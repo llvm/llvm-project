@@ -1695,6 +1695,7 @@ public:
                        const AbstractAttribute &QueryingAA, const Value &V,
                        bool CheckBBLivenessOnly = false,
                        DepClassTy LivenessDepClass = DepClassTy::OPTIONAL,
+                       bool IgnoreDroppableUses = true,
                        function_ref<bool(const Use &OldU, const Use &NewU)>
                            EquivalentUseCB = nullptr);
 

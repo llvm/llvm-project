@@ -1511,7 +1511,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
     };
     if (!A.checkForAllUses(UsePred, *this, AssociatedValue,
                            /* CheckBBLivenessOnly */ true, DepClassTy::OPTIONAL,
-                           EquivalentUseCB))
+                           /* IgnoreDroppableUses */ true, EquivalentUseCB))
       return indicatePessimisticFixpoint();
 
     LLVM_DEBUG({
@@ -3530,7 +3530,8 @@ struct AAIsDeadValueImpl : public AAIsDead {
     // without going through N update cycles. This is not required for
     // correctness.
     return A.checkForAllUses(UsePred, *this, V, /* CheckBBLivenessOnly */ false,
-                             DepClassTy::REQUIRED);
+                             DepClassTy::REQUIRED,
+                             /* IgnoreDroppableUses */ false);
   }
 
   /// Determine if \p I is assumed to be side-effect free.

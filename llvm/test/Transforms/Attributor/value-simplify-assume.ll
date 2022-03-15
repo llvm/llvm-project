@@ -242,6 +242,8 @@ define void @assume_1b_nr(i1 %arg, i1 %cond) norecurse {
 ; CHECK: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@assume_1b_nr
 ; CHECK-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; CHECK-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
@@ -303,13 +305,18 @@ define void @assume_2b_nr(i1 %arg, i1 %cond) norecurse {
 ; CHECK: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@assume_2b_nr
 ; CHECK-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; CHECK-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
+; CHECK-NEXT:    store i1 true, i1* [[STACK]], align 1
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f:
+; CHECK-NEXT:    store i1 false, i1* [[STACK]], align 1
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca i1
@@ -375,7 +382,8 @@ define i1 @assume_4_nr(i1 %arg, i1 %cond) norecurse {
 ; CHECK-NEXT:    store i1 false, i1* [[STACK]], align 1
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -405,14 +413,17 @@ define i1 @assume_5_nr(i1 %arg, i1 %cond) norecurse {
 ; IS________OPM-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; IS________OPM:       t:
 ; IS________OPM-NEXT:    store i1 true, i1* [[STACK]], align 1
-; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; IS________OPM-NEXT:    [[L2:%.*]] = load i1, i1* [[STACK]], align 1
+; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef [[L2]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    br label [[M:%.*]]
 ; IS________OPM:       f:
 ; IS________OPM-NEXT:    store i1 false, i1* [[STACK]], align 1
-; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; IS________OPM-NEXT:    [[L3:%.*]] = load i1, i1* [[STACK]], align 1
+; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef [[L3]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    br label [[M]]
 ; IS________OPM:       m:
-; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; IS________OPM-NEXT:    [[L4:%.*]] = load i1, i1* [[STACK]], align 1
+; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef [[L4]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; IS________OPM-NEXT:    ret i1 [[R]]
 ;
@@ -432,7 +443,8 @@ define i1 @assume_5_nr(i1 %arg, i1 %cond) norecurse {
 ; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR4]]
 ; IS________NPM-NEXT:    br label [[M]]
 ; IS________NPM:       m:
-; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; IS________NPM-NEXT:    [[L4:%.*]] = load i1, i1* [[STACK]], align 1
+; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef [[L4]]) #[[ATTR4]]
 ; IS________NPM-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; IS________NPM-NEXT:    ret i1 [[R]]
 ;
@@ -472,10 +484,12 @@ define i1 @assume_5c_nr(i1 %cond) norecurse {
 ; IS________OPM-NEXT:    br label [[M:%.*]]
 ; IS________OPM:       f:
 ; IS________OPM-NEXT:    store i1 false, i1* [[STACK]], align 1
-; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; IS________OPM-NEXT:    [[L3:%.*]] = load i1, i1* [[STACK]], align 1
+; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef [[L3]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    br label [[M]]
 ; IS________OPM:       m:
-; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; IS________OPM-NEXT:    [[L4:%.*]] = load i1, i1* [[STACK]], align 1
+; IS________OPM-NEXT:    call void @llvm.assume(i1 noundef [[L4]]) #[[ATTR4]]
 ; IS________OPM-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; IS________OPM-NEXT:    ret i1 [[R]]
 ;
@@ -495,7 +509,8 @@ define i1 @assume_5c_nr(i1 %cond) norecurse {
 ; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef false) #[[ATTR4]]
 ; IS________NPM-NEXT:    br label [[M]]
 ; IS________NPM:       m:
-; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; IS________NPM-NEXT:    [[L4:%.*]] = load i1, i1* [[STACK]], align 1
+; IS________NPM-NEXT:    call void @llvm.assume(i1 noundef [[L4]]) #[[ATTR4]]
 ; IS________NPM-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; IS________NPM-NEXT:    ret i1 [[R]]
 ;
@@ -733,6 +748,8 @@ define void @assume_1b(i1 %arg, i1 %cond) {
 ; CHECK: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@assume_1b
 ; CHECK-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; CHECK-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
@@ -794,13 +811,18 @@ define void @assume_2b(i1 %arg, i1 %cond) {
 ; CHECK: Function Attrs: inaccessiblememonly nofree norecurse nosync nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@assume_2b
 ; CHECK-SAME: (i1 [[ARG:%.*]], i1 [[COND:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[STACK:%.*]] = alloca i1, align 1
+; CHECK-NEXT:    store i1 [[ARG]], i1* [[STACK]], align 1
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
+; CHECK-NEXT:    store i1 true, i1* [[STACK]], align 1
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f:
+; CHECK-NEXT:    store i1 false, i1* [[STACK]], align 1
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret void
 ;
   %stack = alloca i1
@@ -866,7 +888,8 @@ define i1 @assume_4(i1 %arg, i1 %cond) {
 ; CHECK-NEXT:    store i1 false, i1* [[STACK]], align 1
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -896,14 +919,17 @@ define i1 @assume_5(i1 %arg, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    store i1 true, i1* [[STACK]], align 1
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L2:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L2]]) #[[ATTR4]]
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    store i1 false, i1* [[STACK]], align 1
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L3:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L3]]) #[[ATTR4]]
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L4:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L4]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
@@ -943,10 +969,12 @@ define i1 @assume_5c(i1 %cond) {
 ; CHECK-NEXT:    br label [[M:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    store i1 false, i1* [[STACK]], align 1
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L3:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L3]]) #[[ATTR4]]
 ; CHECK-NEXT:    br label [[M]]
 ; CHECK:       m:
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]]
+; CHECK-NEXT:    [[L4:%.*]] = load i1, i1* [[STACK]], align 1
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[L4]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[R:%.*]] = call i1 @readI1p(i1* noalias nocapture nofree noundef nonnull readonly dereferenceable(1) [[STACK]]) #[[ATTR5]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
