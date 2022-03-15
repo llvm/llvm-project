@@ -18,7 +18,7 @@ struct LogicalResult;
 class ModuleOp;
 
 namespace bufferization {
-struct AnalysisBufferizationOptions;
+struct OneShotBufferizationOptions;
 } // namespace bufferization
 
 namespace linalg {
@@ -29,7 +29,7 @@ namespace comprehensive_bufferize {
 /// analyzes and bufferizes FuncOps one-by-one with One-Shot Bufferize.
 LogicalResult
 runModuleBufferize(ModuleOp moduleOp,
-                   bufferization::AnalysisBufferizationOptions options);
+                   bufferization::OneShotBufferizationOptions options);
 
 namespace std_ext {
 

@@ -153,7 +153,7 @@ struct OneShotBufferizePass
     : public OneShotBufferizeBase<OneShotBufferizePass> {
   OneShotBufferizePass() : OneShotBufferizeBase<OneShotBufferizePass>() {}
 
-  explicit OneShotBufferizePass(const AnalysisBufferizationOptions &options)
+  explicit OneShotBufferizePass(const OneShotBufferizationOptions &options)
       : options(options) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -161,7 +161,7 @@ struct OneShotBufferizePass
   }
 
   void runOnOperation() override {
-    AnalysisBufferizationOptions opt;
+    OneShotBufferizationOptions opt;
     if (!options) {
       // Make new bufferization options if none were provided when creating the
       // pass.
@@ -209,7 +209,7 @@ struct OneShotBufferizePass
   }
 
 private:
-  llvm::Optional<AnalysisBufferizationOptions> options;
+  llvm::Optional<OneShotBufferizationOptions> options;
 };
 } // namespace
 
@@ -218,7 +218,7 @@ std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
 }
 
 std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass(
-    const AnalysisBufferizationOptions &options) {
+    const OneShotBufferizationOptions &options) {
   return std::make_unique<OneShotBufferizePass>(options);
 }
 
@@ -243,23 +243,25 @@ static bool hasTensorSemantics(Operation *op) {
 /// Rewrite pattern that bufferizes bufferizable ops.
 struct BufferizationPattern
     : public OpInterfaceRewritePattern<BufferizableOpInterface> {
-  BufferizationPattern(MLIRContext *context, const BufferizationState &state,
+  BufferizationPattern(MLIRContext *context, BufferizationState &state,
                        PatternBenefit benefit = 1)
       : OpInterfaceRewritePattern<BufferizableOpInterface>(context, benefit),
-        state(state) {}
+        state(&state) {}
 
   LogicalResult matchAndRewrite(BufferizableOpInterface bufferizableOp,
                                 PatternRewriter &rewriter) const override {
+    const BufferizationOptions &options = state->getOptions();
+
     // No tensors => no buffers.
     if (!hasTensorSemantics(bufferizableOp.getOperation()))
       return failure();
-    if (!state.getOptions().isOpAllowed(bufferizableOp.getOperation()))
+    if (!options.isOpAllowed(bufferizableOp.getOperation()))
       return failure();
-    return bufferizableOp.bufferize(rewriter, state);
+    return bufferizableOp.bufferize(rewriter, *state);
   }
 
 private:
-  const BufferizationState &state;
+  BufferizationState *const state;
 };
 
 /// Check the result of bufferization. Return an error if an op was not
@@ -298,10 +300,17 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
 }
 
 LogicalResult bufferization::bufferizeOp(Operation *op,
-                                         const BufferizationState &state) {
+                                         const AnalysisState &analysisState) {
+  BufferizationState bufferizationState(analysisState);
+  return bufferizeOp(op, bufferizationState);
+}
+
+LogicalResult
+bufferization::bufferizeOp(Operation *op,
+                           BufferizationState &bufferizationState) {
   // Bufferize the op and its nested ops.
   RewritePatternSet patterns(op->getContext());
-  populateBufferizationPattern(state, patterns);
+  patterns.add<BufferizationPattern>(patterns.getContext(), bufferizationState);
 
   // Bufferize ops top-to-bottom. When creating a new op, we should ideally
   // know the exact memref type of all operands. Otherwise, we have to use a
@@ -323,21 +332,21 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
     return failure();
 
-  return checkBufferizationResult(op, state.getOptions());
+  return checkBufferizationResult(op, bufferizationState.getOptions());
 }
 
 namespace {
-/// This a "no analysis, always copy" BufferizationState. In the absence of an
+/// This a "no analysis, always copy" AnalysisState. In the absence of an
 /// analysis, a buffer must be copied each time it is written to. Therefore, all
 /// OpOperands that bufferize to a memory write must bufferize out-of-place.
-class AlwaysCopyBufferizationState : public BufferizationState {
+class AlwaysCopyAnalysisState : public AnalysisState {
 public:
-  AlwaysCopyBufferizationState(const BufferizationOptions &options)
-      : BufferizationState(options) {}
+  AlwaysCopyAnalysisState(const BufferizationOptions &options)
+      : AnalysisState(options) {}
 
-  AlwaysCopyBufferizationState(const AlwaysCopyBufferizationState &) = delete;
+  AlwaysCopyAnalysisState(const AlwaysCopyAnalysisState &) = delete;
 
-  virtual ~AlwaysCopyBufferizationState() = default;
+  virtual ~AlwaysCopyAnalysisState() = default;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpOperand &opOperand) const override {
@@ -357,13 +366,8 @@ public:
 
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const BufferizationOptions &options) {
-  AlwaysCopyBufferizationState state(options);
+  AlwaysCopyAnalysisState state(options);
   return bufferizeOp(op, state);
-}
-
-void bufferization::populateBufferizationPattern(
-    const BufferizationState &state, RewritePatternSet &patterns) {
-  patterns.add<BufferizationPattern>(patterns.getContext(), state);
 }
 
 BufferizationOptions bufferization::getPartialBufferizationOptions() {

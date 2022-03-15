@@ -5,7 +5,7 @@
 
 namespace mlir {
 namespace bufferization {
-struct AnalysisBufferizationOptions;
+struct OneShotBufferizationOptions;
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -37,7 +37,7 @@ std::unique_ptr<Pass> createOneShotBufferizePass();
 /// Create a pass that bufferizes all ops that implement BufferizableOpInterface
 /// with One-Shot Bufferize and the specified bufferization options.
 std::unique_ptr<Pass>
-createOneShotBufferizePass(const AnalysisBufferizationOptions &options);
+createOneShotBufferizePass(const OneShotBufferizationOptions &options);
 
 /// Creates a pass that promotes heap-based allocations to stack-based ones.
 /// Only buffers smaller than the provided size are promoted.

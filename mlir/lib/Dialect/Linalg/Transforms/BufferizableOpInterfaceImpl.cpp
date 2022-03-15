@@ -25,7 +25,7 @@ namespace {
 
 /// Generic conversion for any LinalgOp on tensors.
 static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
-                                       const BufferizationState &state) {
+                                       BufferizationState &state) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(op);
@@ -56,7 +56,7 @@ static LogicalResult bufferizeLinalgOp(RewriterBase &rewriter, LinalgOp op,
   SmallVector<Value> newOutputBuffers;
   for (OpResult opResult : op->getOpResults()) {
     SmallVector<OpOperand *> aliasingOpOperands =
-        state.getAliasingOpOperand(opResult);
+        state.getAnalysisState().getAliasingOpOperand(opResult);
     assert(aliasingOpOperands.size() == 1 && "expected 1 OpOperand");
     FailureOr<Value> resultBuffer =
         state.getBuffer(rewriter, *aliasingOpOperands.front());
@@ -156,14 +156,14 @@ struct LinalgOpInterface
     : public BufferizableOpInterface::ExternalModel<LinalgOpInterface<OpTy>,
                                                     OpTy> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     // Operand is read if it is used in the computation.
     auto genericOp = cast<linalg::LinalgOp>(op);
     return genericOp.payloadUsesValueFromOperand(&opOperand);
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     // Operand is written to if it has an aliasing OpResult.
     auto bufferizableOp = cast<BufferizableOpInterface>(op);
     return !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
@@ -171,7 +171,7 @@ struct LinalgOpInterface
 
   SmallVector<OpOperand *>
   getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const BufferizationState &state) const {
+                       const AnalysisState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
 
     // By default, the i-th OpResult may alias with the i-th "out" tensor.
@@ -188,9 +188,8 @@ struct LinalgOpInterface
     return {};
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     auto genericOp = cast<linalg::LinalgOp>(op);
 
     // By default, the i-th "out" tensor may alias with the i-th OpResult.
@@ -209,12 +208,12 @@ struct LinalgOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     return bufferizeLinalgOp(rewriter, cast<LinalgOp>(op), state);
   }
 };
@@ -223,13 +222,13 @@ struct InitTensorOpInterface
     : public BufferizableOpInterface::ExternalModel<InitTensorOpInterface,
                                                     linalg::InitTensorOp> {
   bool isMemoryWrite(Operation *op, OpResult opResult,
-                     const BufferizationState &state) const {
+                     const AnalysisState &state) const {
     // InitTensorOps allocate but do not write.
     return false;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto initTensorOp = cast<linalg::InitTensorOp>(op);
 
     // The InitTensorOp may have been eliminated.
@@ -345,7 +344,7 @@ findValidInsertionPoint(Operation *initTensorOp,
 /// chain, starting from the OpOperand and always following the aliasing
 /// OpOperand, that eventually ends at a single InitTensorOp.
 LogicalResult mlir::linalg::eliminateInitTensors(
-    Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
+    Operation *op, AnalysisState &state, BufferizationAliasInfo &aliasInfo,
     AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc,
     SmallVector<Operation *> &newOps) {
   OpBuilder b(op->getContext());
@@ -447,7 +446,7 @@ LogicalResult mlir::linalg::eliminateInitTensors(
 /// Note that the newly inserted ExtractSliceOp may have to bufferize
 /// out-of-place due to RaW conflicts.
 LogicalResult mlir::linalg::insertSliceAnchoredInitTensorEliminationStep(
-    Operation *op, BufferizationState &state, BufferizationAliasInfo &aliasInfo,
+    Operation *op, AnalysisState &state, BufferizationAliasInfo &aliasInfo,
     SmallVector<Operation *> &newOps) {
   return eliminateInitTensors(
       op, state, aliasInfo,

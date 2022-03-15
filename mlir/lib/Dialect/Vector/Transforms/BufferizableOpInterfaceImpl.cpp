@@ -27,27 +27,26 @@ struct TransferReadOpInterface
     : public BufferizableOpInterface::ExternalModel<TransferReadOpInterface,
                                                     vector::TransferReadOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     assert(opOperand.get().getType().isa<RankedTensorType>() &&
            "only tensor types expected");
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     assert(opOperand.get().getType().isa<RankedTensorType>() &&
            "only tensor types expected");
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     return {};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto readOp = cast<vector::TransferReadOp>(op);
     assert(readOp.getShapedType().isa<TensorType>() &&
            "only tensor types expected");
@@ -69,34 +68,33 @@ struct TransferWriteOpInterface
     : public BufferizableOpInterface::ExternalModel<TransferWriteOpInterface,
                                                     vector::TransferWriteOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     assert(opOperand.get().getType().isa<TensorType>() &&
            "only tensor types expected");
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     assert(opOperand.get().getType().isa<TensorType>() &&
            "only tensor types expected");
     return true;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     assert(opOperand.get().getType().isa<TensorType>() &&
            "only tensor types expected");
     return {op->getOpResult(0)};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);
     assert(writeOp.getShapedType().isa<TensorType>() &&
            "only tensor types expected");
