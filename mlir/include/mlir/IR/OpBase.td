@@ -2446,12 +2446,6 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // provided.
   bit skipDefaultBuilders = 0;
 
-  // Custom parser and printer.
-  // NOTE: These fields are deprecated in favor of `assemblyFormat` or
-  // `hasCustomAssemblyFormat`, and are slated for deletion.
-  code parser = ?;
-  code printer = ?;
-
   // Custom assembly format.
   /// This field corresponds to a declarative description of the assembly format
   /// for this operation. If populated, the `hasCustomAssemblyFormat` field is
@@ -2482,12 +2476,6 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
   // associated with regions. Note that this method is invoked after all the
   // region ops are verified.
   bit hasRegionVerifier = 0;
-
-  // A custom code block corresponding to the extra verification code of the
-  // operation.
-  // NOTE: This field is deprecated in favor of `hasVerifier` and is slated for
-  // deletion.
-  code verifier = ?;
 
   // Whether this op has associated canonicalization patterns.
   bit hasCanonicalizer = 0;

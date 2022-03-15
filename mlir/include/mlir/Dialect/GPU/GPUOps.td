@@ -901,7 +901,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
     `(` $dynamicSizes `)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
 
