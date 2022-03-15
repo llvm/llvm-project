@@ -570,7 +570,7 @@ define i8* @complicated_args_byval2() {
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@complicated_args_byval2() {
 ; IS__CGSCC_NPM-NEXT:    [[TMP1:%.*]] = load i8*, i8** getelementptr inbounds ([[STRUCT_X:%.*]], %struct.X* @S, i32 0, i32 0), align 8
 ; IS__CGSCC_NPM-NEXT:    [[C:%.*]] = call i8* @test_byval2(i8* noalias nofree readnone "no-capture-maybe-returned" [[TMP1]])
-; IS__CGSCC_NPM-NEXT:    ret i8* [[TMP1]]
+; IS__CGSCC_NPM-NEXT:    ret i8* [[C]]
 ;
   %c = call i8* @test_byval2(%struct.X* byval(%struct.X) @S)
   ret i8* %c
@@ -1247,8 +1247,8 @@ define i8 @memcpy_uses_store_caller(i8 %arg) {
 
 declare i32 @speculatable() speculatable readnone
 
-define i32 @test_speculatable_expr() {
-; IS__TUNIT_OPM: Function Attrs: nosync readnone
+define i32 @test_speculatable_expr() norecurse {
+; IS__TUNIT_OPM: Function Attrs: norecurse nosync readnone
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@test_speculatable_expr
 ; IS__TUNIT_OPM-SAME: () #[[ATTR8:[0-9]+]] {
 ; IS__TUNIT_OPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
@@ -1258,7 +1258,7 @@ define i32 @test_speculatable_expr() {
 ; IS__TUNIT_OPM-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[STACK]]) #[[ATTR14:[0-9]+]]
 ; IS__TUNIT_OPM-NEXT:    ret i32 [[RSPEC]]
 ;
-; IS__TUNIT_NPM: Function Attrs: nosync readnone
+; IS__TUNIT_NPM: Function Attrs: norecurse nosync readnone
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@test_speculatable_expr
 ; IS__TUNIT_NPM-SAME: () #[[ATTR7:[0-9]+]] {
 ; IS__TUNIT_NPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
@@ -1269,7 +1269,7 @@ define i32 @test_speculatable_expr() {
 ; IS__TUNIT_NPM-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32 [[TMP1]]) #[[ATTR13:[0-9]+]]
 ; IS__TUNIT_NPM-NEXT:    ret i32 [[RSPEC]]
 ;
-; IS__CGSCC_OPM: Function Attrs: nosync readnone
+; IS__CGSCC_OPM: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@test_speculatable_expr
 ; IS__CGSCC_OPM-SAME: () #[[ATTR9:[0-9]+]] {
 ; IS__CGSCC_OPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
@@ -1278,7 +1278,7 @@ define i32 @test_speculatable_expr() {
 ; IS__CGSCC_OPM-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32* noalias nocapture nofree noundef nonnull readnone align 4 dereferenceable(4) [[STACK]]) #[[ATTR16:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret i32 [[RSPEC]]
 ;
-; IS__CGSCC_NPM: Function Attrs: nosync readnone
+; IS__CGSCC_NPM: Function Attrs: norecurse nosync readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@test_speculatable_expr
 ; IS__CGSCC_NPM-SAME: () #[[ATTR9:[0-9]+]] {
 ; IS__CGSCC_NPM-NEXT:    [[STACK:%.*]] = alloca i32, align 4
@@ -1353,7 +1353,7 @@ define internal i32 @ret_speculatable_expr(i32* %mem, i32 %a2) {
 ; IS__TUNIT_OPM: attributes #[[ATTR5]] = { argmemonly nofree norecurse nosync nounwind writeonly }
 ; IS__TUNIT_OPM: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR7:[0-9]+]] = { readnone speculatable }
-; IS__TUNIT_OPM: attributes #[[ATTR8]] = { nosync readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR8]] = { norecurse nosync readnone }
 ; IS__TUNIT_OPM: attributes #[[ATTR9]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR10:[0-9]+]] = { argmemonly nofree nounwind willreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR11]] = { nofree nosync nounwind readnone willreturn }
@@ -1368,7 +1368,7 @@ define internal i32 @ret_speculatable_expr(i32* %mem, i32 %a2) {
 ; IS__TUNIT_NPM: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__TUNIT_NPM: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR6:[0-9]+]] = { readnone speculatable }
-; IS__TUNIT_NPM: attributes #[[ATTR7]] = { nosync readnone }
+; IS__TUNIT_NPM: attributes #[[ATTR7]] = { norecurse nosync readnone }
 ; IS__TUNIT_NPM: attributes #[[ATTR8]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR9:[0-9]+]] = { argmemonly nofree nounwind willreturn }
 ; IS__TUNIT_NPM: attributes #[[ATTR10]] = { nofree nosync nounwind readnone willreturn }
@@ -1385,7 +1385,7 @@ define internal i32 @ret_speculatable_expr(i32* %mem, i32 %a2) {
 ; IS__CGSCC_OPM: attributes #[[ATTR6]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR8:[0-9]+]] = { readnone speculatable }
-; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nosync readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR9]] = { norecurse nosync readnone }
 ; IS__CGSCC_OPM: attributes #[[ATTR10]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR11:[0-9]+]] = { argmemonly nofree nounwind willreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR12]] = { willreturn }
@@ -1403,7 +1403,7 @@ define internal i32 @ret_speculatable_expr(i32* %mem, i32 %a2) {
 ; IS__CGSCC_NPM: attributes #[[ATTR6]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR8:[0-9]+]] = { readnone speculatable }
-; IS__CGSCC_NPM: attributes #[[ATTR9]] = { nosync readnone }
+; IS__CGSCC_NPM: attributes #[[ATTR9]] = { norecurse nosync readnone }
 ; IS__CGSCC_NPM: attributes #[[ATTR10]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR11:[0-9]+]] = { argmemonly nofree nounwind willreturn }
 ; IS__CGSCC_NPM: attributes #[[ATTR12]] = { willreturn }

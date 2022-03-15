@@ -214,7 +214,7 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
     return !C->isThreadDependent();
   // TODO: Inspect and cache more complex instructions.
   if (auto *CB = dyn_cast<CallBase>(&V))
-    return CB->getNumOperands() == 0 && !CB->mayHaveSideEffects() &&
+    return CB->arg_size() == 0 && !CB->mayHaveSideEffects() &&
            !CB->mayReadFromMemory();
   const Function *Scope = nullptr;
   if (auto *I = dyn_cast<Instruction>(&V))
@@ -388,15 +388,16 @@ getPotentialCopiesOfMemoryValue(Attributor &A, Ty &I,
     auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
       if ((IsLoad && !Acc.isWrite()) || (!IsLoad && !Acc.isRead()))
         return true;
-      if (OnlyExact && !IsExact) {
+      if (IsLoad && Acc.isWrittenValueYetUndetermined())
+        return true;
+      if (OnlyExact && !IsExact &&
+          !isa_and_nonnull<UndefValue>(Acc.getWrittenValue())) {
         LLVM_DEBUG(dbgs() << "Non exact access " << *Acc.getRemoteInst()
                           << ", abort!\n");
         return false;
       }
       if (IsLoad) {
         assert(isa<LoadInst>(I) && "Expected load or store instruction only!");
-        if (Acc.isWrittenValueYetUndetermined())
-          return true;
         if (!Acc.isWrittenValueUnknown()) {
           NewCopies.push_back(Acc.getWrittenValue());
           return true;

@@ -5389,76 +5389,6 @@ struct AAValueSimplifyImpl : AAValueSimplify {
     SimplifiedAssociatedValue = &getAssociatedValue();
     return AAValueSimplify::indicatePessimisticFixpoint();
   }
-
-  static bool handleLoad(Attributor &A, const AbstractAttribute &AA,
-                         LoadInst &L, function_ref<bool(Value &)> Union) {
-    auto UnionWrapper = [&](Value &V, Value &Obj) {
-      if (isa<AllocaInst>(Obj))
-        return Union(V);
-      if (!AA::isDynamicallyUnique(A, AA, V))
-        return false;
-      ValueToValueMapTy VMap;
-      if (!reproduceValue(A, AA, V, *L.getType(), &L, /* CheckOnly */ true,
-                          VMap))
-        return false;
-      return Union(V);
-    };
-
-    Value &Ptr = *L.getPointerOperand();
-    SmallVector<Value *, 8> Objects;
-    bool UsedAssumedInformation = false;
-    if (!AA::getAssumedUnderlyingObjects(A, Ptr, Objects, AA, &L,
-                                         UsedAssumedInformation))
-      return false;
-
-    const auto *TLI =
-        A.getInfoCache().getTargetLibraryInfoForFunction(*L.getFunction());
-    for (Value *Obj : Objects) {
-      LLVM_DEBUG(dbgs() << "Visit underlying object " << *Obj << "\n");
-      if (isa<UndefValue>(Obj))
-        continue;
-      if (isa<ConstantPointerNull>(Obj)) {
-        // A null pointer access can be undefined but any offset from null may
-        // be OK. We do not try to optimize the latter.
-        if (!NullPointerIsDefined(L.getFunction(),
-                                  Ptr.getType()->getPointerAddressSpace()) &&
-            A.getAssumedSimplified(Ptr, AA, UsedAssumedInformation) == Obj)
-          continue;
-        return false;
-      }
-      Constant *InitialVal = AA::getInitialValueForObj(*Obj, *L.getType(), TLI);
-      if (!InitialVal || !Union(*InitialVal))
-        return false;
-
-      LLVM_DEBUG(dbgs() << "Underlying object amenable to load-store "
-                           "propagation, checking accesses next.\n");
-
-      auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
-        LLVM_DEBUG(dbgs() << " - visit access " << Acc << "\n");
-        if (Acc.isWrittenValueYetUndetermined())
-          return true;
-        Value *Content = Acc.getWrittenValue();
-        if (!Content)
-          return false;
-        Value *CastedContent =
-            AA::getWithType(*Content, *AA.getAssociatedType());
-        if (!CastedContent)
-          return false;
-        if (IsExact)
-          return UnionWrapper(*CastedContent, *Obj);
-        if (auto *C = dyn_cast<Constant>(CastedContent))
-          if (C->isNullValue() || C->isAllOnesValue() || isa<UndefValue>(C))
-            return UnionWrapper(*CastedContent, *Obj);
-        return false;
-      };
-
-      auto &PI = A.getAAFor<AAPointerInfo>(AA, IRPosition::value(*Obj),
-                                           DepClassTy::REQUIRED);
-      if (!PI.forallInterferingAccesses(A, AA, L, CheckAccess))
-        return false;
-    }
-    return true;
-  }
 };
 
 struct AAValueSimplifyArgument final : AAValueSimplifyImpl {
@@ -5685,15 +5615,6 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
     return true;
   }
 
-  bool updateWithLoad(Attributor &A, LoadInst &L) {
-    auto Union = [&](Value &V) {
-      SimplifiedAssociatedValue = AA::combineOptionalValuesInAAValueLatice(
-          SimplifiedAssociatedValue, &V, L.getType());
-      return SimplifiedAssociatedValue != Optional<Value *>(nullptr);
-    };
-    return handleLoad(A, *this, L, Union);
-  }
-
   /// Use the generic, non-optimistic InstSimplfy functionality if we managed to
   /// simplify any operand of the instruction \p I. Return true if successful,
   /// in that case SimplifiedAssociatedValue will be updated.
@@ -5757,9 +5678,6 @@ struct AAValueSimplifyFloating : AAValueSimplifyImpl {
       if (!Stripped && this == &AA) {
 
         if (auto *I = dyn_cast<Instruction>(&V)) {
-          if (auto *LI = dyn_cast<LoadInst>(&V))
-            if (updateWithLoad(A, *LI))
-              return true;
           if (auto *Cmp = dyn_cast<CmpInst>(&V))
             if (handleCmp(A, *Cmp))
               return true;
@@ -9253,30 +9171,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
                                          : ChangeStatus::CHANGED;
   }
 
-  ChangeStatus updateWithLoad(Attributor &A, LoadInst &L) {
-    if (!L.getType()->isIntegerTy())
-      return indicatePessimisticFixpoint();
-
-    auto Union = [&](Value &V) {
-      if (isa<UndefValue>(V)) {
-        unionAssumedWithUndef();
-        return true;
-      }
-      if (ConstantInt *CI = dyn_cast<ConstantInt>(&V)) {
-        unionAssumed(CI->getValue());
-        return true;
-      }
-      return false;
-    };
-    auto AssumedBefore = getAssumed();
-
-    if (!AAValueSimplifyImpl::handleLoad(A, *this, L, Union))
-      return indicatePessimisticFixpoint();
-
-    return AssumedBefore == getAssumed() ? ChangeStatus::UNCHANGED
-                                         : ChangeStatus::CHANGED;
-  }
-
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     Value &V = getAssociatedValue();
@@ -9296,9 +9190,6 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     if (auto *PHI = dyn_cast<PHINode>(I))
       return updateWithPHINode(A, PHI);
-
-    if (auto *L = dyn_cast<LoadInst>(I))
-      return updateWithLoad(A, *L);
 
     return indicatePessimisticFixpoint();
   }

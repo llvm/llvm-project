@@ -85,7 +85,7 @@ define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________OPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________OPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* [[TMP0]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@t0_callback_callee
@@ -94,7 +94,7 @@ define internal void @t0_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________NPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________NPM-NEXT:    tail call void @t0_check(i32* align 256 [[A]], i64 noundef 99, i32* [[TMP0]])
 ; IS________NPM-NEXT:    ret void
 ;
 entry:
@@ -186,7 +186,7 @@ define internal void @t1_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________OPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________OPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: nosync
@@ -196,7 +196,7 @@ define internal void @t1_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________NPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________NPM-NEXT:    tail call void @t1_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
 ; IS________NPM-NEXT:    ret void
 ;
 entry:
@@ -287,7 +287,7 @@ define internal void @t2_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________OPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________OPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@t2_callback_callee
@@ -296,7 +296,7 @@ define internal void @t2_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________NPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________NPM-NEXT:    tail call void @t2_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
 ; IS________NPM-NEXT:    ret void
 ;
 entry:
@@ -392,7 +392,7 @@ define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________OPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________OPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________OPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________OPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________OPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM-LABEL: define {{[^@]+}}@t3_callback_callee
@@ -401,7 +401,7 @@ define internal void @t3_callback_callee(i32* %is_not_null, i32* %ptr, i32* %a, 
 ; IS________NPM-NEXT:    [[PTR_VAL:%.*]] = load i32, i32* [[PTR]], align 8
 ; IS________NPM-NEXT:    store i32 [[PTR_VAL]], i32* [[IS_NOT_NULL]], align 4
 ; IS________NPM-NEXT:    [[TMP0:%.*]] = load i32*, i32** [[C]], align 64
-; IS________NPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture noundef nonnull align 32 dereferenceable(4) [[TMP0]])
+; IS________NPM-NEXT:    tail call void @t3_check(i32* nocapture align 256 [[A]], i64 noundef 99, i32* nocapture [[TMP0]])
 ; IS________NPM-NEXT:    ret void
 ;
 entry:
