@@ -30,6 +30,7 @@ extern llvm::cl::OptionCategory BoltInstrCategory;
 extern llvm::cl::OptionCategory HeatmapCategory;
 
 extern llvm::cl::opt<unsigned> AlignText;
+extern llvm::cl::opt<unsigned> AlignFunctions;
 extern llvm::cl::opt<bool> AggregateOnly;
 extern llvm::cl::opt<unsigned> BucketsPerLine;
 extern llvm::cl::opt<bool> DiffOnly;
