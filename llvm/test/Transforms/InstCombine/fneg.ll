@@ -674,10 +674,12 @@ define float @select_fneg_false_nsz(float %x, float %y, i1 %b) {
   ret float %r
 }
 
+; Special-case for propagating nsz: it's ok when selecting between an operand and its negation.
+
 define float @select_common_op_fneg_true(float %x, i1 %b) {
 ; CHECK-LABEL: @select_common_op_fneg_true(
 ; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan ninf nsz float [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select nnan ninf i1 [[B:%.*]], float [[X_NEG]], float [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf nsz i1 [[B:%.*]], float [[X_NEG]], float [[X]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %nx = fneg float %x
@@ -689,7 +691,7 @@ define float @select_common_op_fneg_true(float %x, i1 %b) {
 define float @select_common_op_fneg_false(float %x, i1 %b) {
 ; CHECK-LABEL: @select_common_op_fneg_false(
 ; CHECK-NEXT:    [[X_NEG:%.*]] = fneg nnan ninf nsz float [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select nnan ninf i1 [[B:%.*]], float [[X_NEG]], float [[X]]
+; CHECK-NEXT:    [[R:%.*]] = select nnan ninf nsz i1 [[B:%.*]], float [[X_NEG]], float [[X]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %nx = fneg float %x
@@ -698,12 +700,12 @@ define float @select_common_op_fneg_false(float %x, i1 %b) {
   ret float %r
 }
 
+; The transform above allows follow-on folds to convert to fabs.
+
 define float @fabs(float %a) {
 ; CHECK-LABEL: @fabs(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[A_NEG:%.*]] = fneg nnan ninf nsz float [[A]]
-; CHECK-NEXT:    [[FNEG1:%.*]] = select nnan ninf i1 [[CMP]], float [[A]], float [[A_NEG]]
-; CHECK-NEXT:    ret float [[FNEG1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz float @llvm.fabs.f32(float [[A:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %fneg = fneg float %a
   %cmp = fcmp ogt float %a, %fneg
@@ -712,11 +714,13 @@ define float @fabs(float %a) {
   ret float %fneg1
 }
 
+; TODO: This should reduce to fneg-of-fabs.
+
 define float @fnabs(float %a) {
 ; CHECK-LABEL: @fnabs(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[A_NEG:%.*]] = fneg fast float [[A]]
-; CHECK-NEXT:    [[FNEG1:%.*]] = select reassoc nnan ninf arcp contract afn i1 [[CMP]], float [[A]], float [[A_NEG]]
+; CHECK-NEXT:    [[FNEG1:%.*]] = select fast i1 [[CMP]], float [[A]], float [[A_NEG]]
 ; CHECK-NEXT:    ret float [[FNEG1]]
 ;
   %fneg = fneg float %a
