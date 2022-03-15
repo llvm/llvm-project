@@ -121,24 +121,16 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 /// result will be based only on AA results for the function declaration; it
 /// will be assumed that some other (perhaps less optimized) version of the
 /// function may be selected at link time.
-static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
-                                                  AAResults &AAR,
-                                                  const SCCNodeSet &SCCNodes) {
+static FunctionModRefBehavior
+checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
+                          const SCCNodeSet &SCCNodes) {
   FunctionModRefBehavior MRB = AAR.getModRefBehavior(&F);
   if (MRB == FMRB_DoesNotAccessMemory)
     // Already perfect!
-    return MAK_ReadNone;
+    return MRB;
 
-  if (!ThisBody) {
-    if (AliasAnalysis::onlyReadsMemory(MRB))
-      return MAK_ReadOnly;
-
-    if (AliasAnalysis::onlyWritesMemory(MRB))
-      return MAK_WriteOnly;
-
-    // Conservatively assume it reads and writes to memory.
-    return MAK_MayWrite;
-  }
+  if (!ThisBody)
+    return MRB;
 
   // Scan the function body for instructions that may read or write memory.
   bool ReadsMemory = false;
@@ -232,18 +224,18 @@ static MemoryAccessKind checkFunctionMemoryAccess(Function &F, bool ThisBody,
     ReadsMemory |= I.mayReadFromMemory();
   }
 
-  if (WritesMemory) { 
+  if (WritesMemory) {
     if (!ReadsMemory)
-      return MAK_WriteOnly;
+      return FMRB_OnlyWritesMemory;
     else
-      return MAK_MayWrite;
+      return FMRB_UnknownModRefBehavior;
   }
 
-  return ReadsMemory ? MAK_ReadOnly : MAK_ReadNone;
+  return ReadsMemory ? FMRB_OnlyReadsMemory : FMRB_DoesNotAccessMemory;
 }
 
-MemoryAccessKind llvm::computeFunctionBodyMemoryAccess(Function &F,
-                                                       AAResults &AAR) {
+FunctionModRefBehavior llvm::computeFunctionBodyMemoryAccess(Function &F,
+                                                             AAResults &AAR) {
   return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {});
 }
 
@@ -262,20 +254,14 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
     // Non-exact function definitions may not be selected at link time, and an
     // alternative version that writes to memory may be selected.  See the
     // comment on GlobalValue::isDefinitionExact for more details.
-    switch (checkFunctionMemoryAccess(*F, F->hasExactDefinition(),
-                                      AAR, SCCNodes)) {
-    case MAK_MayWrite:
+    FunctionModRefBehavior FMRB =
+        checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
+    if (isModAndRefSet(createModRefInfo(FMRB)))
       return;
-    case MAK_ReadOnly:
-      ReadsMemory = true;
-      break;
-    case MAK_WriteOnly:
-      WritesMemory = true;
-      break;
-    case MAK_ReadNone:
-      // Nothing to do!
-      break;
-    }
+    if (FMRB == FMRB_DoesNotAccessMemory)
+      continue;
+    ReadsMemory |= AliasAnalysis::onlyReadsMemory(FMRB);
+    WritesMemory |= AliasAnalysis::onlyWritesMemory(FMRB);
   }
 
   // If the SCC contains both functions that read and functions that write, then

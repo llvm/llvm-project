@@ -1740,7 +1740,7 @@ bool DevirtModule::tryVirtualConstProp(
   for (VirtualCallTarget &Target : TargetsForSlot) {
     if (Target.Fn->isDeclaration() ||
         computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn)) !=
-            MAK_ReadNone ||
+            FMRB_DoesNotAccessMemory ||
         Target.Fn->arg_empty() || !Target.Fn->arg_begin()->use_empty() ||
         Target.Fn->getReturnType() != RetType)
       return false;
