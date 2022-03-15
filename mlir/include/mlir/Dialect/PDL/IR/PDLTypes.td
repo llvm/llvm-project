@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_PDL_IR_PDLTYPES
 #define MLIR_DIALECT_PDL_IR_PDLTYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Dialect/PDL/IR/PDLDialect.td"
 
 //===----------------------------------------------------------------------===//

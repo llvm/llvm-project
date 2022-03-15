@@ -337,11 +337,11 @@ static void emitDialectDoc(const Dialect &dialect, ArrayRef<AttrDef> attrDefs,
 static void emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
   std::vector<Record *> opDefs = getRequestedOpDefinitions(recordKeeper);
   std::vector<Record *> typeDefs =
-      recordKeeper.getAllDerivedDefinitions("DialectType");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("DialectType");
   std::vector<Record *> typeDefDefs =
-      recordKeeper.getAllDerivedDefinitions("TypeDef");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("TypeDef");
   std::vector<Record *> attrDefDefs =
-      recordKeeper.getAllDerivedDefinitions("AttrDef");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("AttrDef");
 
   std::set<Dialect> dialectsWithDocs;
 
