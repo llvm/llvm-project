@@ -1,0 +1,5 @@
+---
+Name: CxxInterop
+Classes:
+- Name: NSSomeClass
+  SwiftName: SomeClass

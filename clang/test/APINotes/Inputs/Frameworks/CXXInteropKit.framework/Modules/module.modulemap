@@ -1,0 +1,5 @@
+framework module CxxInteropKit [extern_c] {
+  umbrella header "CxxInteropKit.h"
+  export *
+  module * { export * }
+}
