@@ -1054,6 +1054,10 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
     }
   }
 
+  // Finalize all buffers.
+  if (failed(finalizeBuffers(moduleOp, options)))
+    return failure();
+
   // Perform a post-processing pass of layout modification at function boundary
   // according to the kBufferLayoutAttrName.
   layoutPostProcessing(moduleOp);

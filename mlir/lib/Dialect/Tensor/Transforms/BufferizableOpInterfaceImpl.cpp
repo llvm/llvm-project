@@ -228,8 +228,7 @@ struct ExtractSliceOpInterface
     Value alloc;
     if (!inplace) {
       FailureOr<Value> allocOrFailure =
-          createAlloc(rewriter, loc, extractSliceOp.result(),
-                      state.getOptions().createDeallocs, state.getOptions());
+          state.createAlloc(rewriter, loc, extractSliceOp.result());
       if (failed(allocOrFailure))
         return failure();
       alloc = *allocOrFailure;
@@ -338,9 +337,7 @@ struct FromElementsOpInterface
     auto shape = tensorType.getShape();
     MemRefType resultType = getContiguousMemRefType(tensorType);
     FailureOr<Value> maybeBuffer =
-        createAlloc(rewriter, loc, resultType, {},
-                    /*deallocMemref=*/state.getOptions().createDeallocs,
-                    state.getOptions());
+        state.createAlloc(rewriter, loc, resultType, {});
     if (failed(maybeBuffer))
       return failure();
     Value buffer = *maybeBuffer;
@@ -389,10 +386,8 @@ struct GenerateOpInterface
     Location loc = op->getLoc();
     MemRefType memrefType =
         getContiguousMemRefType(generateOp.getType().cast<RankedTensorType>());
-    FailureOr<Value> maybeResult =
-        createAlloc(rewriter, loc, memrefType, generateOp.dynamicExtents(),
-                    /*deallocMemref=*/state.getOptions().createDeallocs,
-                    state.getOptions());
+    FailureOr<Value> maybeResult = state.createAlloc(
+        rewriter, loc, memrefType, generateOp.dynamicExtents());
     if (failed(maybeResult))
       return failure();
     Value result = *maybeResult;

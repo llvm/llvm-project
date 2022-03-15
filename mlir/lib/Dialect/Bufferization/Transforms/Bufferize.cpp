@@ -302,7 +302,11 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const AnalysisState &analysisState) {
   BufferizationState bufferizationState(analysisState);
-  return bufferizeOp(op, bufferizationState);
+  if (failed(bufferizeOp(op, bufferizationState)))
+    return failure();
+  if (failed(finalizeBuffers(op, analysisState.getOptions())))
+    return failure();
+  return success();
 }
 
 LogicalResult
@@ -332,7 +336,10 @@ bufferization::bufferizeOp(Operation *op,
   if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
     return failure();
 
-  return checkBufferizationResult(op, bufferizationState.getOptions());
+  if (failed(checkBufferizationResult(op, bufferizationState.getOptions())))
+    return failure();
+
+  return success();
 }
 
 namespace {
