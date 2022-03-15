@@ -1,5 +1,16 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
+// CHECK-LABEL: define void @func_with_empty_named_info()
+// Check that translation doens't crash in the presence of an inlineble call
+// with a named loc that has no backing source info.
+llvm.func @callee() {
+  llvm.return
+} loc("calleesource.cc":1:1)
+llvm.func @func_with_empty_named_info() {
+  llvm.call @callee() : () -> () loc("named with no line info")
+  llvm.return
+}
+
 // CHECK-LABEL: define void @func_no_debug()
 // CHECK-NOT: !dbg
 llvm.func @func_no_debug() {
