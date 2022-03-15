@@ -63,7 +63,7 @@ public:
   // Only undefined or dylib symbols can be weak references. A weak reference
   // need not be satisfied at runtime, e.g. due to the symbol not being
   // available on a given target platform.
-  virtual bool isWeakRef() const { llvm_unreachable("cannot be a weak ref"); }
+  virtual bool isWeakRef() const { return false; }
 
   virtual bool isTlv() const { llvm_unreachable("cannot be TLV"); }
 
@@ -87,9 +87,9 @@ public:
   // on whether it is a thread-local. A given symbol cannot be referenced by
   // both these sections at once.
   uint32_t gotIndex = UINT32_MAX;
-
+  uint32_t lazyBindOffset = UINT32_MAX;
+  uint32_t stubsHelperIndex = UINT32_MAX;
   uint32_t stubsIndex = UINT32_MAX;
-
   uint32_t symtabIndex = UINT32_MAX;
 
   InputFile *getFile() const { return file; }
@@ -257,9 +257,6 @@ public:
   }
 
   static bool classof(const Symbol *s) { return s->kind() == DylibKind; }
-
-  uint32_t stubsHelperIndex = UINT32_MAX;
-  uint32_t lazyBindOffset = UINT32_MAX;
 
   RefState getRefState() const { return refState; }
 

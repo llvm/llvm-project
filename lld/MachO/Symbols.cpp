@@ -15,13 +15,13 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 48,
+static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 56,
               "Try to minimize Symbol's size; we create many instances");
 
 // The Microsoft ABI doesn't support using parent class tail padding for child
 // members, hence the _MSC_VER check.
 #if !defined(_MSC_VER)
-static_assert(sizeof(void *) != 8 || sizeof(Defined) == 80,
+static_assert(sizeof(void *) != 8 || sizeof(Defined) == 88,
               "Try to minimize Defined's size; we create many instances");
 #endif
 
