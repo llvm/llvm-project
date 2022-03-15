@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-delicm -analyze -pass-remarks-analysis=polly-delicm -polly-delicm-max-ops=1 < %s 2>&1 | FileCheck %s
-; RUN: opt %loadPolly -polly-delicm -polly-dependences -analyze -polly-delicm-max-ops=1 -polly-dependences-computeout=0 < %s | FileCheck %s -check-prefix=DEP
+; RUN: opt %loadPolly -polly-print-delicm -pass-remarks-analysis=polly-delicm -polly-delicm-max-ops=1 -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -polly-delicm -polly-print-dependences -polly-delicm-max-ops=1 -polly-dependences-computeout=0 -disable-output < %s | FileCheck %s -check-prefix=DEP
 ;
 ;    void func(double *A) {
 ;      for (int j = 0; j < 2; j += 1) { /* outer */

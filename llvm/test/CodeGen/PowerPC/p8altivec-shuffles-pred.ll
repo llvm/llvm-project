@@ -1,4 +1,7 @@
-; RUN: llc -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -verify-machineinstrs -ppc-disable-perfect-shuffle=false < %s | FileCheck %s
+
+; TODO: Fix this case when disabling perfect shuffle
+
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -9,8 +12,8 @@ entry:
   ret <2 x i32> %strided.vec
 
 ; CHECK-LABEL: @test1
-; CHECK: xxswapd 35, 34
-; CHECK: vmrghw 2, 2, 3
+; CHECK: xxswapd 0, 34
+; CHECK: xxmrghw 34, 34, 0
 ; CHECK: blr
 }
 

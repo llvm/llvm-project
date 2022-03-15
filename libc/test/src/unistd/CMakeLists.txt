@@ -20,6 +20,22 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  lseek_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    lseek_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.src.unistd.lseek
+    libc.src.unistd.read
+    libc.test.errno_setter_matcher
+)
+
+add_libc_unittest(
   rmdir_test
   SUITE
     libc_unistd_unittests

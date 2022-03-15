@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze < %s \
-; RUN:     | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; CHECK-NOT: Valid Region for Scop:
 

@@ -33,7 +33,7 @@ private:
   void writeRelocSection(raw_ostream &OS, WasmYAML::Section &Sec,
                          uint32_t SectionIndex);
 
-  void writeInitExpr(raw_ostream &OS, const wasm::WasmInitExpr &InitExpr);
+  void writeInitExpr(raw_ostream &OS, const WasmYAML::InitExpr &InitExpr);
 
   void writeSectionContent(raw_ostream &OS, WasmYAML::CustomSection &Section);
   void writeSectionContent(raw_ostream &OS, WasmYAML::TypeSection &Section);
@@ -129,29 +129,34 @@ void WasmWriter::reportError(const Twine &Msg) {
 }
 
 void WasmWriter::writeInitExpr(raw_ostream &OS,
-                               const wasm::WasmInitExpr &InitExpr) {
-  writeUint8(OS, InitExpr.Opcode);
-  switch (InitExpr.Opcode) {
-  case wasm::WASM_OPCODE_I32_CONST:
-    encodeSLEB128(InitExpr.Value.Int32, OS);
-    break;
-  case wasm::WASM_OPCODE_I64_CONST:
-    encodeSLEB128(InitExpr.Value.Int64, OS);
-    break;
-  case wasm::WASM_OPCODE_F32_CONST:
-    writeUint32(OS, InitExpr.Value.Float32);
-    break;
-  case wasm::WASM_OPCODE_F64_CONST:
-    writeUint64(OS, InitExpr.Value.Float64);
-    break;
-  case wasm::WASM_OPCODE_GLOBAL_GET:
-    encodeULEB128(InitExpr.Value.Global, OS);
-    break;
-  default:
-    reportError("unknown opcode in init_expr: " + Twine(InitExpr.Opcode));
-    return;
+                               const WasmYAML::InitExpr &InitExpr) {
+  if (InitExpr.Extended) {
+    InitExpr.Body.writeAsBinary(OS);
+  } else {
+    writeUint8(OS, InitExpr.Inst.Opcode);
+    switch (InitExpr.Inst.Opcode) {
+    case wasm::WASM_OPCODE_I32_CONST:
+      encodeSLEB128(InitExpr.Inst.Value.Int32, OS);
+      break;
+    case wasm::WASM_OPCODE_I64_CONST:
+      encodeSLEB128(InitExpr.Inst.Value.Int64, OS);
+      break;
+    case wasm::WASM_OPCODE_F32_CONST:
+      writeUint32(OS, InitExpr.Inst.Value.Float32);
+      break;
+    case wasm::WASM_OPCODE_F64_CONST:
+      writeUint64(OS, InitExpr.Inst.Value.Float64);
+      break;
+    case wasm::WASM_OPCODE_GLOBAL_GET:
+      encodeULEB128(InitExpr.Inst.Value.Global, OS);
+      break;
+    default:
+      reportError("unknown opcode in init_expr: " +
+                  Twine(InitExpr.Inst.Opcode));
+      return;
+    }
+    writeUint8(OS, wasm::WASM_OPCODE_END);
   }
-  writeUint8(OS, wasm::WASM_OPCODE_END);
 }
 
 void WasmWriter::writeSectionContent(raw_ostream &OS,
@@ -478,7 +483,7 @@ void WasmWriter::writeSectionContent(raw_ostream &OS,
     ++ExpectedIndex;
     writeUint8(OS, Global.Type);
     writeUint8(OS, Global.Mutable);
-    writeInitExpr(OS, Global.InitExpr);
+    writeInitExpr(OS, Global.Init);
   }
 }
 

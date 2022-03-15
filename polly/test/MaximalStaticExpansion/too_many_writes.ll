@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-mse -pass-remarks-analysis="polly-mse" -analyze < %s 2>&1 | FileCheck %s --check-prefix=MSE
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ;
 ; Verify that Polly detects problems and does not expand the array
 ;

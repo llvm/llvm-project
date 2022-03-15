@@ -229,101 +229,151 @@ bool ContainsAnyImpliedDoIndex(const ExtentExpr &expr) {
 // Determines lower bound on a dimension.  This can be other than 1 only
 // for a reference to a whole array object or component. (See LBOUND, 16.9.109).
 // ASSOCIATE construct entities may require traversal of their referents.
-class GetLowerBoundHelper : public Traverse<GetLowerBoundHelper, ExtentExpr> {
+template <typename RESULT, bool LBOUND_SEMANTICS>
+class GetLowerBoundHelper
+    : public Traverse<GetLowerBoundHelper<RESULT, LBOUND_SEMANTICS>, RESULT> {
 public:
-  using Result = ExtentExpr;
-  using Base = Traverse<GetLowerBoundHelper, ExtentExpr>;
+  using Result = RESULT;
+  using Base = Traverse<GetLowerBoundHelper, RESULT>;
   using Base::operator();
-  explicit GetLowerBoundHelper(int d) : Base{*this}, dimension_{d} {}
-  static ExtentExpr Default() { return ExtentExpr{1}; }
-  static ExtentExpr Combine(Result &&, Result &&) { return Default(); }
-  ExtentExpr operator()(const Symbol &);
-  ExtentExpr operator()(const Component &);
+  explicit GetLowerBoundHelper(int d, FoldingContext *context)
+      : Base{*this}, dimension_{d}, context_{context} {}
+  static Result Default() { return Result{1}; }
+  static Result Combine(Result &&, Result &&) {
+    // Operator results and array references always have lower bounds == 1
+    return Result{1};
+  }
+
+  Result operator()(const Symbol &symbol0) const {
+    const Symbol &symbol{symbol0.GetUltimate()};
+    if (const auto *details{
+            symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
+      int rank{details->shape().Rank()};
+      if (dimension_ < rank) {
+        const semantics::ShapeSpec &shapeSpec{details->shape()[dimension_]};
+        if (shapeSpec.lbound().isExplicit()) {
+          if (const auto &lbound{shapeSpec.lbound().GetExplicit()}) {
+            if constexpr (LBOUND_SEMANTICS) {
+              bool ok{false};
+              auto lbValue{ToInt64(*lbound)};
+              if (dimension_ == rank - 1 && details->IsAssumedSize()) {
+                // last dimension of assumed-size dummy array: don't worry
+                // about handling an empty dimension
+                ok = IsScopeInvariantExpr(*lbound);
+              } else if (lbValue.value_or(0) == 1) {
+                // Lower bound is 1, regardless of extent
+                ok = true;
+              } else if (const auto &ubound{shapeSpec.ubound().GetExplicit()}) {
+                // If we can't prove that the dimension is nonempty,
+                // we must be conservative.
+                // TODO: simple symbolic math in expression rewriting to
+                // cope with cases like A(J:J)
+                if (context_) {
+                  auto extent{ToInt64(Fold(*context_,
+                      ExtentExpr{*ubound} - ExtentExpr{*lbound} +
+                          ExtentExpr{1}))};
+                  ok = extent && *extent > 0;
+                } else {
+                  auto ubValue{ToInt64(*ubound)};
+                  ok = lbValue && ubValue && *lbValue <= *ubValue;
+                }
+              }
+              return ok ? *lbound : Result{};
+            } else {
+              return *lbound;
+            }
+          } else {
+            return Result{1};
+          }
+        }
+        if (IsDescriptor(symbol)) {
+          return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
+              DescriptorInquiry::Field::LowerBound, dimension_}};
+        }
+      }
+    } else if (const auto *assoc{
+                   symbol.detailsIf<semantics::AssocEntityDetails>()}) {
+      if (assoc->rank()) { // SELECT RANK case
+        const Symbol &resolved{ResolveAssociations(symbol)};
+        if (IsDescriptor(resolved) && dimension_ < *assoc->rank()) {
+          return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
+              DescriptorInquiry::Field::LowerBound, dimension_}};
+        }
+      } else {
+        return (*this)(assoc->expr());
+      }
+    }
+    if constexpr (LBOUND_SEMANTICS) {
+      return Result{};
+    } else {
+      return Result{1};
+    }
+  }
+
+  Result operator()(const Component &component) const {
+    if (component.base().Rank() == 0) {
+      return (*this)(component.GetLastSymbol());
+    }
+    return Result{1};
+  }
 
 private:
   int dimension_;
+  FoldingContext *context_{nullptr};
 };
 
-auto GetLowerBoundHelper::operator()(const Symbol &symbol0) -> Result {
-  const Symbol &symbol{symbol0.GetUltimate()};
-  if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    int j{0};
-    for (const auto &shapeSpec : details->shape()) {
-      if (j++ == dimension_) {
-        const auto &bound{shapeSpec.lbound().GetExplicit()};
-        if (bound && IsScopeInvariantExpr(*bound)) {
-          return *bound;
-        } else if (IsDescriptor(symbol)) {
-          return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
-              DescriptorInquiry::Field::LowerBound, dimension_}};
-        } else {
-          break;
-        }
-      }
-    }
-  } else if (const auto *assoc{
-                 symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (assoc->rank()) { // SELECT RANK case
-      const Symbol &resolved{ResolveAssociations(symbol)};
-      if (IsDescriptor(resolved) && dimension_ < *assoc->rank()) {
-        return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
-            DescriptorInquiry::Field::LowerBound, dimension_}};
-      }
-    } else {
-      return (*this)(assoc->expr());
-    }
-  }
-  return Default();
+ExtentExpr GetRawLowerBound(const NamedEntity &base, int dimension) {
+  return GetLowerBoundHelper<ExtentExpr, false>{dimension, nullptr}(base);
 }
 
-auto GetLowerBoundHelper::operator()(const Component &component) -> Result {
-  if (component.base().Rank() == 0) {
-    const Symbol &symbol{component.GetLastSymbol().GetUltimate()};
-    if (const auto *details{
-            symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-      int j{0};
-      for (const auto &shapeSpec : details->shape()) {
-        if (j++ == dimension_) {
-          const auto &bound{shapeSpec.lbound().GetExplicit()};
-          if (bound && IsScopeInvariantExpr(*bound)) {
-            return *bound;
-          } else if (IsDescriptor(symbol)) {
-            return ExtentExpr{
-                DescriptorInquiry{NamedEntity{common::Clone(component)},
-                    DescriptorInquiry::Field::LowerBound, dimension_}};
-          } else {
-            break;
-          }
-        }
-      }
-    }
-  }
-  return Default();
-}
-
-ExtentExpr GetLowerBound(const NamedEntity &base, int dimension) {
-  return GetLowerBoundHelper{dimension}(base);
-}
-
-ExtentExpr GetLowerBound(
+ExtentExpr GetRawLowerBound(
     FoldingContext &context, const NamedEntity &base, int dimension) {
-  return Fold(context, GetLowerBound(base, dimension));
+  return Fold(context,
+      GetLowerBoundHelper<ExtentExpr, false>{dimension, &context}(base));
 }
 
-Shape GetLowerBounds(const NamedEntity &base) {
+MaybeExtentExpr GetLBOUND(const NamedEntity &base, int dimension) {
+  return GetLowerBoundHelper<MaybeExtentExpr, true>{dimension, nullptr}(base);
+}
+
+MaybeExtentExpr GetLBOUND(
+    FoldingContext &context, const NamedEntity &base, int dimension) {
+  return Fold(context,
+      GetLowerBoundHelper<MaybeExtentExpr, true>{dimension, &context}(base));
+}
+
+Shape GetRawLowerBounds(const NamedEntity &base) {
   Shape result;
   int rank{base.Rank()};
   for (int dim{0}; dim < rank; ++dim) {
-    result.emplace_back(GetLowerBound(base, dim));
+    result.emplace_back(GetRawLowerBound(base, dim));
   }
   return result;
 }
 
-Shape GetLowerBounds(FoldingContext &context, const NamedEntity &base) {
+Shape GetRawLowerBounds(FoldingContext &context, const NamedEntity &base) {
   Shape result;
   int rank{base.Rank()};
   for (int dim{0}; dim < rank; ++dim) {
-    result.emplace_back(GetLowerBound(context, base, dim));
+    result.emplace_back(GetRawLowerBound(context, base, dim));
+  }
+  return result;
+}
+
+Shape GetLBOUNDs(const NamedEntity &base) {
+  Shape result;
+  int rank{base.Rank()};
+  for (int dim{0}; dim < rank; ++dim) {
+    result.emplace_back(GetLBOUND(base, dim));
+  }
+  return result;
+}
+
+Shape GetLBOUNDs(FoldingContext &context, const NamedEntity &base) {
+  Shape result;
+  int rank{base.Rank()};
+  for (int dim{0}; dim < rank; ++dim) {
+    result.emplace_back(GetLBOUND(context, base, dim));
   }
   return result;
 }
@@ -420,7 +470,7 @@ MaybeExtentExpr GetExtent(
             }
             MaybeExtentExpr lower{triplet.lower()};
             if (!lower) {
-              lower = GetLowerBound(base, dimension);
+              lower = GetLBOUND(base, dimension);
             }
             return CountTrips(std::move(lower), std::move(upper),
                 MaybeExtentExpr{triplet.stride()});
@@ -472,9 +522,8 @@ MaybeExtentExpr GetUpperBound(const NamedEntity &base, int dimension) {
           return *bound;
         } else if (details->IsAssumedSize() && dimension + 1 == symbol.Rank()) {
           break;
-        } else {
-          return ComputeUpperBound(
-              GetLowerBound(base, dimension), GetExtent(base, dimension));
+        } else if (auto lb{GetLBOUND(base, dimension)}) {
+          return ComputeUpperBound(std::move(*lb), GetExtent(base, dimension));
         }
       }
     }
@@ -482,8 +531,10 @@ MaybeExtentExpr GetUpperBound(const NamedEntity &base, int dimension) {
                  symbol.detailsIf<semantics::AssocEntityDetails>()}) {
     if (auto shape{GetShape(assoc->expr())}) {
       if (dimension < static_cast<int>(shape->size())) {
-        return ComputeUpperBound(
-            GetLowerBound(base, dimension), std::move(shape->at(dimension)));
+        if (auto lb{GetLBOUND(base, dimension)}) {
+          return ComputeUpperBound(
+              std::move(*lb), std::move(shape->at(dimension)));
+        }
       }
     }
   }
@@ -506,9 +557,11 @@ Shape GetUpperBounds(const NamedEntity &base) {
         result.push_back(*bound);
       } else if (details->IsAssumedSize() && dim + 1 == base.Rank()) {
         result.emplace_back(std::nullopt); // UBOUND folding replaces with -1
-      } else {
+      } else if (auto lb{GetLBOUND(base, dim)}) {
         result.emplace_back(
-            ComputeUpperBound(GetLowerBound(base, dim), GetExtent(base, dim)));
+            ComputeUpperBound(std::move(*lb), GetExtent(base, dim)));
+      } else {
+        result.emplace_back(); // unknown
       }
       ++dim;
     }

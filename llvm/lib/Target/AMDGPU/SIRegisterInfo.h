@@ -379,6 +379,11 @@ public:
   // the subtarget.
   bool isProperlyAlignedRC(const TargetRegisterClass &RC) const;
 
+  // Given \p RC returns corresponding aligned register class if required
+  // by the subtarget.
+  const TargetRegisterClass *
+  getProperlyAlignedRC(const TargetRegisterClass *RC) const;
+
   /// Return all SGPR128 which satisfy the waves per execution unit requirement
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR128(const MachineFunction &MF) const;

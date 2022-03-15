@@ -1,10 +1,7 @@
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false -analyze < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -analyze < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true -analyze < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
-; RUN: opt %loadPolly -basic-aa -polly-detect -polly-process-unprofitable=false \
-; RUN:    -polly-allow-nonaffine -polly-allow-nonaffine-branches \
-; RUN:    -polly-allow-nonaffine-loops=true -analyze < %s \
-; RUN:    | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=false                                                          -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=REJECTNONAFFINELOOPS
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true                                                           -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPS
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine                                   -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=ALLOWNONAFFINELOOPSANDACCESSES
+; RUN: opt %loadPolly -basic-aa -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops=true  -polly-allow-nonaffine -polly-process-unprofitable=false -polly-print-detect -disable-output < %s | FileCheck %s --check-prefix=PROFIT
 ;
 ; Here we have a non-affine loop but also a non-affine access which should
 ; be rejected as long as -polly-allow-nonaffine isn't given.

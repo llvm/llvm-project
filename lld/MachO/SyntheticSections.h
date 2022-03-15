@@ -192,13 +192,13 @@ public:
   bool isNeeded() const override { return !bindingsMap.empty(); }
   void writeTo(uint8_t *buf) const override;
 
-  void addEntry(const DylibSymbol *dysym, const InputSection *isec,
-                uint64_t offset, int64_t addend = 0) {
+  void addEntry(const Symbol *dysym, const InputSection *isec, uint64_t offset,
+                int64_t addend = 0) {
     bindingsMap[dysym].emplace_back(addend, Location(isec, offset));
   }
 
 private:
-  BindingsMap<const DylibSymbol *> bindingsMap;
+  BindingsMap<const Symbol *> bindingsMap;
   SmallVector<char, 128> contents;
 };
 
@@ -331,13 +331,13 @@ public:
   void writeTo(uint8_t *buf) const override;
   // Note that every entry here will by referenced by a corresponding entry in
   // the StubHelperSection.
-  void addEntry(DylibSymbol *dysym);
-  const llvm::SetVector<DylibSymbol *> &getEntries() const { return entries; }
+  void addEntry(Symbol *dysym);
+  const llvm::SetVector<Symbol *> &getEntries() const { return entries; }
 
 private:
-  uint32_t encode(const DylibSymbol &);
+  uint32_t encode(const Symbol &);
 
-  llvm::SetVector<DylibSymbol *> entries;
+  llvm::SetVector<Symbol *> entries;
   SmallVector<char, 128> contents;
   llvm::raw_svector_ostream os{contents};
 };

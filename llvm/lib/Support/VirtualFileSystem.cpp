@@ -1381,14 +1381,14 @@ std::vector<StringRef> RedirectingFileSystem::getRoots() const {
   return R;
 }
 
-void RedirectingFileSystem::dump(raw_ostream &OS) const {
+void RedirectingFileSystem::print(raw_ostream &OS) const {
   for (const auto &Root : Roots)
-    dumpEntry(OS, Root.get());
+    printEntry(OS, Root.get());
 }
 
-void RedirectingFileSystem::dumpEntry(raw_ostream &OS,
-                                      RedirectingFileSystem::Entry *E,
-                                      int NumSpaces) const {
+void RedirectingFileSystem::printEntry(raw_ostream &OS,
+                                       RedirectingFileSystem::Entry *E,
+                                       int NumSpaces) const {
   StringRef Name = E->getName();
   for (int i = 0, e = NumSpaces; i < e; ++i)
     OS << " ";
@@ -1401,12 +1401,12 @@ void RedirectingFileSystem::dumpEntry(raw_ostream &OS,
 
     for (std::unique_ptr<Entry> &SubEntry :
          llvm::make_range(DE->contents_begin(), DE->contents_end()))
-      dumpEntry(OS, SubEntry.get(), NumSpaces + 2);
+      printEntry(OS, SubEntry.get(), NumSpaces + 2);
   }
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void RedirectingFileSystem::dump() const { dump(dbgs()); }
+void RedirectingFileSystem::dump() const { print(dbgs()); }
 #endif
 
 /// A helper class to hold the common YAML parsing state.

@@ -951,9 +951,11 @@ cc_binary(
 td_library(
     name = "OpBaseTdFiles",
     srcs = [
+        "include/mlir/IR/AttrTypeBase.td",
         "include/mlir/IR/EnumAttr.td",
         "include/mlir/IR/OpAsmInterface.td",
         "include/mlir/IR/OpBase.td",
+        "include/mlir/IR/PatternBase.td",
         "include/mlir/IR/RegionKindInterface.td",
         "include/mlir/IR/SymbolInterfaces.td",
         "include/mlir/IR/TensorEncoding.td",
@@ -6821,22 +6823,6 @@ gentbl_cc_library(
     ],
 )
 
-cc_library(
-    name = "AffineBufferizableOpInterfaceImpl",
-    srcs = [
-        "lib/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h",
-    ],
-    includes = ["include"],
-    deps = [
-        ":Affine",
-        ":BufferizationDialect",
-        "//llvm:Support",
-    ],
-)
-
 td_library(
     name = "LinalgDocTdFiles",
     srcs = ["include/mlir/Dialect/Linalg/IR/LinalgDoc.td"],
@@ -7038,7 +7024,6 @@ cc_library(
     deps = [
         ":Affine",
         ":AffineAnalysis",
-        ":AffineBufferizableOpInterfaceImpl",
         ":AffineUtils",
         ":Analysis",
         ":ArithmeticDialect",

@@ -1281,7 +1281,7 @@ public:
     return OS.str();
   }
 
-  StringRef getFileName() { return FileName; }
+  StringRef getFileName() const { return FileName; }
 
   Error takeError() { return Error(std::move(Err)); }
 

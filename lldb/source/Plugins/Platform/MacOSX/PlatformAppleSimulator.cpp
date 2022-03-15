@@ -266,7 +266,8 @@ CoreSimulatorSupport::Device PlatformAppleSimulator::GetSimulatorDevice() {
 }
 #endif
 
-std::vector<ArchSpec> PlatformAppleSimulator::GetSupportedArchitectures() {
+std::vector<ArchSpec> PlatformAppleSimulator::GetSupportedArchitectures(
+    const ArchSpec &process_host_arch) {
   std::vector<ArchSpec> result(m_supported_triples.size());
   llvm::transform(m_supported_triples, result.begin(),
                   [](llvm::StringRef triple) { return ArchSpec(triple); });
@@ -382,7 +383,7 @@ Status PlatformAppleSimulator::ResolveExecutable(
     StreamString arch_names;
     llvm::ListSeparator LS;
     ArchSpec platform_arch;
-    for (const ArchSpec &arch : GetSupportedArchitectures()) {
+    for (const ArchSpec &arch : GetSupportedArchitectures({})) {
       resolved_module_spec.GetArchitecture() = arch;
 
       // Only match x86 with x86 and x86_64 with x86_64...

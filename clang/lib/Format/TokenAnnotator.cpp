@@ -1529,6 +1529,12 @@ private:
       if (Line.First->isOneOf(tok::kw_using, tok::kw_return))
         return false;
       if (Line.First->is(tok::kw_template)) {
+        assert(Current.Previous);
+        if (Current.Previous->is(tok::kw_operator)) {
+          // `template ... operator=` cannot be an expression.
+          return false;
+        }
+
         // `template` keyword can start a variable template.
         const FormatToken *Tok = Line.First->getNextNonComment();
         assert(Tok); // Current token is on the same line.

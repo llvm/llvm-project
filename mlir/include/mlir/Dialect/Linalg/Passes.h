@@ -19,7 +19,7 @@
 
 namespace mlir {
 namespace bufferization {
-struct AnalysisBufferizationOptions;
+struct OneShotBufferizationOptions;
 } // namespace bufferization
 
 std::unique_ptr<Pass> createConvertElementwiseToLinalgPass();
@@ -64,7 +64,7 @@ std::unique_ptr<OperationPass<FuncOp>> createConvertLinalgToAffineLoopsPass();
 /// with the 'inplaceable' attribute.
 std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass();
 std::unique_ptr<Pass> createLinalgComprehensiveModuleBufferizePass(
-    const bufferization::AnalysisBufferizationOptions &options);
+    const bufferization::OneShotBufferizationOptions &options);
 
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.

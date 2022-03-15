@@ -190,6 +190,19 @@ Value *OutlinableRegion::findCorrespondingValueIn(const OutlinableRegion &Other,
   return FoundValueOpt.getValueOr(nullptr);
 }
 
+BasicBlock *
+OutlinableRegion::findCorrespondingBlockIn(const OutlinableRegion &Other,
+                                           BasicBlock *BB) {
+  Instruction *FirstNonPHI = BB->getFirstNonPHI();
+  assert(FirstNonPHI && "block is empty?");
+  Value *CorrespondingVal = findCorrespondingValueIn(Other, FirstNonPHI);
+  if (!CorrespondingVal)
+    return nullptr;
+  BasicBlock *CorrespondingBlock =
+      cast<Instruction>(CorrespondingVal)->getParent();
+  return CorrespondingBlock;
+}
+
 /// Rewrite the BranchInsts in the incoming blocks to \p PHIBlock that are found
 /// in \p Included to branch to BasicBlock \p Replace if they currently branch
 /// to the BasicBlock \p Find.  This is used to fix up the incoming basic blocks
@@ -1095,25 +1108,38 @@ static hash_code encodePHINodeData(PHINodeData &PND) {
 ///
 /// \param Region - The region that \p PN is an output for.
 /// \param PN - The PHINode we are analyzing.
+/// \param Blocks - The blocks for the region we are analyzing.
 /// \param AggArgIdx - The argument \p PN will be stored into.
 /// \returns An optional holding the assigned canonical number, or None if
 /// there is some attribute of the PHINode blocking it from being used.
 static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
-                                           PHINode *PN, unsigned AggArgIdx) {
+                                           PHINode *PN,
+                                           DenseSet<BasicBlock *> &Blocks,
+                                           unsigned AggArgIdx) {
   OutlinableGroup &Group = *Region.Parent;
   IRSimilarityCandidate &Cand = *Region.Candidate;
   BasicBlock *PHIBB = PN->getParent();
   CanonList PHIGVNs;
-  for (Value *Incoming : PN->incoming_values()) {
-    // If we cannot find a GVN, this means that the input to the PHINode is
-    // not included in the region we are trying to analyze, meaning, that if
-    // it was outlined, we would be adding an extra input.  We ignore this
-    // case for now, and so ignore the region.
+  Value *Incoming;
+  BasicBlock *IncomingBlock;
+  for (unsigned Idx = 0, EIdx = PN->getNumIncomingValues(); Idx < EIdx; Idx++) {
+    Incoming = PN->getIncomingValue(Idx);
+    IncomingBlock = PN->getIncomingBlock(Idx);
+    // If we cannot find a GVN, and the incoming block is included in the region
+    // this means that the input to the PHINode is not included in the region we
+    // are trying to analyze, meaning, that if it was outlined, we would be
+    // adding an extra input.  We ignore this case for now, and so ignore the
+    // region.
     Optional<unsigned> OGVN = Cand.getGVN(Incoming);
-    if (!OGVN.hasValue()) {
+    if (!OGVN.hasValue() && (Blocks.find(IncomingBlock) != Blocks.end())) {
       Region.IgnoreRegion = true;
       return None;
     }
+
+    // If the incoming block isn't in the region, we don't have to worry about
+    // this incoming value.
+    if (Blocks.find(IncomingBlock) == Blocks.end())
+      continue;
 
     // Collect the canonical numbers of the values in the PHINode.
     unsigned GVN = OGVN.getValue();
@@ -1259,9 +1285,9 @@ findExtractedOutputToOverallOutputMapping(OutlinableRegion &Region,
 
       // If two PHINodes have the same canonical values, but different aggregate
       // argument locations, then they will have distinct Canonical Values.
-      GVN = getGVNForPHINode(Region, PN, AggArgIdx);
+      GVN = getGVNForPHINode(Region, PN, BlocksInRegion, AggArgIdx);
       if (!GVN.hasValue())
-        return; 
+        return;
     } else {
       // If we do not have a PHINode we use the global value numbering for the
       // output value, to find the canonical number to add to the set of stored
@@ -1517,17 +1543,18 @@ getPassedArgumentAndAdjustArgumentLocation(const Argument *A,
 /// \param OutputMappings [in] - The mapping of output values from outlined
 /// region to their original values.
 /// \param CanonNums [out] - The canonical numbering for the incoming values to
-/// \p PN.
+/// \p PN paired with their incoming block.
 /// \param ReplacedWithOutlinedCall - A flag to use the extracted function call
 /// of \p Region rather than the overall function's call.
-static void
-findCanonNumsForPHI(PHINode *PN, OutlinableRegion &Region,
-                    const DenseMap<Value *, Value *> &OutputMappings,
-                    DenseSet<unsigned> &CanonNums,
-                    bool ReplacedWithOutlinedCall = true) {
+static void findCanonNumsForPHI(
+    PHINode *PN, OutlinableRegion &Region,
+    const DenseMap<Value *, Value *> &OutputMappings,
+    SmallVector<std::pair<unsigned, BasicBlock *>> &CanonNums,
+    bool ReplacedWithOutlinedCall = true) {
   // Iterate over the incoming values.
   for (unsigned Idx = 0, EIdx = PN->getNumIncomingValues(); Idx < EIdx; Idx++) {
     Value *IVal = PN->getIncomingValue(Idx);
+    BasicBlock *IBlock = PN->getIncomingBlock(Idx);
     // If we have an argument as incoming value, we need to grab the passed
     // value from the call itself.
     if (Argument *A = dyn_cast<Argument>(IVal)) {
@@ -1545,7 +1572,7 @@ findCanonNumsForPHI(PHINode *PN, OutlinableRegion &Region,
     assert(GVN.hasValue() && "No GVN for incoming value");
     Optional<unsigned> CanonNum = Region.Candidate->getCanonicalNum(*GVN);
     assert(CanonNum.hasValue() && "No Canonical Number for GVN");
-    CanonNums.insert(*CanonNum);
+    CanonNums.push_back(std::make_pair(*CanonNum, IBlock));
   }
 }
 
@@ -1559,14 +1586,21 @@ findCanonNumsForPHI(PHINode *PN, OutlinableRegion &Region,
 /// \p PN in.
 /// \param OutputMappings [in] - The mapping of output values from outlined
 /// region to their original values.
+/// \param UsedPhis [in, out] - The PHINodes in the block that have already been
+/// matched.
 /// \return the newly found or created PHINode in \p OverallPhiBlock.
 static PHINode*
 findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
                        BasicBlock *OverallPhiBlock,
-                       const DenseMap<Value *, Value *> &OutputMappings) {
+                       const DenseMap<Value *, Value *> &OutputMappings,
+                       DenseSet<PHINode *> &UsedPHIs) {
   OutlinableGroup &Group = *Region.Parent;
   
-  DenseSet<unsigned> PNCanonNums;
+  
+  // A list of the canonical numbering assigned to each incoming value, paired
+  // with the incoming block for the PHINode passed into this function.
+  SmallVector<std::pair<unsigned, BasicBlock *>> PNCanonNums;
+
   // We have to use the extracted function since we have merged this region into
   // the overall function yet.  We make sure to reassign the argument numbering
   // since it is possible that the argument ordering is different between the
@@ -1575,18 +1609,61 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
                       /* ReplacedWithOutlinedCall = */ false);
 
   OutlinableRegion *FirstRegion = Group.Regions[0];
-  DenseSet<unsigned> CurrentCanonNums;
+
+  // A list of the canonical numbering assigned to each incoming value, paired
+  // with the incoming block for the PHINode that we are currently comparing
+  // the passed PHINode to.
+  SmallVector<std::pair<unsigned, BasicBlock *>> CurrentCanonNums;
+
   // Find the Canonical Numbering for each PHINode, if it matches, we replace
   // the uses of the PHINode we are searching for, with the found PHINode.
   for (PHINode &CurrPN : OverallPhiBlock->phis()) {
+    // If this PHINode has already been matched to another PHINode to be merged,
+    // we skip it.
+    if (UsedPHIs.find(&CurrPN) != UsedPHIs.end())
+      continue;
+
     CurrentCanonNums.clear();
     findCanonNumsForPHI(&CurrPN, *FirstRegion, OutputMappings, CurrentCanonNums,
                         /* ReplacedWithOutlinedCall = */ true);
 
-    if (all_of(PNCanonNums, [&CurrentCanonNums](unsigned CanonNum) {
-          return CurrentCanonNums.contains(CanonNum);
-        }))
+    // If the list of incoming values is not the same length, then they cannot
+    // match since there is not an analogue for each incoming value.
+    if (PNCanonNums.size() != CurrentCanonNums.size())
+      continue;
+
+    bool FoundMatch = true;
+
+    // We compare the canonical value for each incoming value in the passed
+    // in PHINode to one already present in the outlined region.  If the
+    // incoming values do not match, then the PHINodes do not match.
+
+    // We also check to make sure that the incoming block matches as well by
+    // finding the corresponding incoming block in the combined outlined region
+    // for the current outlined region.
+    for (unsigned Idx = 0, Edx = PNCanonNums.size(); Idx < Edx; ++Idx) {
+      std::pair<unsigned, BasicBlock *> ToCompareTo = CurrentCanonNums[Idx];
+      std::pair<unsigned, BasicBlock *> ToAdd = PNCanonNums[Idx];
+      if (ToCompareTo.first != ToAdd.first) {
+        FoundMatch = false;
+        break;
+      }
+
+      BasicBlock *CorrespondingBlock =
+          Region.findCorrespondingBlockIn(*FirstRegion, ToAdd.second);
+      assert(CorrespondingBlock && "Found block is nullptr");
+      if (CorrespondingBlock != ToCompareTo.second) {
+        FoundMatch = false;
+        break;
+      }
+    }
+
+    // If all incoming values and branches matched, then we can merge
+    // into the found PHINode.
+    if (FoundMatch) {
+      UsedPHIs.insert(&CurrPN);
       return &CurrPN;
+    }
   }
 
   // If we've made it here, it means we weren't able to replace the PHINode, so
@@ -1600,12 +1677,8 @@ findOrCreatePHIInBlock(PHINode &PN, OutlinableRegion &Region,
 
     // Find corresponding basic block in the overall function for the incoming
     // block.
-    Instruction *FirstNonPHI = IncomingBlock->getFirstNonPHI();
-    assert(FirstNonPHI && "Incoming block is empty?");
-    Value *CorrespondingVal =
-        Region.findCorrespondingValueIn(*FirstRegion, FirstNonPHI);
-    assert(CorrespondingVal && "Value is nullptr?");
-    BasicBlock *BlockToUse = cast<Instruction>(CorrespondingVal)->getParent();
+    BasicBlock *BlockToUse =
+        Region.findCorrespondingBlockIn(*FirstRegion, IncomingBlock);
     NewPN->setIncomingBlock(Idx, BlockToUse);
 
     // If we have an argument we make sure we replace using the argument from
@@ -1646,6 +1719,7 @@ replaceArgumentUses(OutlinableRegion &Region,
   if (FirstFunction)
     DominatingFunction = Group.OutlinedFunction;
   DominatorTree DT(*DominatingFunction);
+  DenseSet<PHINode *> UsedPHIs;
 
   for (unsigned ArgIdx = 0; ArgIdx < Region.ExtractedFunction->arg_size();
        ArgIdx++) {
@@ -1745,8 +1819,8 @@ replaceArgumentUses(OutlinableRegion &Region,
       // For our PHINode, we find the combined canonical numbering, and
       // attempt to find a matching PHINode in the overall PHIBlock.  If we
       // cannot, we copy the PHINode and move it into this new block.
-      PHINode *NewPN =
-          findOrCreatePHIInBlock(*PN, Region, OverallPhiBlock, OutputMappings);
+      PHINode *NewPN = findOrCreatePHIInBlock(*PN, Region, OverallPhiBlock,
+                                              OutputMappings, UsedPHIs);
       NewI->setOperand(0, NewPN);
     }
 

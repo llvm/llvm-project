@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -polly-invariant-load-hoisting -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -polly-invariant-load-hoisting -disable-output< %s | FileCheck %s
 
 ;CHECK:     Function: test_init_chpl
 ;CHECK-NEXT:     Region: %bb1---%bb16

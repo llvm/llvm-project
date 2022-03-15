@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-mse -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-mse -pass-remarks-analysis="polly-mse" -analyze < %s 2>&1| FileCheck %s --check-prefix=MSE
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-mse -polly-print-scops -pass-remarks-analysis="polly-mse" -disable-output < %s 2>&1 | FileCheck %s --check-prefix=MSE
 ;
 ; Verify that the accesses are correctly expanded for MemoryKind::Array and MemoryKind::PHI.
 ; tmp_06_phi is not expanded because it need copy in.

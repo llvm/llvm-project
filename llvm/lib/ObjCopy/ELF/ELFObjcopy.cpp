@@ -509,12 +509,8 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
     if (Error Err = replaceDebugSections(
             Obj, isCompressable,
             [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
-              Expected<CompressedSection> NewSection =
-                  CompressedSection::create(*S, Config.CompressionType);
-              if (!NewSection)
-                return NewSection.takeError();
-
-              return &Obj.addSection<CompressedSection>(std::move(*NewSection));
+              return &Obj.addSection<CompressedSection>(
+                  CompressedSection(*S, Config.CompressionType));
             }))
       return Err;
   } else if (Config.DecompressDebugSections) {

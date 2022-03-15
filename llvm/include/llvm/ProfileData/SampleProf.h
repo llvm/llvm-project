@@ -55,7 +55,6 @@ enum class sampleprof_error {
   not_implemented,
   counter_overflow,
   ostream_seek_unsupported,
-  compress_failed,
   uncompress_failed,
   zlib_unavailable,
   hash_mismatch

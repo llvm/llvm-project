@@ -30,6 +30,7 @@ namespace elf {
 
 class InputFile;
 class InputSectionBase;
+class Symbol;
 
 enum ELFKind : uint8_t {
   ELFNoneKind,
@@ -348,6 +349,24 @@ struct Configuration {
 
 // The only instance of Configuration struct.
 extern std::unique_ptr<Configuration> config;
+
+struct DuplicateSymbol {
+  const Symbol *sym;
+  const InputFile *file;
+  InputSectionBase *section;
+  uint64_t value;
+};
+
+struct Ctx {
+  // Duplicate symbol candidates.
+  SmallVector<DuplicateSymbol, 0> duplicates;
+  // Symbols in a non-prevailing COMDAT group which should be changed to an
+  // Undefined.
+  SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
+};
+
+// The only instance of Ctx struct.
+extern std::unique_ptr<Ctx> ctx;
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and
 // VER_NDX_GLOBAL. This helper returns other elements.

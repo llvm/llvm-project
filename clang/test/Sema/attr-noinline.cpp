@@ -13,7 +13,7 @@ void foo() {
   int x;
   [[clang::noinline]] x = 0; // expected-warning {{'noinline' attribute is ignored because there exists no call expression inside the statement}}
   [[clang::noinline]] { asm("nop"); } // expected-warning {{'noinline' attribute is ignored because there exists no call expression inside the statement}}
-  [[clang::noinline]] label: x = 1; // expected-error {{'noinline' attribute only applies to functions and statements}}
+  [[clang::noinline]] label: x = 1; // expected-warning {{'noinline' attribute only applies to functions and statements}}
 
 
   [[clang::noinline]] always_inline_fn(); // expected-warning {{statement attribute 'noinline' has higher precedence than function attribute 'always_inline'}}
@@ -24,4 +24,4 @@ void foo() {
   __attribute__((noinline)) bar(); // expected-warning {{attribute is ignored on this statement as it only applies to functions; use '[[clang::noinline]]' on statements}}
 }
 
-[[clang::noinline]] static int i = bar(); // expected-error {{'noinline' attribute only applies to functions and statements}}
+[[clang::noinline]] static int i = bar(); // expected-warning {{'noinline' attribute only applies to functions and statements}}

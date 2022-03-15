@@ -5,13 +5,15 @@
 ; Note that this test relies on an unsafe feature of GlobalsModRef. While this
 ; test is correct and safe, GMR's technique for handling this isn't generally.
 
+target datalayout = "p:32:32:32"
+
 @G = internal global i32* null		; <i32**> [#uses=3]
 
 declare noalias i8* @malloc(i32)
 define void @malloc_init() {
 ; CHECK-LABEL: @malloc_init(
 ; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i32 4)
-; CHECK-NEXT:    store i8* [[A]], i8** bitcast (i32** @G to i8**), align 8
+; CHECK-NEXT:    store i8* [[A]], i8** bitcast (i32** @G to i8**), align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = call i8* @malloc(i32 4)
@@ -40,7 +42,7 @@ declare noalias i8* @calloc(i32, i32)
 define void @calloc_init() {
 ; CHECK-LABEL: @calloc_init(
 ; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) i8* @calloc(i32 4, i32 1)
-; CHECK-NEXT:    store i8* [[A]], i8** bitcast (i32** @G2 to i8**), align 8
+; CHECK-NEXT:    store i8* [[A]], i8** bitcast (i32** @G2 to i8**), align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = call i8* @calloc(i32 4, i32 1)
@@ -69,7 +71,7 @@ declare noalias i8* @my_alloc(i32)
 define void @my_alloc_init() {
 ; CHECK-LABEL: @my_alloc_init(
 ; CHECK-NEXT:    [[A:%.*]] = call i8* @my_alloc(i32 4)
-; CHECK-NEXT:    store i8* [[A]], i8** bitcast (i32** @G3 to i8**), align 8
+; CHECK-NEXT:    store i8* [[A]], i8** bitcast (i32** @G3 to i8**), align 4
 ; CHECK-NEXT:    ret void
 ;
   %a = call i8* @my_alloc(i32 4)

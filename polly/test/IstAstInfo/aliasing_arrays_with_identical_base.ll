@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze < %s \
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s \
 ; RUN:   -polly-invariant-load-hoisting \
 ; RUN:   | FileCheck %s
 

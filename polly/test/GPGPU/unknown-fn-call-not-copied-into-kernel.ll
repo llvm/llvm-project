@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s --check-prefix=SCOP
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=SCOP
 ; RUN: opt %loadPolly -S -polly-codegen-ppcg < %s | FileCheck %s
 
 ; Check that we do not create a kernel if there is an

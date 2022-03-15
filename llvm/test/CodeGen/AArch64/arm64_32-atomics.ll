@@ -80,7 +80,7 @@ define i8 @test_ldxr_8(i8* %addr) {
 ; CHECK-LABEL: test_ldxr_8:
 ; CHECK: ldxrb w0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldxr.p0i8(i8* %addr)
+  %val = call i64 @llvm.aarch64.ldxr.p0i8(i8* elementtype(i8) %addr)
   %val8 = trunc i64 %val to i8
   ret i8 %val8
 }
@@ -89,7 +89,7 @@ define i16 @test_ldxr_16(i16* %addr) {
 ; CHECK-LABEL: test_ldxr_16:
 ; CHECK: ldxrh w0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldxr.p0i16(i16* %addr)
+  %val = call i64 @llvm.aarch64.ldxr.p0i16(i16* elementtype(i16) %addr)
   %val16 = trunc i64 %val to i16
   ret i16 %val16
 }
@@ -98,7 +98,7 @@ define i32 @test_ldxr_32(i32* %addr) {
 ; CHECK-LABEL: test_ldxr_32:
 ; CHECK: ldxr w0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldxr.p0i32(i32* %addr)
+  %val = call i64 @llvm.aarch64.ldxr.p0i32(i32* elementtype(i32) %addr)
   %val32 = trunc i64 %val to i32
   ret i32 %val32
 }
@@ -107,7 +107,7 @@ define i64 @test_ldxr_64(i64* %addr) {
 ; CHECK-LABEL: test_ldxr_64:
 ; CHECK: ldxr x0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldxr.p0i64(i64* %addr)
+  %val = call i64 @llvm.aarch64.ldxr.p0i64(i64* elementtype(i64) %addr)
   ret i64 %val
 }
 
@@ -120,7 +120,7 @@ define i8 @test_ldaxr_8(i8* %addr) {
 ; CHECK-LABEL: test_ldaxr_8:
 ; CHECK: ldaxrb w0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldaxr.p0i8(i8* %addr)
+  %val = call i64 @llvm.aarch64.ldaxr.p0i8(i8* elementtype(i8) %addr)
   %val8 = trunc i64 %val to i8
   ret i8 %val8
 }
@@ -129,7 +129,7 @@ define i16 @test_ldaxr_16(i16* %addr) {
 ; CHECK-LABEL: test_ldaxr_16:
 ; CHECK: ldaxrh w0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldaxr.p0i16(i16* %addr)
+  %val = call i64 @llvm.aarch64.ldaxr.p0i16(i16* elementtype(i16) %addr)
   %val16 = trunc i64 %val to i16
   ret i16 %val16
 }
@@ -138,7 +138,7 @@ define i32 @test_ldaxr_32(i32* %addr) {
 ; CHECK-LABEL: test_ldaxr_32:
 ; CHECK: ldaxr w0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldaxr.p0i32(i32* %addr)
+  %val = call i64 @llvm.aarch64.ldaxr.p0i32(i32* elementtype(i32) %addr)
   %val32 = trunc i64 %val to i32
   ret i32 %val32
 }
@@ -147,7 +147,7 @@ define i64 @test_ldaxr_64(i64* %addr) {
 ; CHECK-LABEL: test_ldaxr_64:
 ; CHECK: ldaxr x0, [x0]
 
-  %val = call i64 @llvm.aarch64.ldaxr.p0i64(i64* %addr)
+  %val = call i64 @llvm.aarch64.ldaxr.p0i64(i64* elementtype(i64) %addr)
   ret i64 %val
 }
 
@@ -162,7 +162,7 @@ define i32 @test_stxr_8(i8* %addr, i8 %val) {
 ; CHECK: mov w0, [[TMP]]
 
   %extval = zext i8 %val to i64
-  %success = call i32 @llvm.aarch64.stxr.p0i8(i64 %extval, i8* %addr)
+  %success = call i32 @llvm.aarch64.stxr.p0i8(i64 %extval, i8* elementtype(i8) %addr)
   ret i32 %success
 }
 
@@ -172,7 +172,7 @@ define i32 @test_stxr_16(i16* %addr, i16 %val) {
 ; CHECK: mov w0, [[TMP]]
 
   %extval = zext i16 %val to i64
-  %success = call i32 @llvm.aarch64.stxr.p0i16(i64 %extval, i16* %addr)
+  %success = call i32 @llvm.aarch64.stxr.p0i16(i64 %extval, i16* elementtype(i16) %addr)
   ret i32 %success
 }
 
@@ -182,7 +182,7 @@ define i32 @test_stxr_32(i32* %addr, i32 %val) {
 ; CHECK: mov w0, [[TMP]]
 
   %extval = zext i32 %val to i64
-  %success = call i32 @llvm.aarch64.stxr.p0i32(i64 %extval, i32* %addr)
+  %success = call i32 @llvm.aarch64.stxr.p0i32(i64 %extval, i32* elementtype(i32) %addr)
   ret i32 %success
 }
 
@@ -191,7 +191,7 @@ define i32 @test_stxr_64(i64* %addr, i64 %val) {
 ; CHECK: stxr [[TMP:w[0-9]+]], x1, [x0]
 ; CHECK: mov w0, [[TMP]]
 
-  %success = call i32 @llvm.aarch64.stxr.p0i64(i64 %val, i64* %addr)
+  %success = call i32 @llvm.aarch64.stxr.p0i64(i64 %val, i64* elementtype(i64) %addr)
   ret i32 %success
 }
 
@@ -206,7 +206,7 @@ define i32 @test_stlxr_8(i8* %addr, i8 %val) {
 ; CHECK: mov w0, [[TMP]]
 
   %extval = zext i8 %val to i64
-  %success = call i32 @llvm.aarch64.stlxr.p0i8(i64 %extval, i8* %addr)
+  %success = call i32 @llvm.aarch64.stlxr.p0i8(i64 %extval, i8* elementtype(i8) %addr)
   ret i32 %success
 }
 
@@ -216,7 +216,7 @@ define i32 @test_stlxr_16(i16* %addr, i16 %val) {
 ; CHECK: mov w0, [[TMP]]
 
   %extval = zext i16 %val to i64
-  %success = call i32 @llvm.aarch64.stlxr.p0i16(i64 %extval, i16* %addr)
+  %success = call i32 @llvm.aarch64.stlxr.p0i16(i64 %extval, i16* elementtype(i16) %addr)
   ret i32 %success
 }
 
@@ -226,7 +226,7 @@ define i32 @test_stlxr_32(i32* %addr, i32 %val) {
 ; CHECK: mov w0, [[TMP]]
 
   %extval = zext i32 %val to i64
-  %success = call i32 @llvm.aarch64.stlxr.p0i32(i64 %extval, i32* %addr)
+  %success = call i32 @llvm.aarch64.stlxr.p0i32(i64 %extval, i32* elementtype(i32) %addr)
   ret i32 %success
 }
 
@@ -235,7 +235,7 @@ define i32 @test_stlxr_64(i64* %addr, i64 %val) {
 ; CHECK: stlxr [[TMP:w[0-9]+]], x1, [x0]
 ; CHECK: mov w0, [[TMP]]
 
-  %success = call i32 @llvm.aarch64.stlxr.p0i64(i64 %val, i64* %addr)
+  %success = call i32 @llvm.aarch64.stlxr.p0i64(i64 %val, i64* elementtype(i64) %addr)
   ret i32 %success
 }
 

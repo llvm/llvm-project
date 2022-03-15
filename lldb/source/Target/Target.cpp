@@ -287,6 +287,17 @@ void Target::Destroy() {
   m_suppress_stop_hooks = false;
 }
 
+llvm::StringRef Target::GetABIName() const {
+  lldb::ABISP abi_sp;
+  if (m_process_sp)
+    abi_sp = m_process_sp->GetABI();
+  if (!abi_sp)
+    abi_sp = ABI::FindPlugin(ProcessSP(), GetArchitecture());
+  if (abi_sp)
+      return abi_sp->GetPluginName();
+  return {};
+}
+
 BreakpointList &Target::GetBreakpointList(bool internal) {
   if (internal)
     return m_internal_breakpoint_list;
@@ -1470,10 +1481,10 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
     if (other.IsValid()) {
       auto platform_sp = GetPlatform();
       if (!platform_sp ||
-          !platform_sp->IsCompatibleArchitecture(other, false, nullptr)) {
+          !platform_sp->IsCompatibleArchitecture(other, {}, false, nullptr)) {
         ArchSpec platform_arch;
         auto arch_platform_sp =
-            Platform::GetPlatformForArchitecture(other, &platform_arch);
+            Platform::GetPlatformForArchitecture(other, {}, &platform_arch);
         if (arch_platform_sp) {
           SetPlatform(arch_platform_sp);
           if (platform_arch.IsValid())

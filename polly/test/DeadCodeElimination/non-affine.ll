@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine -polly-dce -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine -polly-dce -polly-print-ast -disable-output < %s | FileCheck %s
 ;
 ; CHECK: for (int c0 = 0; c0 <= 1023; c0 += 1)
 ;

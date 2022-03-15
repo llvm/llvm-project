@@ -13,6 +13,7 @@
 #ifndef BUILTIN_LOCATION_ATTRIBUTES_TD
 #define BUILTIN_LOCATION_ATTRIBUTES_TD
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 
 // Base class for Builtin dialect location attributes.

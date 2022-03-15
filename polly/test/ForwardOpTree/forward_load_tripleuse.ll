@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-optree -polly-codegen -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-optree -polly-codegen -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; %val1 is used three times: Twice by its own operand tree of %val2 and once
 ; more by the store in %bodyB.

@@ -376,6 +376,118 @@ defm : Binary_rv_vv<c_vvp_fmul,
 defm : Binary_rv_vv<vvp_fsub,
                     i64, v512f32, v512i1, "PVFSUB">;
 
+multiclass Ternary_vvv<
+    SDPatternOperator OpNode, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru.
+  def : Pat<(vvp_select
+              (OpNode DataVT:$vx, DataVT:$vy, DataVT:$vz,
+                (MaskVT srcvalue), (i32 srcvalue)),
+              DataVT:$vfalse,
+              MaskVT:$mask,
+              i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vvvml_v")
+              $vx, $vy, $vz, $mask, $avl, $vfalse)>;
+
+  // Unmasked.
+  def : Pat<(OpNode DataVT:$vx, DataVT:$vy, DataVT:$vz,
+              (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vvvl")
+              $vx, $vy, $vz, $avl)>;
+
+  // Masked.
+  def : Pat<(OpNode DataVT:$vx, DataVT:$vy, DataVT:$vz,
+              MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vvvml")
+              $vx, $vy, $vz, $mask, $avl)>;
+}
+
+multiclass Ternary_rvv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru, broadcast first.
+  def : Pat<(vvp_select
+              (OpNode
+                (any_broadcast ScalarVT:$sx), DataVT:$vy, DataVT:$vz,
+                (MaskVT srcvalue), (i32 srcvalue)),
+              DataVT:$vfalse,
+              MaskVT:$mask,
+              i32:$avl),
+            (!cast<Instruction>(OpBaseName#"rvvml_v")
+              $sx, $vy, $vz, $mask, $avl, $vfalse)>;
+
+  // Unmasked, broadcast first.
+  def : Pat<(OpNode
+              (any_broadcast ScalarVT:$sx), DataVT:$vy, DataVT:$vz,
+              (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(OpBaseName#"rvvl")
+              $sx, $vy, $vz, $avl)>;
+
+  // Masked, broadcast first.
+  def : Pat<(OpNode 
+              (any_broadcast ScalarVT:$sx), DataVT:$vy, DataVT:$vz,
+              MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(OpBaseName#"rvvml")
+              $sx, $vy, $vz, $mask, $avl)>;
+}
+
+multiclass Ternary_vrv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru, broadcast second.
+  def : Pat<(vvp_select
+              (OpNode
+                DataVT:$vx, (any_broadcast ScalarVT:$sy), DataVT:$vz,
+                (MaskVT srcvalue), (i32 srcvalue)),
+              DataVT:$vfalse,
+              MaskVT:$mask,
+              i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrvml_v")
+              $vx, $sy, $vz,
+              $mask, $avl, $vfalse)>;
+
+  // Unmasked, broadcast second.
+  def : Pat<(OpNode
+              DataVT:$vx, (any_broadcast ScalarVT:$sy), DataVT:$vz,
+              (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrvl")
+              $vx, $sy, $vz, $avl)>;
+
+  // Masked, broadcast second.
+  def : Pat<(OpNode
+              DataVT:$vx, (any_broadcast ScalarVT:$sy), DataVT:$vz,
+              MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrvml")
+              $vx, $sy, $vz, $mask, $avl)>;
+}
+
+multiclass Ternary_rvv_vrv_vvv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  defm : Ternary_rvv<OpNode, ScalarVT, DataVT, MaskVT, OpBaseName>;
+  defm : Ternary_vrv<OpNode, ScalarVT, DataVT, MaskVT, OpBaseName>;
+  defm : Ternary_vvv<OpNode, DataVT, MaskVT, OpBaseName>;
+}
+
+// Expand both 64bit and 32 bit variant (256 elements)
+multiclass Ternary_ShortLong<
+    SDPatternOperator OpNode,
+    ValueType LongScalarVT, ValueType LongDataVT, string LongOpBaseName,
+    ValueType ShortScalarVT, ValueType ShortDataVT, string ShortOpBaseName> {
+  defm : Ternary_rvv_vrv_vvv<OpNode, LongScalarVT, LongDataVT,
+                             v256i1, LongOpBaseName>;
+  defm : Ternary_rvv_vrv_vvv<OpNode, ShortScalarVT, ShortDataVT,
+                             v256i1, ShortOpBaseName>;
+}
+
+defm : Ternary_ShortLong<c_vvp_ffma,
+                         f64, v256f64, "VFMADD", f32, v256f32, "VFMADS">;
+defm : Ternary_rvv_vrv_vvv<c_vvp_ffma,
+                           i64, v512f32, v512i1, "PVFMAD">;
+
 multiclass Merge_mvv<
     SDPatternOperator OpNode,
     ValueType DataVT, ValueType MaskVT,

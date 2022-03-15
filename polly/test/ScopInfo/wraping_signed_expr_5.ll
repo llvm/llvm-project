@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; We should not generate runtime check for ((int)r1 + (int)r2) as it is known not
 ; to overflow. However (p + q) can, thus checks are needed.

@@ -7013,19 +7013,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       unsigned AS = LI->getPointerAddressSpace();
       Value *PO = LI->getPointerOperand();
       if (E->State == TreeEntry::Vectorize) {
-
         Value *VecPtr = Builder.CreateBitCast(PO, VecTy->getPointerTo(AS));
+        NewLI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
 
         // The pointer operand uses an in-tree scalar so we add the new BitCast
-        // to ExternalUses list to make sure that an extract will be generated
-        // in the future.
+        // or LoadInst to ExternalUses list to make sure that an extract will
+        // be generated in the future.
         if (TreeEntry *Entry = getTreeEntry(PO)) {
           // Find which lane we need to extract.
           unsigned FoundLane = Entry->findLaneForValue(PO);
-          ExternalUses.emplace_back(PO, cast<User>(VecPtr), FoundLane);
+          ExternalUses.emplace_back(
+              PO, PO != VecPtr ? cast<User>(VecPtr) : NewLI, FoundLane);
         }
-
-        NewLI = Builder.CreateAlignedLoad(VecTy, VecPtr, LI->getAlign());
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unhandled state");
         Value *VecPtr = vectorizeTree(E->getOperand(0));
@@ -7058,17 +7057,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *ScalarPtr = SI->getPointerOperand();
       Value *VecPtr = Builder.CreateBitCast(
           ScalarPtr, VecValue->getType()->getPointerTo(AS));
-      StoreInst *ST = Builder.CreateAlignedStore(VecValue, VecPtr,
-                                                 SI->getAlign());
+      StoreInst *ST =
+          Builder.CreateAlignedStore(VecValue, VecPtr, SI->getAlign());
 
-      // The pointer operand uses an in-tree scalar, so add the new BitCast to
-      // ExternalUses to make sure that an extract will be generated in the
-      // future.
+      // The pointer operand uses an in-tree scalar, so add the new BitCast or
+      // StoreInst to ExternalUses to make sure that an extract will be
+      // generated in the future.
       if (TreeEntry *Entry = getTreeEntry(ScalarPtr)) {
         // Find which lane we need to extract.
         unsigned FoundLane = Entry->findLaneForValue(ScalarPtr);
-        ExternalUses.push_back(
-            ExternalUser(ScalarPtr, cast<User>(VecPtr), FoundLane));
+        ExternalUses.push_back(ExternalUser(
+            ScalarPtr, ScalarPtr != VecPtr ? cast<User>(VecPtr) : ST,
+            FoundLane));
       }
 
       Value *V = propagateMetadata(ST, E->Scalars);

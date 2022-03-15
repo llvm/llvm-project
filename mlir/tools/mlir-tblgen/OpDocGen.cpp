@@ -253,8 +253,7 @@ static void emitAttrOrTypeDefDoc(const AttrOrTypeDef &def, raw_ostream &os) {
     os << "\n" << def.getSummary() << "\n";
 
   // Emit the syntax if present.
-  if (def.getMnemonic() && def.getPrinterCode() == StringRef() &&
-      def.getParserCode() == StringRef())
+  if (def.getMnemonic() && !def.hasCustomAssemblyFormat())
     emitAttrOrTypeDefAssemblyFormat(def, os);
 
   // Emit the description if present.
@@ -337,11 +336,11 @@ static void emitDialectDoc(const Dialect &dialect, ArrayRef<AttrDef> attrDefs,
 static void emitDialectDoc(const RecordKeeper &recordKeeper, raw_ostream &os) {
   std::vector<Record *> opDefs = getRequestedOpDefinitions(recordKeeper);
   std::vector<Record *> typeDefs =
-      recordKeeper.getAllDerivedDefinitions("DialectType");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("DialectType");
   std::vector<Record *> typeDefDefs =
-      recordKeeper.getAllDerivedDefinitions("TypeDef");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("TypeDef");
   std::vector<Record *> attrDefDefs =
-      recordKeeper.getAllDerivedDefinitions("AttrDef");
+      recordKeeper.getAllDerivedDefinitionsIfDefined("AttrDef");
 
   std::set<Dialect> dialectsWithDocs;
 

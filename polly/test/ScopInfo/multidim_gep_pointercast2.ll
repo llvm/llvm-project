@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; Verfy that we do not use the GetElementPtr information to delinearize A
 ; because of the cast in-between. Use the single-dimensional modeling instead.

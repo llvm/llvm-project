@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze < %s | \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output < %s | \
 ; RUN:     FileCheck %s -check-prefix=NONAFFINE
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-scops -analyze \
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-print-scops -disable-output \
 ; RUN:     -polly-allow-nonaffine-branches=false < %s | \
 ; RUN:     FileCheck %s -check-prefix=NO-NONEAFFINE
 

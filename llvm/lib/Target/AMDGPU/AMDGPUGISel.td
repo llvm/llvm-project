@@ -47,6 +47,10 @@ def gi_vop3pmods :
     GIComplexOperandMatcher<s32, "selectVOP3PMods">,
     GIComplexPatternEquiv<VOP3PMods>;
 
+def gi_vop3pmodsdot :
+    GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
+    GIComplexPatternEquiv<VOP3PModsDOT>;
+
 def gi_vop3opselmods :
     GIComplexOperandMatcher<s32, "selectVOP3OpSelMods">,
     GIComplexPatternEquiv<VOP3OpSelMods>;
@@ -92,6 +96,10 @@ def gi_flat_scratch_offset :
 def gi_flat_scratch_saddr :
     GIComplexOperandMatcher<s32, "selectScratchSAddr">,
     GIComplexPatternEquiv<ScratchSAddr>;
+
+def gi_flat_scratch_svaddr :
+    GIComplexOperandMatcher<s32, "selectScratchSVAddr">,
+    GIComplexPatternEquiv<ScratchSVAddr>;
 
 def gi_ds_1addr_1offset :
     GIComplexOperandMatcher<s32, "selectDS1Addr1Offset">,

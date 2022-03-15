@@ -413,9 +413,7 @@ uint32_t Materializer::AddPersistentVariable(
 class EntityVariable : public Materializer::Entity {
 public:
   EntityVariable(lldb::VariableSP &variable_sp)
-      : Entity(), m_variable_sp(variable_sp), m_is_reference(false),
-        m_temporary_allocation(LLDB_INVALID_ADDRESS),
-        m_temporary_allocation_size(0) {
+      : Entity(), m_variable_sp(variable_sp) {
     // Hard-coding to maximum size of a pointer since all variables are
     // materialized by reference
     m_size = 8;
@@ -749,9 +747,9 @@ public:
 
 private:
   lldb::VariableSP m_variable_sp;
-  bool m_is_reference;
-  lldb::addr_t m_temporary_allocation;
-  size_t m_temporary_allocation_size;
+  bool m_is_reference = false;
+  lldb::addr_t m_temporary_allocation = LLDB_INVALID_ADDRESS;
+  size_t m_temporary_allocation_size = 0;
   lldb::DataBufferSP m_original_data;
 };
 
@@ -769,9 +767,7 @@ public:
                        bool keep_in_memory,
                        Materializer::PersistentVariableDelegate *delegate)
       : Entity(), m_type(type), m_is_program_reference(is_program_reference),
-        m_keep_in_memory(keep_in_memory),
-        m_temporary_allocation(LLDB_INVALID_ADDRESS),
-        m_temporary_allocation_size(0), m_delegate(delegate) {
+        m_keep_in_memory(keep_in_memory), m_delegate(delegate) {
     // Hard-coding to maximum size of a pointer since all results are
     // materialized by reference
     m_size = 8;
@@ -1030,8 +1026,8 @@ private:
   bool m_is_program_reference;
   bool m_keep_in_memory;
 
-  lldb::addr_t m_temporary_allocation;
-  size_t m_temporary_allocation_size;
+  lldb::addr_t m_temporary_allocation = LLDB_INVALID_ADDRESS;
+  size_t m_temporary_allocation_size = 0;
   Materializer::PersistentVariableDelegate *m_delegate;
 };
 

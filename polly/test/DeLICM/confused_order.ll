@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-print-delicm -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-delicm -disable-output -pass-remarks-missed=polly-delicm < %s 2>&1 | FileCheck %s -check-prefix=REMARKS
 ;
 ; ForwardOptree changes the SCoP and may already map some accesses.

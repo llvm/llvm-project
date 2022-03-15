@@ -154,7 +154,10 @@ entry:
 
   ; Check that the call was devirtualized.
   ; CHECK-IR: %call = tail call i32 @_ZN1A1nEi
-  %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
+  ; Ensure !prof and !callees metadata for indirect call promotion removed.
+  ; CHECK-IR-NOT: prof
+  ; CHECK-IR-NOT: callees
+  %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a), !prof !5, !callees !6
 
   %3 = bitcast i8** %vtable to i32 (%struct.A*, i32)**
   %fptr22 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %3, align 8
@@ -207,3 +210,5 @@ attributes #0 = { noinline optnone }
 !2 = !{i64 16, !"_ZTS1C"}
 !3 = !{i64 16, !4}
 !4 = distinct !{}
+!5 = !{!"VP", i32 0, i64 1, i64 1621563287929432257, i64 1}
+!6 = !{i32 (%struct.A*, i32)* @_ZN1A1nEi}

@@ -73,6 +73,11 @@ Optional<unsigned> getVVPOpcode(unsigned Opcode) {
   case ISD::SDNAME:                                                            \
     return VEISD::VVPNAME;
 #include "VVPNodes.def"
+  // TODO: Map those in VVPNodes.def too
+  case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
+    return VEISD::VVP_LOAD;
+  case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
+    return VEISD::VVP_STORE;
   }
   return None;
 }
@@ -275,10 +280,17 @@ Optional<EVT> getIdiomaticVectorType(SDNode *Op) {
 }
 
 SDValue getLoadStoreStride(SDValue Op, VECustomDAG &CDAG) {
-  if (Op->getOpcode() == VEISD::VVP_STORE)
+  switch (Op->getOpcode()) {
+  case VEISD::VVP_STORE:
     return Op->getOperand(3);
-  if (Op->getOpcode() == VEISD::VVP_LOAD)
+  case VEISD::VVP_LOAD:
     return Op->getOperand(2);
+  }
+
+  if (auto *StoreN = dyn_cast<VPStridedStoreSDNode>(Op.getNode()))
+    return StoreN->getStride();
+  if (auto *StoreN = dyn_cast<VPStridedLoadSDNode>(Op.getNode()))
+    return StoreN->getStride();
 
   if (isa<MemSDNode>(Op.getNode())) {
     // Regular MLOAD/MSTORE/LOAD/STORE
@@ -309,12 +321,15 @@ SDValue getGatherScatterScale(SDValue Op) {
 
 SDValue getStoredValue(SDValue Op) {
   switch (Op->getOpcode()) {
+  case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
   case VEISD::VVP_STORE:
     return Op->getOperand(1);
   }
   if (auto *StoreN = dyn_cast<StoreSDNode>(Op.getNode()))
     return StoreN->getValue();
   if (auto *StoreN = dyn_cast<MaskedStoreSDNode>(Op.getNode()))
+    return StoreN->getValue();
+  if (auto *StoreN = dyn_cast<VPStridedStoreSDNode>(Op.getNode()))
     return StoreN->getValue();
   if (auto *StoreN = dyn_cast<VPStoreSDNode>(Op.getNode()))
     return StoreN->getValue();

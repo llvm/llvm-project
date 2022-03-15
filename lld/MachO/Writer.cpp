@@ -594,6 +594,9 @@ static void prepareBranchTarget(Symbol *sym) {
         in.weakBinding->addEntry(sym, in.lazyPointers->isec,
                                  sym->stubsIndex * target->wordSize);
       }
+    } else if (defined->interposable) {
+      if (in.stubs->addEntry(sym))
+        in.lazyBinding->addEntry(sym);
     }
   } else {
     llvm_unreachable("invalid branch target symbol type");
@@ -605,7 +608,7 @@ static bool needsBinding(const Symbol *sym) {
   if (isa<DylibSymbol>(sym))
     return true;
   if (const auto *defined = dyn_cast<Defined>(sym))
-    return defined->isExternalWeakDef();
+    return defined->isExternalWeakDef() || defined->interposable;
   return false;
 }
 

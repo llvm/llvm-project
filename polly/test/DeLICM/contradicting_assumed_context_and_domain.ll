@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; The domain of bb14 contradicts the SCoP's assumptions. This leads to
 ; 'anything goes' inside the statement since it is never executed,

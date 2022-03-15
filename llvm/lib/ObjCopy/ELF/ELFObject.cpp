@@ -545,39 +545,13 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   return Error::success();
 }
 
-Expected<CompressedSection>
-CompressedSection::create(const SectionBase &Sec,
-                          DebugCompressionType CompressionType) {
-  Error Err = Error::success();
-  CompressedSection Section(Sec, CompressionType, Err);
-
-  if (Err)
-    return std::move(Err);
-
-  return Section;
-}
-Expected<CompressedSection>
-CompressedSection::create(ArrayRef<uint8_t> CompressedData,
-                          uint64_t DecompressedSize,
-                          uint64_t DecompressedAlign) {
-  return CompressedSection(CompressedData, DecompressedSize, DecompressedAlign);
-}
-
 CompressedSection::CompressedSection(const SectionBase &Sec,
-                                     DebugCompressionType CompressionType,
-                                     Error &OutErr)
+                                     DebugCompressionType CompressionType)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-  ErrorAsOutParameter EAO(&OutErr);
-
-  if (Error Err = zlib::compress(
-          StringRef(reinterpret_cast<const char *>(OriginalData.data()),
-                    OriginalData.size()),
-          CompressedData)) {
-    OutErr = createStringError(llvm::errc::invalid_argument,
-                               "'" + Name + "': " + toString(std::move(Err)));
-    return;
-  }
+  zlib::compress(StringRef(reinterpret_cast<const char *>(OriginalData.data()),
+                           OriginalData.size()),
+                 CompressedData);
 
   size_t ChdrSize;
   if (CompressionType == DebugCompressionType::GNU) {
@@ -1768,12 +1742,8 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
       uint64_t DecompressedSize, DecompressedAlign;
       std::tie(DecompressedSize, DecompressedAlign) =
           getDecompressedSizeAndAlignment<ELFT>(*Data);
-      Expected<CompressedSection> NewSection =
-          CompressedSection::create(*Data, DecompressedSize, DecompressedAlign);
-      if (!NewSection)
-        return NewSection.takeError();
-
-      return Obj.addSection<CompressedSection>(std::move(*NewSection));
+      return Obj.addSection<CompressedSection>(
+          CompressedSection(*Data, DecompressedSize, DecompressedAlign));
     }
 
     return Obj.addSection<Section>(*Data);

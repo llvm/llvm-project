@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-scops \
-; RUN: -polly-invariant-load-hoisting=true \
-; RUN:     < %s 2>&1 | FileCheck %s
+; RUN: opt %loadPolly -pass-remarks-analysis="polly-scops" -polly-print-scops \
+; RUN:     -polly-invariant-load-hoisting=true \
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; This test case has an SCEVSMax expression with a very high arity. The
 ; piecewise affine function we would create for it would have a huge amount of
