@@ -9,7 +9,7 @@ add_header(
 )
 
 add_header(
-  stdio_macros
+  file_seek_macros
   HDR
-    stdio-macros.h
+    file-seek-macros.h
 )

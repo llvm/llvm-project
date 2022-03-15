@@ -25,6 +25,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  lseek
+  SRCS
+    lseek.cpp
+  HDRS
+    ../lseek.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   read
   SRCS
     read.cpp

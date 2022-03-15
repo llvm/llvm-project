@@ -95,6 +95,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # unistd.h entrypoints
     libc.src.unistd.close
     libc.src.unistd.fsync
+    libc.src.unistd.lseek
     libc.src.unistd.read
     libc.src.unistd.rmdir
     libc.src.unistd.unlink

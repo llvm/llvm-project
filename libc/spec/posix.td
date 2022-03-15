@@ -222,6 +222,7 @@ def POSIX : StandardSpec<"POSIX"> {
     "unistd.h",
     [], // Macros
     [
+      OffTType,
       SSizeTType,
       SizeTType,
     ],
@@ -236,6 +237,11 @@ def POSIX : StandardSpec<"POSIX"> {
           "fsync",
           RetValSpec<IntType>,
           [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "lseek",
+          RetValSpec<OffTType>,
+          [ArgSpec<IntType>, ArgSpec<OffTType>, ArgSpec<IntType>]
         >,
         FunctionSpec<
           "read",
