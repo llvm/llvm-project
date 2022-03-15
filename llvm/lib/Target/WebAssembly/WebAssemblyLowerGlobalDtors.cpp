@@ -1,4 +1,4 @@
-//===-- LowerGlobalDtors.cpp - Lower @llvm.global_dtors -------------------===//
+//===-- WebAssemblyLowerGlobalDtors.cpp - Lower @llvm.global_dtors --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,31 +9,33 @@
 /// \file
 /// Lower @llvm.global_dtors.
 ///
+/// WebAssembly doesn't have a builtin way to invoke static destructors.
 /// Implement @llvm.global_dtors by creating wrapper functions that are
 /// registered in @llvm.global_ctors and which contain a call to
 /// `__cxa_atexit` to register their destructor functions.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/LowerGlobalDtors.h"
-
+#include "WebAssembly.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <map>
 
 using namespace llvm;
 
-#define DEBUG_TYPE "lower-global-dtors"
+#define DEBUG_TYPE "wasm-lower-global-dtors"
 
 namespace {
-class LowerGlobalDtorsLegacyPass final : public ModulePass {
+class LowerGlobalDtors final : public ModulePass {
   StringRef getPassName() const override {
-    return "Lower @llvm.global_dtors via `__cxa_atexit`";
+    return "WebAssembly Lower @llvm.global_dtors";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -45,33 +47,21 @@ class LowerGlobalDtorsLegacyPass final : public ModulePass {
 
 public:
   static char ID;
-  LowerGlobalDtorsLegacyPass() : ModulePass(ID) {}
+  LowerGlobalDtors() : ModulePass(ID) {}
 };
 } // End anonymous namespace
 
-char LowerGlobalDtorsLegacyPass::ID = 0;
-INITIALIZE_PASS(LowerGlobalDtorsLegacyPass, DEBUG_TYPE,
-                "Lower @llvm.global_dtors via `__cxa_atexit`", false, false)
+char LowerGlobalDtors::ID = 0;
+INITIALIZE_PASS(LowerGlobalDtors, DEBUG_TYPE,
+                "Lower @llvm.global_dtors for WebAssembly", false, false)
 
-ModulePass *llvm::createLowerGlobalDtorsLegacyPass() {
-  return new LowerGlobalDtorsLegacyPass();
+ModulePass *llvm::createWebAssemblyLowerGlobalDtors() {
+  return new LowerGlobalDtors();
 }
 
-static bool runImpl(Module &M);
-bool LowerGlobalDtorsLegacyPass::runOnModule(Module &M) { return runImpl(M); }
+bool LowerGlobalDtors::runOnModule(Module &M) {
+  LLVM_DEBUG(dbgs() << "********** Lower Global Destructors **********\n");
 
-PreservedAnalyses LowerGlobalDtorsPass::run(Module &M,
-                                            ModuleAnalysisManager &AM) {
-  bool Changed = runImpl(M);
-  if (!Changed)
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
-}
-
-static bool runImpl(Module &M) {
   GlobalVariable *GV = M.getGlobalVariable("llvm.global_dtors");
   if (!GV || !GV->hasInitializer())
     return false;
