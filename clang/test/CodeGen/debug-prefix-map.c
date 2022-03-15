@@ -6,6 +6,9 @@
 // RUN: %clang -g -fdebug-prefix-map=%p=%{fs-src-root}UNLIKELY_PATH%{fs-sep}empty -S -c %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang -g -ffile-prefix-map=%p=%{fs-src-root}UNLIKELY_PATH%{fs-sep}empty -S -c %s -emit-llvm -o - | FileCheck %s
 
+// RUN: %clang -g -fdebug-prefix-map=%p=./UNLIKELY_PATH/empty -S -c %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-REL
+// RUN: %clang -g -ffile-prefix-map=%p=./UNLIKELY_PATH/empty -S -c %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-REL
+
 #include "Inputs/stdio.h"
 
 int main(int argc, char **argv) {
@@ -40,3 +43,7 @@ void test_rewrite_includes(void) {
 // CHECK-COMPILATION-DIR: !DIFile(filename: "{{.*}}Inputs{{/|\\\\}}stdio.h", directory: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty")
 // CHECK-COMPILATION-DIR-NOT: !DIFile(filename:
 // CHECK-SYSROOT: !DICompileUnit({{.*}}sysroot: "{{/|.:\\\\}}UNLIKELY_PATH{{/|\\\\}}empty"
+
+// CHECK-REL: !DIFile(filename: "./UNLIKELY_PATH/empty{{/|\\\\}}{{.*}}",
+// CHECK-REL: !DIFile(filename: "./UNLIKELY_PATH/empty{{/|\\\\}}{{.*}}Inputs/stdio.h",
+// CHECK-REL-SAME:    directory: ""
