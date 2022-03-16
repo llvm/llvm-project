@@ -322,14 +322,20 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
   uint32_t CurrentIndex = 0;
   if (opts::HotFunctionsAtEnd) {
     for (BinaryFunction *BF : SortedFunctions) {
-      if (BF->hasValidIndex() && LastHotIndex == -1u)
+      if (BF->hasValidIndex()) {
         LastHotIndex = CurrentIndex;
+        break;
+      }
+
       ++CurrentIndex;
     }
   } else {
     for (BinaryFunction *BF : SortedFunctions) {
-      if (!BF->hasValidIndex() && LastHotIndex == -1u)
+      if (!BF->hasValidIndex()) {
         LastHotIndex = CurrentIndex;
+        break;
+      }
+
       ++CurrentIndex;
     }
   }
@@ -386,17 +392,23 @@ void LongJmpPass::tentativeLayout(
   }
 
   // Relocation mode
-  uint64_t EstimatedTextSize = tentativeLayoutRelocMode(BC, SortedFunctions, 0);
+  uint64_t EstimatedTextSize = 0;
+  if (opts::UseOldText) {
+    EstimatedTextSize = tentativeLayoutRelocMode(BC, SortedFunctions, 0);
 
-  // Initial padding
-  if (opts::UseOldText && EstimatedTextSize <= BC.OldTextSectionSize) {
-    DotAddress = BC.OldTextSectionAddress;
-    uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(opts::AlignText));
-    if (Pad + EstimatedTextSize <= BC.OldTextSectionSize)
-      DotAddress += Pad;
-  } else {
-    DotAddress = alignTo(BC.LayoutStartAddress, opts::AlignText);
+    // Initial padding
+    if (EstimatedTextSize <= BC.OldTextSectionSize) {
+      DotAddress = BC.OldTextSectionAddress;
+      uint64_t Pad =
+          offsetToAlignment(DotAddress, llvm::Align(opts::AlignText));
+      if (Pad + EstimatedTextSize <= BC.OldTextSectionSize) {
+        DotAddress += Pad;
+      }
+    }
   }
+
+  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize)
+    DotAddress = alignTo(BC.LayoutStartAddress, opts::AlignText);
 
   tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
 }
