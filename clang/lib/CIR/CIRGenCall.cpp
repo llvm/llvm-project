@@ -366,6 +366,7 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // TODO: alignment attributes
 
+  // Emit the actual call op.
   auto callLoc = CGM.getLoc(Loc);
   auto theCall = CGM.getBuilder().create<mlir::func::CallOp>(callLoc, CalleePtr,
                                                              CIRCallArgs);
@@ -404,7 +405,41 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   // TODO: cleanup argument memory at the end
 
-  // TODO: implement genuine returns
+  // Extract the return value.
+  RValue Ret = [&] {
+    switch (RetAI.getKind()) {
+    case ABIArgInfo::Direct: {
+      mlir::Type RetCIRTy = convertType(RetTy);
+      if (RetAI.getCoerceToType() == RetCIRTy && RetAI.getDirectOffset() == 0) {
+        switch (getEvaluationKind(RetTy)) {
+        case TEK_Scalar: {
+          // If the argument doesn't match, perform a bitcast to coerce it. This
+          // can happen due to trivial type mismatches.
+          auto Results = theCall.getResults();
+          assert(Results.size() <= 1 && "multiple returns NYI");
+          assert(Results[0].getType() == RetCIRTy && "Bitcast support NYI");
+          return RValue::get(Results[0]);
+        }
+        default:
+          llvm_unreachable("NYI");
+        }
+      } else {
+        llvm_unreachable("No other forms implemented yet.");
+      }
+    }
+
+    case ABIArgInfo::Ignore:
+      // If we are ignoring an argument that had a result, make sure to
+      // construct the appropriate return value for our caller.
+      return GetUndefRValue(RetTy);
+
+    default:
+      llvm_unreachable("NYI");
+    }
+
+    llvm_unreachable("NYI");
+    return RValue{};
+  }();
 
   // TODO: implement assumed_aligned
 
@@ -412,7 +447,11 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
 
   assert(RetTy.isDestructedType() != QualType::DK_nontrivial_c_struct && "NYI");
 
-  assert(theCall.getNumResults() == 0 && "Returns NYI");
+  return Ret;
+}
+
+RValue CIRGenFunction::GetUndefRValue(QualType Ty) {
+  assert(Ty->isVoidType() && "Only VoidType supported so far.");
   return RValue::get(nullptr);
 }
 
