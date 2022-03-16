@@ -9919,10 +9919,13 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeft);
   verifyFormat("template <typename T> void operator=(T) &;", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) const&;", AlignLeft);
-  verifyFormat("template <typename T> void operator=(T) & noexcept;", AlignLeft);
-  verifyFormat("template <typename T> void operator=(T) & = default;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) & noexcept;",
+               AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) & = default;",
+               AlignLeft);
   verifyFormat("template <typename T> void operator=(T) &&;", AlignLeft);
-  verifyFormat("template <typename T> void operator=(T) && = delete;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) && = delete;",
+               AlignLeft);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignLeft);
 
@@ -9948,10 +9951,13 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) &;", AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) const &;", AlignMiddle);
-  verifyFormat("template <typename T> void operator=(T) & noexcept;", AlignMiddle);
-  verifyFormat("template <typename T> void operator=(T) & = default;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) & noexcept;",
+               AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) & = default;",
+               AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) &&;", AlignMiddle);
-  verifyFormat("template <typename T> void operator=(T) && = delete;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) && = delete;",
+               AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignMiddle);
 
