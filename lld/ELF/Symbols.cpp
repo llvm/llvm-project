@@ -541,10 +541,9 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
                           InputSectionBase *errSec, uint64_t errOffset) {
   if (config->allowMultipleDefinition)
     return;
-  // A definition in a COMDAT may be reported as duplicate with a definition
-  // relative to .gnu.linkonce.t.__x86.get_pc_thunk.bx.
-  // .gnu.linkonce.t.__x86.get_pc_thunk.bx will be discarded, so there is
-  // actually no duplicate.
+  // In glibc<2.32, crti.o has .gnu.linkonce.t.__x86.get_pc_thunk.bx, which
+  // is sort of proto-comdat. There is actually no duplicate if we have
+  // full support for .gnu.linkonce.
   const Defined *d = dyn_cast<Defined>(&sym);
   if (!d || d->getName() == "__x86.get_pc_thunk.bx")
     return;

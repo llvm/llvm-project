@@ -415,6 +415,11 @@ def AddiPairImmB : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
+def TrailingZeros : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getAPIntValue().countTrailingZeros(),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
 def XLenSubTrailingOnes : SDNodeXForm<imm, [{
   uint64_t XLen = Subtarget->getXLen();
   uint64_t TrailingOnes = N->getAPIntValue().countTrailingOnes();
@@ -423,7 +428,13 @@ def XLenSubTrailingOnes : SDNodeXForm<imm, [{
 }]>;
 
 // Checks if this mask is a non-empty sequence of ones starting at the
-// least significant bit with the remainder zero and exceeds simm12.
+// most/least significant bit with the remainder zero and exceeds simm32/simm12.
+def LeadingOnesMask : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  return !isInt<32>(N->getSExtValue()) && isMask_64(~N->getSExtValue());
+}], TrailingZeros>;
+
 def TrailingOnesMask : PatLeaf<(imm), [{
   if (!N->hasOneUse())
     return false;
@@ -1134,7 +1145,9 @@ def : PatGprUimmLog2XLen<shl, SLLI>;
 def : PatGprUimmLog2XLen<srl, SRLI>;
 def : PatGprUimmLog2XLen<sra, SRAI>;
 
-// AND with trailing ones mask exceeding simm12.
+// AND with leading/trailing ones mask exceeding simm32/simm12.
+def : Pat<(i64 (and GPR:$rs, LeadingOnesMask:$mask)),
+          (SLLI (SRLI $rs, LeadingOnesMask:$mask), LeadingOnesMask:$mask)>;
 def : Pat<(XLenVT (and GPR:$rs, TrailingOnesMask:$mask)),
           (SRLI (SLLI $rs, TrailingOnesMask:$mask), TrailingOnesMask:$mask)>;
 

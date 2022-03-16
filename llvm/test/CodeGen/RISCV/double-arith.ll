@@ -199,9 +199,8 @@ define double @fsgnj_d(double %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: fsgnj_d:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a2, a2, 63
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a1, a1, 63
+; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    srli a0, a0, 1
 ; RV64I-NEXT:    or a0, a0, a1
@@ -291,11 +290,10 @@ define double @fsgnjn_d(double %a, double %b) nounwind {
 ; RV64I-LABEL: fsgnjn_d:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    not a1, a1
-; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a2, a2, 63
-; RV64I-NEXT:    and a1, a1, a2
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    srli a0, a0, 1
+; RV64I-NEXT:    srli a1, a1, 63
+; RV64I-NEXT:    slli a1, a1, 63
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = fsub double -0.0, %b
