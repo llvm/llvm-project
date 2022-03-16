@@ -4,7 +4,7 @@
 bool b;
 
 // CHECK-LABEL: @_Z10test_ldrexv()
-// CHECK: call i32 @llvm.arm.ldrex.p0i8(i8* @b)
+// CHECK: call i32 @llvm.arm.ldrex.p0i8(i8* elementtype(i8) @b)
 
 // CHECK-ARM64-LABEL: @_Z10test_ldrexv()
 // CHECK-ARM64: call i64 @llvm.aarch64.ldxr.p0i8(i8* elementtype(i8) @b)
@@ -14,7 +14,7 @@ void test_ldrex() {
 }
 
 // CHECK-LABEL: @_Z10tset_strexv()
-// CHECK: %{{.*}} = call i32 @llvm.arm.strex.p0i8(i32 1, i8* @b)
+// CHECK: %{{.*}} = call i32 @llvm.arm.strex.p0i8(i32 1, i8* elementtype(i8) @b)
 
 // CHECK-ARM64-LABEL: @_Z10tset_strexv()
 // CHECK-ARM64: %{{.*}} = call i32 @llvm.aarch64.stxr.p0i8(i64 1, i8* elementtype(i8) @b)

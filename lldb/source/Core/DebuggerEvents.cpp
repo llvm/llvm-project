@@ -10,6 +10,15 @@
 
 using namespace lldb_private;
 
+template <typename T>
+static const T *GetEventDataFromEventImpl(const Event *event_ptr) {
+  if (event_ptr)
+    if (const EventData *event_data = event_ptr->GetData())
+      if (event_data->GetFlavor() == T::GetFlavorString())
+        return static_cast<const T *>(event_ptr->GetData());
+  return nullptr;
+}
+
 ConstString ProgressEventData::GetFlavorString() {
   static ConstString g_flavor("ProgressEventData");
   return g_flavor;
@@ -33,9 +42,33 @@ void ProgressEventData::Dump(Stream *s) const {
 
 const ProgressEventData *
 ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
-  if (event_ptr)
-    if (const EventData *event_data = event_ptr->GetData())
-      if (event_data->GetFlavor() == ProgressEventData::GetFlavorString())
-        return static_cast<const ProgressEventData *>(event_ptr->GetData());
-  return nullptr;
+  return GetEventDataFromEventImpl<ProgressEventData>(event_ptr);
+}
+
+llvm::StringRef DiagnosticEventData::GetPrefix() const {
+  switch (m_type) {
+  case Type::Warning:
+    return "warning";
+  case Type::Error:
+    return "error";
+  }
+}
+
+void DiagnosticEventData::Dump(Stream *s) const {
+  *s << GetPrefix() << ": " << GetMessage() << '\n';
+  s->Flush();
+}
+
+ConstString DiagnosticEventData::GetFlavorString() {
+  static ConstString g_flavor("DiagnosticEventData");
+  return g_flavor;
+}
+
+ConstString DiagnosticEventData::GetFlavor() const {
+  return DiagnosticEventData::GetFlavorString();
+}
+
+const DiagnosticEventData *
+DiagnosticEventData::GetEventDataFromEvent(const Event *event_ptr) {
+  return GetEventDataFromEventImpl<DiagnosticEventData>(event_ptr);
 }

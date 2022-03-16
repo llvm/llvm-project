@@ -1647,7 +1647,7 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
       for (unsigned i = CopyMI->getNumOperands(); i != 0; --i) {
         MachineOperand &MO = CopyMI->getOperand(i-1);
         if (MO.isReg() && MO.isUse())
-          CopyMI->RemoveOperand(i-1);
+          CopyMI->removeOperand(i-1);
       }
       LLVM_DEBUG(dbgs() << "\tReplaced copy of <undef> value with an "
                            "implicit def\n");

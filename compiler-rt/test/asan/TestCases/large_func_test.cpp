@@ -54,5 +54,7 @@ int main(int argc, char **argv) {
   // CHECK-FreeBSD:{{    #0 0x.* in operator new}}
   // CHECK-Darwin: {{    #0 0x.* in .*_Zna}}
   // CHECK-NEXT:   {{    #1 0x.* in main .*large_func_test.cpp:}}[[@LINE-10]]
+  int y = x[argc];
   delete[] x;
+  return y;
 }

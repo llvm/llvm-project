@@ -555,7 +555,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       MI.setDesc(TII.get(ARM::tMOVr));
       MI.getOperand(FrameRegIdx).ChangeToRegister(FrameReg, false);
       // Remove offset and remaining explicit predicate operands.
-      do MI.RemoveOperand(FrameRegIdx+1);
+      do MI.removeOperand(FrameRegIdx+1);
       while (MI.getNumOperands() > FrameRegIdx+1);
       MachineInstrBuilder MIB(*MI.getParent()->getParent(), &MI);
       MIB.add(predOps(ARMCC::AL));
@@ -592,7 +592,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       MI.getOperand(FrameRegIdx+1).ChangeToImmediate(Offset);
       // Remove the cc_out operand.
       if (HasCCOut)
-        MI.RemoveOperand(MI.getNumOperands()-1);
+        MI.removeOperand(MI.getNumOperands()-1);
       Offset = 0;
       return true;
     }
@@ -626,7 +626,7 @@ bool llvm::rewriteT2FrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
         return Offset == 0;
       }
 
-      MI.RemoveOperand(FrameRegIdx+1);
+      MI.removeOperand(FrameRegIdx+1);
       MI.getOperand(FrameRegIdx+1).ChangeToImmediate(0);
       NewOpc = immediateOffsetOpcode(Opcode);
       AddrMode = ARMII::AddrModeT2_i12;

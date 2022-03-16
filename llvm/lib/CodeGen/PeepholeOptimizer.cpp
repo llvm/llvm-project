@@ -90,7 +90,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
@@ -1022,7 +1021,7 @@ public:
       CurrentSrcIdx = -1;
       // Rewrite the operation as a COPY.
       // Get rid of the sub-register index.
-      CopyLike.RemoveOperand(2);
+      CopyLike.removeOperand(2);
       // Morph the operation into a COPY.
       CopyLike.setDesc(TII.get(TargetOpcode::COPY));
       return true;

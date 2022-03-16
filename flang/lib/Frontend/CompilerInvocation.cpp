@@ -584,6 +584,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &res,
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);
   success &= parseDiagArgs(res, args, diags);
+  res.frontendOpts_.llvmArgs =
+      args.getAllArgValues(clang::driver::options::OPT_mllvm);
 
   return success;
 }

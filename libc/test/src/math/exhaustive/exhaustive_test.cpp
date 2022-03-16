@@ -32,8 +32,7 @@ void LlvmLibcExhaustiveTest<T>::test_full_range(T start, T stop, int nthreads,
       std::cout << msg.str();
       msg.str("");
 
-      bool result;
-      check(begin, end, rounding, result);
+      bool result = check(begin, end, rounding);
 
       msg << "** Finished testing from " << std::dec << begin << " to " << end
           << " [0x" << std::hex << begin << ", 0x" << end

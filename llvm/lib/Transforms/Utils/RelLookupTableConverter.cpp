@@ -170,13 +170,17 @@ static void convertToRelLookupTable(GlobalVariable &LookupTable) {
 // Convert lookup tables to relative lookup tables in the module.
 static bool convertToRelativeLookupTables(
     Module &M, function_ref<TargetTransformInfo &(Function &)> GetTTI) {
-  Module::iterator FI = M.begin();
-  if (FI == M.end())
-    return false;
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
 
-  // Check if we have a target that supports relative lookup tables.
-  if (!GetTTI(*FI).shouldBuildRelLookupTables())
-    return false;
+    // Check if we have a target that supports relative lookup tables.
+    if (!GetTTI(F).shouldBuildRelLookupTables())
+      return false;
+
+    // We assume that the result is independent of the checked function.
+    break;
+  }
 
   bool Changed = false;
 

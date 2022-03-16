@@ -98,6 +98,14 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T, bool ForBitField) {
 
   llvm::Type *R = ConvertType(T);
 
+  // Check for the boolean vector case.
+  if (T->isExtVectorBoolType()) {
+    auto *FixedVT = cast<llvm::FixedVectorType>(R);
+    // Pad to at least one byte.
+    uint64_t BytePadded = std::max<uint64_t>(FixedVT->getNumElements(), 8);
+    return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
+  }
+
   // If this is a bool type, or a bit-precise integer type in a bitfield
   // representation, map this integer to the target-specified size.
   if ((ForBitField && T->isBitIntType()) ||
@@ -701,9 +709,12 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   }
   case Type::ExtVector:
   case Type::Vector: {
-    const VectorType *VT = cast<VectorType>(Ty);
-    ResultType = llvm::FixedVectorType::get(ConvertType(VT->getElementType()),
-                                            VT->getNumElements());
+    const auto *VT = cast<VectorType>(Ty);
+    // An ext_vector_type of Bool is really a vector of bits.
+    llvm::Type *IRElemTy = VT->isExtVectorBoolType()
+                               ? llvm::Type::getInt1Ty(getLLVMContext())
+                               : ConvertType(VT->getElementType());
+    ResultType = llvm::FixedVectorType::get(IRElemTy, VT->getNumElements());
     break;
   }
   case Type::ConstantMatrix: {

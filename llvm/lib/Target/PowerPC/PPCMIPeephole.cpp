@@ -28,6 +28,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -985,7 +986,7 @@ bool PPCMIPeephole::simplifyCode() {
                   LiMI->getOpcode() == PPC::LI8) &&
                  "Invalid Opcode!");
           auto LiImm = LiMI->getOperand(1).getImm(); // save the imm of LI
-          LiMI->RemoveOperand(1);                    // remove the imm of LI
+          LiMI->removeOperand(1);                    // remove the imm of LI
           LiMI->setDesc(TII->get(LiMI->getOpcode() == PPC::LI ? PPC::ADDI
                                                               : PPC::ADDI8));
           MachineInstrBuilder(*LiMI->getParent()->getParent(), *LiMI)

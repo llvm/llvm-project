@@ -14,7 +14,7 @@ entry:
 }
 
 define i32 @test_only_read_arg(i32* %ptr) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
 ; CHECK-LABEL: @test_only_read_arg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[PTR:%.*]], align 4
@@ -52,7 +52,7 @@ entry:
 }
 
 define void @test_only_write_arg(i32* %ptr) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly
 ; CHECK-LABEL: @test_only_write_arg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, i32* [[PTR:%.*]], align 4
@@ -91,7 +91,7 @@ entry:
 declare i32 @fn_readnone() readnone
 
 define void @test_call_readnone(i32* %ptr) {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: argmemonly writeonly
 ; CHECK-LABEL: @test_call_readnone(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @fn_readnone()
@@ -118,7 +118,7 @@ entry:
 }
 
 define i32 @test_call_fn_where_argmemonly_can_be_inferred(i32* %ptr) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
 ; CHECK-LABEL: @test_call_fn_where_argmemonly_can_be_inferred(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @test_only_read_arg(i32* [[PTR:%.*]])
@@ -130,7 +130,7 @@ entry:
 }
 
 define void @test_memcpy_argonly(i8* %dst, i8* %src) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn
+; CHECK: Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
 ; CHECK-LABEL: @test_memcpy_argonly(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 32, i1 false)
@@ -174,7 +174,7 @@ entry:
 }
 
 define i32 @test_read_arg_access_alloca(i32* %ptr) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
 ; CHECK-LABEL: @test_read_arg_access_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4

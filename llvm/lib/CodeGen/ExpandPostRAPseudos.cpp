@@ -13,8 +13,6 @@
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
@@ -104,8 +102,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
 
   if (MI->allDefsAreDead()) {
     MI->setDesc(TII->get(TargetOpcode::KILL));
-    MI->RemoveOperand(3); // SubIdx
-    MI->RemoveOperand(1); // Imm
+    MI->removeOperand(3); // SubIdx
+    MI->removeOperand(1); // Imm
     LLVM_DEBUG(dbgs() << "subreg: replaced by: " << *MI);
     return true;
   }
@@ -117,8 +115,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
     // We must leave %rax live.
     if (DstReg != InsReg) {
       MI->setDesc(TII->get(TargetOpcode::KILL));
-      MI->RemoveOperand(3);     // SubIdx
-      MI->RemoveOperand(1);     // Imm
+      MI->removeOperand(3);     // SubIdx
+      MI->removeOperand(1);     // Imm
       LLVM_DEBUG(dbgs() << "subreg: replace by: " << *MI);
       return true;
     }

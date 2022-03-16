@@ -51,7 +51,9 @@ public:
     return false;
   }
 
-  bool shortenInstruction(MCInst &) const override { return false; }
+  bool shortenInstruction(MCInst &, const MCSubtargetInfo &) const override {
+    return false;
+  }
 
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;

@@ -9,6 +9,7 @@ declare void @llvm.experimental.deoptimize.void(...)
 declare void @unknown_but_readonly() readonly
 
 define void @test1(i8* %p) {
+  load i8, i8* %p
   call void(...) @llvm.experimental.deoptimize.void() [ "deopt"() ]
   ret void
 
@@ -26,6 +27,8 @@ define i32 @test_memcpy_with_deopt() {
 
   %A = alloca i8
   %B = alloca i8
+  load i8, i8* %A
+  load i8, i8* %B
 
   store i32 2, i32* @G1  ;; Not referenced by semantics of memcpy but still may be read due to "deopt"
 
@@ -43,6 +46,8 @@ define i32 @test_memmove_with_deopt() {
 
   %A = alloca i8
   %B = alloca i8
+  load i8, i8* %A
+  load i8, i8* %B
 
   store i32 2, i32* @G1  ;; Not referenced by semantics of memcpy but still may be read due to "deopt"
 

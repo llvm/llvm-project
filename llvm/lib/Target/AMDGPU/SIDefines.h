@@ -363,8 +363,6 @@ enum StreamId : unsigned { // Stream ID, (2) [9:8].
 namespace Hwreg { // Encoding of SIMM16 used in s_setreg/getreg* insns.
 
 enum Id { // HwRegCode, (6) [5:0]
-  ID_UNKNOWN_ = -1,
-  ID_SYMBOLIC_FIRST_ = 1, // There are corresponding symbolic names defined.
   ID_MODE = 1,
   ID_STATUS = 2,
   ID_TRAPSTS = 3,
@@ -373,28 +371,23 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_LDS_ALLOC = 6,
   ID_IB_STS = 7,
   ID_MEM_BASES = 15,
-  ID_SYMBOLIC_FIRST_GFX9_ = ID_MEM_BASES,
   ID_TBA_LO = 16,
   ID_TBA_HI = 17,
   ID_TMA_LO = 18,
   ID_TMA_HI = 19,
   ID_XCC_ID = 20,
-  ID_SYMBOLIC_FIRST_GFX940_ = ID_XCC_ID,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
   ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
   ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
-  ID_SYMBOLIC_LAST_GFX940_ = ID_SQ_PERF_SNAPSHOT_PC_HI + 1,
   ID_FLAT_SCR_LO = 20,
-  ID_SYMBOLIC_FIRST_GFX10_ = ID_FLAT_SCR_LO,
   ID_FLAT_SCR_HI = 21,
   ID_XNACK_MASK = 22,
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
   ID_SHADER_CYCLES = 29,
-  ID_SYMBOLIC_FIRST_GFX1030_ = ID_SHADER_CYCLES,
-  ID_SYMBOLIC_LAST_ = 30,
+
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
   ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)

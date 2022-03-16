@@ -133,6 +133,16 @@ bool isVVPOrVEC(unsigned Opcode) {
   return false;
 }
 
+bool isVVPUnaryOp(unsigned VVPOpcode) {
+  switch (VVPOpcode) {
+#define ADD_UNARY_VVP_OP(VVPNAME, ...)                                         \
+  case VEISD::VVPNAME:                                                         \
+    return true;
+#include "VVPNodes.def"
+  }
+  return false;
+}
+
 bool isVVPBinaryOp(unsigned VVPOpcode) {
   switch (VVPOpcode) {
 #define ADD_BINARY_VVP_OP(VVPNAME, ...)                                        \

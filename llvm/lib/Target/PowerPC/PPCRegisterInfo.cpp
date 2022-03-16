@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -1107,7 +1108,7 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   MBB.erase(II);
   if (SpillsKnownBit && KillsCRBit && !SeenUse) {
     Ins->setDesc(TII.get(PPC::UNENCODED_NOP));
-    Ins->RemoveOperand(0);
+    Ins->removeOperand(0);
   }
 }
 

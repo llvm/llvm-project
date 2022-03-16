@@ -2,7 +2,7 @@
 # RUN: %lldb -c %t -o "thread list" -o "register read" -b 2>&1 | FileCheck %s
 
 # CHECK: (lldb) target create --core
-# CHECK: Unable to retrieve process ID from minidump file, setting process ID to 1.
+# CHECK: unable to retrieve process ID from minidump file, setting process ID to 1
 # CHECK: Core file {{.*}} was loaded.
 
 # CHECK: (lldb) thread list

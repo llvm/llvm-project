@@ -1039,74 +1039,70 @@ unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
 }
 
 //===----------------------------------------------------------------------===//
+// Custom Operands.
+//
+// A table of custom operands shall describe "primary" operand names
+// first followed by aliases if any. It is not required but recommended
+// to arrange operands so that operand encoding match operand position
+// in the table. This will make disassembly a bit more efficient.
+// Unused slots in the table shall have an empty name.
+//
+//===----------------------------------------------------------------------===//
+
+template <class T>
+static bool isValidOpr(int Idx, const CustomOperand<T> OpInfo[], int OpInfoSize,
+                       T Context) {
+  return 0 <= Idx && Idx < OpInfoSize && !OpInfo[Idx].Name.empty() &&
+         (!OpInfo[Idx].Cond || OpInfo[Idx].Cond(Context));
+}
+
+template <class T>
+static int getOprIdx(std::function<bool(const CustomOperand<T> &)> Test,
+                     const CustomOperand<T> OpInfo[], int OpInfoSize,
+                     T Context) {
+  int InvalidIdx = OPR_ID_UNKNOWN;
+  for (int Idx = 0; Idx < OpInfoSize; ++Idx) {
+    if (Test(OpInfo[Idx])) {
+      if (!OpInfo[Idx].Cond || OpInfo[Idx].Cond(Context))
+        return Idx;
+      InvalidIdx = OPR_ID_UNSUPPORTED;
+    }
+  }
+  return InvalidIdx;
+}
+
+template <class T>
+static int getOprIdx(const StringRef Name, const CustomOperand<T> OpInfo[],
+                     int OpInfoSize, T Context) {
+  auto Test = [=](const CustomOperand<T> &Op) { return Op.Name == Name; };
+  return getOprIdx<T>(Test, OpInfo, OpInfoSize, Context);
+}
+
+template <class T>
+static int getOprIdx(int Id, const CustomOperand<T> OpInfo[], int OpInfoSize,
+                     T Context, bool QuickCheck = true) {
+  auto Test = [=](const CustomOperand<T> &Op) {
+    return Op.Encoding == Id && !Op.Name.empty();
+  };
+  // This is an optimization that should work in most cases.
+  // As a side effect, it may cause selection of an alias
+  // instead of a primary operand name in case of sparse tables.
+  if (QuickCheck && isValidOpr<T>(Id, OpInfo, OpInfoSize, Context) &&
+      OpInfo[Id].Encoding == Id) {
+    return Id;
+  }
+  return getOprIdx<T>(Test, OpInfo, OpInfoSize, Context);
+}
+
+//===----------------------------------------------------------------------===//
 // hwreg
 //===----------------------------------------------------------------------===//
 
 namespace Hwreg {
 
-static const char* getHwregName(int64_t Id, const MCSubtargetInfo &STI) {
-  if (isGFX940(STI) && Id >= ID_SYMBOLIC_FIRST_GFX940_ &&
-      Id < ID_SYMBOLIC_LAST_GFX940_)
-    return IdSymbolicGFX940Specific[Id - ID_SYMBOLIC_FIRST_GFX940_];
-  return (Id < ID_SYMBOLIC_LAST_) ? IdSymbolic[Id] : nullptr;
-}
-
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI) {
-  if (isGFX10(STI) && Name == "HW_REG_HW_ID") // An alias
-    return ID_HW_ID1;
-  for (int Id = ID_SYMBOLIC_FIRST_; Id < ID_SYMBOLIC_LAST_; ++Id) {
-    if (IdSymbolic[Id] && Name == IdSymbolic[Id])
-      return Id;
-    // These are all defined, however may be invalid for subtarget and need
-    // further validation.
-    if (Id >= ID_SYMBOLIC_FIRST_GFX940_ && Id < ID_SYMBOLIC_LAST_GFX940_ &&
-        Name == IdSymbolicGFX940Specific[Id - ID_SYMBOLIC_FIRST_GFX940_])
-      return Id;
-  }
-  return ID_UNKNOWN_;
-}
-
-static unsigned getLastSymbolicHwreg(const MCSubtargetInfo &STI) {
-  if (isSI(STI) || isCI(STI) || isVI(STI))
-    return ID_SYMBOLIC_FIRST_GFX9_;
-  else if (isGFX940(STI))
-    return ID_SYMBOLIC_LAST_GFX940_;
-  else if (isGFX9(STI))
-    return ID_SYMBOLIC_FIRST_GFX10_;
-  else if (isGFX10(STI) && !isGFX10_BEncoding(STI))
-    return ID_SYMBOLIC_FIRST_GFX1030_;
-  else
-    return ID_SYMBOLIC_LAST_;
-}
-
-bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI, StringRef Name) {
-  if (isGFX10(STI) && Name == "HW_REG_HW_ID") // An alias
-    return true;
-
-  const char *HWRegName = getHwregName(Id, STI);
-  if (!HWRegName || !Name.startswith(HWRegName))
-    return false;
-
-  if (isGFX10Plus(STI)) {
-    switch (Id) {
-    case ID_HW_ID1:
-    case ID_HW_ID2:
-      return true;
-    case ID_XNACK_MASK:
-      return !AMDGPU::isGFX10_BEncoding(STI);
-    default:
-      break;
-    }
-  }
-
-  if (ID_SYMBOLIC_FIRST_ > Id || Id >= getLastSymbolicHwreg(STI))
-    return false;
-
-  if (isGFX940(STI) && Id >= ID_SYMBOLIC_FIRST_GFX10_ &&
-      Id < ID_SYMBOLIC_FIRST_GFX940_)
-    return false;
-
-  return true;
+  int Idx = getOprIdx<const MCSubtargetInfo &>(Name, Opr, OPR_SIZE, STI);
+  return (Idx < 0) ? Idx : Opr[Idx].Encoding;
 }
 
 bool isValidHwreg(int64_t Id) {
@@ -1128,8 +1124,8 @@ uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width) {
 }
 
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI) {
-  const char *HWRegName = getHwregName(Id, STI);
-  return (HWRegName && isValidHwreg(Id, STI, HWRegName)) ? HWRegName : "";
+  int Idx = getOprIdx<const MCSubtargetInfo &>(Id, Opr, OPR_SIZE, STI);
+  return (Idx < 0) ? "" : Opr[Idx].Name;
 }
 
 void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) {
@@ -1535,6 +1531,10 @@ bool isVI(const MCSubtargetInfo &STI) {
 
 bool isGFX9(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX9];
+}
+
+bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
+  return isGFX9(STI) || isGFX10(STI);
 }
 
 bool isGFX9Plus(const MCSubtargetInfo &STI) {

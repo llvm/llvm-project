@@ -52,7 +52,7 @@ E: neil@daikokuya.co.uk
 D: APFloat implementation.
 
 N: Alex Bradbury
-E: asb@asbradbury.org
+E: asb@igalia.com
 D: RISC-V backend
 
 N: Misha Brukman

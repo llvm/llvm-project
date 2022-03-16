@@ -157,7 +157,9 @@ struct OneShotBufferizePass
       : options(options) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<bufferization::BufferizationDialect>();
+    registry
+        .insert<bufferization::BufferizationDialect, memref::MemRefDialect>();
+    registerAllocationOpInterfaceExternalModels(registry);
   }
 
   void runOnOperation() override {
@@ -165,7 +167,7 @@ struct OneShotBufferizePass
     if (!options) {
       // Make new bufferization options if none were provided when creating the
       // pass.
-      opt.allowReturnMemref = allowReturnMemref;
+      opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
       opt.createDeallocs = createDeallocs;
@@ -299,6 +301,21 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
   return success();
 }
 
+LogicalResult
+bufferization::finalizeBuffers(Operation *op,
+                               const BufferizationOptions &options) {
+  if (failed(hoistBufferAllocations(op, options)))
+    return failure();
+  if (failed(createAllocDeallocOps(op, options, /*onlyLeakingAllocs=*/true)))
+    return failure();
+  if (options.createDeallocs && failed(deallocateBuffers(op)))
+    return failure();
+  if (failed(createAllocDeallocOps(op, options)))
+    return failure();
+
+  return success();
+}
+
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const AnalysisState &analysisState) {
   BufferizationState bufferizationState(analysisState);
@@ -379,7 +396,6 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
 
 BufferizationOptions bufferization::getPartialBufferizationOptions() {
   BufferizationOptions options;
-  options.allowReturnMemref = true;
   options.allowUnknownOps = true;
   options.createDeallocs = false;
   options.fullyDynamicLayoutMaps = false;
