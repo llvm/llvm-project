@@ -274,11 +274,45 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   assert((Hi != Memory || Lo == Memory) && "Invalid memory classification.");
   assert((Hi != SSEUp || Lo == SSE) && "Invalid SSEUp classification.");
 
-  // mlir::Type ResType = nullptr;
-  assert(Lo == NoClass && "Only NoClass Supported so far");
-  assert(Hi == NoClass && "Only NoClass Supported so far");
+  mlir::Type ResType = nullptr;
+  assert(Lo == NoClass ||
+         Lo == Integer && "Only NoClass and Integer supported so far");
 
-  return ABIArgInfo::getIgnore();
+  switch (Lo) {
+  case NoClass:
+    assert(Hi == NoClass && "Only NoClass supported so far for Hi");
+    return ABIArgInfo::getIgnore();
+
+  // AMD64-ABI 3.2.3p4: Rule 3. If the class is INTEGER, the next available
+  // register of the sequence %rax, %rdx is used.
+  case Integer:
+    ResType = GetINTEGERTypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
+
+    // If we have a sign or zero extended integer, make sure to return Extend so
+    // that the parameter gets the right LLVM IR attributes.
+    // TODO: extend the above consideration to MLIR
+    if (Hi == NoClass && ResType.isa<mlir::IntegerType>()) {
+      // Treat an enum type as its underlying type.
+      if (const auto *EnumTy = RetTy->getAs<EnumType>())
+        RetTy = EnumTy->getDecl()->getIntegerType();
+
+      if (RetTy->isIntegralOrEnumerationType() &&
+          isPromotableIntegerTypeForABI(RetTy)) {
+        assert(false && "extended types NYI");
+      }
+      break;
+    }
+    llvm_unreachable("ResType as intenger is only case currently implemented.");
+  default:
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Type HighPart = nullptr;
+
+  if (HighPart)
+    assert(false && "NYI");
+
+  return ABIArgInfo::getDirect(ResType);
 }
 
 const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
