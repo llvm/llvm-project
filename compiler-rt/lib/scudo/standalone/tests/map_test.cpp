@@ -17,7 +17,7 @@ static const char *MappingName = "scudo:test";
 
 TEST(ScudoMapTest, PageSize) {
   EXPECT_EQ(scudo::getPageSizeCached(),
-            static_cast<scudo::uptr>(getpagesize()));
+            static_cast<scudo::uptr>(sysconf(_SC_PAGESIZE)));
 }
 
 TEST(ScudoMapDeathTest, MapNoAccessUnmap) {
