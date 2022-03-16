@@ -489,7 +489,6 @@ class LLVMConfig(object):
 
         lib_dir_props = [
             self.config.name.lower() + '_libs_dir',
-            'clang_libs_dir',
             'llvm_shlib_dir',
             'llvm_libs_dir',
             ]

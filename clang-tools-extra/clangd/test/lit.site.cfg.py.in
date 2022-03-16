@@ -2,7 +2,6 @@
 
 # Variables needed for common clang config.
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
-config.clang_libs_dir = "@CLANG_LIBS_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
