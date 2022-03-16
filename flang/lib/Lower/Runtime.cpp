@@ -16,6 +16,7 @@
 #include "flang/Runtime/pointer.h"
 #include "flang/Runtime/random.h"
 #include "flang/Runtime/stop.h"
+#include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
 
@@ -125,6 +126,56 @@ mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getType(), pointer, target);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+mlir::Value Fortran::lower::genCpuTime(fir::FirOpBuilder &builder,
+                                       mlir::Location loc) {
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(CpuTime)>(loc, builder);
+  return builder.create<fir::CallOp>(loc, func, llvm::None).getResult(0);
+}
+
+void Fortran::lower::genDateAndTime(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    llvm::Optional<fir::CharBoxValue> date,
+                                    llvm::Optional<fir::CharBoxValue> time,
+                                    llvm::Optional<fir::CharBoxValue> zone,
+                                    mlir::Value values) {
+  mlir::FuncOp callee =
+      fir::runtime::getRuntimeFunc<mkRTKey(DateAndTime)>(loc, builder);
+  mlir::FunctionType funcTy = callee.getType();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero;
+  auto splitArg = [&](llvm::Optional<fir::CharBoxValue> arg,
+                      mlir::Value &buffer, mlir::Value &len) {
+    if (arg) {
+      buffer = arg->getBuffer();
+      len = arg->getLen();
+    } else {
+      if (!zero)
+        zero = builder.createIntegerConstant(loc, idxTy, 0);
+      buffer = zero;
+      len = zero;
+    }
+  };
+  mlir::Value dateBuffer;
+  mlir::Value dateLen;
+  splitArg(date, dateBuffer, dateLen);
+  mlir::Value timeBuffer;
+  mlir::Value timeLen;
+  splitArg(time, timeBuffer, timeLen);
+  mlir::Value zoneBuffer;
+  mlir::Value zoneLen;
+  splitArg(zone, zoneBuffer, zoneLen);
+
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(7));
+
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, funcTy, dateBuffer, dateLen, timeBuffer, timeLen,
+      zoneBuffer, zoneLen, sourceFile, sourceLine, values);
+  builder.create<fir::CallOp>(loc, callee, args);
 }
 
 void Fortran::lower::genRandomInit(fir::FirOpBuilder &builder,
