@@ -33,30 +33,30 @@ define float @foo(float* nocapture readonly %A) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi float [ [[TMP3]], [[ENTRY:%.*]] ], [ [[DOTPRE:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[B_032:%.*]] = phi float [ [[TMP2]], [[ENTRY]] ], [ [[ADD14:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x float> [ [[TMP1]], [[ENTRY]] ], [ [[TMP11:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x float> [ [[TMP1]], [[ENTRY]] ], [ [[TMP14:%.*]], [[FOR_BODY_FOR_BODY_CRIT_EDGE]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, float* [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> [[TMP8]], float [[TMP7]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x float> [[TMP9]], <float 7.000000e+00, float 8.000000e+00>
-; CHECK-NEXT:    [[TMP11]] = fadd <2 x float> [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP13:%.*]] = load float, float* [[ARRAYIDX12]], align 4
-; CHECK-NEXT:    [[MUL13:%.*]] = fmul float [[TMP13]], 9.000000e+00
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, float* [[ARRAYIDX12]], align 4
+; CHECK-NEXT:    [[MUL13:%.*]] = fmul float [[TMP12]], 9.000000e+00
 ; CHECK-NEXT:    [[ADD14]] = fadd float [[B_032]], [[MUL13]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP14]], 121
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP13]], 121
+; CHECK-NEXT:    [[TMP14]] = fadd <2 x float> [[TMP5]], [[TMP10]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY_FOR_BODY_CRIT_EDGE]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.for.body_crit_edge:
 ; CHECK-NEXT:    [[ARRAYIDX3_PHI_TRANS_INSERT:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    [[DOTPRE]] = load float, float* [[ARRAYIDX3_PHI_TRANS_INSERT]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP11]], i32 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x float> [[TMP14]], i32 0
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP14]], i32 1
 ; CHECK-NEXT:    [[ADD16:%.*]] = fadd float [[TMP15]], [[TMP16]]
 ; CHECK-NEXT:    [[ADD17:%.*]] = fadd float [[ADD16]], [[ADD14]]
 ; CHECK-NEXT:    ret float [[ADD17]]

@@ -16,8 +16,8 @@ define void @foo() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* undef, align 8
 ; CHECK-NEXT:    br i1 undef, label [[BB3]], label [[BB4:%.*]]
 ; CHECK:       bb4:
-; CHECK-NEXT:    [[CONV2:%.*]] = uitofp i16 undef to double
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP2]] to <4 x double>
+; CHECK-NEXT:    [[CONV2:%.*]] = uitofp i16 undef to double
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[TMP3]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> <double undef, double poison>, double [[CONV2]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP5]], [[TMP6]]
