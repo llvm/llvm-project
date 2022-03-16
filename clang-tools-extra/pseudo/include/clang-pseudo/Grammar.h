@@ -1,4 +1,4 @@
-//===--- Grammar.h - grammar used by clang pseudo parser  --------*- C++-*-===//
+//===--- Grammar.h - grammar used by clang pseudoparser  ---------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@
 //
 //  A grammar formally describes a language, and it is constructed by a set of
 //  production rules. A rule is of BNF form (AAA := BBB CCC). A symbol is either
-//  non-terminal or terminal, identified by a SymbolID.
+//  nonterminal or terminal, identified by a SymbolID.
 //
 //  Notions about the BNF grammar:
 //  - "_" is the start symbol of the augmented grammar;
@@ -45,8 +45,8 @@
 
 namespace clang {
 namespace pseudo {
-// A SymbolID uniquely identifies a terminal/non-terminal symbol in a grammar.
-// Non-terminal IDs are indexes into a table of non-terminal symbols.
+// A SymbolID uniquely identifies a terminal/nonterminal symbol in a grammar.
+// nonterminal IDs are indexes into a table of nonterminal symbols.
 // Terminal IDs correspond to the clang TokenKind enum.
 using SymbolID = uint16_t;
 // SymbolID is only 12 bits wide.
@@ -120,11 +120,11 @@ public:
   // Returns the SymbolID of the start symbol '_'.
   SymbolID startSymbol() const { return StartSymbol; };
 
-  // Returns all rules of the given non-terminal symbol.
+  // Returns all rules of the given nonterminal symbol.
   llvm::ArrayRef<Rule> rulesFor(SymbolID SID) const;
   const Rule &lookupRule(RuleID RID) const;
 
-  // Gets symbol (terminal or non-terminal) name.
+  // Gets symbol (terminal or nonterminal) name.
   // Terminals have names like "," (kw_comma) or "OPERATOR" (kw_operator).
   llvm::StringRef symbolName(SymbolID) const;
 
@@ -157,7 +157,7 @@ struct GrammarTable {
 
   struct Nonterminal {
     std::string Name;
-    // Corresponding rules that construct the non-terminal, it is a [Start, End)
+    // Corresponding rules that construct the nonterminal, it is a [Start, End)
     // index range of the Rules table.
     struct {
       RuleID Start;
