@@ -177,4 +177,4 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LRTable::Action &);
 } // namespace pseudo
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_SYNTAX_PSEUDO_LRTABLE_H
+#endif // CLANG_PSEUDO_LRTABLE_H

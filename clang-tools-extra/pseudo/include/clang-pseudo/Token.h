@@ -200,4 +200,4 @@ TokenStream stripComments(const TokenStream &);
 } // namespace pseudo
 } // namespace clang
 
-#endif
+#endif // CLANG_PSEUDO_TOKEN_H
