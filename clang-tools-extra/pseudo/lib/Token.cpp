@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Pseudo/Token.h"
+#include "clang-pseudo/Token.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T) {
@@ -105,5 +104,4 @@ TokenStream stripComments(const TokenStream &Input) {
 }
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang

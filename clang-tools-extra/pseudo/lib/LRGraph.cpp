@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Pseudo/LRGraph.h"
-#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
+#include "clang-pseudo/LRGraph.h"
+#include "clang-pseudo/Grammar.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -15,16 +15,16 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
-using ItemSet = std::vector<clang::syntax::pseudo::Item>;
+using ItemSet = std::vector<clang::pseudo::Item>;
 
 namespace llvm {
-// Support clang::syntax::pseudo::Item as DenseMap keys.
+// Support clang::pseudo::Item as DenseMap keys.
 template <> struct DenseMapInfo<ItemSet> {
   static inline ItemSet getEmptyKey() {
-    return {DenseMapInfo<clang::syntax::pseudo::Item>::getEmptyKey()};
+    return {DenseMapInfo<clang::pseudo::Item>::getEmptyKey()};
   }
   static inline ItemSet getTombstoneKey() {
-    return {DenseMapInfo<clang::syntax::pseudo::Item>::getTombstoneKey()};
+    return {DenseMapInfo<clang::pseudo::Item>::getTombstoneKey()};
   }
   static unsigned getHashValue(const ItemSet &I) {
     return llvm::hash_combine_range(I.begin(), I.end());
@@ -36,7 +36,6 @@ template <> struct DenseMapInfo<ItemSet> {
 } // namespace llvm
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 namespace {
 
@@ -227,5 +226,4 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
 }
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang
