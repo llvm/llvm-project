@@ -684,6 +684,7 @@ def Math_PowFOp : Math_FloatBinaryOp<"powf"> {
     %x = math.powf %y, %z : tensor<4x?xbf16>
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

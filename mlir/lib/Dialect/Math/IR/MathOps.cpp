@@ -63,7 +63,40 @@ OpFoldResult math::Log2Op::fold(ArrayRef<Attribute> operands) {
     return FloatAttr::get(getType(), log2(apf.convertToDouble()));
 
   if (ft.getWidth() == 32)
-    return FloatAttr::get(getType(), log2f(apf.convertToDouble()));
+    return FloatAttr::get(getType(), log2f(apf.convertToFloat()));
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
+// PowFOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::PowFOp::fold(ArrayRef<Attribute> operands) {
+  auto ft = getType().dyn_cast<FloatType>();
+  if (!ft)
+    return {};
+
+  APFloat vals[2]{APFloat(ft.getFloatSemantics()),
+                  APFloat(ft.getFloatSemantics())};
+  for (int i = 0; i < 2; ++i) {
+    if (!operands[i])
+      return {};
+
+    auto attr = operands[i].dyn_cast<FloatAttr>();
+    if (!attr)
+      return {};
+
+    vals[i] = attr.getValue();
+  }
+
+  if (ft.getWidth() == 64)
+    return FloatAttr::get(
+        getType(), pow(vals[0].convertToDouble(), vals[1].convertToDouble()));
+
+  if (ft.getWidth() == 32)
+    return FloatAttr::get(
+        getType(), powf(vals[0].convertToFloat(), vals[1].convertToFloat()));
 
   return {};
 }
