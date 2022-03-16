@@ -17,7 +17,7 @@
 
 ;; Check that main is not internalized. This covers the case of bitcode symbols
 ;; referenced by undefined symbols that don't belong to any InputFile.
-; CHECK: define void @main()
+; CHECK: define dso_local void @main()
 
 ;; Check that the foo and bar functions are correctly internalized.
 ; CHECK: define internal void @bar()
@@ -25,7 +25,7 @@
 
 ;; Check that a bitcode symbol that is referenced by a regular object file isn't
 ;; internalized.
-; CHECK: define void @used_in_regular_obj()
+; CHECK: define dso_local void @used_in_regular_obj()
 
 ;; Check that a bitcode symbol that is defined in another bitcode file gets
 ;; internalized.
@@ -51,13 +51,13 @@
 
 ;; Note that only foo() gets internalized here; everything else that isn't
 ;; hidden must be exported.
-; DYN: @comm = common global
+; DYN: @comm = common dso_local global
 ; DYN: @comm_hide = internal global
-; DYN: define void @main()
-; DYN: define void @bar()
+; DYN: define dso_local void @main()
+; DYN: define dso_local void @bar()
 ; DYN: define internal void @foo()
-; DYN: define void @used_in_regular_obj()
-; DYN: define void @baz()
+; DYN: define dso_local void @used_in_regular_obj()
+; DYN: define dso_local void @baz()
 
 ; DYN-SYMS-DAG: (__TEXT,__text) external _bar
 ; DYN-SYMS-DAG: (__TEXT,__text) external _baz
