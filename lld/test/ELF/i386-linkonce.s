@@ -6,7 +6,7 @@
 /// crti.o in i386 glibc<2.32 has .gnu.linkonce.t.__x86.get_pc_thunk.bx that is
 /// not fully supported. Test that we don't report
 /// "relocation refers to a symbol in a discarded section: __x86.get_pc_thunk.bx".
-// RUN: ld.lld %t.o %t2.a -o /dev/null
+// RUN: ld.lld %t.o %t2.a %t2.o -o /dev/null
 
     .globl _start
 _start:

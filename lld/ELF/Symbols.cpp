@@ -546,7 +546,7 @@ void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
   // .gnu.linkonce.t.__x86.get_pc_thunk.bx will be discarded, so there is
   // actually no duplicate.
   const Defined *d = dyn_cast<Defined>(&sym);
-  if (!d)
+  if (!d || d->getName() == "__x86.get_pc_thunk.bx")
     return;
   // Allow absolute symbols with the same value for GNU ld compatibility.
   if (!d->section && !errSec && errOffset && d->value == errOffset)
