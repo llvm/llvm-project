@@ -21,12 +21,13 @@ func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
   } else {
   // CHECK: } else {
     // CHECK: %[[m:.*]] = bufferization.to_memref %[[t]]
-    // CHECK: scf.yield %[[m]]
+    // CHECK: %[[cloned:.*]] = bufferization.clone %[[m]]
+    // CHECK: scf.yield %[[cloned]]
     scf.yield %t : tensor<?xf32>
   }
   // CHECK: }
-  // CHECK-NOT: dealloc
   // CHECK: %[[r_tensor:.*]] = bufferization.to_tensor %[[r]]
+  // CHECK: memref.dealloc %[[r]]
   // CHECK: return %[[r_tensor]]
   return %r : tensor<?xf32>
 }

@@ -516,11 +516,16 @@ LogicalResult createDealloc(OpBuilder &b, Location loc, Value allocatedBuffer,
 LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from, Value to,
                            const BufferizationOptions &options);
 
-/// Finalize all buffer allocations.
-/// * Hoist buffer allocations as much as possible.
-/// * Create alloc/dealloc ops as specified by the bufferization options.
-LogicalResult finalizeBuffers(Operation *op,
-                              const BufferizationOptions &options);
+/// Try to hoist all new buffer allocations until the next hoisting barrier.
+LogicalResult hoistBufferAllocations(Operation *op,
+                                     const BufferizationOptions &options);
+
+/// Create alloc/dealloc ops as specified in the bufferization options. If
+/// `onlyLeakingAlloc`, only those buffer allocations are processed for which no
+/// buffer deallocation can be created.
+LogicalResult createAllocDeallocOps(Operation *op,
+                                    const BufferizationOptions &options,
+                                    bool onlyLeakingAllocs = false);
 } // namespace bufferization
 } // namespace mlir
 

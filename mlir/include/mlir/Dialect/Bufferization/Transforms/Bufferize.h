@@ -90,6 +90,12 @@ BufferizationOptions getPartialBufferizationOptions();
 /// Note: This function overload is useful for extending the bufferization.
 LogicalResult bufferizeOp(Operation *op,
                           BufferizationState &bufferizationState);
+
+/// Finalize all buffer allocations.
+/// * Hoist buffer allocations as much as possible.
+/// * Create alloc/dealloc ops as specified by the bufferization options.
+LogicalResult finalizeBuffers(Operation *op,
+                              const BufferizationOptions &options);
 } // namespace bufferization
 } // namespace mlir
 

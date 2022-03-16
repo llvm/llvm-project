@@ -508,8 +508,10 @@ LogicalResult bufferization::createMemCpy(OpBuilder &b, Location loc,
   return success();
 }
 
-static LogicalResult
-createAllocDeallocOps(Operation *op, const BufferizationOptions &options) {
+LogicalResult
+bufferization::createAllocDeallocOps(Operation *op,
+                                     const BufferizationOptions &options,
+                                     bool onlyLeakingAllocs) {
   IRRewriter rewriter(op->getContext());
 
   // Bufferization creates memref.alloca ops. After bufferization, these must be
@@ -518,7 +520,11 @@ createAllocDeallocOps(Operation *op, const BufferizationOptions &options) {
     // Ignore memref.alloca ops that were not created by the bufferization.
     if (!allocaOp->hasAttr(kBufferAllocationAttr))
       return WalkResult::skip();
+    // If `onlyLeakingAllocs`, process only ops that are marked as
+    // "skip dealloc".
     bool skipDealloc = allocaOp->hasAttr(kSkipDeallocAttr);
+    if (onlyLeakingAllocs && !skipDealloc)
+      return WalkResult::skip();
 
     // Create alloc.
     Block *block = allocaOp->getBlock();
@@ -547,8 +553,9 @@ createAllocDeallocOps(Operation *op, const BufferizationOptions &options) {
 
 /// Try to hoist all new buffer allocations until the next hoisting barrier.
 // TODO: Consolidate this function with the existing buffer hoisting pass.
-static LogicalResult
-hoistBufferAllocations(Operation *op, const BufferizationOptions &options) {
+LogicalResult
+bufferization::hoistBufferAllocations(Operation *op,
+                                      const BufferizationOptions &options) {
   // Nothing to do if allocation hoisting is deactivated.
   if (!options.hoistAllocations)
     return success();
@@ -597,17 +604,6 @@ hoistBufferAllocations(Operation *op, const BufferizationOptions &options) {
     // Move to the beginning of the block.
     allocaOp->moveBefore(&(*insertionBlock)->front());
   }
-
-  return success();
-}
-
-LogicalResult
-bufferization::finalizeBuffers(Operation *op,
-                               const BufferizationOptions &options) {
-  if (failed(hoistBufferAllocations(op, options)))
-    return failure();
-  if (failed(createAllocDeallocOps(op, options)))
-    return failure();
 
   return success();
 }

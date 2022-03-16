@@ -157,7 +157,9 @@ struct OneShotBufferizePass
       : options(options) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<bufferization::BufferizationDialect>();
+    registry
+        .insert<bufferization::BufferizationDialect, memref::MemRefDialect>();
+    registerAllocationOpInterfaceExternalModels(registry);
   }
 
   void runOnOperation() override {
@@ -295,6 +297,21 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
     if (failed(status))
       return status;
   }
+
+  return success();
+}
+
+LogicalResult
+bufferization::finalizeBuffers(Operation *op,
+                               const BufferizationOptions &options) {
+  if (failed(hoistBufferAllocations(op, options)))
+    return failure();
+  if (failed(createAllocDeallocOps(op, options, /*onlyLeakingAllocs=*/true)))
+    return failure();
+  if (options.createDeallocs && failed(deallocateBuffers(op)))
+    return failure();
+  if (failed(createAllocDeallocOps(op, options)))
+    return failure();
 
   return success();
 }

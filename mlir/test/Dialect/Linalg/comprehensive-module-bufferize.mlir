@@ -81,7 +81,8 @@ func @not_inplace(
   //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[ALLOC]] : memref<?xf32>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
-  //     CHECK:  return %[[ALLOC]] : memref<?xf32>
+  // CHECK-NOT: dealloc
+  //     CHECK: return %[[ALLOC]] : memref<?xf32>
   return %r: tensor<?xf32>
 }
 
@@ -110,6 +111,7 @@ func @not_inplace(
                      outs(%A: tensor<?x?xf32>)
     -> tensor<?x?xf32>
 
+  //     CHECK: memref.dealloc %[[ALLOC]]
   //     CHECK: return
   // CHECK-NOT: tensor
   return %r: tensor<?x?xf32>
@@ -124,6 +126,7 @@ func @not_inplace(%A : tensor<?x?xf32> {linalg.inplaceable = true}) -> tensor<?x
   %r = linalg.matmul  ins(%A, %A: tensor<?x?xf32>, tensor<?x?xf32>)
                      outs(%A: tensor<?x?xf32>)
     -> tensor<?x?xf32>
+  // CHECK-NOT: dealloc
   return %r: tensor<?x?xf32>
 }
 // -----
@@ -328,6 +331,7 @@ func @scf_for_yield_only(%A : tensor<?xf32> {linalg.inplaceable = false},
   }
 
   //     CHECK:   return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
+  // CHECK-NOT:   dealloc
   return %r0, %r1: tensor<?xf32>, tensor<?xf32>
 }
 
@@ -419,6 +423,7 @@ func @main() {
 //      CHECK:   call @some_external_func(%[[B]]) : (memref<4xi32, #[[$DYN_1D_MAP]]>) -> ()
   call @some_external_func(%A) : (tensor<4xi32>) -> ()
 
+//      CHECK: memref.dealloc %[[alloc]]
   return
 }
 
@@ -444,6 +449,7 @@ func @main() {
     scf.yield
   }
 
+//      CHECK:   memref.dealloc %[[alloc]]
   return
 }
 
@@ -1191,4 +1197,24 @@ func @rank_reducing(
     scf.yield %10 : tensor<?x1x6x8xf32>
   }
   return %5: tensor<?x1x6x8xf32>
+}
+
+// -----
+
+// Note: This bufferization is inefficient, but it bufferizes correctly.
+
+// CHECK-LABEL: func @scf_execute_region_yield_non_equivalent(
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}})
+//       CHECK:   %[[clone:.*]] = bufferization.clone %[[alloc]]
+//       CHECK:   memref.dealloc %[[alloc]]
+//       CHECK:   %[[r:.*]] = memref.load %[[clone]][%{{.*}}]
+//       CHECK:   memref.dealloc %[[clone]]
+//       CHECK:   return %[[r]]
+func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 {
+  %r = scf.execute_region -> (tensor<?xf32>) {
+    %t2 = linalg.init_tensor [%i] : tensor<?xf32>
+    scf.yield %t2 : tensor<?xf32>
+  }
+  %f = tensor.extract %r[%j] : tensor<?xf32>
+  return %f : f32
 }
