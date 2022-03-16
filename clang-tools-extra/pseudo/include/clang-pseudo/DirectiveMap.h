@@ -143,4 +143,4 @@ private:
 } // namespace pseudo
 } // namespace clang
 
-#endif
+#endif // CLANG_PSEUDO_DIRECTIVEMAP_H

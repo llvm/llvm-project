@@ -394,6 +394,10 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_FGETPOS_FSETPOS
 #endif
 
+#if defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#  define TEST_HAS_NO_INCOMPLETE_RANGES
+#endif
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
