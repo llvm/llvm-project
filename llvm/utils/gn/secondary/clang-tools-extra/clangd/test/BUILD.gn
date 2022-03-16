@@ -28,7 +28,6 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_CURRENT_SOURCE_DIR=" +
         rebase_path("//clang-tools-extra/clangd/test"),
 
-    "CLANG_LIBS_DIR=",  # needed only for shared builds
     "CLANG_TOOLS_DIR=",
     "CLANGD_ENABLE_REMOTE=0",
     "CLANGD_TIDY_CHECKS=1",
