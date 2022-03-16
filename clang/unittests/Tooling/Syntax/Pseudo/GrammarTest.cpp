@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Grammar.h"
+#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <memory>
 
 namespace clang {
+namespace syntax {
 namespace pseudo {
 namespace {
 
@@ -156,4 +157,5 @@ simple-type-specifier := INT
 
 } // namespace
 } // namespace pseudo
+} // namespace syntax
 } // namespace clang

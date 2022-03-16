@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS Support)
 
-add_clang_library(clangPseudo
+add_clang_library(clangToolingSyntaxPseudo
   DirectiveMap.cpp
   Grammar.cpp
   GrammarBNF.cpp

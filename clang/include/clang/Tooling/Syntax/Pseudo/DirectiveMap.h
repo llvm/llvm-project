@@ -25,15 +25,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_DIRECTIVEMAP_H
-#define CLANG_PSEUDO_DIRECTIVEMAP_H
+#ifndef LLVM_CLANG_TOOLING_SYNTAX_PREPROCESS_H
+#define LLVM_CLANG_TOOLING_SYNTAX_PREPROCESS_H
 
-#include "clang-pseudo/Token.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Tooling/Syntax/Pseudo/Token.h"
 #include <vector>
 
 namespace clang {
 class LangOptions;
+namespace syntax {
 namespace pseudo {
 
 /// Describes the structure of a source file, as seen by the preprocessor.
@@ -141,6 +142,7 @@ private:
 };
 
 } // namespace pseudo
+} // namespace syntax
 } // namespace clang
 
 #endif

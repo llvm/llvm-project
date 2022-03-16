@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/DirectiveMap.h"
-#include "clang-pseudo/Grammar.h"
-#include "clang-pseudo/LRGraph.h"
-#include "clang-pseudo/LRTable.h"
-#include "clang-pseudo/Token.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Tooling/Syntax/Pseudo/DirectiveMap.h"
+#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
+#include "clang/Tooling/Syntax/Pseudo/LRGraph.h"
+#include "clang/Tooling/Syntax/Pseudo/LRTable.h"
+#include "clang/Tooling/Syntax/Pseudo/Token.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-using clang::pseudo::Grammar;
+using clang::syntax::pseudo::Grammar;
 using llvm::cl::desc;
 using llvm::cl::init;
 using llvm::cl::opt;
@@ -64,17 +64,19 @@ int main(int argc, char *argv[]) {
     if (PrintGrammar)
       llvm::outs() << G->dump();
     if (PrintGraph)
-      llvm::outs() << clang::pseudo::LRGraph::buildLR0(*G).dumpForTests(*G);
+      llvm::outs() << clang::syntax::pseudo::LRGraph::buildLR0(*G).dumpForTests(
+          *G);
     if (PrintTable)
-      llvm::outs() << clang::pseudo::LRTable::buildSLR(*G).dumpForTests(*G);
+      llvm::outs() << clang::syntax::pseudo::LRTable::buildSLR(*G).dumpForTests(
+          *G);
     return 0;
   }
 
   if (Source.getNumOccurrences()) {
     std::string Text = readOrDie(Source);
     clang::LangOptions LangOpts; // FIXME: use real options.
-    auto Stream = clang::pseudo::lex(Text, LangOpts);
-    auto Structure = clang::pseudo::DirectiveMap::parse(Stream);
+    auto Stream = clang::syntax::pseudo::lex(Text, LangOpts);
+    auto Structure = clang::syntax::pseudo::DirectiveMap::parse(Stream);
 
     if (PrintDirectiveMap)
       llvm::outs() << Structure;

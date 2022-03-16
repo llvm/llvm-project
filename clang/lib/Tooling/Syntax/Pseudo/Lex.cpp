@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/Token.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/LiteralSupport.h"
+#include "clang/Tooling/Syntax/Pseudo/Token.h"
 
 namespace clang {
+namespace syntax {
 namespace pseudo {
 
 TokenStream lex(const std::string &Code, const clang::LangOptions &LangOpts) {
@@ -109,4 +110,5 @@ TokenStream cook(const TokenStream &Code, const LangOptions &LangOpts) {
 }
 
 } // namespace pseudo
+} // namespace syntax
 } // namespace clang
