@@ -137,8 +137,7 @@ public:
   ///     The module being instrumented.
   Instrumenter(llvm::Module &module,
                std::shared_ptr<UtilityFunction> checker_function)
-      : m_module(module), m_checker_function(checker_function),
-        m_i8ptr_ty(nullptr), m_intptr_ty(nullptr) {}
+      : m_module(module), m_checker_function(checker_function) {}
 
   virtual ~Instrumenter() = default;
 
@@ -302,8 +301,8 @@ protected:
       m_checker_function; ///< The dynamic checker function for the process
 
 private:
-  PointerType *m_i8ptr_ty;
-  IntegerType *m_intptr_ty;
+  PointerType *m_i8ptr_ty = nullptr;
+  IntegerType *m_intptr_ty = nullptr;
 };
 
 class ValidPointerChecker : public Instrumenter {

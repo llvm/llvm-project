@@ -272,11 +272,6 @@ public:
   /// a finer grain to tune the register allocator.
   virtual bool enableRALocalReassignment(CodeGenOpt::Level OptLevel) const;
 
-  /// True if the subtarget should consider the cost of local intervals
-  /// created by a split candidate when choosing the best split candidate. This
-  /// heuristic may be compile time intensive.
-  virtual bool enableAdvancedRASplitCost() const;
-
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
   virtual bool useAA() const;

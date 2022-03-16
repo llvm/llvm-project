@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Domain :=
 ; CHECK:   [N, P] -> { Stmt_if_end[i0] : 0 <= i0 < N and (i0 > P or i0 < P) };

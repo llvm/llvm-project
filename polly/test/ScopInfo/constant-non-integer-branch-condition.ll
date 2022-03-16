@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -analyze -polly-scops %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; At some point this caused a problem in the domain generation as we
 ; assumed any constant branch condition to be valid. However, only constant

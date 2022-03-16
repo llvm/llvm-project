@@ -133,7 +133,8 @@ llvm::StringRef PlatformRemoteAppleTV::GetDescriptionStatic() {
   return "Remote Apple TV platform plug-in.";
 }
 
-std::vector<ArchSpec> PlatformRemoteAppleTV::GetSupportedArchitectures() {
+std::vector<ArchSpec> PlatformRemoteAppleTV::GetSupportedArchitectures(
+    const ArchSpec &process_host_arch) {
   ArchSpec system_arch(GetSystemArchitecture());
 
   const ArchSpec::Core system_core = system_arch.GetCore();

@@ -1,5 +1,4 @@
-; RUN: opt %loadPolly -polly-detect -analyze \
-; RUN:     -polly-process-unprofitable=false < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-detect -disable-output < %s | FileCheck %s
 
 ; CHECK: Valid Region for Scop: next => bb3
 ;

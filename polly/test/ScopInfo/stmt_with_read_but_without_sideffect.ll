@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-delicm -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-delicm -disable-output < %s | FileCheck %s
 ;
 ; The statement Stmt_for_if_else_1 should be removed because it has no
 ; sideeffects.  But it has a use of MemRef_tmp21 that must also be

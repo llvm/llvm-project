@@ -17,12 +17,11 @@
 
 namespace llvm {
 class PassRegistry;
-
-void initializeForwardOpTreeWrapperPassPass(PassRegistry &);
 } // namespace llvm
 
 namespace polly {
 llvm::Pass *createForwardOpTreeWrapperPass();
+llvm::Pass *createForwardOpTreePrinterLegacyPass(llvm::raw_ostream &OS);
 
 struct ForwardOpTreePass : llvm::PassInfoMixin<ForwardOpTreePass> {
   ForwardOpTreePass() {}
@@ -43,5 +42,10 @@ private:
 };
 
 } // namespace polly
+
+namespace llvm {
+void initializeForwardOpTreeWrapperPassPass(PassRegistry &);
+void initializeForwardOpTreePrinterLegacyPassPass(PassRegistry &);
+} // namespace llvm
 
 #endif // POLLY_FORWARDOPTREE_H

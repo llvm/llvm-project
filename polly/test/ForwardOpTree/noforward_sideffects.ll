@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly  -polly-optree -analyze < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadPolly  -polly-print-optree -disable-output < %s | FileCheck %s -match-full-lines
 ;
 ; Do not forward instructions with side-effects (here: function call).
 ;

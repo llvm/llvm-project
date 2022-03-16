@@ -9,26 +9,26 @@ define void @test_stxr(i64* %ptr) {
 ; CHECK-NEXT:    [[CONST:%.*]] = bitcast i64 -9223372036317904832 to i64
 ; CHECK-NEXT:    [[PTR_0:%.*]] = getelementptr i64, i64* [[PTR:%.*]], i64 0
 ; CHECK-NEXT:    [[CONST_MAT:%.*]] = add i64 [[CONST]], -64
-; CHECK-NEXT:    [[BAR_0:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST_MAT]], i64* [[PTR_0]])
+; CHECK-NEXT:    [[BAR_0:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST_MAT]], i64* elementtype(i64) [[PTR_0]])
 ; CHECK-NEXT:    [[PTR_1:%.*]] = getelementptr i64, i64* [[PTR]], i64 1
-; CHECK-NEXT:    [[BAR_1:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST]], i64* [[PTR_1]])
+; CHECK-NEXT:    [[BAR_1:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST]], i64* elementtype(i64) [[PTR_1]])
 ; CHECK-NEXT:    [[PTR_2:%.*]] = getelementptr i64, i64* [[PTR]], i64 2
 ; CHECK-NEXT:    [[CONST_MAT1:%.*]] = add i64 [[CONST]], 64
-; CHECK-NEXT:    [[BAR_2:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST_MAT1]], i64* [[PTR_2]])
+; CHECK-NEXT:    [[BAR_2:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST_MAT1]], i64* elementtype(i64) [[PTR_2]])
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr i64, i64* [[PTR]], i64 3
 ; CHECK-NEXT:    [[CONST_MAT2:%.*]] = add i64 [[CONST]], 128
-; CHECK-NEXT:    [[BAR_3:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST_MAT2]], i64* [[PTR_3]])
+; CHECK-NEXT:    [[BAR_3:%.*]] = call i32 @llvm.aarch64.stxr.p0i64(i64 [[CONST_MAT2]], i64* elementtype(i64) [[PTR_3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %ptr.0 = getelementptr i64, i64* %ptr, i64 0
-  %bar.0 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904896, i64* %ptr.0)
+  %bar.0 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904896, i64* elementtype(i64) %ptr.0)
   %ptr.1 = getelementptr i64, i64* %ptr, i64 1
-  %bar.1 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904832,  i64* %ptr.1)
+  %bar.1 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904832,  i64* elementtype(i64) %ptr.1)
   %ptr.2 = getelementptr i64, i64* %ptr, i64 2
-  %bar.2 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904768, i64* %ptr.2)
+  %bar.2 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904768, i64* elementtype(i64) %ptr.2)
   %ptr.3 = getelementptr i64, i64* %ptr, i64 3
-  %bar.3 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904704, i64* %ptr.3)
+  %bar.3 = call i32 @llvm.aarch64.stxr.p0i64(i64 -9223372036317904704, i64* elementtype(i64) %ptr.3)
   ret void
 }
 

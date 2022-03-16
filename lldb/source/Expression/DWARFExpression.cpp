@@ -64,8 +64,7 @@ DWARFExpression::DWARFExpression() : m_module_wp(), m_data() {}
 DWARFExpression::DWARFExpression(lldb::ModuleSP module_sp,
                                  const DataExtractor &data,
                                  const DWARFUnit *dwarf_cu)
-    : m_module_wp(), m_data(data), m_dwarf_cu(dwarf_cu),
-      m_reg_kind(eRegisterKindDWARF) {
+    : m_module_wp(), m_data(data), m_dwarf_cu(dwarf_cu) {
   if (module_sp)
     m_module_wp = module_sp;
 }

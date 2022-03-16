@@ -561,7 +561,7 @@ public:
 
 private:
   CompressedSection(const SectionBase &Sec,
-                    DebugCompressionType CompressionType, Error &Err);
+                    DebugCompressionType CompressionType);
   CompressedSection(ArrayRef<uint8_t> CompressedData, uint64_t DecompressedSize,
                     uint64_t DecompressedAlign);
 };

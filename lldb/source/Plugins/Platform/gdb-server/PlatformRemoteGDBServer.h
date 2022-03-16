@@ -65,7 +65,8 @@ public:
                                          // target, else use existing one
                          Status &error) override;
 
-  std::vector<ArchSpec> GetSupportedArchitectures() override {
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override {
     return m_supported_architectures;
   }
 

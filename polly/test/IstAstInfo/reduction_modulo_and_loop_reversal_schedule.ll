@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-import-jscop -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-import-jscop -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; CHECK:          #pragma known-parallel reduction (+ : MemRef_A)
 ; CHECK-NEXT:     for (int c0 = 0; c0 <= 2; c0 += 1) {

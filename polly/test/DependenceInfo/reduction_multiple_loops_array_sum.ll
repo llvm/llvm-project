@@ -1,6 +1,6 @@
-; RUN: opt -basic-aa %loadPolly -polly-dependences -analyze < %s | FileCheck %s
-; RUN: opt -basic-aa %loadPolly -polly-dependences -polly-dependences-analysis-level=reference-wise -analyze < %s | FileCheck %s
-; RUN: opt -basic-aa %loadPolly -polly-dependences -polly-dependences-analysis-level=access-wise -analyze < %s | FileCheck %s
+; RUN: opt -basic-aa %loadPolly -polly-print-dependences -disable-output < %s | FileCheck %s
+; RUN: opt -basic-aa %loadPolly -polly-print-dependences -polly-dependences-analysis-level=reference-wise -disable-output < %s | FileCheck %s
+; RUN: opt -basic-aa %loadPolly -polly-print-dependences -polly-dependences-analysis-level=access-wise -disable-output < %s | FileCheck %s
 ;
 ; Verify that only the inner reduction like accesses cause reduction dependences
 ;

@@ -81,7 +81,7 @@ module test_ops
   ! CHECK:  %[[VAL_25:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xi32>, index) -> i32
   ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xi32>, index) -> i32
   ! CHECK:  %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_25]], %[[VAL_26]] : i32
-  ! CHECK:  %[[VAL_28:.*]] = select %[[VAL_27]], %[[VAL_25]], %[[VAL_26]] : i32
+  ! CHECK:  %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_25]], %[[VAL_26]] : i32
   ! CHECK:  fir.store %[[VAL_28]] to %[[VAL_0]] : !fir.ref<i32>
   ! CHECK:  fir.call @_QPelem_func(%[[VAL_0]]) : (!fir.ref<i32>) -> i32
   end subroutine

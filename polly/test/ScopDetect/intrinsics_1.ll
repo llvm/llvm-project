@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-detect -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-print-detect -disable-output < %s | FileCheck %s
 ;
 ; CHECK: Valid Region for Scop: for.cond => for.end
 ;

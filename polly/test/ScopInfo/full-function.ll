@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -polly-scops -analyze -polly-detect-full-functions < %s \
+; RUN: opt %loadPolly -polly-print-scops -disable-output -polly-detect-full-functions < %s \
 ; RUN: | FileCheck %s -check-prefix=FULL
-; RUN: opt %loadPolly -polly-scops -analyze < %s \
+; RUN: opt %loadPolly -polly-print-scops -disable-output < %s \
 ; RUN: | FileCheck %s -check-prefix=WITHOUT-FULL
 
 ; FULL:      Region: %bb---FunctionExit

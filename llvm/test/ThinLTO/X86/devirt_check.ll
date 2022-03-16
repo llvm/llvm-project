@@ -1,21 +1,33 @@
 ; REQUIRES: x86-registered-target
 
 ; Test that devirtualization option -wholeprogramdevirt-check adds code to check
-; that the devirtualization decision was correct and trap if not.
+; that the devirtualization decision was correct and trap or fallback if not.
 
 ; The vtables have vcall_visibility metadata with hidden visibility, to enable
 ; devirtualization.
 
 ; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt -thinlto-bc -o %t2.o %s
+
+; Check first in trapping mode.
 ; RUN: llvm-lto2 run %t2.o -save-temps -use-new-pm -pass-remarks=. \
-; RUN:	 -wholeprogramdevirt-check \
+; RUN:	 -wholeprogramdevirt-check=trap \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t2.o,test,px \
 ; RUN:   -r=%t2.o,_ZN1A1nEi,p \
 ; RUN:   -r=%t2.o,_ZN1B1fEi,p \
 ; RUN:   -r=%t2.o,_ZTV1B,px 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK --check-prefix=TRAP
+
+; Check next in fallback mode.
+; RUN: llvm-lto2 run %t2.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN:	 -wholeprogramdevirt-check=fallback \
+; RUN:   -o %t3 \
+; RUN:   -r=%t2.o,test,px \
+; RUN:   -r=%t2.o,_ZN1A1nEi,p \
+; RUN:   -r=%t2.o,_ZN1B1fEi,p \
+; RUN:   -r=%t2.o,_ZTV1B,px 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK --check-prefix=FALLBACK
 
 ; REMARK-DAG: single-impl: devirtualized a call to _ZN1A1nEi
 
@@ -28,7 +40,7 @@ target triple = "x86_64-grtev4-linux-gnu"
 @_ZTV1B = constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1, !vcall_visibility !5
 
 
-; CHECK-IR-LABEL: define i32 @test
+; CHECK-LABEL: define i32 @test
 define i32 @test(%struct.A* %obj, i32 %a) {
 entry:
   %0 = bitcast %struct.A* %obj to i8***
@@ -42,19 +54,40 @@ entry:
 
   ; Check that the call was devirtualized, but preceeded by a check guarding
   ; a trap if the function pointer doesn't match.
-  ; CHECK-IR:   %.not = icmp eq i32 (%struct.A*, i32)* %fptr1, @_ZN1A1nEi
-  ; CHECK-IR:   br i1 %.not, label %3, label %2
-  ; CHECK-IR: 2:
-  ; CHECK-IR:   tail call void @llvm.debugtrap()
-  ; CHECK-IR:   br label %3
-  ; CHECK-IR: 3:
-  ; CHECK-IR:   tail call i32 @_ZN1A1nEi
-  %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
+  ; TRAP:   %.not = icmp eq i32 (%struct.A*, i32)* %fptr1, @_ZN1A1nEi
+  ; Ensure !prof and !callees metadata for indirect call promotion removed.
+  ; TRAP-NOT: prof
+  ; TRAP-NOT: callees
+  ; TRAP:   br i1 %.not, label %3, label %2
+  ; TRAP: 2:
+  ; TRAP:   tail call void @llvm.debugtrap()
+  ; TRAP:   br label %3
+  ; TRAP: 3:
+  ; TRAP:   tail call i32 @_ZN1A1nEi
+  ; Check that the call was devirtualized, but preceeded by a check guarding
+  ; a fallback if the function pointer doesn't match.
+  ; FALLBACK:   %2 = icmp eq i32 (%struct.A*, i32)* %fptr1, @_ZN1A1nEi
+  ; FALLBACK:   br i1 %2, label %if.true.direct_targ, label %if.false.orig_indirect
+  ; FALLBACK: if.true.direct_targ:
+  ; FALLBACK:   tail call i32 @_ZN1A1nEi
+  ; Ensure !prof and !callees metadata for indirect call promotion removed.
+  ; FALLBACK-NOT: prof
+  ; FALLBACK-NOT: callees
+  ; FALLBACK:   br label %if.end.icp
+  ; FALLBACK: if.false.orig_indirect:
+  ; FALLBACK:   tail call i32 %fptr1
+  ; Ensure !prof and !callees metadata for indirect call promotion removed.
+  ; In particular, if left on the fallback indirect call ICP may perform an
+  ; additional round of promotion.
+  ; FALLBACK-NOT: prof
+  ; FALLBACK-NOT: callees
+  ; FALLBACK:   br label %if.end.icp
+  %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a), !prof !6, !callees !7
 
   ret i32 %call
 }
-; CHECK-IR-LABEL:   ret i32
-; CHECK-IR-LABEL: }
+; CHECK-LABEL:   ret i32
+; CHECK-LABEL: }
 
 declare i1 @llvm.type.test(i8*, metadata)
 declare void @llvm.assume(i1)
@@ -75,3 +108,5 @@ attributes #0 = { noinline optnone }
 !3 = !{i64 16, !4}
 !4 = distinct !{}
 !5 = !{i64 1}
+!6 = !{!"VP", i32 0, i64 1, i64 1621563287929432257, i64 1}
+!7 = !{i32 (%struct.A*, i32)* @_ZN1A1nEi}

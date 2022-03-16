@@ -22,14 +22,14 @@ OptionValueFileSpec::OptionValueFileSpec(bool resolve) : m_resolve(resolve) {}
 
 OptionValueFileSpec::OptionValueFileSpec(const FileSpec &value, bool resolve)
     : m_current_value(value), m_default_value(value),
-      m_completion_mask(CommandCompletions::eDiskFileCompletion),
+
       m_resolve(resolve) {}
 
 OptionValueFileSpec::OptionValueFileSpec(const FileSpec &current_value,
                                          const FileSpec &default_value,
                                          bool resolve)
     : m_current_value(current_value), m_default_value(default_value),
-      m_completion_mask(CommandCompletions::eDiskFileCompletion),
+
       m_resolve(resolve) {}
 
 void OptionValueFileSpec::DumpValue(const ExecutionContext *exe_ctx,
