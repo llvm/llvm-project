@@ -535,55 +535,28 @@ define <8 x i16> @PR47448_ugt(i16 signext %0) {
   ret <8 x i16> %6
 }
 
-; FIXME: Recognise the knownbits from X86ISD::AND in previous block.
+; Recognise the knownbits from X86ISD::AND in previous block.
 define void @PR54171(<4 x i64>* %mask0, <4 x i64>* %mask1, i64 %i) {
-; SSE2-LABEL: PR54171:
-; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    andq $7, %rdx
-; SSE2-NEXT:    je .LBB18_2
-; SSE2-NEXT:  # %bb.1: # %if.then
-; SSE2-NEXT:    movd %edx, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE2-NEXT:    movdqa %xmm2, (%rdi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    movdqa %xmm0, (%rsi)
-; SSE2-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE2-NEXT:  .LBB18_2: # %if.end
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: PR54171:
-; SSE41:       # %bb.0: # %entry
-; SSE41-NEXT:    andq $7, %rdx
-; SSE41-NEXT:    je .LBB18_2
-; SSE41-NEXT:  # %bb.1: # %if.then
-; SSE41-NEXT:    movd %edx, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [3,3,4,4]
-; SSE41-NEXT:    pmaxud %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,2,2]
-; SSE41-NEXT:    pmaxud %xmm0, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, (%rdi)
-; SSE41-NEXT:    movdqa %xmm1, 16(%rdi)
-; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [7,7,8,8]
-; SSE41-NEXT:    pmaxud %xmm0, %xmm1
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [5,5,6,6]
-; SSE41-NEXT:    pmaxud %xmm0, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, (%rsi)
-; SSE41-NEXT:    movdqa %xmm1, 16(%rsi)
-; SSE41-NEXT:  .LBB18_2: # %if.end
-; SSE41-NEXT:    retq
+; SSE-LABEL: PR54171:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    andq $7, %rdx
+; SSE-NEXT:    je .LBB18_2
+; SSE-NEXT:  # %bb.1: # %if.then
+; SSE-NEXT:    movd %edx, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE-NEXT:  .LBB18_2: # %if.end
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR54171:
 ; AVX1:       # %bb.0: # %entry
@@ -592,16 +565,12 @@ define void @PR54171(<4 x i64>* %mask0, <4 x i64>* %mask1, i64 %i) {
 ; AVX1-NEXT:  # %bb.1: # %if.then
 ; AVX1-NEXT:    vmovd %edx, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
-; AVX1-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; AVX1-NEXT:    vmovdqa %xmm2, (%rdi)
 ; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdi)
-; AVX1-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
 ; AVX1-NEXT:    vmovdqa %xmm1, 16(%rsi)
 ; AVX1-NEXT:  .LBB18_2: # %if.end
@@ -614,11 +583,9 @@ define void @PR54171(<4 x i64>* %mask0, <4 x i64>* %mask1, i64 %i) {
 ; AVX2-NEXT:  # %bb.1: # %if.then
 ; AVX2-NEXT:    vmovd %edx, %xmm0
 ; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
-; AVX2-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
 ; AVX2-NEXT:    vmovdqa %ymm1, (%rdi)
-; AVX2-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
-; AVX2-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
 ; AVX2-NEXT:  .LBB18_2: # %if.end
 ; AVX2-NEXT:    vzeroupper
