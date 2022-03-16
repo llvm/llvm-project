@@ -70,8 +70,8 @@ Derived d;
 
 // poison int, ignore vector, poison int
 // CHECK-LABEL: define {{.*}}ZN7DerivedD2Ev
-// CHECK: call void {{.*}}ZN6VectorIiED1Ev
 // CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 4)
+// CHECK: call void {{.*}}ZN6VectorIiED1Ev
 // CHECK: call void {{.*}}sanitizer_dtor_callback({{.*}}, i64 4)
 // CHECK: call void {{.*}}ZN4BaseD2Ev
 // CHECK: ret void
