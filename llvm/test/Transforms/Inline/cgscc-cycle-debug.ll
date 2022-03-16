@@ -18,7 +18,6 @@
 ; CHECK: Switch an internal ref edge to a call edge from 'test1_a' to 'test1_a'
 ; CHECK: Re-running SCC passes after a refinement of the current SCC: (test1_c, test1_a)
 ; CHECK: Skipping redundant run on SCC: (test1_c, test1_a)
-; CHECK: Skipping an SCC that is now part of some other RefSCC...
 
 declare void @external(i32 %seed)
 

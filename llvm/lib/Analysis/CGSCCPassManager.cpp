@@ -164,9 +164,9 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
       InlinedInternalEdges;
 
   CGSCCUpdateResult UR = {
-      RCWorklist, CWorklist, InvalidRefSCCSet,         InvalidSCCSet,
-      nullptr,    nullptr,   PreservedAnalyses::all(), InlinedInternalEdges,
-      {}};
+      RCWorklist,           CWorklist, InvalidRefSCCSet,
+      InvalidSCCSet,        nullptr,   PreservedAnalyses::all(),
+      InlinedInternalEdges, {}};
 
   // Request PassInstrumentation from analysis manager, will use it to run
   // instrumenting callbacks for the passes later.
@@ -230,11 +230,15 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
           LLVM_DEBUG(dbgs() << "Skipping redundant run on SCC: " << *C << "\n");
           continue;
         }
-        if (&C->getOuterRefSCC() != RC) {
-          LLVM_DEBUG(dbgs() << "Skipping an SCC that is now part of some other "
-                               "RefSCC...\n");
-          continue;
-        }
+        // We used to also check if the current SCC is part of the current
+        // RefSCC and bail if it wasn't, since it should be in RCWorklist.
+        // However, this can cause compile time explosions in some cases on
+        // modules with a huge RefSCC. If a non-trivial amount of SCCs in the
+        // huge RefSCC can become their own child RefSCC, we create one child
+        // RefSCC, bail on the current RefSCC, visit the child RefSCC, revisit
+        // the huge RefSCC, and repeat. By visiting all SCCs in the original
+        // RefSCC we create all the child RefSCCs in one pass of the RefSCC,
+        // rather one pass of the RefSCC creating one child RefSCC at a time.
 
         // Ensure we can proxy analysis updates from the CGSCC analysis manager
         // into the the Function analysis manager by getting a proxy here.
@@ -264,11 +268,8 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
           // Check that we didn't miss any update scenario.
           assert(!InvalidSCCSet.count(C) && "Processing an invalid SCC!");
           assert(C->begin() != C->end() && "Cannot have an empty SCC!");
-          assert(&C->getOuterRefSCC() == RC &&
-                 "Processing an SCC in a different RefSCC!");
 
           LastUpdatedC = UR.UpdatedC;
-          UR.UpdatedRC = nullptr;
           UR.UpdatedC = nullptr;
 
           // Check the PassInstrumentation's BeforePass callbacks before
@@ -290,7 +291,6 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
           // Update the SCC and RefSCC if necessary.
           C = UR.UpdatedC ? UR.UpdatedC : C;
-          RC = UR.UpdatedRC ? UR.UpdatedRC : RC;
 
           if (UR.UpdatedC) {
             // If we're updating the SCC, also update the FAM inside the proxy's
@@ -1213,10 +1213,8 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
   assert(!UR.InvalidatedRefSCCs.count(RC) && "Invalidated the current RefSCC!");
   assert(&C->getOuterRefSCC() == RC && "Current SCC not in current RefSCC!");
 
-  // Record the current RefSCC and SCC for higher layers of the CGSCC pass
-  // manager now that all the updates have been applied.
-  if (RC != &InitialRC)
-    UR.UpdatedRC = RC;
+  // Record the current SCC for higher layers of the CGSCC pass manager now that
+  // all the updates have been applied.
   if (C != &InitialC)
     UR.UpdatedC = C;
 
