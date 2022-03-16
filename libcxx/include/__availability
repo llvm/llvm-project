@@ -164,11 +164,14 @@
 #       define _LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_shared_timed_mutex
 #   endif
 
+        // Note: bad_optional_access & friends were not introduced in the matching
+        // macOS and iOS versions, so the version mismatch between macOS and others
+        // is intended.
 #   define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS                             \
         __attribute__((availability(macosx,strict,introduced=10.13)))           \
-        __attribute__((availability(ios,strict,introduced=11.0)))               \
-        __attribute__((availability(tvos,strict,introduced=11.0)))              \
-        __attribute__((availability(watchos,strict,introduced=4.0)))
+        __attribute__((availability(ios,strict,introduced=12.0)))               \
+        __attribute__((availability(tvos,strict,introduced=12.0)))              \
+        __attribute__((availability(watchos,strict,introduced=5.0)))
 #   define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS                              \
         _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #   define _LIBCPP_AVAILABILITY_BAD_ANY_CAST                                    \
