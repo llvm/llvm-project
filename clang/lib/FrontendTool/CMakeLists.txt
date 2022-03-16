@@ -10,6 +10,7 @@ set(link_libs
   clangFrontend
   clangIndex
   clangRewriteFrontend
+  clangSymbolGraph
   )
 
 if(CLANG_ENABLE_ARCMT)

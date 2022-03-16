@@ -8,9 +8,3 @@
 // EXTRACT-API-PHASES: 2: compiler, {1}, api-information
 // EXTRACT-API-PHASES-NOT: 3:
 // EXTRACT-API-PHASES: END
-
-// FIXME: Check for the dummy output now to verify that the custom action was executed.
-// RUN: %clang -extract-api %s | FileCheck -check-prefix DUMMY-OUTPUT %s
-
-void dummy_function(void);
-// DUMMY-OUTPUT: dummy_function
