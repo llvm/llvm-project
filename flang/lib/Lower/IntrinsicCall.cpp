@@ -457,6 +457,7 @@ struct IntrinsicLibrary {
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -634,6 +635,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue}}},
      /*isElemental=*/false},
     {"iand", &I::genIand},
+    {"ibclr", &I::genIbclr},
     {"ibits", &I::genIbits},
     {"ibset", &I::genIbset},
     {"ieor", &I::genIeor},
@@ -1889,6 +1891,22 @@ mlir::Value IntrinsicLibrary::genIand(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   return builder.create<mlir::arith::AndIOp>(loc, args[0], args[1]);
+}
+
+// IBCLR
+mlir::Value IntrinsicLibrary::genIbclr(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // A conformant IBCLR(I,POS) call satisfies:
+  //     POS >= 0
+  //     POS < BIT_SIZE(I)
+  // Return:  I & (!(1 << POS))
+  assert(args.size() == 2);
+  mlir::Value pos = builder.createConvert(loc, resultType, args[1]);
+  mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
+  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  auto mask = builder.create<mlir::arith::ShLIOp>(loc, one, pos);
+  auto res = builder.create<mlir::arith::XOrIOp>(loc, ones, mask);
+  return builder.create<mlir::arith::AndIOp>(loc, args[0], res);
 }
 
 // IBITS
