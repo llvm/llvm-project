@@ -164,12 +164,6 @@ Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
       m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
-  //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ",
-  //    addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 "
-  //    - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s\n",
-  //            this, module_sp.get(), sect_id, file_addr, file_addr +
-  //            byte_size, file_offset, file_offset + file_size, flags,
-  //            name.GetCString());
 }
 
 Section::Section(const lldb::SectionSP &parent_section_sp,
@@ -186,19 +180,11 @@ Section::Section(const lldb::SectionSP &parent_section_sp,
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
       m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
-  //    printf ("Section::Section(%p): module=%p, sect_id = 0x%16.16" PRIx64 ",
-  //    addr=[0x%16.16" PRIx64 " - 0x%16.16" PRIx64 "), file [0x%16.16" PRIx64 "
-  //    - 0x%16.16" PRIx64 "), flags = 0x%8.8x, name = %s.%s\n",
-  //            this, module_sp.get(), sect_id, file_addr, file_addr +
-  //            byte_size, file_offset, file_offset + file_size, flags,
-  //            parent_section_sp->GetName().GetCString(), name.GetCString());
   if (parent_section_sp)
     m_parent_wp = parent_section_sp;
 }
 
-Section::~Section() {
-  //    printf ("Section::~Section(%p)\n", this);
-}
+Section::~Section() {}
 
 addr_t Section::GetFileAddress() const {
   SectionSP parent_sp(GetParent());
