@@ -80,8 +80,8 @@ define void @testfunc(float* nocapture %dest, float* nocapture readonly %src) {
 ; AVX-NEXT:    [[TMP16:%.*]] = fcmp olt <2 x float> [[TMP15]], <float 1.000000e+00, float 1.000000e+00>
 ; AVX-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP16]], <2 x float> [[TMP15]], <2 x float> <float 1.000000e+00, float 1.000000e+00>
 ; AVX-NEXT:    [[TMP18:%.*]] = fcmp olt <2 x float> [[TMP17]], <float -1.000000e+00, float -1.000000e+00>
-; AVX-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 32
 ; AVX-NEXT:    [[TMP19]] = select <2 x i1> [[TMP18]], <2 x float> <float -1.000000e+00, float -1.000000e+00>, <2 x float> [[TMP17]]
+; AVX-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 32
 ; AVX-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]
 ; AVX:       for.end:
 ; AVX-NEXT:    ret void
