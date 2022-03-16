@@ -1764,6 +1764,24 @@ def OMP_loop : Directive<"loop"> {
     VersionedClause<OMPC_Order>,
   ];
 }
+def OMP_teams_loop : Directive<"teams loop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Shared>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Bind, 50>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_NumTeams>,
+    VersionedClause<OMPC_Order>,
+    VersionedClause<OMPC_ThreadLimit>,
+  ];
+}
 def OMP_Metadirective : Directive<"metadirective"> {
   let allowedClauses = [VersionedClause<OMPC_When>];
   let allowedOnceClauses = [VersionedClause<OMPC_Default>];
