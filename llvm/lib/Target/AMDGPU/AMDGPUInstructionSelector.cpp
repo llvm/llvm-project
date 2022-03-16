@@ -3493,7 +3493,7 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
 
 std::pair<Register, unsigned>
 AMDGPUInstructionSelector::selectVOP3PModsImpl(
-  Register Src, const MachineRegisterInfo &MRI) const {
+  Register Src, const MachineRegisterInfo &MRI, bool IsDOT) const {
   unsigned Mods = 0;
   MachineInstr *MI = MRI.getVRegDef(Src);
 
@@ -3507,6 +3507,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(
   }
 
   // TODO: Match op_sel through g_build_vector_trunc and g_shuffle_vector.
+  (void)IsDOT; // DOTs do not use OPSEL on gfx940+, check ST.hasDOTOpSelHazard()
 
   // Packed instructions do not have abs modifiers.
   Mods |= SISrcMods::OP_SEL_1;
@@ -3522,6 +3523,21 @@ AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
   Register Src;
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI);
+
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
+  }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
+  MachineRegisterInfo &MRI
+    = Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  Register Src;
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, true);
 
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
