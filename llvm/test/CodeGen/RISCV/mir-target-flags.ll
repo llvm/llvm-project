@@ -24,10 +24,10 @@ define i32 @caller(i32 %a) nounwind {
 ; RV32-SMALL-LABEL: name: caller
 ; RV32-SMALL:      target-flags(riscv-hi) @g_e
 ; RV32-SMALL-NEXT: target-flags(riscv-lo) @g_e
-; RV32-SMALL-NEXT: target-flags(riscv-hi) @g_i
-; RV32-SMALL-NEXT: target-flags(riscv-lo) @g_i
 ; RV32-SMALL:      target-flags(riscv-tls-got-hi) @t_un
 ; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo) %bb.1
+; RV32-SMALL:      target-flags(riscv-hi) @g_i
+; RV32-SMALL-NEXT: target-flags(riscv-lo) @g_i
 ; RV32-SMALL:      target-flags(riscv-tls-got-hi) @t_ld
 ; RV32-SMALL-NEXT: target-flags(riscv-pcrel-lo) %bb.2
 ; RV32-SMALL:      target-flags(riscv-tls-got-hi) @t_ie
