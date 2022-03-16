@@ -233,3 +233,31 @@ void Fortran::lower::genRandomSeed(fir::FirOpBuilder &builder,
       builder, loc, funcTy, argBox, sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, func, args);
 }
+
+/// generate system_clock runtime call/s
+/// all intrinsic arguments are optional and may appear here as mlir::Value{}
+void Fortran::lower::genSystemClock(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value count,
+                                    mlir::Value rate, mlir::Value max) {
+  auto makeCall = [&](mlir::FuncOp func, mlir::Value arg) {
+    mlir::Type kindTy = func.getType().getInput(0);
+    int integerKind = 8;
+    if (auto intType =
+            fir::unwrapRefType(arg.getType()).dyn_cast<mlir::IntegerType>())
+      integerKind = intType.getWidth() / 8;
+    mlir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
+    mlir::Value res =
+        builder.create<fir::CallOp>(loc, func, mlir::ValueRange{kind})
+            .getResult(0);
+    mlir::Value castRes =
+        builder.createConvert(loc, fir::dyn_cast_ptrEleTy(arg.getType()), res);
+    builder.create<fir::StoreOp>(loc, castRes, arg);
+  };
+  using fir::runtime::getRuntimeFunc;
+  if (count)
+    makeCall(getRuntimeFunc<mkRTKey(SystemClockCount)>(loc, builder), count);
+  if (rate)
+    makeCall(getRuntimeFunc<mkRTKey(SystemClockCountRate)>(loc, builder), rate);
+  if (max)
+    makeCall(getRuntimeFunc<mkRTKey(SystemClockCountMax)>(loc, builder), max);
+}

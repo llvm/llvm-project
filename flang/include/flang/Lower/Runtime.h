@@ -81,6 +81,11 @@ void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
 void genRandomSeed(fir::FirOpBuilder &, mlir::Location, int argIndex,
                    mlir::Value argBox);
 
+/// generate system_clock runtime call/s
+/// all intrinsic arguments are optional and may appear here as mlir::Value{}
+void genSystemClock(fir::FirOpBuilder &, mlir::Location, mlir::Value count,
+                    mlir::Value rate, mlir::Value max);
+
 } // namespace lower
 } // namespace Fortran
 
