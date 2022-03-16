@@ -197,7 +197,7 @@ suffix. Local value names for instructions are purely optional, but it
 makes it much easier to read the IR dumps.
 
 `LLVM instructions <../../LangRef.html#instruction-reference>`_ are constrained by strict
-rules: for example, the Left and Right operators of an `add
+rules: for example, the Left and Right operands of an `add
 instruction <../../LangRef.html#add-instruction>`_ must have the same type, and the
 result type of the add must match the operand types. Because all values
 in Kaleidoscope are doubles, this makes for very simple code for add,
