@@ -8,6 +8,7 @@
 ## not fully supported. Test that we don't report
 ## "relocation refers to a symbol in a discarded section: __x86.get_pc_thunk.bx".
 # RUN: ld.lld %t/a.o %t/crti.o %t/elf-init.o -o /dev/null
+# RUN: ld.lld -shared %t/a.o %t/crti.o %t/elf-init.o -o /dev/null
 
 #--- a.s
 .globl _start
