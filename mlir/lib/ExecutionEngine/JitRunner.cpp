@@ -252,7 +252,7 @@ template <typename Type>
 Error checkCompatibleReturnType(LLVM::LLVMFuncOp mainFunction);
 template <>
 Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
-  auto resultType = mainFunction.getType()
+  auto resultType = mainFunction.getFunctionType()
                         .cast<LLVM::LLVMFunctionType>()
                         .getReturnType()
                         .dyn_cast<IntegerType>();
@@ -262,7 +262,7 @@ Error checkCompatibleReturnType<int32_t>(LLVM::LLVMFuncOp mainFunction) {
 }
 template <>
 Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
-  auto resultType = mainFunction.getType()
+  auto resultType = mainFunction.getFunctionType()
                         .cast<LLVM::LLVMFunctionType>()
                         .getReturnType()
                         .dyn_cast<IntegerType>();
@@ -272,7 +272,7 @@ Error checkCompatibleReturnType<int64_t>(LLVM::LLVMFuncOp mainFunction) {
 }
 template <>
 Error checkCompatibleReturnType<float>(LLVM::LLVMFuncOp mainFunction) {
-  if (!mainFunction.getType()
+  if (!mainFunction.getFunctionType()
            .cast<LLVM::LLVMFunctionType>()
            .getReturnType()
            .isa<Float32Type>())
@@ -287,7 +287,9 @@ Error compileAndExecuteSingleReturnFunction(Options &options, ModuleOp module,
   if (!mainFunction || mainFunction.isExternal())
     return makeStringError("entry point not found");
 
-  if (mainFunction.getType().cast<LLVM::LLVMFunctionType>().getNumParams() != 0)
+  if (mainFunction.getFunctionType()
+          .cast<LLVM::LLVMFunctionType>()
+          .getNumParams() != 0)
     return makeStringError("function inputs not supported");
 
   if (Error error = checkCompatibleReturnType<Type>(mainFunction))

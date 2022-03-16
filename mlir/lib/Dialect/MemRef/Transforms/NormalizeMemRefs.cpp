@@ -193,7 +193,7 @@ bool NormalizeMemRefs::areMemRefsNormalizable(FuncOp funcOp) {
 /// returned value is in turn used in ReturnOp of the calling function.
 void NormalizeMemRefs::updateFunctionSignature(FuncOp funcOp,
                                                ModuleOp moduleOp) {
-  FunctionType functionType = funcOp.getType();
+  FunctionType functionType = funcOp.getFunctionType();
   SmallVector<Type, 4> resultTypes;
   FunctionType newFuncType;
   resultTypes = llvm::to_vector<4>(functionType.getResults());
@@ -333,7 +333,7 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(FuncOp funcOp,
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);
 
-  FunctionType functionType = funcOp.getType();
+  FunctionType functionType = funcOp.getFunctionType();
   SmallVector<Location> functionArgLocs(llvm::map_range(
       funcOp.getArguments(), [](BlockArgument arg) { return arg.getLoc(); }));
   SmallVector<Type, 8> inputTypes;

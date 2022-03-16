@@ -1003,7 +1003,7 @@ LogicalResult CallOp::verify() {
       return emitOpError() << "'" << calleeName.getValue()
                            << "' does not reference a valid LLVM function";
 
-    fnType = fn.getType();
+    fnType = fn.getFunctionType();
   }
 
   LLVMFunctionType funcType = fnType.dyn_cast<LLVMFunctionType>();
@@ -1499,7 +1499,7 @@ LogicalResult ReturnOp::verify() {
     return emitOpError("expected at most 1 operand");
 
   if (auto parent = (*this)->getParentOfType<LLVMFuncOp>()) {
-    Type expectedType = parent.getType().getReturnType();
+    Type expectedType = parent.getFunctionType().getReturnType();
     if (expectedType.isa<LLVMVoidType>()) {
       if (getNumOperands() == 0)
         return success();
@@ -1571,8 +1571,8 @@ LogicalResult AddressOfOp::verify() {
     return emitOpError(
         "the type must be a pointer to the type of the referenced global");
 
-  if (function &&
-      LLVM::LLVMPointerType::get(function.getType()) != getResult().getType())
+  if (function && LLVM::LLVMPointerType::get(function.getFunctionType()) !=
+                      getResult().getType())
     return emitOpError(
         "the type must be a pointer to the type of the referenced function");
 
@@ -1965,7 +1965,7 @@ Block *LLVMFuncOp::addEntryBlock() {
   push_back(entry);
 
   // FIXME: Allow passing in proper locations for the entry arguments.
-  LLVMFunctionType type = getType();
+  LLVMFunctionType type = getFunctionType();
   for (unsigned i = 0, e = type.getNumParams(); i < e; ++i)
     entry->addArgument(type.getParamType(i), getLoc());
   return entry;
@@ -1978,7 +1978,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
-  result.addAttribute("type", TypeAttr::get(type));
+  result.addAttribute(getFunctionTypeAttrName(result.name),
+                      TypeAttr::get(type));
   result.addAttribute(::getLinkageAttrName(),
                       LinkageAttr::get(builder.getContext(), linkage));
   result.attributes.append(attrs.begin(), attrs.end());
@@ -2089,7 +2090,7 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
     p << stringifyLinkage(getLinkage()) << ' ';
   p.printSymbolName(getName());
 
-  LLVMFunctionType fnType = getType();
+  LLVMFunctionType fnType = getFunctionType();
   SmallVector<Type, 8> argTypes;
   SmallVector<Type, 1> resTypes;
   argTypes.reserve(fnType.getNumParams());
@@ -2114,15 +2115,6 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   }
 }
 
-LogicalResult LLVMFuncOp::verifyType() {
-  auto llvmType = getTypeAttr().getValue().dyn_cast_or_null<LLVMFunctionType>();
-  if (!llvmType)
-    return emitOpError("requires '" + getTypeAttrName() +
-                       "' attribute of wrapped LLVM function type");
-
-  return success();
-}
-
 // Verifies LLVM- and implementation-specific properties of the LLVM func Op:
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage;
@@ -2135,7 +2127,7 @@ LogicalResult LLVMFuncOp::verify() {
 
   // Check to see if this function has a void return with a result attribute to
   // it. It isn't clear what semantics we would assign to that.
-  if (getType().getReturnType().isa<LLVMVoidType>() &&
+  if (getFunctionType().getReturnType().isa<LLVMVoidType>() &&
       !getResultAttrs(0).empty()) {
     return emitOpError()
            << "cannot attach result attributes to functions with a void return";
@@ -2164,7 +2156,7 @@ LogicalResult LLVMFuncOp::verifyRegions() {
   if (isExternal())
     return success();
 
-  unsigned numArguments = getType().getNumParams();
+  unsigned numArguments = getFunctionType().getNumParams();
   Block &entryBlock = front();
   for (unsigned i = 0; i < numArguments; ++i) {
     Type argType = entryBlock.getArgument(i).getType();

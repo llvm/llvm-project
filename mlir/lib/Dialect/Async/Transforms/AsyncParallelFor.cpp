@@ -463,7 +463,8 @@ static FuncOp createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
 
   ModuleOp module = computeFunc.func->getParentOfType<ModuleOp>();
 
-  ArrayRef<Type> computeFuncInputTypes = computeFunc.func.getType().getInputs();
+  ArrayRef<Type> computeFuncInputTypes =
+      computeFunc.func.getFunctionType().getInputs();
 
   // Compared to the parallel compute function async dispatch function takes
   // additional !async.group argument. Also instead of a single `blockIndex` it

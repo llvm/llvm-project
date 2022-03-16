@@ -47,7 +47,8 @@ void fir::runtime::genGetCommandArgument(fir::FirOpBuilder &builder,
   // "STATUS" or "ERRMSG" parameters.
   if (!isAbsent(value) || status || !isAbsent(errmsg)) {
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-        builder, loc, argumentValueFunc.getType(), number, value, errmsg);
+        builder, loc, argumentValueFunc.getFunctionType(), number, value,
+        errmsg);
     valueResult =
         builder.create<fir::CallOp>(loc, argumentValueFunc, args).getResult(0);
   }
@@ -63,7 +64,7 @@ void fir::runtime::genGetCommandArgument(fir::FirOpBuilder &builder,
   // Only run `ArgumentLength` intrinsic if "LENGTH" parameter provided
   if (length) {
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-        builder, loc, argumentLengthFunc.getType(), number);
+        builder, loc, argumentLengthFunc.getFunctionType(), number);
     mlir::Value result =
         builder.create<fir::CallOp>(loc, argumentLengthFunc, args).getResult(0);
     const mlir::Value valueLoaded = builder.create<fir::LoadOp>(loc, length);
@@ -89,7 +90,7 @@ void fir::runtime::genGetEnvironmentVariable(
   if (!isAbsent(value) || status || !isAbsent(errmsg) || length) {
     sourceFile = fir::factory::locationToFilename(builder, loc);
     sourceLine = fir::factory::locationToLineNo(
-        builder, loc, valueFunc.getType().getInput(5));
+        builder, loc, valueFunc.getFunctionType().getInput(5));
   }
 
   mlir::Value valueResult;
@@ -97,8 +98,8 @@ void fir::runtime::genGetEnvironmentVariable(
   // "VALUE", "STATUS" or "ERRMSG" parameters.
   if (!isAbsent(value) || status || !isAbsent(errmsg)) {
     llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-        builder, loc, valueFunc.getType(), name, value, trimName, errmsg,
-        sourceFile, sourceLine);
+        builder, loc, valueFunc.getFunctionType(), name, value, trimName,
+        errmsg, sourceFile, sourceLine);
     valueResult =
         builder.create<fir::CallOp>(loc, valueFunc, args).getResult(0);
   }
@@ -113,9 +114,9 @@ void fir::runtime::genGetEnvironmentVariable(
 
   // Only run `EnvVariableLength` intrinsic if "LENGTH" parameter provided
   if (length) {
-    llvm::SmallVector<mlir::Value> args =
-        fir::runtime::createArguments(builder, loc, lengthFunc.getType(), name,
-                                      trimName, sourceFile, sourceLine);
+    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+        builder, loc, lengthFunc.getFunctionType(), name, trimName, sourceFile,
+        sourceLine);
     mlir::Value result =
         builder.create<fir::CallOp>(loc, lengthFunc, args).getResult(0);
     const mlir::Value lengthLoaded = builder.create<fir::LoadOp>(loc, length);

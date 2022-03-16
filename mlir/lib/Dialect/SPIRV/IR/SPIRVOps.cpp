@@ -2245,7 +2245,7 @@ void spirv::FuncOp::print(OpAsmPrinter &printer) {
   // Print function name, signature, and control.
   printer << " ";
   printer.printSymbolName(sym_name());
-  auto fnType = getType();
+  auto fnType = getFunctionType();
   function_interface_impl::printFunctionSignature(
       printer, *this, fnType.getInputs(),
       /*isVariadic=*/false, fnType.getResults());
@@ -2265,17 +2265,17 @@ void spirv::FuncOp::print(OpAsmPrinter &printer) {
 }
 
 LogicalResult spirv::FuncOp::verifyType() {
-  auto type = getTypeAttr().getValue();
+  auto type = getFunctionTypeAttr().getValue();
   if (!type.isa<FunctionType>())
     return emitOpError("requires '" + getTypeAttrName() +
                        "' attribute of function type");
-  if (getType().getNumResults() > 1)
+  if (getFunctionType().getNumResults() > 1)
     return emitOpError("cannot have more than one result");
   return success();
 }
 
 LogicalResult spirv::FuncOp::verifyBody() {
-  FunctionType fnType = getType();
+  FunctionType fnType = getFunctionType();
 
   auto walkResult = walk([fnType](Operation *op) -> WalkResult {
     if (auto retOp = dyn_cast<spirv::ReturnOp>(op)) {
@@ -2322,7 +2322,7 @@ Region *spirv::FuncOp::getCallableRegion() {
 
 // CallableOpInterface
 ArrayRef<Type> spirv::FuncOp::getCallableResults() {
-  return getType().getResults();
+  return getFunctionType().getResults();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2339,7 +2339,7 @@ LogicalResult spirv::FunctionCallOp::verify() {
            << fnName.getValue() << "' not found in nearest symbol table";
   }
 
-  auto functionType = funcOp.getType();
+  auto functionType = funcOp.getFunctionType();
 
   if (getNumResults() > 1) {
     return emitOpError(

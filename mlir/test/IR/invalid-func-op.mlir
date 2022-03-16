@@ -91,8 +91,8 @@ func private @invalid_symbol_name_attr() attributes { sym_name = "x" }
 
 // -----
 
-// expected-error@+1 {{'type' is an inferred attribute and should not be specified in the explicit attribute dictionary}}
-func private @invalid_symbol_type_attr() attributes { type = "x" }
+// expected-error@+1 {{'function_type' is an inferred attribute and should not be specified in the explicit attribute dictionary}}
+func private @invalid_symbol_type_attr() attributes { function_type = "x" }
 
 // -----
 

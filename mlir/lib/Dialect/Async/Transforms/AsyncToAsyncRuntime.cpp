@@ -614,7 +614,8 @@ static CoroMachinery rewriteFuncAsCoroutine(FuncOp func) {
   resultTypes.reserve(func.getCallableResults().size());
   llvm::transform(func.getCallableResults(), std::back_inserter(resultTypes),
                   [](Type type) { return ValueType::get(type); });
-  func.setType(FunctionType::get(ctx, func.getType().getInputs(), resultTypes));
+  func.setType(
+      FunctionType::get(ctx, func.getFunctionType().getInputs(), resultTypes));
   func.insertResult(0, TokenType::get(ctx), {});
   for (Block &block : func.getBlocks()) {
     Operation *terminator = block.getTerminator();

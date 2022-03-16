@@ -389,8 +389,8 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
       getModuleAnalysisState(state.getAnalysisState());
 
   // If nothing to do then we are done.
-  if (!llvm::any_of(funcOp.getType().getInputs(), isaTensor) &&
-      !llvm::any_of(funcOp.getType().getResults(), isaTensor))
+  if (!llvm::any_of(funcOp.getFunctionType().getInputs(), isaTensor) &&
+      !llvm::any_of(funcOp.getFunctionType().getResults(), isaTensor))
     return success();
 
   // Get the bufferized FunctionType for funcOp or construct it if not yet
@@ -412,11 +412,11 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
   // bufferization contract they want to enforce atm.
   // As a consequence, only support functions that don't return any tensor atm.
   if (funcOp.getBody().empty()) {
-    if (llvm::any_of(funcOp.getType().getResults(), isaTensor))
+    if (llvm::any_of(funcOp.getFunctionType().getResults(), isaTensor))
       return funcOp->emitError() << "cannot bufferize bodiless function that "
                                  << "returns a tensor";
     FunctionType bufferizedFuncType = getBufferizedFunctionType(
-        funcOp.getContext(), funcOp.getType().getInputs(), TypeRange{},
+        funcOp.getContext(), funcOp.getFunctionType().getInputs(), TypeRange{},
         state.getOptions());
     funcOp.setType(bufferizedFuncType);
     return success();
@@ -451,8 +451,8 @@ static LogicalResult bufferizeFuncOpBoundary(FuncOp funcOp,
   // 2. Rewrite the terminator without the inPlace bufferizable values.
   ValueRange retValues{returnValues};
   FunctionType bufferizedFuncType = getBufferizedFunctionType(
-      funcOp.getContext(), funcOp.getType().getInputs(), retValues.getTypes(),
-      state.getOptions());
+      funcOp.getContext(), funcOp.getFunctionType().getInputs(),
+      retValues.getTypes(), state.getOptions());
   OpBuilder b(returnOp);
   b.create<func::ReturnOp>(returnOp.getLoc(), returnValues);
   returnOp->erase();
@@ -598,7 +598,8 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
     SmallVector<Type> argumentTypes;
     // Iterate on each function argument and check it it was marked with a
     // desired layout.
-    for (const auto &it : llvm::enumerate(funcOp.getType().getInputs())) {
+    for (const auto &it :
+         llvm::enumerate(funcOp.getFunctionType().getInputs())) {
       int argNumber = it.index();
       Type inputType = it.value();
       auto memrefType = inputType.dyn_cast<MemRefType>();
@@ -661,7 +662,7 @@ static void layoutPostProcessing(ModuleOp moduleOp) {
 
     // Finally set the funcOp type to update the arguments.
     auto newFuncType = FunctionType::get(moduleOp.getContext(), argumentTypes,
-                                         funcOp.getType().getResults());
+                                         funcOp.getFunctionType().getResults());
     funcOp.setType(newFuncType);
   }
 }
@@ -1046,7 +1047,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
       return failure();
 
     if (!options.allowReturnAllocs &&
-        llvm::any_of(funcOp.getType().getResults(), [](Type t) {
+        llvm::any_of(funcOp.getFunctionType().getResults(), [](Type t) {
           return t.isa<MemRefType, UnrankedMemRefType>();
         })) {
       funcOp->emitError("memref return type is unsupported");

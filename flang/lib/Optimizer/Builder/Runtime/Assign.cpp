@@ -16,7 +16,7 @@ using namespace Fortran::runtime;
 void fir::runtime::genAssign(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value destBox, mlir::Value sourceBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Assign)>(loc, builder);
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));

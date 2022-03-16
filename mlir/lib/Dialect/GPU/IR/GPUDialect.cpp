@@ -261,7 +261,7 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
              << actualNumArguments << " kernel operands but expected "
              << expectedNumArguments;
 
-    auto functionType = kernelGPUFunction.getType();
+    auto functionType = kernelGPUFunction.getFunctionType();
     for (unsigned i = 0; i < expectedNumArguments; ++i) {
       if (launchOp.getKernelOperand(i).getType() != functionType.getInput(i)) {
         return launchOp.emitOpError("type of function argument ")
@@ -723,8 +723,8 @@ BlockArgument GPUFuncOp::addWorkgroupAttribution(Type type, Location loc) {
   auto attr = (*this)->getAttrOfType<IntegerAttr>(attrName);
   (*this)->setAttr(attrName,
                    IntegerAttr::get(attr.getType(), attr.getValue() + 1));
-  return getBody().insertArgument(getType().getNumInputs() + attr.getInt(),
-                                  type, loc);
+  return getBody().insertArgument(
+      getFunctionType().getNumInputs() + attr.getInt(), type, loc);
 }
 
 /// Adds a new block argument that corresponds to buffers located in
@@ -880,7 +880,7 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
 
-  FunctionType type = getType();
+  FunctionType type = getFunctionType();
   function_interface_impl::printFunctionSignature(p, *this, type.getInputs(),
                                                   /*isVariadic=*/false,
                                                   type.getResults());
@@ -899,12 +899,12 @@ void GPUFuncOp::print(OpAsmPrinter &p) {
 }
 
 LogicalResult GPUFuncOp::verifyType() {
-  Type type = getTypeAttr().getValue();
+  Type type = getFunctionTypeAttr().getValue();
   if (!type.isa<FunctionType>())
     return emitOpError("requires '" + getTypeAttrName() +
                        "' attribute of function type");
 
-  if (isKernel() && getType().getNumResults() != 0)
+  if (isKernel() && getFunctionType().getNumResults() != 0)
     return emitOpError() << "expected void return type for kernel function";
 
   return success();
@@ -936,7 +936,7 @@ LogicalResult GPUFuncOp::verifyBody() {
                          << numFuncArguments + numWorkgroupAttributions
                          << " arguments to body region";
 
-  ArrayRef<Type> funcArgTypes = getType().getInputs();
+  ArrayRef<Type> funcArgTypes = getFunctionType().getInputs();
   for (unsigned i = 0; i < numFuncArguments; ++i) {
     Type blockArgType = front().getArgument(i).getType();
     if (funcArgTypes[i] != blockArgType)
@@ -961,7 +961,7 @@ LogicalResult GPUFuncOp::verifyBody() {
 LogicalResult gpu::ReturnOp::verify() {
   GPUFuncOp function = (*this)->getParentOfType<GPUFuncOp>();
 
-  FunctionType funType = function.getType();
+  FunctionType funType = function.getFunctionType();
 
   if (funType.getNumResults() != operands().size())
     return emitOpError()
@@ -970,7 +970,7 @@ LogicalResult gpu::ReturnOp::verify() {
         .append("return type declared here");
 
   for (const auto &pair : llvm::enumerate(
-           llvm::zip(function.getType().getResults(), operands()))) {
+           llvm::zip(function.getFunctionType().getResults(), operands()))) {
     Type type;
     Value operand;
     std::tie(type, operand) = pair.value();

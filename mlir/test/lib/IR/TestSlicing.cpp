@@ -29,8 +29,8 @@ static LogicalResult createBackwardSliceFunction(Operation *op,
   OpBuilder builder(parentFuncOp);
   Location loc = op->getLoc();
   std::string clonedFuncOpName = parentFuncOp.getName().str() + suffix.str();
-  FuncOp clonedFuncOp =
-      builder.create<FuncOp>(loc, clonedFuncOpName, parentFuncOp.getType());
+  FuncOp clonedFuncOp = builder.create<FuncOp>(loc, clonedFuncOpName,
+                                               parentFuncOp.getFunctionType());
   BlockAndValueMapping mapper;
   builder.setInsertionPointToEnd(clonedFuncOp.addEntryBlock());
   for (const auto &arg : enumerate(parentFuncOp.getArguments()))

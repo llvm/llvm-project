@@ -585,7 +585,7 @@ static LogicalResult printOperation(CppEmitter &emitter, FuncOp functionOp) {
   CppEmitter::Scope scope(emitter);
   raw_indented_ostream &os = emitter.ostream();
   if (failed(emitter.emitTypes(functionOp.getLoc(),
-                               functionOp.getType().getResults())))
+                               functionOp.getFunctionType().getResults())))
     return failure();
   os << " " << functionOp.getName();
 

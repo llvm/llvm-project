@@ -49,7 +49,7 @@ struct TestDecomposeCallGraphTypes
     target.addDynamicallyLegalOp<func::CallOp>(
         [&](func::CallOp op) { return typeConverter.isLegal(op); });
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-      return typeConverter.isSignatureLegal(op.getType());
+      return typeConverter.isSignatureLegal(op.getFunctionType());
     });
 
     typeConverter.addConversion([](Type type) { return type; });

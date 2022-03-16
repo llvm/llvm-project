@@ -95,7 +95,8 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("\"add\""));
   MlirNamedAttribute funcAttrs[] = {
       mlirNamedAttributeGet(
-          mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("type")),
+          mlirIdentifierGet(ctx,
+                            mlirStringRefCreateFromCString("function_type")),
           funcTypeAttr),
       mlirNamedAttributeGet(
           mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("sym_name")),

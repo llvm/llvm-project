@@ -553,7 +553,7 @@ public:
 LogicalResult
 FuncOpConversion::matchAndRewrite(FuncOp funcOp, OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const {
-  auto fnType = funcOp.getType();
+  auto fnType = funcOp.getFunctionType();
   if (fnType.getNumResults() > 1)
     return failure();
 

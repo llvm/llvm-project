@@ -134,7 +134,7 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                          << "' does not reference a valid function";
 
   // Verify that the operand and result types match the callee.
-  auto fnType = fn.getType();
+  auto fnType = fn.getFunctionType();
   if (fnType.getNumInputs() != getNumOperands())
     return emitOpError("incorrect number of operands for callee");
 
@@ -196,7 +196,7 @@ LogicalResult ConstantOp::verify() {
                          << "'";
 
   // Check that the referenced function has the correct type.
-  if (fn.getType() != type)
+  if (fn.getFunctionType() != type)
     return emitOpError("reference to function with mismatched type");
 
   return success();
@@ -304,7 +304,7 @@ FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
   // the function by specifying them in the mapper. If so, we don't add the
   // argument to the input type vector.
   if (!isExternal()) {
-    FunctionType oldType = getType();
+    FunctionType oldType = getFunctionType();
 
     unsigned oldNumArgs = oldType.getNumInputs();
     SmallVector<Type, 4> newInputs;
@@ -347,7 +347,7 @@ LogicalResult ReturnOp::verify() {
   auto function = cast<FuncOp>((*this)->getParentOp());
 
   // The operand number and types must match the function signature.
-  const auto &results = function.getType().getResults();
+  const auto &results = function.getFunctionType().getResults();
   if (getNumOperands() != results.size())
     return emitOpError("has ")
            << getNumOperands() << " operands, but enclosing function (@"

@@ -293,7 +293,7 @@ public:
         return;
 
       rewriter.setInsertionPoint(op);
-      FunctionType funcTy = func.getType();
+      FunctionType funcTy = func.getFunctionType();
       auto resultTys = funcTy.getResults();
 
       bool castAdded = false;

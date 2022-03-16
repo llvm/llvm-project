@@ -222,7 +222,7 @@ public:
                                   /*newArg=*/{}};
 
     // Convert function type itself if it has an abstract result
-    auto funcTy = func.getType().cast<mlir::FunctionType>();
+    auto funcTy = func.getFunctionType().cast<mlir::FunctionType>();
     if (mustConvertCallOrFunc(funcTy)) {
       func.setType(getNewFunctionType(funcTy, options));
       unsigned zero = 0;

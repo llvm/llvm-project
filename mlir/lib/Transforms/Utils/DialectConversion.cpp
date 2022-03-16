@@ -3074,7 +3074,7 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionOpInterface funcOp = cast<FunctionOpInterface>(op);
-    FunctionType type = funcOp.getType().cast<FunctionType>();
+    FunctionType type = funcOp.getFunctionType().cast<FunctionType>();
 
     // Convert the original function types.
     TypeConverter::SignatureConversion result(type.getNumInputs());

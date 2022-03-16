@@ -669,7 +669,7 @@ void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
                         mlir::FuncOp callee, mlir::ValueRange operands) {
   result.addOperands(operands);
   result.addAttribute(getCalleeAttrNameStr(), SymbolRefAttr::get(callee));
-  result.addTypes(callee.getType().getResults());
+  result.addTypes(callee.getFunctionType().getResults());
 }
 
 void fir::CallOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,

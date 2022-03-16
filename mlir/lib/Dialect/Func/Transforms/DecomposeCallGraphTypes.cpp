@@ -64,7 +64,7 @@ struct DecomposeCallGraphTypesForFuncArgs
   LogicalResult
   matchAndRewrite(FuncOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    auto functionType = op.getType();
+    auto functionType = op.getFunctionType();
 
     // Convert function arguments using the provided TypeConverter.
     TypeConverter::SignatureConversion conversion(functionType.getNumInputs());

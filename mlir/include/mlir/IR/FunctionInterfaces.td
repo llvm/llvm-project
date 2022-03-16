@@ -37,9 +37,8 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     The function, aside from implementing the various interface methods,
     should have the following ODS arguments:
 
-      - `type` (required)
+      - `function_type` (required)
         * A TypeAttr that holds the signature type of the function.
-        * TODO: this field will soon be renamed to something less generic.
 
       - `arg_attrs` (optional)
         * An ArrayAttr of DictionaryAttr that contains attribute dictionaries
@@ -73,7 +72,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     "::mlir::Type", "cloneTypeWith", (ins
       "::mlir::TypeRange":$inputs, "::mlir::TypeRange":$results
     ), /*methodBody=*/[{}], /*defaultImplementation=*/[{
-      return $_op.getType().clone(inputs, results);
+      return $_op.getFunctionType().clone(inputs, results);
     }]>,
 
     InterfaceMethod<[{
@@ -258,13 +257,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     }
 
     /// Return the attribute containing the type of this function.
-    TypeAttr getTypeAttr() {
+    TypeAttr getFunctionTypeAttr() {
       return this->getOperation()->template getAttrOfType<TypeAttr>(
           getTypeAttrName());
     }
 
     /// Return the type of this function.
-    Type getType() { return getTypeAttr().getValue(); }
+    Type getFunctionType() { return getFunctionTypeAttr().getValue(); }
 
     //===------------------------------------------------------------------===//
     // Argument and Result Handling

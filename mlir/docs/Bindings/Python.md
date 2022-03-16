@@ -661,7 +661,7 @@ with Context():
     # Operations can be created in a generic way.
     func = Operation.create(
         "func.func", results=[], operands=[],
-        attributes={"type":TypeAttr.get(FunctionType.get([], []))},
+        attributes={"function_type":TypeAttr.get(FunctionType.get([], []))},
         successors=None, regions=1)
     # The result will be downcasted to the concrete `OpView` subclass if
     # available.

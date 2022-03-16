@@ -162,7 +162,7 @@ module attributes {gpu.container_module} {
     "gpu.func"() ({
     ^bb0(%arg0: f32, %arg1: memref<?xf32>, %arg2: memref<5xf32, 3>, %arg3: memref<5xf32, 5>):
       "gpu.return"() : () -> ()
-    } ) {gpu.kernel, sym_name = "kernel_1", type = (f32, memref<?xf32>) -> (), workgroup_attributions = 1: i64} : () -> ()
+    } ) {function_type = (f32, memref<?xf32>) -> (), gpu.kernel, sym_name = "kernel_1", workgroup_attributions = 1: i64} : () -> ()
   }
 
   func @alloc() {

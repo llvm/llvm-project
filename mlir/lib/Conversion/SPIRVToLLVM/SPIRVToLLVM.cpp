@@ -1291,11 +1291,11 @@ public:
 
     // Convert function signature. At the moment LLVMType converter is enough
     // for currently supported types.
-    auto funcType = funcOp.getType();
+    auto funcType = funcOp.getFunctionType();
     TypeConverter::SignatureConversion signatureConverter(
         funcType.getNumInputs());
     auto llvmType = typeConverter.convertFunctionSignature(
-        funcOp.getType(), /*isVariadic=*/false, signatureConverter);
+        funcType, /*isVariadic=*/false, signatureConverter);
     if (!llvmType)
       return failure();
 

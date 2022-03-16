@@ -1269,7 +1269,7 @@ def TypeAttr : TypeAttrBase<"::mlir::Type", "any type attribute"> {
 }
 
 class TypeAttrOf<Type ty>
-   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.description> {
+   : TypeAttrBase<ty.cppClassName, "type attribute of " # ty.summary> {
   let constBuilderCall = "::mlir::TypeAttr::get($0)";
 }
 

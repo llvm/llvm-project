@@ -58,7 +58,7 @@ void Fortran::lower::genStopStatement(
         [&](const fir::CharBoxValue &x) {
           callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatementText)>(
               loc, builder);
-          calleeType = callee.getType();
+          calleeType = callee.getFunctionType();
           // Creates a pair of operands for the CHARACTER and its LEN.
           operands.push_back(
               builder.createConvert(loc, calleeType.getInput(0), x.getAddr()));
@@ -68,7 +68,7 @@ void Fortran::lower::genStopStatement(
         [&](fir::UnboxedValue x) {
           callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(
               loc, builder);
-          calleeType = callee.getType();
+          calleeType = callee.getFunctionType();
           mlir::Value cast =
               builder.createConvert(loc, calleeType.getInput(0), x);
           operands.push_back(cast);
@@ -79,7 +79,7 @@ void Fortran::lower::genStopStatement(
         });
   } else {
     callee = fir::runtime::getRuntimeFunc<mkRTKey(StopStatement)>(loc, builder);
-    calleeType = callee.getType();
+    calleeType = callee.getFunctionType();
     operands.push_back(
         builder.createIntegerConstant(loc, calleeType.getInput(0), 0));
   }
@@ -125,7 +125,7 @@ mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(PointerIsAssociatedWith)>(loc,
                                                                      builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-      builder, loc, func.getType(), pointer, target);
+      builder, loc, func.getFunctionType(), pointer, target);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }
 
@@ -144,7 +144,7 @@ void Fortran::lower::genDateAndTime(fir::FirOpBuilder &builder,
                                     mlir::Value values) {
   mlir::FuncOp callee =
       fir::runtime::getRuntimeFunc<mkRTKey(DateAndTime)>(loc, builder);
-  mlir::FunctionType funcTy = callee.getType();
+  mlir::FunctionType funcTy = callee.getFunctionType();
   mlir::Type idxTy = builder.getIndexType();
   mlir::Value zero;
   auto splitArg = [&](llvm::Optional<fir::CharBoxValue> arg,
@@ -185,7 +185,7 @@ void Fortran::lower::genRandomInit(fir::FirOpBuilder &builder,
   mlir::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(RandomInit)>(loc, builder);
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
-      builder, loc, func.getType(), repeatable, imageDistinct);
+      builder, loc, func.getFunctionType(), repeatable, imageDistinct);
   builder.create<fir::CallOp>(loc, func, args);
 }
 
@@ -193,7 +193,7 @@ void Fortran::lower::genRandomNumber(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Value harvest) {
   mlir::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(RandomNumber)>(loc, builder);
-  mlir::FunctionType funcTy = func.getType();
+  mlir::FunctionType funcTy = func.getFunctionType();
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   mlir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
@@ -226,7 +226,7 @@ void Fortran::lower::genRandomSeed(fir::FirOpBuilder &builder,
   default:
     llvm::report_fatal_error("invalid RANDOM_SEED argument index");
   }
-  mlir::FunctionType funcTy = func.getType();
+  mlir::FunctionType funcTy = func.getFunctionType();
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   mlir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
@@ -242,7 +242,7 @@ void Fortran::lower::genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(Transfer)>(loc, builder);
-  mlir::FunctionType fTy = func.getType();
+  mlir::FunctionType fTy = func.getFunctionType();
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   mlir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
@@ -258,7 +258,7 @@ void Fortran::lower::genTransferSize(fir::FirOpBuilder &builder,
                                      mlir::Value size) {
   mlir::FuncOp func =
       fir::runtime::getRuntimeFunc<mkRTKey(TransferSize)>(loc, builder);
-  mlir::FunctionType fTy = func.getType();
+  mlir::FunctionType fTy = func.getFunctionType();
   mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
   mlir::Value sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
@@ -274,7 +274,7 @@ void Fortran::lower::genSystemClock(fir::FirOpBuilder &builder,
                                     mlir::Location loc, mlir::Value count,
                                     mlir::Value rate, mlir::Value max) {
   auto makeCall = [&](mlir::FuncOp func, mlir::Value arg) {
-    mlir::Type kindTy = func.getType().getInput(0);
+    mlir::Type kindTy = func.getFunctionType().getInput(0);
     int integerKind = 8;
     if (auto intType =
             fir::unwrapRefType(arg.getType()).dyn_cast<mlir::IntegerType>())

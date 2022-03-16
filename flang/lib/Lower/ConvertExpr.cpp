@@ -2050,15 +2050,17 @@ public:
         auto stackSaveFn = fir::factory::getLlvmStackSave(builder);
         auto stackSaveSymbol = bldr->getSymbolRefAttr(stackSaveFn.getName());
         mlir::Value sp =
-            bldr->create<fir::CallOp>(loc, stackSaveFn.getType().getResults(),
-                                      stackSaveSymbol, mlir::ValueRange{})
+            bldr->create<fir::CallOp>(
+                    loc, stackSaveFn.getFunctionType().getResults(),
+                    stackSaveSymbol, mlir::ValueRange{})
                 .getResult(0);
         stmtCtx.attachCleanup([bldr, loc, sp]() {
           auto stackRestoreFn = fir::factory::getLlvmStackRestore(*bldr);
           auto stackRestoreSymbol =
               bldr->getSymbolRefAttr(stackRestoreFn.getName());
-          bldr->create<fir::CallOp>(loc, stackRestoreFn.getType().getResults(),
-                                    stackRestoreSymbol, mlir::ValueRange{sp});
+          bldr->create<fir::CallOp>(
+              loc, stackRestoreFn.getFunctionType().getResults(),
+              stackRestoreSymbol, mlir::ValueRange{sp});
         });
       }
       mlir::Value temp =
@@ -2107,7 +2109,7 @@ public:
     mlir::SymbolRefAttr funcSymbolAttr;
     bool addHostAssociations = false;
     if (!funcPointer) {
-      mlir::FunctionType funcOpType = caller.getFuncOp().getType();
+      mlir::FunctionType funcOpType = caller.getFuncOp().getFunctionType();
       mlir::SymbolRefAttr symbolAttr =
           builder.getSymbolRefAttr(caller.getMangledName());
       if (callSiteType.getNumResults() == funcOpType.getNumResults() &&
@@ -2149,7 +2151,7 @@ public:
     }
 
     mlir::FunctionType funcType =
-        funcPointer ? callSiteType : caller.getFuncOp().getType();
+        funcPointer ? callSiteType : caller.getFuncOp().getFunctionType();
     llvm::SmallVector<mlir::Value> operands;
     // First operand of indirect call is the function pointer. Cast it to
     // required function type for the call to handle procedures that have a
@@ -2970,8 +2972,8 @@ static void genScalarUserDefinedAssignmentCall(fir::FirOpBuilder &builder,
     return builder.createConvert(loc, argType, from);
   };
   assert(func.getNumArguments() == 2);
-  mlir::Type lhsType = func.getType().getInput(0);
-  mlir::Type rhsType = func.getType().getInput(1);
+  mlir::Type lhsType = func.getFunctionType().getInput(0);
+  mlir::Type rhsType = func.getFunctionType().getInput(1);
   mlir::Value lhsArg = prepareUserDefinedArg(builder, loc, lhs, lhsType);
   mlir::Value rhsArg = prepareUserDefinedArg(builder, loc, rhs, rhsType);
   builder.create<fir::CallOp>(loc, func, mlir::ValueRange{lhsArg, rhsArg});
@@ -4901,7 +4903,7 @@ public:
 
   /// Get the function signature of the LLVM memcpy intrinsic.
   mlir::FunctionType memcpyType() {
-    return fir::factory::getLlvmMemcpy(builder).getType();
+    return fir::factory::getLlvmMemcpy(builder).getFunctionType();
   }
 
   /// Create a call to the LLVM memcpy intrinsic.
@@ -4910,7 +4912,7 @@ public:
     mlir::FuncOp memcpyFunc = fir::factory::getLlvmMemcpy(builder);
     mlir::SymbolRefAttr funcSymAttr =
         builder.getSymbolRefAttr(memcpyFunc.getName());
-    mlir::FunctionType funcTy = memcpyFunc.getType();
+    mlir::FunctionType funcTy = memcpyFunc.getFunctionType();
     builder.create<fir::CallOp>(loc, funcTy.getResults(), funcSymAttr, args);
   }
 
@@ -4935,7 +4937,7 @@ public:
     mlir::Value byteSz = builder.create<mlir::arith::MulIOp>(loc, newSz, eleSz);
     mlir::SymbolRefAttr funcSymAttr =
         builder.getSymbolRefAttr(reallocFunc.getName());
-    mlir::FunctionType funcTy = reallocFunc.getType();
+    mlir::FunctionType funcTy = reallocFunc.getFunctionType();
     auto newMem = builder.create<fir::CallOp>(
         loc, funcTy.getResults(), funcSymAttr,
         llvm::ArrayRef<mlir::Value>{

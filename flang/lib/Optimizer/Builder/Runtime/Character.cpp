@@ -26,7 +26,7 @@ static void genCharacterSearch(FN func, fir::FirOpBuilder &builder,
                                mlir::Value string1Box, mlir::Value string2Box,
                                mlir::Value backBox, mlir::Value kind) {
 
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(6));
@@ -66,7 +66,7 @@ static void genAdjust(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value resultBox, mlir::Value stringBox,
                       mlir::FuncOp &adjustFunc) {
 
-  auto fTy = adjustFunc.getType();
+  auto fTy = adjustFunc.getFunctionType();
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
@@ -111,7 +111,7 @@ fir::runtime::genCharCompare(fir::FirOpBuilder &builder, mlir::Location loc,
   default:
     llvm_unreachable("runtime does not support CHARACTER KIND");
   }
-  auto fTy = beginFunc.getType();
+  auto fTy = beginFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, lhsBuff, rhsBuff,
                                             lhsLen, rhsLen);
   auto tri = builder.create<fir::CallOp>(loc, beginFunc, args).getResult(0);
@@ -161,7 +161,7 @@ mlir::Value fir::runtime::genIndex(fir::FirOpBuilder &builder,
     fir::emitFatalError(
         loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
   }
-  auto fTy = indexFunc.getType();
+  auto fTy = indexFunc.getFunctionType();
   auto args =
       fir::runtime::createArguments(builder, loc, fTy, stringBase, stringLen,
                                     substringBase, substringLen, back);
@@ -182,7 +182,7 @@ void fir::runtime::genRepeat(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value stringBox,
                              mlir::Value ncopies) {
   auto repeatFunc = fir::runtime::getRuntimeFunc<mkRTKey(Repeat)>(loc, builder);
-  auto fTy = repeatFunc.getType();
+  auto fTy = repeatFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
@@ -195,7 +195,7 @@ void fir::runtime::genRepeat(fir::FirOpBuilder &builder, mlir::Location loc,
 void fir::runtime::genTrim(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value resultBox, mlir::Value stringBox) {
   auto trimFunc = fir::runtime::getRuntimeFunc<mkRTKey(Trim)>(loc, builder);
-  auto fTy = trimFunc.getType();
+  auto fTy = trimFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
@@ -234,7 +234,7 @@ mlir::Value fir::runtime::genScan(fir::FirOpBuilder &builder,
     fir::emitFatalError(
         loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
   }
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, stringBase,
                                             stringLen, setBase, setLen, back);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
@@ -271,7 +271,7 @@ mlir::Value fir::runtime::genVerify(fir::FirOpBuilder &builder,
     fir::emitFatalError(
         loc, "unsupported CHARACTER kind value. Runtime expects 1, 2, or 4.");
   }
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, stringBase,
                                             stringLen, setBase, setLen, back);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
