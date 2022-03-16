@@ -3300,11 +3300,16 @@ void SubprogramVisitor::Post(const parser::EntryStmt &stmt) {
       return;
     }
   }
-  Symbol &entrySymbol{MakeSymbol(outer, name.source, attrs)};
-  entrySymbol.set_details(std::move(entryDetails));
-  SetBindNameOn(entrySymbol);
-  entrySymbol.set(subpFlag);
-  Resolve(name, entrySymbol);
+
+  Symbol *entrySymbol{&MakeSymbol(outer, name.source, attrs)};
+  if (auto *generic{entrySymbol->detailsIf<GenericDetails>()}) {
+    CHECK(generic->specific());
+    entrySymbol = generic->specific();
+  }
+  entrySymbol->set_details(std::move(entryDetails));
+  SetBindNameOn(*entrySymbol);
+  entrySymbol->set(subpFlag);
+  Resolve(name, *entrySymbol);
 }
 
 // A subprogram declared with MODULE PROCEDURE
@@ -3400,9 +3405,14 @@ void SubprogramVisitor::EndSubprogram() {
 
 bool SubprogramVisitor::HandlePreviousCalls(
     const parser::Name &name, Symbol &symbol, Symbol::Flag subpFlag) {
-  if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}; proc &&
-      !proc->isDummy() &&
-      !symbol.attrs().HasAny(Attrs{Attr::INTRINSIC, Attr::POINTER})) {
+  // If the extant symbol is a generic, check its homonymous specific
+  // procedure instead if it has one.
+  if (auto *generic{symbol.detailsIf<GenericDetails>()}) {
+    return generic->specific() &&
+        HandlePreviousCalls(name, *generic->specific(), subpFlag);
+  } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}; proc &&
+             !proc->isDummy() &&
+             !symbol.attrs().HasAny(Attrs{Attr::INTRINSIC, Attr::POINTER})) {
     // There's a symbol created for previous calls to this subprogram or
     // ENTRY's name.  We have to replace that symbol in situ to avoid the
     // obligation to rewrite symbol pointers in the parse tree.
@@ -7320,14 +7330,27 @@ bool ResolveNames(
 void ResolveSpecificationParts(
     SemanticsContext &context, const Symbol &subprogram) {
   auto originalLocation{context.location()};
+  ImplicitRulesMap implicitRulesMap;
+  bool localImplicitRulesMap{false};
+  if (!sharedImplicitRulesMap) {
+    sharedImplicitRulesMap = &implicitRulesMap;
+    localImplicitRulesMap = true;
+  }
   ResolveNamesVisitor visitor{
-      context, DEREF(sharedImplicitRulesMap), context.globalScope()};
+      context, *sharedImplicitRulesMap, context.globalScope()};
   const auto &details{subprogram.get<SubprogramNameDetails>()};
   ProgramTree &node{details.node()};
   const Scope &moduleScope{subprogram.owner()};
-  visitor.SetScope(const_cast<Scope &>(moduleScope));
+  if (localImplicitRulesMap) {
+    visitor.BeginScope(const_cast<Scope &>(moduleScope));
+  } else {
+    visitor.SetScope(const_cast<Scope &>(moduleScope));
+  }
   visitor.ResolveSpecificationParts(node);
   context.set_location(std::move(originalLocation));
+  if (localImplicitRulesMap) {
+    sharedImplicitRulesMap = nullptr;
+  }
 }
 
 } // namespace Fortran::semantics
