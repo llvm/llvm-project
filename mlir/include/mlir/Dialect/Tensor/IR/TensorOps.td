@@ -372,6 +372,7 @@ def Tensor_FromElementsOp : Tensor_Op<"from_elements", [
 
 def Tensor_GenerateOp : Tensor_Op<"generate",
     [RecursiveSideEffects,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
      SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   string summary = "Creates a dynamically sized tensor from elements";
   string description = [{
