@@ -19,18 +19,24 @@ class CrashLogScriptedProcess(ScriptedProcess):
         self.crashed_thread_idx = crash_log.crashed_thread_idx
         self.loaded_images = []
 
+        def load_images(self, images):
+            #TODO: Add to self.loaded_images and load images in lldb
+            if images:
+                for image in images:
+                    if image not in self.loaded_images:
+                        err = image.add_module(self.target)
+                        if err:
+                            print(err)
+                        else:
+                            self.loaded_images.append(image)
+
         for thread in crash_log.threads:
-            if thread.did_crash():
+            if self.load_all_images:
+                load_images(self, crash_log.images)
+            elif thread.did_crash():
                 for ident in thread.idents:
-                    images = crash_log.find_images_with_identifier(ident)
-                    if images:
-                        for image in images:
-                            #TODO: Add to self.loaded_images and load images in lldb
-                            err = image.add_module(self.target)
-                            if err:
-                                print(err)
-                            else:
-                                self.loaded_images.append(image)
+                    load_images(self, crash_log.find_images_with_identifier(ident))
+
             self.threads[thread.index] = CrashLogScriptedThread(self, None, thread)
 
     def __init__(self, target: lldb.SBTarget, args : lldb.SBStructuredData):
@@ -48,6 +54,14 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
         if not self.crashlog_path:
             return
+
+        load_all_images = args.GetValueForKey("load_all_images")
+        if load_all_images and load_all_images.IsValid():
+            if load_all_images.GetType() == lldb.eStructuredDataTypeBoolean:
+                self.load_all_images = load_all_images.GetBooleanValue()
+
+        if not self.load_all_images:
+            self.load_all_images = False
 
         self.pid = super().get_process_id()
         self.crashed_thread_idx = 0
@@ -101,7 +115,7 @@ class CrashLogScriptedThread(ScriptedThread):
         return self.register_ctx
 
     def create_stackframes(self):
-        if not self.has_crashed:
+        if not (self.scripted_process.load_all_images or self.has_crashed):
             return None
 
         if not self.backing_thread or not len(self.backing_thread.frames):
