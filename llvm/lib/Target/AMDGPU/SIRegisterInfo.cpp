@@ -19,7 +19,9 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 
 using namespace llvm;
@@ -2143,18 +2145,23 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             Offset = 0;
           }
 
-          assert(!TII->getNamedOperand(*MI, AMDGPU::OpName::vaddr) &&
-                 "Unexpected vaddr for flat scratch with a FI operand");
-
-          // On GFX10 we have ST mode to use no registers for an address.
-          // Otherwise we need to materialize 0 into an SGPR.
-          if (!Offset && ST.hasFlatScratchSTMode()) {
+          if (!Offset) {
             unsigned Opc = MI->getOpcode();
-            unsigned NewOpc = AMDGPU::getFlatScratchInstSTfromSS(Opc);
-            MI->RemoveOperand(
-                AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr));
-            MI->setDesc(TII->get(NewOpc));
-            return;
+            int NewOpc = -1;
+            if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr) != -1) {
+              NewOpc = AMDGPU::getFlatScratchInstSVfromSVS(Opc);
+            } else if (ST.hasFlatScratchSTMode()) {
+              // On GFX10 we have ST mode to use no registers for an address.
+              // Otherwise we need to materialize 0 into an SGPR.
+              NewOpc = AMDGPU::getFlatScratchInstSTfromSS(Opc);
+            }
+
+            if (NewOpc != -1) {
+              MI->RemoveOperand(
+                  AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr));
+              MI->setDesc(TII->get(NewOpc));
+              return;
+            }
           }
         }
 
@@ -3012,6 +3019,25 @@ bool SIRegisterInfo::isProperlyAlignedRC(const TargetRegisterClass &RC) const {
         getVectorSuperClassForBitWidth(getRegSizeInBits(RC)));
 
   return true;
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
+  if (!RC || !ST.needsAlignedVGPRs())
+    return RC;
+
+  unsigned Size = getRegSizeInBits(*RC);
+  if (Size <= 32)
+    return RC;
+
+  if (isVGPRClass(RC))
+    return getAlignedVGPRClassForBitWidth(Size);
+  if (isAGPRClass(RC))
+    return getAlignedAGPRClassForBitWidth(Size);
+  if (isVectorSuperClass(RC))
+    return getAlignedVectorSuperClassForBitWidth(Size);
+
+  return RC;
 }
 
 bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {

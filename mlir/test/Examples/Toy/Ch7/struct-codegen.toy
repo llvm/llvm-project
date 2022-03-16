@@ -21,7 +21,7 @@ def main() {
   print(c);
 }
 
-# CHECK-LABEL:   func private @multiply_transpose(
+# CHECK-LABEL:   toy.func private @multiply_transpose(
 # CHECK-SAME:                             [[VAL_0:%.*]]: !toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
 # CHECK-NEXT:      [[VAL_1:%.*]] = toy.struct_access [[VAL_0]][0] : !toy.struct<tensor<*xf64>, tensor<*xf64>> -> tensor<*xf64>
 # CHECK-NEXT:      [[VAL_2:%.*]] = toy.transpose([[VAL_1]] : tensor<*xf64>) to tensor<*xf64>
@@ -30,13 +30,13 @@ def main() {
 # CHECK-NEXT:      [[VAL_5:%.*]] = toy.mul [[VAL_2]], [[VAL_4]] : tensor<*xf64>
 # CHECK-NEXT:      toy.return [[VAL_5]] : tensor<*xf64>
 
-# CHECK-LABEL:   func @main()
+# CHECK-LABEL:   toy.func @main()
 # CHECK-NEXT:      [[VAL_6:%.*]] = toy.struct_constant [dense<{{\[\[}}1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>, dense<{{\[\[}}1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>] : !toy.struct<tensor<*xf64>, tensor<*xf64>>
 # CHECK-NEXT:      [[VAL_7:%.*]] = toy.generic_call @multiply_transpose([[VAL_6]]) : (!toy.struct<tensor<*xf64>, tensor<*xf64>>) -> tensor<*xf64>
 # CHECK-NEXT:      toy.print [[VAL_7]] : tensor<*xf64>
 # CHECK-NEXT:      toy.return
 
-# OPT-LABEL:   func @main()
+# OPT-LABEL:   toy.func @main()
 # OPT-NEXT:      [[VAL_0:%.*]] = toy.constant dense<{{\[\[}}1.000000e+00, 2.000000e+00, 3.000000e+00], [4.000000e+00, 5.000000e+00, 6.000000e+00]]> : tensor<2x3xf64>
 # OPT-NEXT:      [[VAL_1:%.*]] = toy.transpose([[VAL_0]] : tensor<2x3xf64>) to tensor<3x2xf64>
 # OPT-NEXT:      [[VAL_2:%.*]] = toy.mul [[VAL_1]], [[VAL_1]] : tensor<3x2xf64>

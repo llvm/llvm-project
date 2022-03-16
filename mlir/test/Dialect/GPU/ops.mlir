@@ -44,6 +44,10 @@ module attributes {gpu.container_module} {
       %gDimY = gpu.grid_dim y
       %gDimZ = gpu.grid_dim z
 
+      %gIdX = gpu.global_id x
+      %gIdY = gpu.global_id y
+      %gIdZ = gpu.global_id z
+
       %sgId = gpu.subgroup_id : index
       %numSg = gpu.num_subgroups : index
       %SgSi = gpu.subgroup_size : index

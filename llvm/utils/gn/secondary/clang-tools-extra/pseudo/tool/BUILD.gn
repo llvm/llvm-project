@@ -1,0 +1,10 @@
+executable("clang-pseudo") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//clang-tools-extra/pseudo/lib",
+    "//llvm/lib/Support",
+  ]
+  include_dirs = [ "../include" ]
+  sources = [ "ClangPseudo.cpp" ]
+}

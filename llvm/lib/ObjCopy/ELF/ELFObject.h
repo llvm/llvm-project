@@ -542,11 +542,10 @@ class CompressedSection : public SectionBase {
   SmallVector<char, 128> CompressedData;
 
 public:
-  static Expected<CompressedSection>
-  create(const SectionBase &Sec, DebugCompressionType CompressionType);
-  static Expected<CompressedSection> create(ArrayRef<uint8_t> CompressedData,
-                                            uint64_t DecompressedSize,
-                                            uint64_t DecompressedAlign);
+  CompressedSection(const SectionBase &Sec,
+                    DebugCompressionType CompressionType);
+  CompressedSection(ArrayRef<uint8_t> CompressedData, uint64_t DecompressedSize,
+                    uint64_t DecompressedAlign);
 
   uint64_t getDecompressedSize() const { return DecompressedSize; }
   uint64_t getDecompressedAlign() const { return DecompressedAlign; }
@@ -558,12 +557,6 @@ public:
     return (S->OriginalFlags & ELF::SHF_COMPRESSED) ||
            (StringRef(S->Name).startswith(".zdebug"));
   }
-
-private:
-  CompressedSection(const SectionBase &Sec,
-                    DebugCompressionType CompressionType, Error &Err);
-  CompressedSection(ArrayRef<uint8_t> CompressedData, uint64_t DecompressedSize,
-                    uint64_t DecompressedAlign);
 };
 
 class DecompressedSection : public SectionBase {

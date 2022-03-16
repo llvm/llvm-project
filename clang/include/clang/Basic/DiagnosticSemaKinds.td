@@ -3022,8 +3022,9 @@ def err_aligned_attribute_argument_not_int : Error<
 def err_align_value_attribute_argument_not_int : Error<
   "'align_value' attribute requires integer constant">;
 def err_alignas_attribute_wrong_decl_type : Error<
-  "%0 attribute cannot be applied to a %select{function parameter|"
-  "variable with 'register' storage class|'catch' variable|bit-field}1">;
+  "%0 attribute cannot be applied to %select{a function parameter|"
+  "a variable with 'register' storage class|a 'catch' variable|a bit-field|"
+  "an enumeration}1">;
 def err_alignas_missing_on_definition : Error<
   "%0 must be specified on definition if it is specified on any declaration">;
 def note_alignas_on_declaration : Note<"declared with %0 attribute here">;
@@ -4052,7 +4053,7 @@ def warn_attribute_nonnull_parm_no_args : Warning<
   InGroup<IgnoredAttributes>;
 def warn_function_stmt_attribute_precedence : Warning<
   "statement attribute %0 has higher precedence than function attribute "
-  "'%select{always_inline|flatten}1'">,
+  "'%select{always_inline|flatten|noinline}1'">,
   InGroup<IgnoredAttributes>;
 def note_declared_nonnull : Note<
   "declared %select{'returns_nonnull'|'nonnull'}0 here">;

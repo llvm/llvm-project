@@ -2885,13 +2885,15 @@ void Process::CompleteAttach() {
   // switch architectures.
   PlatformSP platform_sp(GetTarget().GetPlatform());
   assert(platform_sp);
+  ArchSpec process_host_arch = GetSystemArchitecture();
   if (platform_sp) {
     const ArchSpec &target_arch = GetTarget().GetArchitecture();
     if (target_arch.IsValid() &&
-        !platform_sp->IsCompatibleArchitecture(target_arch, false, nullptr)) {
+        !platform_sp->IsCompatibleArchitecture(target_arch, process_host_arch,
+                                               false, nullptr)) {
       ArchSpec platform_arch;
-      platform_sp =
-          platform_sp->GetPlatformForArchitecture(target_arch, &platform_arch);
+      platform_sp = platform_sp->GetPlatformForArchitecture(
+          target_arch, process_host_arch, &platform_arch);
       if (platform_sp) {
         GetTarget().SetPlatform(platform_sp);
         GetTarget().SetArchitecture(platform_arch);
@@ -3860,8 +3862,7 @@ Process::ProcessEventData::ProcessEventData() : EventData(), m_process_wp() {}
 
 Process::ProcessEventData::ProcessEventData(const ProcessSP &process_sp,
                                             StateType state)
-    : EventData(), m_process_wp(), m_state(state), m_restarted(false),
-      m_update_state(0), m_interrupted(false) {
+    : EventData(), m_process_wp(), m_state(state) {
   if (process_sp)
     m_process_wp = process_sp;
 }
@@ -4505,7 +4506,7 @@ namespace {
 class RestorePlanState {
 public:
   RestorePlanState(lldb::ThreadPlanSP thread_plan_sp)
-      : m_thread_plan_sp(thread_plan_sp), m_already_reset(false) {
+      : m_thread_plan_sp(thread_plan_sp) {
     if (m_thread_plan_sp) {
       m_private = m_thread_plan_sp->GetPrivate();
       m_is_controlling = m_thread_plan_sp->IsControllingPlan();
@@ -4526,7 +4527,7 @@ public:
 
 private:
   lldb::ThreadPlanSP m_thread_plan_sp;
-  bool m_already_reset;
+  bool m_already_reset = false;
   bool m_private;
   bool m_is_controlling;
   bool m_okay_to_discard;

@@ -49,12 +49,8 @@ void CoverageFilenamesSectionWriter::write(raw_ostream &OS, bool Compress) {
   SmallString<128> CompressedStr;
   bool doCompression =
       Compress && zlib::isAvailable() && DoInstrProfNameCompression;
-  if (doCompression) {
-    auto E =
-        zlib::compress(FilenamesStr, CompressedStr, zlib::BestSizeCompression);
-    if (E)
-      report_bad_alloc_error("Failed to zlib compress coverage data");
-  }
+  if (doCompression)
+    zlib::compress(FilenamesStr, CompressedStr, zlib::BestSizeCompression);
 
   // ::= <num-filenames>
   //     <uncompressed-len>

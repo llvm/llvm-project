@@ -1474,6 +1474,7 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
                                             object_error::parse_failed);
 
     if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) {
+      Segment.Offset.Extended = false;
       Segment.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
       Segment.Offset.Inst.Value.Int32 = 0;
     } else {
@@ -1534,6 +1535,7 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
       if (Error Err = readInitExpr(Segment.Data.Offset, Ctx))
         return Err;
     } else {
+      Segment.Data.Offset.Extended = false;
       Segment.Data.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
       Segment.Data.Offset.Inst.Value.Int32 = 0;
     }

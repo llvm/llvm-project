@@ -27,13 +27,10 @@ void TestZlibCompression(StringRef Input, int Level) {
   SmallString<32> Compressed;
   SmallString<32> Uncompressed;
 
-  Error E = zlib::compress(Input, Compressed, Level);
-  EXPECT_FALSE(E);
-  consumeError(std::move(E));
+  zlib::compress(Input, Compressed, Level);
 
   // Check that uncompressed buffer is the same as original.
-  E = zlib::uncompress(Compressed, Uncompressed, Input.size());
-  EXPECT_FALSE(E);
+  Error E = zlib::uncompress(Compressed, Uncompressed, Input.size());
   consumeError(std::move(E));
 
   EXPECT_EQ(Input, Uncompressed);

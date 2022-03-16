@@ -849,12 +849,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
           continue;
         }
 
-        // Use SPLAT_VECTOR to prevent type legalization from destroying the
-        // splats when type legalizing i64 scalar on RV32.
+        // Make SPLAT_VECTOR Legal so DAGCombine will convert splat vectors to
+        // it before type legalization for i64 vectors on RV32. It will then be
+        // type legalized to SPLAT_VECTOR_PARTS which we need to Custom handle.
         // FIXME: Use SPLAT_VECTOR for all types? DAGCombine probably needs
         // improvements first.
         if (!Subtarget.is64Bit() && VT.getVectorElementType() == MVT::i64) {
-          setOperationAction(ISD::SPLAT_VECTOR, VT, Custom);
+          setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
           setOperationAction(ISD::SPLAT_VECTOR_PARTS, VT, Custom);
         }
 
@@ -1883,24 +1884,6 @@ static SDValue lowerFROUND(SDValue Op, SelectionDAG &DAG) {
   MVT SetccVT = MVT::getVectorVT(MVT::i1, VT.getVectorElementCount());
   SDValue Setcc = DAG.getSetCC(DL, SetccVT, Abs, MaxValNode, ISD::SETOLT);
   return DAG.getSelect(DL, VT, Setcc, Truncated, Src);
-}
-
-static SDValue lowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG,
-                                 const RISCVSubtarget &Subtarget) {
-  MVT VT = Op.getSimpleValueType();
-  assert(VT.isFixedLengthVector() && "Unexpected vector!");
-
-  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
-
-  SDLoc DL(Op);
-  SDValue Mask, VL;
-  std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
-
-  unsigned Opc =
-      VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL : RISCVISD::VMV_V_X_VL;
-  SDValue Splat = DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-                              Op.getOperand(0), VL);
-  return convertFromScalableVector(VT, Splat, DAG, Subtarget);
 }
 
 struct VIDSequence {
@@ -3537,7 +3520,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SPLAT_VECTOR:
     if (Op.getValueType().getVectorElementType() == MVT::i1)
       return lowerVectorMaskSplat(Op, DAG);
-    return lowerSPLAT_VECTOR(Op, DAG, Subtarget);
+    return SDValue();
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG, Subtarget);
   case ISD::CONCAT_VECTORS: {

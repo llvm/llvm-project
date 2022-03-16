@@ -7,11 +7,13 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ; in deterministic order.
 ; CHECK-LABEL: @foo(
 ; CHECK: vector.body:
+; CHECK:      [[VEC_PHI_1:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[ADD_5:%.+]], %vector.body ]
+; CHECK:      [[VEC_PHI_2:%.+]] = phi <4 x i32> [ zeroinitializer, %vector.ph ], [ [[ADD_3:%.+]], %vector.body ]
 ; CHECK:      icmp ule <4 x i64>
-; CHECK-NEXT: %[[VAR1:.*]] = add <4 x i32> <i32 3, i32 3, i32 3, i32 3>, %vec.phi1
-; CHECK-NEXT: %[[VAR2:.*]] = add <4 x i32> %vec.phi, <i32 5, i32 5, i32 5, i32 5>
-; CHECK:      select <4 x i1> {{.*}}, <4 x i32> %[[VAR2]], <4 x i32>
-; CHECK-NEXT: select <4 x i1> {{.*}}, <4 x i32> %[[VAR1]], <4 x i32>
+; CHECK-NEXT: [[ADD_3]] = add <4 x i32> <i32 3, i32 3, i32 3, i32 3>, [[VEC_PHI_2]]
+; CHECK-NEXT: [[ADD_5]] = add <4 x i32> [[VEC_PHI_1]], <i32 5, i32 5, i32 5, i32 5>
+; CHECK:      select <4 x i1> {{.*}}, <4 x i32> [[ADD_5]], <4 x i32>
+; CHECK-NEXT: select <4 x i1> {{.*}}, <4 x i32> [[ADD_3]], <4 x i32>
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body
 ;
 define internal i64 @foo(i32* %t0) !prof !1 {
@@ -30,7 +32,7 @@ t20:                                               ; preds = %t20, %t16
   %t24 = add i32 3, %t23
   %t28 = add i32 %t22, 5
   %t29 = add nuw nsw i64 %t21, 1
-  %t30 = icmp eq i64 %t29, undef
+  %t30 = icmp eq i64 %t29, 10
   br i1 %t30, label %t17, label %t20, !prof !2
 
 t31:

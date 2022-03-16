@@ -78,17 +78,12 @@ TEST(LlvmLibcAtExit, Many) {
   EXPECT_EXITS(test, 0);
 }
 
-// POSIX doesn't specify if an atexit handler can call atexit, it only says it
-// is undefined for a handler to call exit(3). The current implementation will
-// end up invoking the newly registered function, although glibc does, other
-// libc's do not. This just tests that we don't deadlock when an exit handler
-// calls atexit.
 TEST(LlvmLibcAtExit, HandlerCallsAtExit) {
   auto test = [] {
     __llvm_libc::atexit(+[] {
-      __llvm_libc::atexit(+[] { __builtin_trap(); });
-      __llvm_libc::exit(0);
+      __llvm_libc::atexit(+[] { __llvm_libc::exit(1); });
     });
+    __llvm_libc::exit(0);
   };
-  EXPECT_EXITS(test, 0);
+  EXPECT_EXITS(test, 1);
 }

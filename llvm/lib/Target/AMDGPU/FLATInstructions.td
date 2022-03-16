@@ -12,6 +12,7 @@ def ScratchOffset : ComplexPattern<iPTR, 2, "SelectScratchOffset", [], [SDNPWant
 
 def GlobalSAddr : ComplexPattern<iPTR, 3, "SelectGlobalSAddr", [], [SDNPWantRoot], -10>;
 def ScratchSAddr : ComplexPattern<iPTR, 2, "SelectScratchSAddr", [], [SDNPWantRoot], -10>;
+def ScratchSVAddr : ComplexPattern<iPTR, 3, "SelectScratchSVAddr", [], [SDNPWantRoot], -10>;
 
 //===----------------------------------------------------------------------===//
 // FLAT classes
@@ -56,6 +57,8 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   bits<1> dlcValue = 0;
   bits<1> has_sccb  = 1;
   bits<1> sccbValue = 0;
+  bits<1> has_sve  = 0; // Scratch VGPR Enable
+  bits<1> sve = 0;
 
   let SubtargetPredicate = !if(is_flat_global, HasFlatGlobalInsts,
     !if(is_flat_scratch, HasFlatScratchInsts, HasFlatAddressSpace));
@@ -123,7 +126,7 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps> :
 
   // Only valid on GFX9+
   let Inst{12-0} = offset;
-  let Inst{13} = lds;
+  let Inst{13} = !if(ps.has_sve, ps.sve, lds);
   let Inst{15-14} = seg;
 
   let Inst{16}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ps.glcValue);
@@ -240,6 +243,33 @@ multiclass FLAT_Global_Store_Pseudo<string opName, RegisterClass regClass> {
   }
 }
 
+class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0> : FLAT_Pseudo<
+  opName,
+  (outs ),
+  !con(
+      !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64:$vaddr)),
+      (ins flat_offset:$offset, CPol_0:$cpol)),
+  " $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
+  let LGKM_CNT = 1;
+  let is_flat_global = 1;
+  let has_data = 0;
+  let has_vdst = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", "");
+  let Uses = [M0, EXEC];
+  let SchedRW = [WriteVMEM, WriteLDS];
+}
+
+multiclass FLAT_Global_Load_LDS_Pseudo<string opName> {
+  def ""     : FLAT_Global_Load_LDS_Pseudo<opName>,
+    GlobalSaddrTable<0, opName>;
+  def _SADDR : FLAT_Global_Load_LDS_Pseudo<opName, 1>,
+    GlobalSaddrTable<1, opName>;
+}
+
 class FLAT_Global_Store_AddTid_Pseudo <string opName, RegisterClass vdataClass,
   bit EnableSaddr = 0> : FLAT_Pseudo<
   opName,
@@ -273,16 +303,19 @@ class FlatScratchInst <string sv_op, string mode> {
 class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   bit HasTiedOutput = 0,
   bit EnableSaddr = 0,
-  bit EnableVaddr = !not(EnableSaddr)>
+  bit EnableSVE = 0,
+  bit EnableVaddr = !or(EnableSVE, !not(EnableSaddr))>
   : FLAT_Pseudo<
   opName,
   (outs getLdStRegisterOperand<regClass>.ret:$vdst),
   !con(
-     !if(EnableSaddr,
-       (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset),
-       !if(EnableVaddr,
-         (ins VGPR_32:$vaddr, flat_offset:$offset),
-         (ins flat_offset:$offset))),
+    !if(EnableSVE,
+        (ins VGPR_32:$vaddr, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset),
+        !if(EnableSaddr,
+          (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset),
+          !if(EnableVaddr,
+            (ins VGPR_32:$vaddr, flat_offset:$offset),
+            (ins flat_offset:$offset)))),
      !if(HasTiedOutput, (ins CPol:$cpol, getLdStRegisterOperand<regClass>.ret:$vdst_in),
                         (ins CPol_0:$cpol))),
   " $vdst, "#!if(EnableVaddr, "$vaddr, ", "off, ")#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol"> {
@@ -291,7 +324,9 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
   let has_vaddr = EnableVaddr;
-  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST"));
+  let has_sve = EnableSVE;
+  let sve = EnableVaddr;
+  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
   let maybeAtomic = 1;
 
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
@@ -299,15 +334,18 @@ class FLAT_Scratch_Load_Pseudo <string opName, RegisterClass regClass,
 }
 
 class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit EnableSaddr = 0,
-  bit EnableVaddr = !not(EnableSaddr),
+  bit EnableSVE = 0,
+  bit EnableVaddr = !or(EnableSVE, !not(EnableSaddr)),
   RegisterOperand vdata_op = getLdStRegisterOperand<vdataClass>.ret> : FLAT_Pseudo<
   opName,
   (outs),
-  !if(EnableSaddr,
-    (ins vdata_op:$vdata, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol_0:$cpol),
-    !if(EnableVaddr,
-      (ins vdata_op:$vdata, VGPR_32:$vaddr, flat_offset:$offset, CPol_0:$cpol),
-      (ins vdata_op:$vdata, flat_offset:$offset, CPol_0:$cpol))),
+  !if(EnableSVE,
+    (ins vdata_op:$vdata, VGPR_32:$vaddr, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol_0:$cpol),
+    !if(EnableSaddr,
+      (ins vdata_op:$vdata, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol_0:$cpol),
+      !if(EnableVaddr,
+        (ins vdata_op:$vdata, VGPR_32:$vaddr, flat_offset:$offset, CPol_0:$cpol),
+        (ins vdata_op:$vdata, flat_offset:$offset, CPol_0:$cpol)))),
   " "#!if(EnableVaddr, "$vaddr", "off")#", $vdata, "#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol"> {
   let mayLoad  = 0;
   let mayStore = 1;
@@ -315,7 +353,9 @@ class FLAT_Scratch_Store_Pseudo <string opName, RegisterClass vdataClass, bit En
   let has_saddr = 1;
   let enabled_saddr = EnableSaddr;
   let has_vaddr = EnableVaddr;
-  let PseudoInstr = opName#!if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST"));
+  let has_sve = EnableSVE;
+  let sve = EnableVaddr;
+  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
   let maybeAtomic = 1;
 }
 
@@ -326,8 +366,12 @@ multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit H
     def _SADDR : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1>,
                  FlatScratchInst<opName, "SS">;
 
+    let SubtargetPredicate = isGFX940Plus in
+    def _SVS : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1, 1>,
+               FlatScratchInst<opName, "SVS">;
+
     let SubtargetPredicate = HasFlatScratchSTMode in
-    def _ST  : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 0, 0>,
+    def _ST  : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 0, 0, 0>,
                FlatScratchInst<opName, "ST">;
   }
 }
@@ -339,10 +383,55 @@ multiclass FLAT_Scratch_Store_Pseudo<string opName, RegisterClass regClass> {
     def _SADDR : FLAT_Scratch_Store_Pseudo<opName, regClass, 1>,
                  FlatScratchInst<opName, "SS">;
 
+    let SubtargetPredicate = isGFX940Plus in
+    def _SVS : FLAT_Scratch_Store_Pseudo<opName, regClass, 1, 1>,
+               FlatScratchInst<opName, "SVS">;
+
     let SubtargetPredicate = HasFlatScratchSTMode in
-    def _ST  : FLAT_Scratch_Store_Pseudo<opName, regClass, 0, 0>,
+    def _ST  : FLAT_Scratch_Store_Pseudo<opName, regClass, 0, 0, 0>,
                FlatScratchInst<opName, "ST">;
   }
+}
+
+class FLAT_Scratch_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0,
+  bit EnableSVE = 0,
+  bit EnableVaddr = !or(EnableSVE, !not(EnableSaddr))> : FLAT_Pseudo<
+  opName,
+  (outs ),
+  !if(EnableSVE,
+    (ins VGPR_32:$vaddr, SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol:$cpol),
+    !if(EnableSaddr,
+      (ins SReg_32_XEXEC_HI:$saddr, flat_offset:$offset, CPol:$cpol),
+      !if(EnableVaddr,
+        (ins VGPR_32:$vaddr, flat_offset:$offset, CPol:$cpol),
+        (ins flat_offset:$offset, CPol:$cpol)))),
+  " "#!if(EnableVaddr, "$vaddr, ", "off, ")#!if(EnableSaddr, "$saddr", "off")#"$offset$cpol"> {
+
+  let LGKM_CNT = 1;
+  let is_flat_scratch = 1;
+  let has_data = 0;
+  let has_vdst = 0;
+  let mayLoad = 1;
+  let mayStore = 1;
+  let has_saddr = 1;
+  let enabled_saddr = EnableSaddr;
+  let has_vaddr = EnableVaddr;
+  let has_sve = EnableSVE;
+  let sve = EnableVaddr;
+  let PseudoInstr = opName#!if(EnableSVE, "_SVS", !if(EnableSaddr, "_SADDR", !if(EnableVaddr, "", "_ST")));
+  let Uses = [M0, EXEC];
+  let SchedRW = [WriteVMEM, WriteLDS];
+}
+
+multiclass FLAT_Scratch_Load_LDS_Pseudo<string opName> {
+  def ""     : FLAT_Scratch_Load_LDS_Pseudo<opName>,
+               FlatScratchInst<opName, "SV">;
+  def _SADDR : FLAT_Scratch_Load_LDS_Pseudo<opName, 1>,
+               FlatScratchInst<opName, "SS">;
+  def _SVS   : FLAT_Scratch_Load_LDS_Pseudo<opName, 1, 1>,
+               FlatScratchInst<opName, "SVS">;
+  def _ST    : FLAT_Scratch_Load_LDS_Pseudo<opName, 0, 0, 0>,
+               FlatScratchInst<opName, "ST">;
 }
 
 class FLAT_AtomicNoRet_Pseudo<string opName, dag outs, dag ins,
@@ -751,6 +840,16 @@ defm GLOBAL_ATOMIC_DEC_X2 : FLAT_Global_Atomic_Pseudo <"global_atomic_dec_x2",
 let SubtargetPredicate = HasGFX10_BEncoding in
 defm GLOBAL_ATOMIC_CSUB : FLAT_Global_Atomic_Pseudo_RTN <"global_atomic_csub",
                               VGPR_32, i32, int_amdgcn_global_atomic_csub>;
+
+let SubtargetPredicate = isGFX940Plus in {
+
+defm GLOBAL_LOAD_LDS_UBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ubyte">;
+defm GLOBAL_LOAD_LDS_SBYTE  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sbyte">;
+defm GLOBAL_LOAD_LDS_USHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_ushort">;
+defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_sshort">;
+defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Global_Load_LDS_Pseudo <"global_load_lds_dword">;
+
+} // End let SubtargetPredicate = isGFX940Plus
 } // End is_flat_global = 1
 
 
@@ -781,6 +880,16 @@ defm SCRATCH_STORE_DWORDX4 : FLAT_Scratch_Store_Pseudo <"scratch_store_dwordx4",
 
 defm SCRATCH_STORE_BYTE_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_byte_d16_hi", VGPR_32>;
 defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Scratch_Store_Pseudo <"scratch_store_short_d16_hi", VGPR_32>;
+
+let SubtargetPredicate = isGFX940Plus in {
+
+defm SCRATCH_LOAD_LDS_UBYTE  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_ubyte">;
+defm SCRATCH_LOAD_LDS_SBYTE  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sbyte">;
+defm SCRATCH_LOAD_LDS_USHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_ushort">;
+defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_sshort">;
+defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Scratch_Load_LDS_Pseudo <"scratch_load_lds_dword">;
+
+} // End let SubtargetPredicate = isGFX940Plus
 
 } // End SubtargetPredicate = HasFlatScratchInsts
 
@@ -960,6 +1069,22 @@ class ScratchStoreSaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
                             ValueType vt> : GCNPat <
   (node vt:$data, (ScratchSAddr (i32 SGPR_32:$saddr), i16:$offset)),
   (inst getVregSrcForVT<vt>.ret:$data, $saddr, $offset)
+>;
+
+class ScratchLoadSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i16:$offset))),
+  (inst $vaddr, $saddr, $offset, 0)
+>;
+
+class ScratchStoreSVaddrPat <FLAT_Pseudo inst, SDPatternOperator node,
+                             ValueType vt> : GCNPat <
+  (node vt:$data, (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i16:$offset)),
+  (inst getVregSrcForVT<vt>.ret:$data, $vaddr, $saddr, $offset)
+>;
+
+class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i16:$offset), vt:$in)),
+  (inst $vaddr, $saddr, $offset, 0, $in)
 >;
 
 let OtherPredicates = [HasFlatAddressSpace] in {
@@ -1145,6 +1270,11 @@ multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueTy
   def : ScratchLoadSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 26;
   }
+
+  def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = isGFX940Plus;
+    let AddedComplexity = 27;
+  }
 }
 
 multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
@@ -1156,6 +1286,11 @@ multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   def : ScratchStoreSaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 26;
   }
+
+  def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = isGFX940Plus;
+    let AddedComplexity = 27;
+  }
 }
 
 multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> {
@@ -1165,6 +1300,11 @@ multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, Val
 
   def : ScratchLoadSaddrPat_D16<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, vt> {
     let AddedComplexity = 26;
+  }
+
+  def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
+    let SubtargetPredicate = isGFX940Plus;
+    let AddedComplexity = 27;
   }
 }
 
@@ -1451,7 +1591,23 @@ class FLAT_Real_gfx940 <bits<7> op, FLAT_Pseudo ps> :
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX940> {
   let AssemblerPredicate = isGFX940Plus;
   let DecoderNamespace = "GFX9";
+  let Inst{13} = ps.sve;
   let Inst{25} = !if(ps.has_sccb, cpol{CPolBit.SCC}, ps.sccbValue);
+}
+
+multiclass FLAT_Real_AllAddr_SVE_vi<bits<7> op> {
+  def _vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME)> {
+    let AssemblerPredicate = isGFX8GFX9NotGFX940;
+    let OtherPredicates = [isGFX8GFX9NotGFX940];
+  }
+  def _SADDR_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")> {
+    let DecoderNamespace = "GFX9";
+  }
+  let AssemblerPredicate = isGFX940Plus, SubtargetPredicate = isGFX940Plus in {
+    def _VE_gfx940  : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
+    def _SVS_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SVS")>;
+    def _ST_gfx940  : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
+  }
 }
 
 def FLAT_LOAD_UBYTE_vi         : FLAT_Real_vi <0x10, FLAT_LOAD_UBYTE>;
@@ -1545,6 +1701,13 @@ defm GLOBAL_STORE_DWORDX2 : FLAT_Real_AllAddr_vi <0x1d>;
 defm GLOBAL_STORE_DWORDX3 : FLAT_Real_AllAddr_vi <0x1e>;
 defm GLOBAL_STORE_DWORDX4 : FLAT_Real_AllAddr_vi <0x1f>;
 
+let AssemblerPredicate = isGFX940Plus in {
+defm GLOBAL_LOAD_LDS_UBYTE  : FLAT_Real_AllAddr_vi <0x026>;
+defm GLOBAL_LOAD_LDS_SBYTE  : FLAT_Real_AllAddr_vi <0x027>;
+defm GLOBAL_LOAD_LDS_USHORT : FLAT_Real_AllAddr_vi <0x028>;
+defm GLOBAL_LOAD_LDS_SSHORT : FLAT_Real_AllAddr_vi <0x029>;
+defm GLOBAL_LOAD_LDS_DWORD  : FLAT_Real_AllAddr_vi <0x02a>;
+} // End let AssemblerPredicate = isGFX940Plus
 
 defm GLOBAL_ATOMIC_SWAP       : FLAT_Global_Real_Atomics_vi <0x40>;
 defm GLOBAL_ATOMIC_CMPSWAP    : FLAT_Global_Real_Atomics_vi <0x41>;
@@ -1573,28 +1736,36 @@ defm GLOBAL_ATOMIC_XOR_X2     : FLAT_Global_Real_Atomics_vi <0x6a>;
 defm GLOBAL_ATOMIC_INC_X2     : FLAT_Global_Real_Atomics_vi <0x6b>;
 defm GLOBAL_ATOMIC_DEC_X2     : FLAT_Global_Real_Atomics_vi <0x6c>;
 
-defm SCRATCH_LOAD_UBYTE         : FLAT_Real_AllAddr_vi <0x10>;
-defm SCRATCH_LOAD_SBYTE         : FLAT_Real_AllAddr_vi <0x11>;
-defm SCRATCH_LOAD_USHORT        : FLAT_Real_AllAddr_vi <0x12>;
-defm SCRATCH_LOAD_SSHORT        : FLAT_Real_AllAddr_vi <0x13>;
-defm SCRATCH_LOAD_DWORD         : FLAT_Real_AllAddr_vi <0x14>;
-defm SCRATCH_LOAD_DWORDX2       : FLAT_Real_AllAddr_vi <0x15>;
-defm SCRATCH_LOAD_DWORDX3       : FLAT_Real_AllAddr_vi <0x16>;
-defm SCRATCH_LOAD_DWORDX4       : FLAT_Real_AllAddr_vi <0x17>;
-defm SCRATCH_STORE_BYTE         : FLAT_Real_AllAddr_vi <0x18>;
-defm SCRATCH_STORE_BYTE_D16_HI  : FLAT_Real_AllAddr_vi <0x19>;
-defm SCRATCH_LOAD_UBYTE_D16     : FLAT_Real_AllAddr_vi <0x20>;
-defm SCRATCH_LOAD_UBYTE_D16_HI  : FLAT_Real_AllAddr_vi <0x21>;
-defm SCRATCH_LOAD_SBYTE_D16     : FLAT_Real_AllAddr_vi <0x22>;
-defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_AllAddr_vi <0x23>;
-defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_AllAddr_vi <0x24>;
-defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_AllAddr_vi <0x25>;
-defm SCRATCH_STORE_SHORT        : FLAT_Real_AllAddr_vi <0x1a>;
-defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Real_AllAddr_vi <0x1b>;
-defm SCRATCH_STORE_DWORD        : FLAT_Real_AllAddr_vi <0x1c>;
-defm SCRATCH_STORE_DWORDX2      : FLAT_Real_AllAddr_vi <0x1d>;
-defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_vi <0x1e>;
-defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_vi <0x1f>;
+let AssemblerPredicate = isGFX940Plus in {
+defm SCRATCH_LOAD_LDS_UBYTE  : FLAT_Real_AllAddr_SVE_vi <0x026>;
+defm SCRATCH_LOAD_LDS_SBYTE  : FLAT_Real_AllAddr_SVE_vi <0x027>;
+defm SCRATCH_LOAD_LDS_USHORT : FLAT_Real_AllAddr_SVE_vi <0x028>;
+defm SCRATCH_LOAD_LDS_SSHORT : FLAT_Real_AllAddr_SVE_vi <0x029>;
+defm SCRATCH_LOAD_LDS_DWORD  : FLAT_Real_AllAddr_SVE_vi <0x02a>;
+} // End let AssemblerPredicate = isGFX940Plus
+
+defm SCRATCH_LOAD_UBYTE         : FLAT_Real_AllAddr_SVE_vi <0x10>;
+defm SCRATCH_LOAD_SBYTE         : FLAT_Real_AllAddr_SVE_vi <0x11>;
+defm SCRATCH_LOAD_USHORT        : FLAT_Real_AllAddr_SVE_vi <0x12>;
+defm SCRATCH_LOAD_SSHORT        : FLAT_Real_AllAddr_SVE_vi <0x13>;
+defm SCRATCH_LOAD_DWORD         : FLAT_Real_AllAddr_SVE_vi <0x14>;
+defm SCRATCH_LOAD_DWORDX2       : FLAT_Real_AllAddr_SVE_vi <0x15>;
+defm SCRATCH_LOAD_DWORDX3       : FLAT_Real_AllAddr_SVE_vi <0x16>;
+defm SCRATCH_LOAD_DWORDX4       : FLAT_Real_AllAddr_SVE_vi <0x17>;
+defm SCRATCH_STORE_BYTE         : FLAT_Real_AllAddr_SVE_vi <0x18>;
+defm SCRATCH_STORE_BYTE_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x19>;
+defm SCRATCH_LOAD_UBYTE_D16     : FLAT_Real_AllAddr_SVE_vi <0x20>;
+defm SCRATCH_LOAD_UBYTE_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x21>;
+defm SCRATCH_LOAD_SBYTE_D16     : FLAT_Real_AllAddr_SVE_vi <0x22>;
+defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x23>;
+defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_AllAddr_SVE_vi <0x24>;
+defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x25>;
+defm SCRATCH_STORE_SHORT        : FLAT_Real_AllAddr_SVE_vi <0x1a>;
+defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Real_AllAddr_SVE_vi <0x1b>;
+defm SCRATCH_STORE_DWORD        : FLAT_Real_AllAddr_SVE_vi <0x1c>;
+defm SCRATCH_STORE_DWORDX2      : FLAT_Real_AllAddr_SVE_vi <0x1d>;
+defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_SVE_vi <0x1e>;
+defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_SVE_vi <0x1f>;
 
 let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
   // These instructions are encoded differently on gfx90* and gfx940.

@@ -10,14 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/PPCPredicates.h"
 #include "PPCFrameLowering.h"
+#include "MCTargetDesc/PPCPredicates.h"
 #include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -1973,6 +1974,15 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
+
+  // Do not explicitly save the callee saved VSRp registers.
+  // The individual VSR subregisters will be saved instead.
+  SavedRegs.reset(PPC::VSRp26);
+  SavedRegs.reset(PPC::VSRp27);
+  SavedRegs.reset(PPC::VSRp28);
+  SavedRegs.reset(PPC::VSRp29);
+  SavedRegs.reset(PPC::VSRp30);
+  SavedRegs.reset(PPC::VSRp31);
 
   //  Save and clear the LR state.
   PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();

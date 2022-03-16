@@ -390,7 +390,6 @@ cc_library(
     deps = [
         "//llvm:Support",
         "//mlir:Affine",
-        "//mlir:AffineBufferizableOpInterfaceImpl",
         "//mlir:ArithmeticDialect",
         "//mlir:ArithmeticTransforms",
         "//mlir:BufferizationDialect",

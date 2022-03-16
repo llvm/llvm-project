@@ -34,7 +34,7 @@ class Debugger;
 namespace repro {
 class DataRecorder;
 }
-}
+} // namespace lldb_private
 
 namespace curses {
 class Application;
@@ -163,16 +163,16 @@ public:
 
   void WaitForPop();
 
-  virtual void PrintAsync(Stream *stream, const char *s, size_t len) {
-    stream->Write(s, len);
-    stream->Flush();
-  }
+  virtual void PrintAsync(const char *s, size_t len, bool is_stdout);
+
+  std::recursive_mutex &GetOutputMutex() { return m_output_mutex; }
 
 protected:
   Debugger &m_debugger;
   lldb::FileSP m_input_sp;
   lldb::StreamFileSP m_output_sp;
   lldb::StreamFileSP m_error_sp;
+  std::recursive_mutex m_output_mutex;
   repro::DataRecorder *m_data_recorder;
   Predicate<bool> m_popped;
   Flags m_flags;
@@ -415,7 +415,7 @@ public:
 
   uint32_t GetCurrentLineIndex() const;
 
-  void PrintAsync(Stream *stream, const char *s, size_t len) override;
+  void PrintAsync(const char *s, size_t len, bool is_stdout) override;
 
 private:
 #if LLDB_ENABLE_LIBEDIT
@@ -540,7 +540,7 @@ public:
     return ((m_top != nullptr) ? m_top->GetHelpPrologue() : nullptr);
   }
 
-  void PrintAsync(Stream *stream, const char *s, size_t len);
+  bool PrintAsync(const char *s, size_t len, bool is_stdout);
 
 protected:
   typedef std::vector<lldb::IOHandlerSP> collection;

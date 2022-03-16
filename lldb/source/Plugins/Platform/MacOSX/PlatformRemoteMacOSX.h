@@ -9,21 +9,25 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEMACOSX_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEMACOSX_H
 
-#include <string>
-
-#include "lldb/Utility/FileSpec.h"
-
-#include "llvm/Support/FileSystem.h"
-
-#include "PlatformMacOSX.h"
 #include "PlatformRemoteDarwinDevice.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <string>
+#include <vector>
+
+namespace lldb_private {
+class ArchSpec;
+class FileSpec;
+class UUID;
 
 class PlatformRemoteMacOSX : public virtual PlatformRemoteDarwinDevice {
 public:
   PlatformRemoteMacOSX();
 
-  static lldb::PlatformSP CreateInstance(bool force,
-                                         const lldb_private::ArchSpec *arch);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
   static void Initialize();
 
@@ -37,16 +41,17 @@ public:
 
   llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
 
-  lldb_private::Status
-  GetFileWithUUID(const lldb_private::FileSpec &platform_file,
-                  const lldb_private::UUID *uuid_ptr,
-                  lldb_private::FileSpec &local_file) override;
+  Status GetFileWithUUID(const FileSpec &platform_file, const UUID *uuid_ptr,
+                         FileSpec &local_file) override;
 
-  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
 protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;
   llvm::StringRef GetPlatformName() override;
 };
+
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEMACOSX_H

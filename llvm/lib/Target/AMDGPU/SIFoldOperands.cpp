@@ -210,6 +210,8 @@ static bool updateOperand(FoldCandidate &Fold,
   if (Fold.isImm()) {
     if (MI->getDesc().TSFlags & SIInstrFlags::IsPacked &&
         !(MI->getDesc().TSFlags & SIInstrFlags::IsMAI) &&
+        (!ST.hasDOTOpSelHazard() ||
+         !(MI->getDesc().TSFlags & SIInstrFlags::IsDOT)) &&
         AMDGPU::isFoldableLiteralV216(Fold.ImmToFold,
                                       ST.hasInv2PiInlineImm())) {
       // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
@@ -677,7 +679,9 @@ void SIFoldOperands::foldOperand(
 
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::getNamedOperandIdx(UseMI->getOpcode(),
-                                   AMDGPU::OpName::vaddr) != -1) {
+                                   AMDGPU::OpName::vaddr) != -1 &&
+        AMDGPU::getNamedOperandIdx(UseMI->getOpcode(),
+                                   AMDGPU::OpName::saddr) == -1) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(UseMI->getOpcode());
       UseMI->setDesc(TII->get(NewOpc));
     }

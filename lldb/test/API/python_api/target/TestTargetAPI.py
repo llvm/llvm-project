@@ -112,6 +112,29 @@ class TargetAPITestCase(TestBase):
         self.assertIsNotNone(data_section2)
         self.assertEqual(data_section.name, data_section2.name)
 
+    def test_get_ABIName(self):
+        d = {'EXE': 'b.out'}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        target = self.create_simple_target('b.out')
+
+        abi_pre_launch = target.GetABIName()
+        self.assertTrue(len(abi_pre_launch) != 0, "Got an ABI string")
+        
+        breakpoint = target.BreakpointCreateByLocation(
+            "main.c", self.line_main)
+        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+
+        # Put debugger into synchronous mode so when we target.LaunchSimple returns
+        # it will guaranteed to be at the breakpoint
+        self.dbg.SetAsync(False)
+
+        # Launch the process, and do not stop at the entry point.
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
+        abi_after_launch = target.GetABIName()
+        self.assertEqual(abi_pre_launch, abi_after_launch, "ABI's match before and during run")
+
     def test_read_memory(self):
         d = {'EXE': 'b.out'}
         self.build(dictionary=d)

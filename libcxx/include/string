@@ -2304,7 +2304,7 @@ template <bool __is_short>
 basic_string<_CharT, _Traits, _Allocator>&
 basic_string<_CharT, _Traits, _Allocator>::__assign_no_alias(
     const value_type* __s, size_type __n) {
-  size_type __cap = __is_short ? __min_cap : __get_long_cap();
+  size_type __cap = __is_short ? static_cast<size_type>(__min_cap) : __get_long_cap();
   if (__n < __cap) {
     pointer __p = __is_short ? __get_short_pointer() : __get_long_pointer();
     __is_short ? __set_short_size(__n) : __set_long_size(__n);

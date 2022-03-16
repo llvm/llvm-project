@@ -23,12 +23,11 @@ using namespace lldb_private;
 SBListener::SBListener() { LLDB_INSTRUMENT_VA(this); }
 
 SBListener::SBListener(const char *name)
-    : m_opaque_sp(Listener::MakeListener(name)), m_unused_ptr(nullptr) {
+    : m_opaque_sp(Listener::MakeListener(name)) {
   LLDB_INSTRUMENT_VA(this, name);
 }
 
-SBListener::SBListener(const SBListener &rhs)
-    : m_opaque_sp(rhs.m_opaque_sp), m_unused_ptr(nullptr) {
+SBListener::SBListener(const SBListener &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
   LLDB_INSTRUMENT_VA(this, rhs);
 }
 
@@ -43,7 +42,7 @@ const lldb::SBListener &SBListener::operator=(const lldb::SBListener &rhs) {
 }
 
 SBListener::SBListener(const lldb::ListenerSP &listener_sp)
-    : m_opaque_sp(listener_sp), m_unused_ptr(nullptr) {}
+    : m_opaque_sp(listener_sp) {}
 
 SBListener::~SBListener() = default;
 

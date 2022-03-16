@@ -6941,6 +6941,23 @@ INTERCEPTOR(int, stat, const char *path, void *buf) {
 #define INIT_STAT
 #endif
 
+#if SANITIZER_INTERCEPT_STAT64
+INTERCEPTOR(int, stat64, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, stat64, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(stat64)(path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat64_sz);
+  return res;
+}
+#define INIT_STAT64 COMMON_INTERCEPT_FUNCTION(stat64)
+#else
+#define INIT_STAT64
+#endif
+
+
 #if SANITIZER_INTERCEPT_LSTAT
 INTERCEPTOR(int, lstat, const char *path, void *buf) {
   void *ctx;
@@ -6955,6 +6972,22 @@ INTERCEPTOR(int, lstat, const char *path, void *buf) {
 #define INIT_LSTAT COMMON_INTERCEPT_FUNCTION(lstat)
 #else
 #define INIT_LSTAT
+#endif
+
+#if SANITIZER_INTERCEPT_STAT64
+INTERCEPTOR(int, lstat64, const char *path, void *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, lstat64, path, buf);
+  if (common_flags()->intercept_stat)
+    COMMON_INTERCEPTOR_READ_STRING(ctx, path, 0);
+  int res = REAL(lstat64)(path, buf);
+  if (!res)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer::struct_stat64_sz);
+  return res;
+}
+#define INIT_LSTAT64 COMMON_INTERCEPT_FUNCTION(lstat64)
+#else
+#define INIT_LSTAT64
 #endif
 
 #if SANITIZER_INTERCEPT___XSTAT
@@ -7974,7 +8007,7 @@ INTERCEPTOR(int, regcomp, void *preg, const char *pattern, int cflags) {
   if (pattern)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, pattern, internal_strlen(pattern) + 1);
   int res = REAL(regcomp)(preg, pattern, cflags);
-  if (!res)
+  if (preg)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, preg, struct_regex_sz);
   return res;
 }
@@ -10516,8 +10549,10 @@ static void InitializeCommonInterceptors() {
   INIT_RECV_RECVFROM;
   INIT_SEND_SENDTO;
   INIT_STAT;
+  INIT_STAT64;
   INIT_EVENTFD_READ_WRITE;
   INIT_LSTAT;
+  INIT_LSTAT64;
   INIT___XSTAT;
   INIT___XSTAT64;
   INIT___LXSTAT;

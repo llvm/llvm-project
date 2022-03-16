@@ -47,7 +47,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/SymbolRewriter.h"
 #include <cassert>
 #include <string>
 

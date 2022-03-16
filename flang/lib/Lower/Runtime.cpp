@@ -14,7 +14,9 @@
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Runtime/pointer.h"
+#include "flang/Runtime/random.h"
 #include "flang/Runtime/stop.h"
+#include "flang/Runtime/time-intrinsic.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Support/Debug.h"
 
@@ -124,4 +126,110 @@ mlir::Value Fortran::lower::genAssociated(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, func.getType(), pointer, target);
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+mlir::Value Fortran::lower::genCpuTime(fir::FirOpBuilder &builder,
+                                       mlir::Location loc) {
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(CpuTime)>(loc, builder);
+  return builder.create<fir::CallOp>(loc, func, llvm::None).getResult(0);
+}
+
+void Fortran::lower::genDateAndTime(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    llvm::Optional<fir::CharBoxValue> date,
+                                    llvm::Optional<fir::CharBoxValue> time,
+                                    llvm::Optional<fir::CharBoxValue> zone,
+                                    mlir::Value values) {
+  mlir::FuncOp callee =
+      fir::runtime::getRuntimeFunc<mkRTKey(DateAndTime)>(loc, builder);
+  mlir::FunctionType funcTy = callee.getType();
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Value zero;
+  auto splitArg = [&](llvm::Optional<fir::CharBoxValue> arg,
+                      mlir::Value &buffer, mlir::Value &len) {
+    if (arg) {
+      buffer = arg->getBuffer();
+      len = arg->getLen();
+    } else {
+      if (!zero)
+        zero = builder.createIntegerConstant(loc, idxTy, 0);
+      buffer = zero;
+      len = zero;
+    }
+  };
+  mlir::Value dateBuffer;
+  mlir::Value dateLen;
+  splitArg(date, dateBuffer, dateLen);
+  mlir::Value timeBuffer;
+  mlir::Value timeLen;
+  splitArg(time, timeBuffer, timeLen);
+  mlir::Value zoneBuffer;
+  mlir::Value zoneLen;
+  splitArg(zone, zoneBuffer, zoneLen);
+
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(7));
+
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, funcTy, dateBuffer, dateLen, timeBuffer, timeLen,
+      zoneBuffer, zoneLen, sourceFile, sourceLine, values);
+  builder.create<fir::CallOp>(loc, callee, args);
+}
+
+void Fortran::lower::genRandomInit(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, mlir::Value repeatable,
+                                   mlir::Value imageDistinct) {
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(RandomInit)>(loc, builder);
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, func.getType(), repeatable, imageDistinct);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+void Fortran::lower::genRandomNumber(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value harvest) {
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(RandomNumber)>(loc, builder);
+  mlir::FunctionType funcTy = func.getType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, funcTy, harvest, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+void Fortran::lower::genRandomSeed(fir::FirOpBuilder &builder,
+                                   mlir::Location loc, int argIndex,
+                                   mlir::Value argBox) {
+  mlir::FuncOp func;
+  // argIndex is the nth (0-origin) argument in declaration order,
+  // or -1 if no argument is present.
+  switch (argIndex) {
+  case -1:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedDefaultPut)>(loc,
+                                                                       builder);
+    builder.create<fir::CallOp>(loc, func);
+    return;
+  case 0:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedSize)>(loc, builder);
+    break;
+  case 1:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedPut)>(loc, builder);
+    break;
+  case 2:
+    func = fir::runtime::getRuntimeFunc<mkRTKey(RandomSeedGet)>(loc, builder);
+    break;
+  default:
+    llvm::report_fatal_error("invalid RANDOM_SEED argument index");
+  }
+  mlir::FunctionType funcTy = func.getType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, funcTy, argBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
 }

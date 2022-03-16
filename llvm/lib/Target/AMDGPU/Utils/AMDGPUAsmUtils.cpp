@@ -88,6 +88,16 @@ const char* const IdSymbolic[] = {
   "HW_REG_SHADER_CYCLES"
 };
 
+// This is gfx940 specific portion from ID_SYMBOLIC_FIRST_GFX940_ to
+// ID_SYMBOLIC_LAST_GFX940_
+const char* const IdSymbolicGFX940Specific[] = {
+  "HW_REG_XCC_ID",
+  "HW_REG_SQ_PERF_SNAPSHOT_DATA",
+  "HW_REG_SQ_PERF_SNAPSHOT_DATA1",
+  "HW_REG_SQ_PERF_SNAPSHOT_PC_LO",
+  "HW_REG_SQ_PERF_SNAPSHOT_PC_HI"
+};
+
 } // namespace Hwreg
 
 namespace MTBUFFormat {

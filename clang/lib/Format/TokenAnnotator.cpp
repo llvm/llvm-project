@@ -783,7 +783,7 @@ private:
     OpeningBrace.ParentBracket = Contexts.back().ContextKind;
 
     if (Contexts.back().CaretFound)
-      OpeningBrace.setType(TT_ObjCBlockLBrace);
+      OpeningBrace.overwriteFixedType(TT_ObjCBlockLBrace);
     Contexts.back().CaretFound = false;
 
     ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);
@@ -1023,6 +1023,8 @@ private:
       if (Style.isCpp() && CurrentToken && CurrentToken->is(tok::kw_co_await))
         next();
       Contexts.back().ColonIsForRangeExpr = true;
+      if (!CurrentToken || CurrentToken->isNot(tok::l_paren))
+        return false;
       next();
       if (!parseParens())
         return false;
@@ -1526,8 +1528,36 @@ private:
       if (Current.getPrecedence() != prec::Assignment)
         return false;
 
-      if (Line.First->isOneOf(tok::kw_template, tok::kw_using, tok::kw_return))
+      if (Line.First->isOneOf(tok::kw_using, tok::kw_return))
         return false;
+      if (Line.First->is(tok::kw_template)) {
+        assert(Current.Previous);
+        if (Current.Previous->is(tok::kw_operator)) {
+          // `template ... operator=` cannot be an expression.
+          return false;
+        }
+
+        // `template` keyword can start a variable template.
+        const FormatToken *Tok = Line.First->getNextNonComment();
+        assert(Tok); // Current token is on the same line.
+        if (Tok->isNot(TT_TemplateOpener)) {
+          // Explicit template instantiations do not have `<>`.
+          return false;
+        }
+
+        Tok = Tok->MatchingParen;
+        if (!Tok)
+          return false;
+        Tok = Tok->getNextNonComment();
+        if (!Tok)
+          return false;
+
+        if (Tok->isOneOf(tok::kw_class, tok::kw_enum, tok::kw_concept,
+                         tok::kw_struct, tok::kw_using))
+          return false;
+
+        return true;
+      }
 
       // Type aliases use `type X = ...;` in TypeScript and can be exported
       // using `export type ...`.

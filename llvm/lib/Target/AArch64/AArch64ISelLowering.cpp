@@ -11984,23 +11984,23 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   }
   case Intrinsic::aarch64_ldaxr:
   case Intrinsic::aarch64_ldxr: {
-    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(0)->getType());
+    Type *ValTy = I.getParamElementType(0);
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(PtrTy->getPointerElementType());
+    Info.memVT = MVT::getVT(ValTy);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
-    Info.align = DL.getABITypeAlign(PtrTy->getPointerElementType());
+    Info.align = DL.getABITypeAlign(ValTy);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
     return true;
   }
   case Intrinsic::aarch64_stlxr:
   case Intrinsic::aarch64_stxr: {
-    PointerType *PtrTy = cast<PointerType>(I.getArgOperand(1)->getType());
+    Type *ValTy = I.getParamElementType(1);
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Info.memVT = MVT::getVT(PtrTy->getPointerElementType());
+    Info.memVT = MVT::getVT(ValTy);
     Info.ptrVal = I.getArgOperand(1);
     Info.offset = 0;
-    Info.align = DL.getABITypeAlign(PtrTy->getPointerElementType());
+    Info.align = DL.getABITypeAlign(ValTy);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
     return true;
   }
@@ -14410,11 +14410,56 @@ performFirstTrueTestVectorCombine(SDNode *N,
   return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::FIRST_ACTIVE);
 }
 
+// Materialize : Idx = (add (mul vscale, NumEls), -1)
+//               i1 = extract_vector_elt t37, Constant:i64<Idx>
+//     ... into: "ptrue p, all" + PTEST
+static SDValue
+performLastTrueTestVectorCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI,
+                                 const AArch64Subtarget *Subtarget) {
+  assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
+  // Make sure PTEST is legal types.
+  if (!Subtarget->hasSVE() || DCI.isBeforeLegalize())
+    return SDValue();
+
+  SDValue SetCC = N->getOperand(0);
+  EVT OpVT = SetCC.getValueType();
+
+  if (!OpVT.isScalableVector() || OpVT.getVectorElementType() != MVT::i1)
+    return SDValue();
+
+  // Idx == (add (mul vscale, NumEls), -1)
+  SDValue Idx = N->getOperand(1);
+  if (Idx.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  SDValue VS = Idx.getOperand(0);
+  if (VS.getOpcode() != ISD::VSCALE)
+    return SDValue();
+
+  unsigned NumEls = OpVT.getVectorElementCount().getKnownMinValue();
+  if (VS.getConstantOperandVal(0) != NumEls)
+    return SDValue();
+
+  // Restricted the DAG combine to only cases where we're extracting from a
+  // flag-setting operation
+  auto *CI = dyn_cast<ConstantSDNode>(Idx.getOperand(1));
+  if (!CI || !CI->isAllOnes() || SetCC.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  // Extracts of lane EC-1 for SVE can be expressed as PTEST(Op, LAST) ? 1 : 0
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Pg = getPTrue(DAG, SDLoc(N), OpVT, AArch64SVEPredPattern::all);
+  return getPTest(DAG, N->getValueType(0), Pg, SetCC, AArch64CC::LAST_ACTIVE);
+}
+
 static SDValue
 performExtractVectorEltCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64Subtarget *Subtarget) {
   assert(N->getOpcode() == ISD::EXTRACT_VECTOR_ELT);
   if (SDValue Res = performFirstTrueTestVectorCombine(N, DCI, Subtarget))
+    return Res;
+  if (SDValue Res = performLastTrueTestVectorCombine(N, DCI, Subtarget))
     return Res;
 
   SelectionDAG &DAG = DCI.DAG;
@@ -19265,7 +19310,10 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
   const DataLayout &DL = M->getDataLayout();
   IntegerType *IntEltTy = Builder.getIntNTy(DL.getTypeSizeInBits(ValueTy));
-  Value *Trunc = Builder.CreateTrunc(Builder.CreateCall(Ldxr, Addr), IntEltTy);
+  CallInst *CI = Builder.CreateCall(Ldxr, Addr);
+  CI->addParamAttr(
+      0, Attribute::get(Builder.getContext(), Attribute::ElementType, ValueTy));
+  Value *Trunc = Builder.CreateTrunc(CI, IntEltTy);
 
   return Builder.CreateBitCast(Trunc, ValueTy);
 }
@@ -19306,10 +19354,13 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   IntegerType *IntValTy = Builder.getIntNTy(DL.getTypeSizeInBits(Val->getType()));
   Val = Builder.CreateBitCast(Val, IntValTy);
 
-  return Builder.CreateCall(Stxr,
-                            {Builder.CreateZExtOrBitCast(
-                                 Val, Stxr->getFunctionType()->getParamType(0)),
-                             Addr});
+  CallInst *CI = Builder.CreateCall(
+      Stxr, {Builder.CreateZExtOrBitCast(
+                 Val, Stxr->getFunctionType()->getParamType(0)),
+             Addr});
+  CI->addParamAttr(1, Attribute::get(Builder.getContext(),
+                                     Attribute::ElementType, Val->getType()));
+  return CI;
 }
 
 bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(

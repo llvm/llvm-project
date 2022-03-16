@@ -30,12 +30,13 @@ define void @test_aix_splatimm(i32 %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-AIX-NEXT:    lxvw4x 35, 0, 3
 ; CHECK-AIX-NEXT:    addi 3, 1, -16
 ; CHECK-AIX-NEXT:    lxvw4x 36, 0, 3
+; CHECK-AIX-NEXT:    ld 3, L..C0(2) # %const.0
 ; CHECK-AIX-NEXT:    vmrghh 3, 2, 3
-; CHECK-AIX-NEXT:    vsplth 5, 2, 0
-; CHECK-AIX-NEXT:    vmrghh 2, 4, 2
-; CHECK-AIX-NEXT:    xxmrghw 35, 35, 37
-; CHECK-AIX-NEXT:    xxswapd 0, 35
-; CHECK-AIX-NEXT:    xxsldwi 34, 0, 34, 2
+; CHECK-AIX-NEXT:    vmrghh 4, 4, 2
+; CHECK-AIX-NEXT:    vsplth 2, 2, 0
+; CHECK-AIX-NEXT:    xxmrghw 34, 35, 34
+; CHECK-AIX-NEXT:    lxvw4x 35, 0, 3
+; CHECK-AIX-NEXT:    vperm 2, 2, 4, 3
 ; CHECK-AIX-NEXT:    vsplth 3, 2, 1
 ; CHECK-AIX-NEXT:    vsplth 2, 2, 4
 ; CHECK-AIX-NEXT:    stxvw4x 35, 0, 5

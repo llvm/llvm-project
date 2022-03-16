@@ -19,7 +19,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 HostNativeThreadBase::HostNativeThreadBase(thread_t thread)
-    : m_thread(thread), m_result(0) {} // NOLINT(modernize-use-nullptr)
+    : m_thread(thread) {}
 
 lldb::thread_t HostNativeThreadBase::GetSystemHandle() const {
   return m_thread;

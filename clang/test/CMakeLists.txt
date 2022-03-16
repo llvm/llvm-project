@@ -76,7 +76,6 @@ list(APPEND CLANG_TEST_DEPS
   clang-repl
   clang-diff
   clang-scan-deps
-  clang-pseudo
   diagtool
   hmaptool
   )

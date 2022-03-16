@@ -249,7 +249,7 @@ bool X86Subtarget::isLegalToCallImmediateAddr() const {
   // FIXME: I386 PE/COFF supports PC relative calls using IMAGE_REL_I386_REL32
   // but WinCOFFObjectWriter::RecordRelocation cannot emit them.  Once it does,
   // the following check for Win32 should be removed.
-  if (In64BitMode || isTargetWin32())
+  if (Is64Bit || isTargetWin32())
     return false;
   return isTargetELF() || TM.getRelocationModel() == Reloc::Static;
 }
@@ -276,12 +276,12 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   // introduced with Intel's Nehalem/Silvermont and AMD's Family10h
   // micro-architectures respectively.
   if (hasSSE42() || hasSSE4A())
-    IsUAMem16Slow = false;
+    IsUnalignedMem16Slow = false;
 
   LLVM_DEBUG(dbgs() << "Subtarget features: SSELevel " << X86SSELevel
                     << ", 3DNowLevel " << X863DNowLevel << ", 64bit "
                     << HasX86_64 << "\n");
-  if (In64BitMode && !HasX86_64)
+  if (Is64Bit && !HasX86_64)
     report_fatal_error("64-bit code requested on a subtarget that doesn't "
                        "support it!");
 
@@ -291,7 +291,7 @@ void X86Subtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
   else if (isTargetDarwin() || isTargetLinux() || isTargetKFreeBSD() ||
-           isTargetNaCl() || In64BitMode)
+           isTargetNaCl() || Is64Bit)
     stackAlignment = Align(16);
 
   // Consume the vector width attribute or apply any target specific limit.

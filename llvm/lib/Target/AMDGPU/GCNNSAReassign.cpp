@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -184,7 +185,7 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
       // logic to find free registers will be much more complicated with much
       // less chances for success. That seems reasonable to assume that in most
       // cases a tuple is used because a vector variable contains different
-      // parts of an address and it is either already consequitive or cannot
+      // parts of an address and it is either already consecutive or cannot
       // be reassigned if not. If needed it is better to rely on register
       // coalescer to process such address tuples.
       if (MRI->getRegClass(Reg) != &AMDGPU::VGPR_32RegClass || Op.getSubReg())

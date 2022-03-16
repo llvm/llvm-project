@@ -1244,6 +1244,11 @@ namespace AMDGPU {
   LLVM_READONLY
   int getFlatScratchInstSTfromSS(uint16_t Opcode);
 
+  /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
+  /// of an SVS (SADDR + VADDR) form.
+  LLVM_READONLY
+  int getFlatScratchInstSVfromSVS(uint16_t Opcode);
+
   /// \returns SS (SADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SV (VADDR) form.
   LLVM_READONLY

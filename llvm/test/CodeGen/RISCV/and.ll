@@ -70,3 +70,151 @@ define i64 @and64_0xfff(i64 %x) {
   ret i64 %a
 }
 
+; Test for handling of AND with constant. If this constant exceeds simm32 and
+; also is a non-empty sequence of ones starting at the most significant bit
+; with the remainder zero, we can replace it with SRLI + SLLI.
+
+define i32 @and32_0x7ffff000(i32 %x) {
+; RV32I-LABEL: and32_0x7ffff000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 524287
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and32_0x7ffff000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524287
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = and i32 %x, 2147479552
+  ret i32 %a
+}
+
+define i32 @and32_0xfffff000(i32 %x) {
+; RV32I-LABEL: and32_0xfffff000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1048575
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and32_0xfffff000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1048575
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = and i32 %x, -4096
+  ret i32 %a
+}
+
+define i32 @and32_0xfffffa00(i32 %x) {
+; RV32I-LABEL: and32_0xfffffa00:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, -1536
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and32_0xfffffa00:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, -1536
+; RV64I-NEXT:    ret
+  %a = and i32 %x, -1536
+  ret i32 %a
+}
+
+define i64 @and64_0x7ffffffffffff000(i64 %x) {
+; RV32I-LABEL: and64_0x7ffffffffffff000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 1048575
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    slli a1, a1, 1
+; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and64_0x7ffffffffffff000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1048574
+; RV64I-NEXT:    srli a1, a1, 1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = and i64 %x, 9223372036854771712
+  ret i64 %a
+}
+
+define i64 @and64_0xfffffffffffff000(i64 %x) {
+; RV32I-LABEL: and64_0xfffffffffffff000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 1048575
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and64_0xfffffffffffff000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1048575
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = and i64 %x, -4096
+  ret i64 %a
+}
+
+define i64 @and64_0xfffffffffffffa00(i64 %x) {
+; RV32I-LABEL: and64_0xfffffffffffffa00:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, -1536
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and64_0xfffffffffffffa00:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, -1536
+; RV64I-NEXT:    ret
+  %a = and i64 %x, -1536
+  ret i64 %a
+}
+
+define i64 @and64_0xffffffff00000000(i64 %x) {
+; RV32I-LABEL: and64_0xffffffff00000000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and64_0xffffffff00000000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    ret
+  %a = and i64 %x, -4294967296
+  ret i64 %a
+}
+
+define i64 @and64_0x7fffffff00000000(i64 %x) {
+; RV32I-LABEL: and64_0x7fffffff00000000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a1, 1
+; RV32I-NEXT:    srli a1, a0, 1
+; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and64_0x7fffffff00000000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = and i64 %x, 9223372032559808512
+  ret i64 %a
+}
+
+define i64 @and64_0xffffffff80000000(i64 %x) {
+; RV32I-LABEL: and64_0xffffffff80000000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a2, 524288
+; RV32I-NEXT:    and a0, a0, a2
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and64_0xffffffff80000000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = and i64 %x, -2147483648
+  ret i64 %a
+}

@@ -1,4 +1,5 @@
-//===-- PlatformRemoteAppleBridge.h ---------------------------------*- C++ -*-===//
+//===-- PlatformRemoteAppleBridge.h ---------------------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,21 +10,21 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEBRIDGE_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEBRIDGE_H
 
-#include <string>
-
-#include "lldb/Utility/FileSpec.h"
-
-#include "llvm/Support/FileSystem.h"
-
 #include "PlatformRemoteDarwinDevice.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/ADT/StringRef.h"
+
+#include <vector>
+
+namespace lldb_private {
+class ArchSpec;
 
 class PlatformRemoteAppleBridge : public PlatformRemoteDarwinDevice {
 public:
   PlatformRemoteAppleBridge();
 
-  // Class Functions
-  static lldb::PlatformSP CreateInstance(bool force,
-                                         const lldb_private::ArchSpec *arch);
+  static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
   static void Initialize();
 
@@ -33,18 +34,18 @@ public:
 
   static llvm::StringRef GetDescriptionStatic();
 
-  // lldb_private::PluginInterface functions
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  // lldb_private::Platform functions
 
   llvm::StringRef GetDescription() override { return GetDescriptionStatic(); }
 
-  std::vector<lldb_private::ArchSpec> GetSupportedArchitectures() override;
+  std::vector<ArchSpec>
+  GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
 protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;
   llvm::StringRef GetPlatformName() override;
 };
+
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLEBRIDGE_H
