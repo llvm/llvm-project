@@ -37,6 +37,7 @@ class InsertElementInst;
 class InsertValueInst;
 class Instruction;
 class LoopInfo;
+class MemorySSA;
 class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
@@ -67,6 +68,7 @@ struct SLPVectorizerPass : public PassInfoMixin<SLPVectorizerPass> {
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
   DemandedBits *DB = nullptr;
+  MemorySSA *MSSA = nullptr; // nullable, currently preserved, but not used
   const DataLayout *DL = nullptr;
 
 public:
@@ -76,7 +78,7 @@ public:
   bool runImpl(Function &F, ScalarEvolution *SE_, TargetTransformInfo *TTI_,
                TargetLibraryInfo *TLI_, AAResults *AA_, LoopInfo *LI_,
                DominatorTree *DT_, AssumptionCache *AC_, DemandedBits *DB_,
-               OptimizationRemarkEmitter *ORE_);
+               MemorySSA *MSSA_, OptimizationRemarkEmitter *ORE_);
 
 private:
   /// Collect store and getelementptr instructions and organize them
