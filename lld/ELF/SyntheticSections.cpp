@@ -409,7 +409,8 @@ void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
       return;
 
     size_t offset = piece.inputOff;
-    uint32_t id = read32(piece.data().data() + 4);
+    const uint32_t id =
+        endian::read32<ELFT::TargetEndianness>(piece.data().data() + 4);
     if (id == 0) {
       offsetToCie[offset] = addCie<ELFT>(piece, rels);
       continue;
