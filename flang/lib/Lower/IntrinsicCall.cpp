@@ -38,6 +38,19 @@
 #define PGMATH_DECLARE
 #include "flang/Evaluate/pgmath.h.inc"
 
+/// This file implements lowering of Fortran intrinsic procedures.
+/// Intrinsics are lowered to a mix of FIR and MLIR operations as
+/// well as call to runtime functions or LLVM intrinsics.
+
+/// Lowering of intrinsic procedure calls is based on a map that associates
+/// Fortran intrinsic generic names to FIR generator functions.
+/// All generator functions are member functions of the IntrinsicLibrary class
+/// and have the same interface.
+/// If no generator is given for an intrinsic name, a math runtime library
+/// is searched for an implementation and, if a runtime function is found,
+/// a call is generated for it. LLVM intrinsics are handled as a math
+/// runtime library here.
+
 /// Enums used to templatize and share lowering of MIN and MAX.
 enum class Extremum { Min, Max };
 
@@ -80,19 +93,6 @@ enum class ExtremumBehavior {
   // LLVM/MLIR do not provide ways to observe this aspect, so it is not
   // possible to implement it without some target dependent runtime.
 };
-
-/// This file implements lowering of Fortran intrinsic procedures.
-/// Intrinsics are lowered to a mix of FIR and MLIR operations as
-/// well as call to runtime functions or LLVM intrinsics.
-
-/// Lowering of intrinsic procedure calls is based on a map that associates
-/// Fortran intrinsic generic names to FIR generator functions.
-/// All generator functions are member functions of the IntrinsicLibrary class
-/// and have the same interface.
-/// If no generator is given for an intrinsic name, a math runtime library
-/// is searched for an implementation and, if a runtime function is found,
-/// a call is generated for it. LLVM intrinsics are handled as a math
-/// runtime library here.
 
 fir::ExtendedValue Fortran::lower::getAbsentIntrinsicArgument() {
   return fir::UnboxedValue{};
@@ -439,6 +439,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
@@ -592,6 +593,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
     {"char", &I::genChar},
+    {"count",
+     &I::genCount,
+     {{{"mask", asAddr}, {"dim", asValue}, {"kind", asValue}}},
+     /*isElemental=*/false},
     {"cpu_time",
      &I::genCpuTime,
      {{{"time", asAddr}}},
@@ -1644,31 +1649,64 @@ IntrinsicLibrary::genChar(mlir::Type type,
   return fir::CharBoxValue{cast, len};
 }
 
-// DIM
-mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
-                                     llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 2);
-  if (resultType.isa<mlir::IntegerType>()) {
-    mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
-    auto diff = builder.create<mlir::arith::SubIOp>(loc, args[0], args[1]);
-    auto cmp = builder.create<mlir::arith::CmpIOp>(
-        loc, mlir::arith::CmpIPredicate::sgt, diff, zero);
-    return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
-  }
-  assert(fir::isa_real(resultType) && "Only expects real and integer in DIM");
-  mlir::Value zero = builder.createRealZeroConstant(loc, resultType);
-  auto diff = builder.create<mlir::arith::SubFOp>(loc, args[0], args[1]);
-  auto cmp = builder.create<mlir::arith::CmpFOp>(
-      loc, mlir::arith::CmpFPredicate::OGT, diff, zero);
-  return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
-}
-
-// DOT_PRODUCT
+// COUNT
 fir::ExtendedValue
-IntrinsicLibrary::genDotProduct(mlir::Type resultType,
-                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genDotProd(fir::runtime::genDotProduct, resultType, builder, loc,
-                    stmtCtx, args);
+IntrinsicLibrary::genCount(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+
+  // Handle mask argument
+  fir::BoxValue mask = builder.createBox(loc, args[0]);
+  unsigned maskRank = mask.rank();
+
+  assert(maskRank > 0);
+
+  // Handle optional dim argument
+  bool absentDim = isAbsent(args[1]);
+  mlir::Value dim =
+      absentDim ? builder.createIntegerConstant(loc, builder.getIndexType(), 0)
+                : fir::getBase(args[1]);
+
+  if (absentDim || maskRank == 1) {
+    // Result is scalar if no dim argument or mask is rank 1.
+    // So, call specialized Count runtime routine.
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genCount(builder, loc, fir::getBase(mask), dim));
+  }
+
+  // Call general CountDim runtime routine.
+
+  // Handle optional kind argument
+  bool absentKind = isAbsent(args[2]);
+  mlir::Value kind = absentKind ? builder.createIntegerConstant(
+                                      loc, builder.getIndexType(),
+                                      builder.getKindMap().defaultIntegerKind())
+                                : fir::getBase(args[2]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  mlir::Type type = builder.getVarLenSeqTy(resultType, maskRank - 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, type);
+
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genCountDim(builder, loc, resultIrBox, fir::getBase(mask), dim,
+                            kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  fir::ExtendedValue res =
+      fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+        // Add cleanup code
+        addCleanUpForTemp(loc, box.getAddr());
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "unexpected result for COUNT");
+      });
 }
 
 // CPU_TIME
@@ -1697,6 +1735,33 @@ void IntrinsicLibrary::genDateAndTime(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   Fortran::lower::genDateAndTime(builder, loc, charArgs[0], charArgs[1],
                                  charArgs[2], values);
+}
+
+// DIM
+mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  if (resultType.isa<mlir::IntegerType>()) {
+    mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+    auto diff = builder.create<mlir::arith::SubIOp>(loc, args[0], args[1]);
+    auto cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::sgt, diff, zero);
+    return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
+  }
+  assert(fir::isa_real(resultType) && "Only expects real and integer in DIM");
+  mlir::Value zero = builder.createRealZeroConstant(loc, resultType);
+  auto diff = builder.create<mlir::arith::SubFOp>(loc, args[0], args[1]);
+  auto cmp = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::OGT, diff, zero);
+  return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
+}
+
+// DOT_PRODUCT
+fir::ExtendedValue
+IntrinsicLibrary::genDotProduct(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genDotProd(fir::runtime::genDotProduct, resultType, builder, loc,
+                    stmtCtx, args);
 }
 
 // IAND
