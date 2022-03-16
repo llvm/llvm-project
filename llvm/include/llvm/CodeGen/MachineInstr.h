@@ -1746,7 +1746,7 @@ public:
 
   /// Erase an operand from an instruction, leaving it with one
   /// fewer operand than it started with.
-  void RemoveOperand(unsigned OpNo);
+  void removeOperand(unsigned OpNo);
 
   /// Clear this MachineInstr's memory reference descriptor list.  This resets
   /// the memrefs to their most conservative state.  This should be used only
@@ -1865,12 +1865,12 @@ private:
   /// Unlink all of the register operands in this instruction from their
   /// respective use lists.  This requires that the operands already be on their
   /// use lists.
-  void RemoveRegOperandsFromUseLists(MachineRegisterInfo&);
+  void removeRegOperandsFromUseLists(MachineRegisterInfo&);
 
   /// Add all of the register operands in this instruction from their
   /// respective use lists.  This requires that the operands not be on their
   /// use lists yet.
-  void AddRegOperandsToUseLists(MachineRegisterInfo&);
+  void addRegOperandsToUseLists(MachineRegisterInfo&);
 
   /// Slow path for hasProperty when we're dealing with a bundle.
   bool hasPropertyInBundle(uint64_t Mask, QueryType Type) const;

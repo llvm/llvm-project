@@ -11,11 +11,23 @@
 
 #include "SIDefines.h"
 
+#include "llvm/ADT/StringRef.h"
+
 namespace llvm {
 
 class StringLiteral;
+class MCSubtargetInfo;
 
 namespace AMDGPU {
+
+const int OPR_ID_UNKNOWN = -1;
+const int OPR_ID_UNSUPPORTED = -2;
+
+template <class T> struct CustomOperand {
+  StringLiteral Name = "";
+  int Encoding = 0;
+  bool (*Cond)(T Context) = nullptr;
+};
 
 namespace SendMsg { // Symbolic names for the sendmsg(...) syntax.
 
@@ -27,8 +39,8 @@ extern const char *const OpGsSymbolic[OP_GS_LAST_];
 
 namespace Hwreg { // Symbolic names for the hwreg(...) syntax.
 
-extern const char* const IdSymbolic[];
-extern const char* const IdSymbolicGFX940Specific[];
+extern const CustomOperand<const MCSubtargetInfo &> Opr[];
+extern const int OPR_SIZE;
 
 } // namespace Hwreg
 

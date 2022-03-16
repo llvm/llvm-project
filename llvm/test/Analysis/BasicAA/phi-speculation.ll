@@ -27,6 +27,8 @@ while.body:
   %tobool = icmp eq i32 %dec, 0
   %ptr_inc = getelementptr inbounds i32, i32* %ptr_phi, i64 1
   %ptr2_inc = getelementptr inbounds i32, i32* %ptr2_phi, i64 1
+  load i32, i32* %ptr_inc
+  load i32, i32* %ptr2_inc
   br i1 %tobool, label %the_exit, label %while.body
 
 the_exit:
@@ -34,10 +36,10 @@ the_exit:
 }
 
 ; CHECK: test_noalias_2
-; CHECK: NoAlias: i32* %ptr_outer_phi, i32* %ptr_outer_phi2
-; CHECK: NoAlias: i32* %ptr2_inc_outer, i32* %ptr_inc_outer
-; CHECK: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
-; CHECK: NoAlias: i32* %ptr2_inc, i32* %ptr_inc
+; CHECK-DAG: NoAlias: i32* %ptr_outer_phi, i32* %ptr_outer_phi2
+; CHECK-DAG: NoAlias: i32* %ptr2_inc_outer, i32* %ptr_inc_outer
+; CHECK-DAG: NoAlias: i32* %ptr2_phi, i32* %ptr_phi
+; CHECK-DAG: NoAlias: i32* %ptr2_inc, i32* %ptr_inc
 define i32 @test_noalias_2(i32* %ptr2, i32 %count, i32* %coeff) {
 entry:
   %ptr = getelementptr inbounds i32, i32* %ptr2, i64 1
@@ -47,6 +49,8 @@ outer.while.header:
   %ptr_outer_phi = phi i32* [%ptr_inc_outer, %outer.while.backedge], [ %ptr, %entry]
   %ptr_outer_phi2 = phi i32* [%ptr2_inc_outer, %outer.while.backedge], [ %ptr2, %entry]
   %num.outer = phi i32 [ %count, %entry ], [ %dec.outer, %outer.while.backedge ]
+  %ignore1 = load i32, i32* %ptr_outer_phi
+  %ignore2 = load i32, i32* %ptr_outer_phi2
   br label %while.body
 
 while.body:
@@ -64,11 +68,15 @@ while.body:
   %tobool = icmp eq i32 %dec, 0
   %ptr_inc = getelementptr inbounds i32, i32* %ptr_phi, i64 1
   %ptr2_inc = getelementptr inbounds i32, i32* %ptr2_phi, i64 1
+  load i32, i32* %ptr_inc
+  load i32, i32* %ptr2_inc
   br i1 %tobool, label %outer.while.backedge, label %while.body
 
 outer.while.backedge:
   %ptr_inc_outer = getelementptr inbounds i32, i32* %ptr_phi, i64 1
   %ptr2_inc_outer = getelementptr inbounds i32, i32* %ptr2_phi, i64 1
+  load i32, i32* %ptr_inc_outer
+  load i32, i32* %ptr2_inc_outer
   %dec.outer = add nsw i32 %num.outer, -1
   %br.cond = icmp eq i32 %dec.outer, 0
   br i1 %br.cond, label %the_exit, label %outer.while.header
@@ -88,6 +96,8 @@ while.body:
   %num = phi i32 [ %count, %entry ], [ %dec, %while.body ]
   %ptr_phi = phi i8* [ %x, %entry ], [ %z, %while.body ]
   %ptr2_phi = phi i8* [ %y, %entry ], [ %ptr_phi, %while.body ]
+  load i8, i8* %ptr_phi
+  load i8, i8* %ptr2_phi
   %dec = add nsw i32 %num, -1
   %tobool = icmp eq i32 %dec, 0
   br i1 %tobool, label %the_exit, label %while.body
@@ -97,18 +107,24 @@ the_exit:
 }
 
 ; CHECK-LABEL: test_different_stride_noalias
-; CHECK: NoAlias: i16* %y.base, i8* %x.base
-; CHECK: NoAlias: i16* %y, i8* %x
-; CHECK: NoAlias: i16* %y.next, i8* %x.next
+; CHECK: NoAlias: i8* %x.base, i16* %y.base
+; CHECK: NoAlias: i8* %x, i16* %y
+; CHECK: NoAlias: i8* %x.next, i16* %y.next
 define void @test_different_stride_noalias(i1 %c, i8* noalias %x.base, i16* noalias %y.base) {
 entry:
+  load i8, i8* %x.base
+  load i16, i16* %y.base
   br label %loop
 
 loop:
   %x = phi i8* [ %x.base, %entry ], [ %x.next, %loop ]
   %y = phi i16* [ %y.base, %entry ], [ %y.next, %loop ]
+  load i8, i8* %x
+  load i16, i16* %y
   %x.next = getelementptr i8, i8* %x, i64 1
   %y.next = getelementptr i16, i16* %y, i64 1
+  load i8, i8* %x.next
+  load i16, i16* %y.next
   br i1 %c, label %loop, label %exit
 
 exit:
@@ -131,24 +147,32 @@ else:
 end:
   %z8 = phi i8* [ %x8, %if ], [ %y8, %else ]
   %z16 = phi i16* [ %x16, %if ], [ %y16, %else ]
+  load i8, i8* %z8
+  load i16, i16* %z16
   ret void
 }
 
 ; CHECK-LABEL: test_same_stride_mustalias
-; CHECK: MustAlias: i4* %y.base, i8* %x.base
-; CHECK: MayAlias: i4* %y, i8* %x
-; CHECK: MayAlias: i4* %y.next, i8* %x.next
+; CHECK: MustAlias: i8* %x.base, i4* %y.base
+; CHECK: MayAlias: i8* %x, i4* %y
+; CHECK: MayAlias: i8* %x.next, i4* %y.next
 ; TODO: (x, y) could be MustAlias
 define void @test_same_stride_mustalias(i1 %c, i8* noalias %x.base) {
 entry:
   %y.base = bitcast i8* %x.base to i4*
+  load i8, i8* %x.base
+  load i4, i4* %y.base
   br label %loop
 
 loop:
   %x = phi i8* [ %x.base, %entry ], [ %x.next, %loop ]
   %y = phi i4* [ %y.base, %entry ], [ %y.next, %loop ]
+  load i8, i8* %x
+  load i4, i4* %y
   %x.next = getelementptr i8, i8* %x, i64 1
   %y.next = getelementptr i4, i4* %y, i64 1
+  load i8, i8* %x.next
+  load i4, i4* %y.next
   br i1 %c, label %loop, label %exit
 
 exit:
@@ -156,21 +180,27 @@ exit:
 }
 
 ; CHECK-LABEL: test_different_stride_mustalias
-; CHECK: MustAlias: i16* %y.base, i8* %x.base
-; CHECK: MayAlias: i16* %y, i8* %x
-; CHECK: MayAlias: i16* %y.next, i8* %x.next
+; CHECK: MustAlias: i8* %x.base, i16* %y.base
+; CHECK: MayAlias: i8* %x, i16* %y
+; CHECK: MayAlias: i8* %x.next, i16* %y.next
 ; Even though the base pointers MustAlias, the different strides don't preserve
 ; this property across iterations.
 define void @test_different_stride_mustalias(i1 %c, i8* noalias %x.base) {
 entry:
   %y.base = bitcast i8* %x.base to i16*
+  load i8, i8* %x.base
+  load i16, i16* %y.base
   br label %loop
 
 loop:
   %x = phi i8* [ %x.base, %entry ], [ %x.next, %loop ]
   %y = phi i16* [ %y.base, %entry ], [ %y.next, %loop ]
+  load i8, i8* %x
+  load i16, i16* %y
   %x.next = getelementptr i8, i8* %x, i64 1
   %y.next = getelementptr i16, i16* %y, i64 1
+  load i8, i8* %x.next
+  load i16, i16* %y.next
   br i1 %c, label %loop, label %exit
 
 exit:

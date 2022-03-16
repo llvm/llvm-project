@@ -2644,9 +2644,12 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
   // reserved data type under OpenCL v2.0 s6.1.4), we don't support selects
   // on bitvectors, and we have no well-defined ABI for bitvectors, so vectors
   // of bool aren't allowed.
+  //
+  // We explictly allow bool elements in ext_vector_type for C/C++.
+  bool IsNoBoolVecLang = getLangOpts().OpenCL || getLangOpts().OpenCLCPlusPlus;
   if ((!T->isDependentType() && !T->isIntegerType() &&
        !T->isRealFloatingType()) ||
-      T->isBooleanType()) {
+      (IsNoBoolVecLang && T->isBooleanType())) {
     Diag(AttrLoc, diag::err_attribute_invalid_vector_type) << T;
     return QualType();
   }

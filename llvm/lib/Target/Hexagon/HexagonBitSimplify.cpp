@@ -1997,7 +1997,7 @@ bool BitSimplification::genStoreImmediate(MachineInstr *MI) {
   if (!isInt<8>(V))
     return false;
 
-  MI->RemoveOperand(2);
+  MI->removeOperand(2);
   switch (Opc) {
     case Hexagon::S2_storerb_io:
       MI->setDesc(HII.get(Hexagon::S4_storeirb_io));

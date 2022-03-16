@@ -1592,6 +1592,16 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
                                        false);
   }
 
+  if (BaseType->isExtVectorBoolType()) {
+    // We disallow element access for ext_vector_type bool.  There is no way to
+    // materialize a reference to a vector element as a pointer (each element is
+    // one bit in the vector).
+    S.Diag(R.getNameLoc(), diag::err_ext_vector_component_name_illegal)
+        << MemberName
+        << (BaseExpr.get() ? BaseExpr.get()->getSourceRange() : SourceRange());
+    return ExprError();
+  }
+
   // Handle 'field access' to vectors, such as 'V.xx'.
   if (BaseType->isExtVectorType()) {
     // FIXME: this expr should store IsArrow.

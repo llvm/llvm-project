@@ -25,6 +25,10 @@ define void @test() {
 
   %AP = load %T*, %T** %M ; PartialAlias with %A
   %BP = load %T*, %T** %N ; PartialAlias with %B
+  load %T, %T* %A
+  load %T, %T* %B
+  load %T, %T* %AP
+  load %T, %T* %BP
 
   ret void
 }

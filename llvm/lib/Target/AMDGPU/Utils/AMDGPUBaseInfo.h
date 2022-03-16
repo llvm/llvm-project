@@ -612,9 +612,6 @@ namespace Hwreg {
 LLVM_READONLY
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
 
-LLVM_READONLY
-bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI, StringRef Name);
-
 LLVM_READNONE
 bool isValidHwreg(int64_t Id);
 
@@ -775,6 +772,7 @@ bool isSI(const MCSubtargetInfo &STI);
 bool isCI(const MCSubtargetInfo &STI);
 bool isVI(const MCSubtargetInfo &STI);
 bool isGFX9(const MCSubtargetInfo &STI);
+bool isGFX9_GFX10(const MCSubtargetInfo &STI);
 bool isGFX9Plus(const MCSubtargetInfo &STI);
 bool isGFX10(const MCSubtargetInfo &STI);
 bool isGFX10Plus(const MCSubtargetInfo &STI);

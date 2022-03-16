@@ -33,6 +33,9 @@
 #ifdef _MSC_VER
 #include <intrin.h>
 #endif
+#ifdef __MVS__
+#include "llvm/Support/BCD.h"
+#endif
 #if defined(__APPLE__) && (!defined(__x86_64__))
 #include <mach/host_info.h>
 #include <mach/mach.h>

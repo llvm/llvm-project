@@ -125,8 +125,8 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
           for (unsigned i = start->getNumOperands() - 1; i >= 2; i-=2)
             if (start->getOperand(i).isMBB() &&
                 start->getOperand(i).getMBB() == &BB) {
-              start->RemoveOperand(i);
-              start->RemoveOperand(i-1);
+              start->removeOperand(i);
+              start->removeOperand(i-1);
             }
 
           start++;
@@ -156,8 +156,8 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
     while (phi != BB.end() && phi->isPHI()) {
       for (unsigned i = phi->getNumOperands() - 1; i >= 2; i-=2)
         if (!preds.count(phi->getOperand(i).getMBB())) {
-          phi->RemoveOperand(i);
-          phi->RemoveOperand(i-1);
+          phi->removeOperand(i);
+          phi->removeOperand(i-1);
           ModifiedPHI = true;
         }
 

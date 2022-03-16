@@ -46,21 +46,25 @@ private:
   DependencyConsumer &C;
 };
 
+using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
+
 /// A listener that collects the imported modules and optionally the input
 /// files.
 class PrebuiltModuleListener : public ASTReaderListener {
 public:
-  PrebuiltModuleListener(llvm::StringMap<std::string> &PrebuiltModuleFiles,
-                         llvm::StringSet<> &InputFiles, bool VisitInputFiles)
+  PrebuiltModuleListener(PrebuiltModuleFilesT &PrebuiltModuleFiles,
+                         llvm::StringSet<> &InputFiles, bool VisitInputFiles,
+                         llvm::SmallVector<std::string> &NewModuleFiles)
       : PrebuiltModuleFiles(PrebuiltModuleFiles), InputFiles(InputFiles),
-        VisitInputFiles(VisitInputFiles) {}
+        VisitInputFiles(VisitInputFiles), NewModuleFiles(NewModuleFiles) {}
 
   bool needsImportVisitation() const override { return true; }
   bool needsInputFileVisitation() override { return VisitInputFiles; }
   bool needsSystemInputFileVisitation() override { return VisitInputFiles; }
 
   void visitImport(StringRef ModuleName, StringRef Filename) override {
-    PrebuiltModuleFiles.insert({ModuleName, Filename.str()});
+    if (PrebuiltModuleFiles.insert({ModuleName.str(), Filename.str()}).second)
+      NewModuleFiles.push_back(Filename.str());
   }
 
   bool visitInputFile(StringRef Filename, bool isSystem, bool isOverridden,
@@ -70,12 +74,11 @@ public:
   }
 
 private:
-  llvm::StringMap<std::string> &PrebuiltModuleFiles;
+  PrebuiltModuleFilesT &PrebuiltModuleFiles;
   llvm::StringSet<> &InputFiles;
   bool VisitInputFiles;
+  llvm::SmallVector<std::string> &NewModuleFiles;
 };
-
-using PrebuiltModuleFilesT = decltype(HeaderSearchOptions::PrebuiltModuleFiles);
 
 /// Visit the given prebuilt module and collect all of the modules it
 /// transitively imports and contributing input files.
@@ -84,33 +87,17 @@ static void visitPrebuiltModule(StringRef PrebuiltModuleFilename,
                                 PrebuiltModuleFilesT &ModuleFiles,
                                 llvm::StringSet<> &InputFiles,
                                 bool VisitInputFiles) {
-  // Maps the names of modules that weren't yet visited to their PCM path.
-  llvm::StringMap<std::string> ModuleFilesWorklist;
-  // Contains PCM paths of all visited modules.
-  llvm::StringSet<> VisitedModuleFiles;
+  // List of module files to be processed.
+  llvm::SmallVector<std::string> Worklist{PrebuiltModuleFilename.str()};
+  PrebuiltModuleListener Listener(ModuleFiles, InputFiles, VisitInputFiles,
+                                  Worklist);
 
-  PrebuiltModuleListener Listener(ModuleFilesWorklist, InputFiles,
-                                  VisitInputFiles);
-
-  auto GatherModuleFileInfo = [&](StringRef ASTFile) {
+  while (!Worklist.empty())
     ASTReader::readASTFileControlBlock(
-        ASTFile, CI.getFileManager(), CI.getPCHContainerReader(),
+        Worklist.pop_back_val(), CI.getFileManager(),
+        CI.getPCHContainerReader(),
         /*FindModuleFileExtensions=*/false, Listener,
         /*ValidateDiagnosticOptions=*/false);
-  };
-
-  GatherModuleFileInfo(PrebuiltModuleFilename);
-  while (!ModuleFilesWorklist.empty()) {
-    auto WorklistItemIt = ModuleFilesWorklist.begin();
-
-    if (!VisitedModuleFiles.contains(WorklistItemIt->getValue())) {
-      VisitedModuleFiles.insert(WorklistItemIt->getValue());
-      GatherModuleFileInfo(WorklistItemIt->getValue());
-      ModuleFiles[WorklistItemIt->getKey().str()] = WorklistItemIt->getValue();
-    }
-
-    ModuleFilesWorklist.erase(WorklistItemIt);
-  }
 }
 
 /// Transform arbitrary file name into an object-like file name.

@@ -1743,6 +1743,9 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (!opts::AlignText.getNumOccurrences())
     opts::AlignText = BC->PageAlign;
 
+  if (opts::AlignText < opts::AlignFunctions)
+    opts::AlignText = (unsigned)opts::AlignFunctions;
+
   if (BC->isX86() && opts::Lite.getNumOccurrences() == 0 && !opts::StrictMode &&
       !opts::UseOldText)
     opts::Lite = true;

@@ -228,7 +228,6 @@
 ; CHECK-POSTLINK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-POSTLINK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: RelLookupTableConverterPass
-; CHECK-POSTLINK-O-NEXT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT:          Running pass: AnnotationRemarksPass on foo
 ; CHECK-PRELINK-O-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRELINK-O-NEXT: Running pass: NameAnonGlobalPass

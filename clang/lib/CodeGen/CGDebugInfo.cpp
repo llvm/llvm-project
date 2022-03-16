@@ -3036,6 +3036,23 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
                                       llvm::DIFile *Unit) {
+  if (Ty->isExtVectorBoolType()) {
+    // Boolean ext_vector_type(N) are special because their real element type
+    // (bits of bit size) is not their Clang element type (_Bool of size byte).
+    // For now, we pretend the boolean vector were actually a vector of bytes
+    // (where each byte represents 8 bits of the actual vector).
+    // FIXME Debug info should actually represent this proper as a vector mask
+    // type.
+    auto &Ctx = CGM.getContext();
+    uint64_t Size = CGM.getContext().getTypeSize(Ty);
+    uint64_t NumVectorBytes = Size / Ctx.getCharWidth();
+
+    // Construct the vector of 'char' type.
+    QualType CharVecTy = Ctx.getVectorType(Ctx.CharTy, NumVectorBytes,
+                                           VectorType::GenericVector);
+    return CreateType(CharVecTy->getAs<VectorType>(), Unit);
+  }
+
   llvm::DIType *ElementTy = getOrCreateType(Ty->getElementType(), Unit);
   int64_t Count = Ty->getNumElements();
 

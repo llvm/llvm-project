@@ -62,6 +62,15 @@ def SDTIntBinOpVVP : SDTypeProfile<1, 4, [     // vp_add, vp_and, etc.
   IsVLVT<4>
 ]>;
 
+// UnaryFPOp(x,mask,vl)
+def SDTFPUnaryOpVVP : SDTypeProfile<1, 3, [
+  SDTCisSameAs<0, 1>,
+  SDTCisFP<0>,
+  SDTCisInt<2>,
+  SDTCisSameNumEltsAs<0, 2>,
+  IsVLVT<3>
+]>;
+
 // BinaryFPOp(x,y,mask,vl)
 def SDTFPBinOpVVP : SDTypeProfile<1, 4, [      // vvp_fadd, etc.
   SDTCisSameAs<0, 1>,
@@ -151,6 +160,8 @@ def c_vvp_xor  : vvp_commutative<vvp_xor>;
 def vvp_srl    : SDNode<"VEISD::VVP_SRL",  SDTIntBinOpVVP>;
 def vvp_sra    : SDNode<"VEISD::VVP_SRA",  SDTIntBinOpVVP>;
 def vvp_shl    : SDNode<"VEISD::VVP_SHL",  SDTIntBinOpVVP>;
+
+def vvp_fneg    : SDNode<"VEISD::VVP_FNEG",  SDTFPUnaryOpVVP>;
 
 def vvp_fadd    : SDNode<"VEISD::VVP_FADD",  SDTFPBinOpVVP>;
 def c_vvp_fadd  : vvp_commutative<vvp_fadd>;

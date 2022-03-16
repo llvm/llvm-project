@@ -247,7 +247,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &HiLUI,
     // Update the offsets in global address lowering.
     HiLUI.getOperand(1).setOffset(Offset);
     // Update the immediate in the Tail instruction to add the offset.
-    Tail.RemoveOperand(2);
+    Tail.removeOperand(2);
     MachineOperand &ImmOp = LoADDI.getOperand(2);
     ImmOp.setOffset(Offset);
     Tail.addOperand(ImmOp);

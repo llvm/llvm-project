@@ -247,8 +247,8 @@ void SSACCmpConv::updateTailPHIs() {
     for (unsigned oi = I.getNumOperands(); oi > 2; oi -= 2) {
       // PHI operands are (Reg, MBB) at (oi-2, oi-1).
       if (I.getOperand(oi - 1).getMBB() == CmpBB) {
-        I.RemoveOperand(oi - 1);
-        I.RemoveOperand(oi - 2);
+        I.removeOperand(oi - 1);
+        I.removeOperand(oi - 2);
       }
     }
   }

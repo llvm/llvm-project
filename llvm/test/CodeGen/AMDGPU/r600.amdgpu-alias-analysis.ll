@@ -2,5 +2,7 @@
 
 ; CHECK: MayAlias: i8 addrspace(5)* %p, i8 addrspace(999)* %p1
 define amdgpu_kernel void @test(i8 addrspace(5)* %p, i8 addrspace(999)* %p1) {
+  load volatile i8, i8 addrspace(5)* %p
+  load volatile i8, i8 addrspace(999)* %p1
   ret void
 }
