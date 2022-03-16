@@ -302,10 +302,11 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
         Sym.getShndx() != SHN_UNDEF)
       Sym.Binding = STB_GLOBAL;
 
-    if (Config.SymbolsToWeaken.matches(Sym.Name) && Sym.Binding == STB_GLOBAL)
+    // SymbolsToWeaken applies to both STB_GLOBAL and STB_GNU_UNIQUE.
+    if (Config.SymbolsToWeaken.matches(Sym.Name) && Sym.Binding != STB_LOCAL)
       Sym.Binding = STB_WEAK;
 
-    if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
+    if (Config.Weaken && Sym.Binding != STB_LOCAL &&
         Sym.getShndx() != SHN_UNDEF)
       Sym.Binding = STB_WEAK;
 
