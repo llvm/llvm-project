@@ -253,6 +253,23 @@ define <4 x float> @gep00_load_f32_insert_v4f32_addrspace(<4 x float> addrspace(
   ret <4 x float> %r
 }
 
+; Should work with addrspace even when peeking past unsafe loads through geps
+
+define <4 x i32> @unsafe_load_i32_insert_v4i32_addrspace(i32* align 16 dereferenceable(16) %v3) {
+; CHECK-LABEL: @unsafe_load_i32_insert_v4i32_addrspace(
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast i32* [[V3:%.*]] to <4 x i32> addrspace(42)*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32> addrspace(42)* [[TMP1]], align 16
+; CHECK-NEXT:    [[INSELT:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[INSELT]]
+;
+  %t0 = getelementptr inbounds i32, i32* %v3, i32 1
+  %t1 = addrspacecast i32* %t0 to i32 addrspace(42)*
+  %t2 = getelementptr inbounds i32, i32 addrspace(42)* %t1, i64 1
+  %val = load i32, i32 addrspace(42)* %t2, align 4
+  %inselt = insertelement <4 x i32> poison, i32 %val, i32 0
+  ret <4 x i32> %inselt
+}
+
 ; If there are enough dereferenceable bytes, we can offset the vector load.
 
 define <8 x i16> @gep01_load_i16_insert_v8i16(<8 x i16>* align 16 dereferenceable(18) %p) nofree nosync {
