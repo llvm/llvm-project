@@ -1,13 +1,21 @@
+//===--- Implementation of a Linux mutex class ------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef LLVM_LIBC_SRC_SUPPORT_THREAD_LINUX_MUTEX_H
 #define LLVM_LIBC_SRC_SUPPORT_THREAD_LINUX_MUTEX_H
 
-#include "include/sys/syscall.h" // For syscall numbers.
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/mutex.h"
 
 #include <linux/futex.h>
 #include <stdint.h>
+#include <sys/syscall.h> // For syscall numbers.
 #include <threads.h>
 
 namespace __llvm_libc {
