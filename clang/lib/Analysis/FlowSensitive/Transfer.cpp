@@ -382,7 +382,12 @@ public:
       if (Val == nullptr)
         return;
 
+      // Assign a value to the storage location of the object.
       Env.setValue(*ObjectLoc, *Val);
+
+      // FIXME: Add a test for the value of the whole expression.
+      // Assign a storage location for the whole expression.
+      Env.setStorageLocation(*S, *ObjectLoc);
     }
   }
 
