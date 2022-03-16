@@ -37,7 +37,7 @@
 #define SCUDO_TRUSTY 0
 #endif
 
-#if __LP64__
+#if defined(__LP64__)
 #define SCUDO_WORDSIZE 64U
 #else
 #define SCUDO_WORDSIZE 32U
