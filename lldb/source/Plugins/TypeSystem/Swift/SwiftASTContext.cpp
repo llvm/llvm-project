@@ -2087,13 +2087,44 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
   module_search_paths.insert(module_search_paths.end(),
                              opts.getImportSearchPaths().begin(),
                              opts.getImportSearchPaths().end());
-  for (const auto &fwsp : opts.getFrameworkSearchPaths())
-    framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
   auto &clang_opts = invocation.getClangImporterOptions().ExtraArgs;
   for (const std::string &arg : clang_opts) {
     extra_clang_args.push_back(arg);
     LOG_VERBOSE_PRINTF(GetLog(LLDBLog::Types), "adding Clang argument \"%s\".",
                        arg.c_str());
+  }
+  // FIXME: Unfortunately this:
+  //
+  //   for (const auto &fwsp : opts.getFrameworkSearchPaths())
+  //    framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
+  //
+  // is insufficient, as ClangImporter can discover more framework
+  // search paths on the fly. Once a better solution is found,
+  // warmup_contexts can be retired (again).
+  {
+    SymbolFile *sym_file = module_sp->GetSymbolFile();
+    if (!sym_file)
+      return;
+    Status sym_file_error;
+    auto type_system_or_err =
+        sym_file->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
+    if (!type_system_or_err) {
+      llvm::consumeError(type_system_or_err.takeError());
+      return;
+    }
+    auto ts = llvm::dyn_cast_or_null<TypeSystemSwift>(&*type_system_or_err);
+    if (!ts)
+      return;
+
+    SwiftASTContext *ast_context = ts->GetSwiftASTContext();
+    if (ast_context && !ast_context->HasErrors()) {
+      if (use_all_compiler_flags ||
+          target.GetExecutableModulePointer() == module_sp.get()) {
+        const auto &opts = ast_context->GetSearchPathOptions();
+        for (const auto &fwsp : opts.getFrameworkSearchPaths())
+          framework_search_paths.push_back({fwsp.Path, fwsp.IsSystem});
+      }
+    }
   }
 }
 
@@ -2154,7 +2185,26 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     handled_sdk_path = true;
   }
 
+  auto warmup_astcontexts = [&]() {
+    if (target.GetSwiftCreateModuleContextsInParallel()) {
+      // The first call to GetTypeSystemForLanguage() on a module will
+      // trigger the import (and thus most likely the rebuild) of all
+      // the Clang modules that were imported in this module. This can
+      // be a lot of work (potentially ten seconds per module), but it
+      // can be performed in parallel.
+      llvm::ThreadPool pool(llvm::hardware_concurrency());
+      for (size_t mi = 0; mi != num_images; ++mi) {
+        auto module_sp = target.GetImages().GetModuleAtIndex(mi);
+        pool.async([=] {
+          GetModuleSwiftASTContext(*module_sp);
+        });
+      }
+      pool.wait();
+    }
+  };
+
   if (!handled_sdk_path) {
+    warmup_astcontexts();
     for (size_t mi = 0; mi != num_images; ++mi) {
       ModuleSP module_sp = target.GetImages().GetModuleAtIndex(mi);
       if (!HasSwiftModules(*module_sp))

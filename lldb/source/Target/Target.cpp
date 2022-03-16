@@ -4248,6 +4248,18 @@ void TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx,
                                             true);
 }
 
+bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
+  const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
+      nullptr, false, ePropertyExperimental);
+  OptionValueProperties *exp_values =
+      exp_property->GetValue()->GetAsProperties();
+  if (exp_values)
+    return exp_values->GetPropertyAtIndexAsBoolean(
+        nullptr, ePropertySwiftCreateModuleContextsInParallel, true);
+  else
+    return true;
+}
+
 bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
   const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
       nullptr, false, ePropertyExperimental);
