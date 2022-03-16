@@ -277,7 +277,8 @@ public:
       if (Skip < 6) {
         MachineOperand &Op = LastDelayAlu->getOperand(0);
         unsigned LastImm = Op.getImm();
-        assert((LastImm & ~0xf) == 0 && "");
+        assert((LastImm & ~0xf) == 0 &&
+               "Remembered an s_delay_alu with no room for another delay!");
         LastImm |= Imm << 7 | Skip << 4;
         Op.setImm(LastImm);
         return nullptr;
@@ -386,7 +387,8 @@ public:
     }
 
     if (Emit) {
-      assert(State == BlockState[&MBB] && "");
+      assert(State == BlockState[&MBB] &&
+             "Basic block state should not have changed on final pass!");
     } else if (State != BlockState[&MBB]) {
       BlockState[&MBB] = std::move(State);
       Changed = true;
