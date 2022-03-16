@@ -149,10 +149,6 @@ getDWOName(llvm::DWARFUnit &CU,
   return DWOName;
 }
 
-static bool isHighPcFormEightBytes(dwarf::Form DwarfForm) {
-  return DwarfForm == dwarf::DW_FORM_addr || DwarfForm == dwarf::DW_FORM_data8;
-}
-
 void DWARFRewriter::updateDebugInfo() {
   ErrorOr<BinarySection &> DebugInfo = BC.getUniqueSectionByName(".debug_info");
   if (!DebugInfo)

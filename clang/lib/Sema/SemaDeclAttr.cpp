@@ -4290,6 +4290,9 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
     //   declared with the register storage class specifier. An
     //   alignment-specifier may also be applied to the declaration of a class
     //   or enumeration type.
+    // CWG 2354:
+    //   CWG agreed to remove permission for alignas to be applied to
+    //   enumerations.
     // C11 6.7.5/2:
     //   An alignment attribute shall not be specified in a declaration of
     //   a typedef, or a bit-field, or a function, or a parameter, or an
@@ -4305,6 +4308,9 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
     } else if (const auto *FD = dyn_cast<FieldDecl>(D)) {
       if (FD->isBitField())
         DiagKind = 3;
+    } else if (const auto *ED = dyn_cast<EnumDecl>(D)) {
+      if (ED->getLangOpts().CPlusPlus)
+        DiagKind = 4;
     } else if (!isa<TagDecl>(D)) {
       Diag(AttrLoc, diag::err_attribute_wrong_decl_type) << &TmpAttr
         << (TmpAttr.isC11() ? ExpectedVariableOrField

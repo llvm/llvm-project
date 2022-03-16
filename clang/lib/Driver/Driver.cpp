@@ -3873,11 +3873,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   // Builder to be used to build offloading actions.
   OffloadingActionBuilder OffloadBuilder(C, Args, Inputs);
 
-  // Offload kinds active for this compilation.
-  unsigned OffloadKinds = Action::OFK_None;
-  if (C.hasOffloadToolChain<Action::OFK_OpenMP>())
-    OffloadKinds |= Action::OFK_OpenMP;
-
   // Construct the actions to perform.
   HeaderModulePrecompileJobAction *HeaderModuleAction = nullptr;
   ActionList LinkerInputs;
@@ -3978,7 +3973,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (!Args.hasArg(options::OPT_fopenmp_new_driver))
       OffloadBuilder.appendTopLevelActions(Actions, Current, InputArg);
     else if (Current)
-      Current->propagateHostOffloadInfo(OffloadKinds,
+      Current->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                         /*BoundArch=*/nullptr);
   }
 
@@ -3999,9 +3994,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
     } else if (Args.hasArg(options::OPT_fopenmp_new_driver) &&
-               OffloadKinds != Action::OFK_None) {
+               C.getActiveOffloadKinds() != Action::OFK_None) {
       LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
-      LA->propagateHostOffloadInfo(OffloadKinds,
+      LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                    /*BoundArch=*/nullptr);
     } else {
       LA = C.MakeAction<LinkJobAction>(LinkerInputs, types::TY_Image);
@@ -4100,53 +4095,60 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   if (!isa<CompileJobAction>(HostAction))
     return HostAction;
 
-  SmallVector<const ToolChain *, 2> ToolChains;
-  ActionList DeviceActions;
+  OffloadAction::DeviceDependences DDeps;
 
   types::ID InputType = Input.first;
   const Arg *InputArg = Input.second;
 
-  auto OpenMPTCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
-  for (auto TI = OpenMPTCRange.first, TE = OpenMPTCRange.second; TI != TE; ++TI)
-    ToolChains.push_back(TI->second);
+  const Action::OffloadKind OffloadKinds[] = {Action::OFK_OpenMP};
 
-  for (unsigned I = 0; I < ToolChains.size(); ++I)
-    DeviceActions.push_back(C.MakeAction<InputAction>(*InputArg, InputType));
+  for (Action::OffloadKind Kind : OffloadKinds) {
+    SmallVector<const ToolChain *, 2> ToolChains;
+    ActionList DeviceActions;
 
-  if (DeviceActions.empty())
-    return HostAction;
+    auto TCRange = C.getOffloadToolChains(Kind);
+    for (auto TI = TCRange.first, TE = TCRange.second; TI != TE; ++TI)
+      ToolChains.push_back(TI->second);
 
-  auto PL = types::getCompilationPhases(*this, Args, InputType);
+    if (ToolChains.empty())
+      continue;
 
-  for (phases::ID Phase : PL) {
-    if (Phase == phases::Link) {
-      assert(Phase == PL.back() && "linking must be final compilation step.");
-      break;
+    for (unsigned I = 0; I < ToolChains.size(); ++I)
+      DeviceActions.push_back(C.MakeAction<InputAction>(*InputArg, InputType));
+
+    if (DeviceActions.empty())
+      return HostAction;
+
+    auto PL = types::getCompilationPhases(*this, Args, InputType);
+
+    for (phases::ID Phase : PL) {
+      if (Phase == phases::Link) {
+        assert(Phase == PL.back() && "linking must be final compilation step.");
+        break;
+      }
+
+      auto TC = ToolChains.begin();
+      for (Action *&A : DeviceActions) {
+        A = ConstructPhaseAction(C, Args, Phase, A, Kind);
+
+        if (isa<CompileJobAction>(A) && Kind == Action::OFK_OpenMP) {
+          HostAction->setCannotBeCollapsedWithNextDependentAction();
+          OffloadAction::HostDependence HDep(
+              *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
+              /*BourdArch=*/nullptr, Action::OFK_OpenMP);
+          OffloadAction::DeviceDependences DDep;
+          DDep.add(*A, **TC, /*BoundArch=*/nullptr, Kind);
+          A = C.MakeAction<OffloadAction>(HDep, DDep);
+        }
+        ++TC;
+      }
     }
 
     auto TC = ToolChains.begin();
-    for (Action *&A : DeviceActions) {
-      A = ConstructPhaseAction(C, Args, Phase, A, Action::OFK_OpenMP);
-
-      if (isa<CompileJobAction>(A)) {
-        HostAction->setCannotBeCollapsedWithNextDependentAction();
-        OffloadAction::HostDependence HDep(
-            *HostAction, *C.getSingleOffloadToolChain<Action::OFK_Host>(),
-            /*BourdArch=*/nullptr, Action::OFK_OpenMP);
-        OffloadAction::DeviceDependences DDep;
-        DDep.add(*A, **TC, /*BoundArch=*/nullptr, Action::OFK_OpenMP);
-        A = C.MakeAction<OffloadAction>(HDep, DDep);
-      }
-      ++TC;
+    for (Action *A : DeviceActions) {
+      DDeps.add(*A, **TC, /*BoundArch=*/nullptr, Kind);
+      TC++;
     }
-  }
-
-  OffloadAction::DeviceDependences DDeps;
-
-  auto TC = ToolChains.begin();
-  for (Action *A : DeviceActions) {
-    DDeps.add(*A, **TC, /*BoundArch=*/nullptr, Action::OFK_OpenMP);
-    TC++;
   }
 
   OffloadAction::HostDependence HDep(

@@ -201,14 +201,6 @@ C = mlir_pytaco.Tensor([2, 3], _DENSE)
 C[i, j] = A[1, j] + B[i, j]
     """), "Expected IndexVars")
 
-# CHECK: test_invalid_operation: passed
-test_expect_error("invalid_operation", ("""
-i, j = mlir_pytaco.get_index_vars(2)
-A = mlir_pytaco.Tensor([2, 3])
-C = mlir_pytaco.Tensor([2, 3], _DENSE)
-C[i, j] = A[i, j] + i
-    """), "Expected IndexExpr")
-
 # CHECK: test_inconsistent_rank_indices: passed
 test_expect_error("inconsistent_rank_indices", ("""
 i, j = mlir_pytaco.get_index_vars(2)
@@ -244,6 +236,15 @@ C = mlir_pytaco.Tensor([3], _DENSE)
 C[i] = A[i] + B[i]
 C.evaluate()
     """), "Inconsistent source dimension for IndexVar")
+
+# CHECK: test_index_var_outside_domain: passed
+test_expect_error("index_var_outside_domain", ("""
+i, j = mlir_pytaco.get_index_vars(2)
+A = mlir_pytaco.Tensor([3])
+B = mlir_pytaco.Tensor([3])
+B[i] = A[i] + j
+B.evaluate()
+    """), "IndexVar is not part of the iteration domain")
 
 
 # CHECK-LABEL: test_tensor_all_dense_sparse

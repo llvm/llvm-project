@@ -123,6 +123,20 @@ module {
   // CHECK: llvm.func @external_func
   // GENERIC: linkage = #llvm.linkage<external>
   llvm.func external @external_func()
+
+  // CHECK-LABEL: llvm.func @arg_struct_attr(
+  // CHECK-SAME: %{{.*}}: !llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+  llvm.func @arg_struct_attr(
+      %arg0 : !llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+    llvm.return
+  }
+
+   // CHECK-LABEL: llvm.func @res_struct_attr(%{{.*}}: !llvm.struct<(i32)>)
+   // CHECK-SAME:-> (!llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+  llvm.func @res_struct_attr(%arg0 : !llvm.struct<(i32)>)
+      -> (!llvm.struct<(i32)> {llvm.struct_attrs = [{llvm.noalias}]}) {
+    llvm.return %arg0 : !llvm.struct<(i32)>
+  }
 }
 
 // -----
@@ -166,19 +180,9 @@ module {
 // -----
 
 module {
-  // expected-error@+1 {{entry block argument #0 is not of LLVM type}}
+  // expected-error@+1 {{entry block argument #0('tensor<*xf32>') must match the type of the corresponding argument in function signature('i64')}}
   "llvm.func"() ({
   ^bb0(%arg0: tensor<*xf32>):
-    llvm.return
-  }) {sym_name = "wrong_arg_number", type = !llvm.func<void (i64)>} : () -> ()
-}
-
-// -----
-
-module {
-  // expected-error@+1 {{entry block argument #0 does not match the function signature}}
-  "llvm.func"() ({
-  ^bb0(%arg0: i32):
     llvm.return
   }) {sym_name = "wrong_arg_number", type = !llvm.func<void (i64)>} : () -> ()
 }

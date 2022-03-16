@@ -229,7 +229,7 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &MF) {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   bool IsSlowLEA = ST.slowLEA();
   bool IsSlow3OpsLEA = ST.slow3OpsLEA();
-  bool LEAUsesAG = ST.LEAusesAG();
+  bool LEAUsesAG = ST.leaUsesAG();
 
   bool OptIncDec = !ST.slowIncDec() || MF.getFunction().hasOptSize();
   bool UseLEAForSP = ST.useLeaForSP();

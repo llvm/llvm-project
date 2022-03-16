@@ -26,7 +26,7 @@
 // ops) and then bufferizes it.
 //
 // Inplace bufferization decisions are passed from the analysis to the
-// bufferization phase via `BufferizationState` and `BufferizationAliasInfo`.
+// bufferization phase via `AnalysisState` and `BufferizationAliasInfo`.
 // They can be printed for debugging purposes with `testAnalysisOnly`.
 //
 // Ops that do not implement `BufferizableOpInterface` can be analyzed but are
@@ -138,7 +138,7 @@ bool BufferizationAliasInfo::isInPlace(OpOperand &operand) const {
 
 /// Set the inPlace bufferization spec to true.
 void BufferizationAliasInfo::bufferizeInPlace(OpOperand &operand,
-                                              BufferizationState &state) {
+                                              AnalysisState &state) {
   markInPlace(operand);
   for (OpResult result : state.getAliasingOpResult(operand))
     aliasInfo.unionSets(result, operand.get());
@@ -182,12 +182,12 @@ BufferizationAliasInfo::getAliases(Value v) const {
 }
 
 //===----------------------------------------------------------------------===//
-// AnalysisBufferizationState
+// OneShotAnalysisState
 //===----------------------------------------------------------------------===//
 
-AnalysisBufferizationState::AnalysisBufferizationState(
-    Operation *op, const AnalysisBufferizationOptions &options)
-    : BufferizationState(options), aliasInfo(op) {
+OneShotAnalysisState::OneShotAnalysisState(
+    Operation *op, const OneShotBufferizationOptions &options)
+    : AnalysisState(options), aliasInfo(op) {
   // Set up alias sets for OpResults that must bufferize in-place. This should
   // be done before making any other bufferization decisions.
   op->walk([&](BufferizableOpInterface bufferizableOp) {
@@ -206,12 +206,12 @@ AnalysisBufferizationState::AnalysisBufferizationState(
   });
 }
 
-bool AnalysisBufferizationState::isInPlace(OpOperand &opOperand) const {
+bool OneShotAnalysisState::isInPlace(OpOperand &opOperand) const {
   return aliasInfo.isInPlace(opOperand);
 }
 
-bool AnalysisBufferizationState::areEquivalentBufferizedValues(Value v1,
-                                                               Value v2) const {
+bool OneShotAnalysisState::areEquivalentBufferizedValues(Value v1,
+                                                         Value v2) const {
   return aliasInfo.areEquivalentBufferizedValues(v1, v2);
 }
 
@@ -222,7 +222,7 @@ bool AnalysisBufferizationState::areEquivalentBufferizedValues(Value v1,
 /// Return true if opOperand has been decided to bufferize in-place.
 static bool isInplaceMemoryWrite(OpOperand &opOperand,
                                  const BufferizationAliasInfo &aliasInfo,
-                                 BufferizationState &state) {
+                                 AnalysisState &state) {
   // OpOperands that do not bufferize to a memory write do not write in-place.
   if (!state.bufferizesToMemoryWrite(opOperand))
     return false;
@@ -234,7 +234,7 @@ static bool isInplaceMemoryWrite(OpOperand &opOperand,
 /// is not writable.
 static bool aliasesNonWritableBuffer(Value value,
                                      const BufferizationAliasInfo &aliasInfo,
-                                     BufferizationState &state) {
+                                     AnalysisState &state) {
   bool foundNonWritableBuffer = false;
   aliasInfo.applyOnAliases(value, [&](Value v) {
     // Query BufferizableOpInterface to see if the value is writable.
@@ -260,7 +260,7 @@ static bool aliasesNonWritableBuffer(Value value,
 /// to some buffer write.
 static bool aliasesInPlaceWrite(Value value,
                                 const BufferizationAliasInfo &aliasInfo,
-                                BufferizationState &state) {
+                                AnalysisState &state) {
   bool foundInplaceWrite = false;
   aliasInfo.applyOnAliases(value, [&](Value v) {
     for (auto &use : v.getUses()) {
@@ -331,7 +331,7 @@ static void annotateConflict(OpOperand *uRead, OpOperand *uConflictingWrite,
 static bool hasReadAfterWriteInterference(
     const DenseSet<OpOperand *> &usesRead,
     const DenseSet<OpOperand *> &usesWrite, const DominanceInfo &domInfo,
-    BufferizationState &state, const BufferizationAliasInfo &aliasInfo) {
+    AnalysisState &state, const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
 
   for (OpOperand *uRead : usesRead) {
@@ -452,7 +452,7 @@ static bool hasReadAfterWriteInterference(
 /// OpResult. In that case, only the consistency of bufferization decisions
 /// involving aliases of the given OpOperand are checked.
 static bool wouldCreateReadAfterWriteInterference(
-    OpOperand &operand, const DominanceInfo &domInfo, BufferizationState &state,
+    OpOperand &operand, const DominanceInfo &domInfo, AnalysisState &state,
     const BufferizationAliasInfo &aliasInfo,
     bool checkConsistencyOnly = false) {
   // Helper function to iterate on aliases of `root` and capture the reads.
@@ -495,7 +495,7 @@ static bool wouldCreateReadAfterWriteInterference(
 static bool
 wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand,
                                     const BufferizationAliasInfo &aliasInfo,
-                                    BufferizationState &state) {
+                                    AnalysisState &state) {
   // Certain buffers are not writeable:
   //   1. A function bbArg that is not inplaceable or
   //   2. A constant op.
@@ -520,8 +520,8 @@ wouldCreateWriteToNonWritableBuffer(OpOperand &opOperand,
 
 /// Determine if `operand` can be bufferized in-place.
 static LogicalResult bufferizableInPlaceAnalysisImpl(
-    OpOperand &operand, BufferizationAliasInfo &aliasInfo,
-    BufferizationState &state, const DominanceInfo &domInfo) {
+    OpOperand &operand, BufferizationAliasInfo &aliasInfo, AnalysisState &state,
+    const DominanceInfo &domInfo) {
   bool foundInterference =
       wouldCreateWriteToNonWritableBuffer(operand, aliasInfo, state) ||
       wouldCreateReadAfterWriteInterference(operand, domInfo, state, aliasInfo);
@@ -554,7 +554,7 @@ static LogicalResult bufferizableInPlaceAnalysisImpl(
 /// RaW dependence violations.
 static LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
                                      BufferizationAliasInfo &aliasInfo,
-                                     BufferizationState &state,
+                                     AnalysisState &state,
                                      const DominanceInfo &domInfo,
                                      unsigned analysisFuzzerSeed = 0) {
   if (analysisFuzzerSeed) {
@@ -587,7 +587,7 @@ static bool hasTensorSemantics(Operation *op) {
 /// Analyze all ops that are contained in `op`.
 static LogicalResult inPlaceAnalysis(Operation *op,
                                      BufferizationAliasInfo &aliasInfo,
-                                     BufferizationState &state,
+                                     AnalysisState &state,
                                      const DominanceInfo &domInfo,
                                      unsigned analysisFuzzerSeed = 0) {
   // Collect ops so we can build our own reverse traversal.
@@ -605,7 +605,7 @@ static LogicalResult inPlaceAnalysis(Operation *op,
 /// Analyze equivalence of tied OpResult/OpOperand pairs of the given ops.
 static void equivalenceAnalysis(SmallVector<Operation *> &ops,
                                 BufferizationAliasInfo &aliasInfo,
-                                BufferizationState &state) {
+                                AnalysisState &state) {
   for (Operation *op : ops)
     if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
       for (OpResult opResult : op->getOpResults())
@@ -622,7 +622,7 @@ static void equivalenceAnalysis(SmallVector<Operation *> &ops,
 /// in `op`.
 static void equivalenceAnalysis(Operation *op,
                                 BufferizationAliasInfo &aliasInfo,
-                                BufferizationState &state) {
+                                AnalysisState &state) {
   // Traverse ops in PostOrder: Nested ops first, then enclosing ops.
   SmallVector<Operation *> ops;
   op->walk<WalkOrder::PostOrder>([&](Operation *op) {
@@ -638,7 +638,7 @@ static void equivalenceAnalysis(Operation *op,
 /// Assert that the current bufferization decisions are consistent.
 static LogicalResult
 checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
-                          BufferizationState &state,
+                          AnalysisState &state,
                           const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
   Operation *inconsistentOp = nullptr;
@@ -668,7 +668,7 @@ checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
 static void
 annotateOpsWithBufferizationMarkers(Operation *op,
                                     const BufferizationAliasInfo &aliasInfo,
-                                    BufferizationState &state) {
+                                    AnalysisState &state) {
   op->walk([&](Operation *op) {
     if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
       for (OpOperand &opOperand : op->getOpOperands())
@@ -701,7 +701,7 @@ annotateOpsWithBufferizationMarkers(Operation *op,
 // for aliasing values because the analysis is a maybe-alias analysis and we
 // need a must-alias analysis here.
 static LogicalResult
-assertDestinationPassingStyle(Operation *op, BufferizationState &state,
+assertDestinationPassingStyle(Operation *op, AnalysisState &state,
                               BufferizationAliasInfo &aliasInfo,
                               SmallVector<Operation *> &newOps) {
   LogicalResult status = success();
@@ -748,11 +748,11 @@ assertDestinationPassingStyle(Operation *op, BufferizationState &state,
 }
 
 LogicalResult bufferization::analyzeOp(Operation *op,
-                                       AnalysisBufferizationState &state) {
+                                       OneShotAnalysisState &state) {
   DominanceInfo domInfo(op);
   BufferizationAliasInfo &aliasInfo = state.getAliasInfo();
   const auto &options =
-      static_cast<const AnalysisBufferizationOptions &>(state.getOptions());
+      static_cast<const OneShotBufferizationOptions &>(state.getOptions());
 
   if (failed(checkAliasInfoConsistency(op, domInfo, state, aliasInfo)))
     return failure();
@@ -796,9 +796,10 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   return success(!failedAnalysis);
 }
 
-LogicalResult bufferization::runOneShotBufferize(
-    Operation *op, const AnalysisBufferizationOptions &options) {
-  AnalysisBufferizationState state(op, options);
+LogicalResult
+bufferization::runOneShotBufferize(Operation *op,
+                                   const OneShotBufferizationOptions &options) {
+  OneShotAnalysisState state(op, options);
   if (failed(analyzeOp(op, state)))
     return failure();
   if (options.testAnalysisOnly)

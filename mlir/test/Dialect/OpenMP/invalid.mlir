@@ -182,6 +182,19 @@ llvm.func @test_omp_wsloop_dynamic_wrong_modifier3(%lb : i64, %ub : i64, %step :
 
 // -----
 
+func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
+  // expected-error @below {{op failed to verify that all of {lowerBound, upperBound, step} have same type}}
+  "omp.simdloop" (%lb, %ub, %step) ({
+    ^bb0(%iv: index):
+      omp.yield
+  }) {operand_segment_sizes = dense<[1,1,1]> : vector<3xi32>} :
+    (index, index, i32) -> () 
+
+  return
+}
+
+// -----
+
 // expected-error @below {{op expects initializer region with one argument of the reduction type}}
 omp.reduction.declare @add_f32 : f64
 init {

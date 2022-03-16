@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYSubtarget.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 

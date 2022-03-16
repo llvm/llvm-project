@@ -1,5 +1,6 @@
 // RUN: mlir-tblgen -gen-typedef-defs -I %S/../../include -asmformat-error-is-fatal=false %s 2>&1 | FileCheck %s
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
@@ -106,4 +107,28 @@ def InvalidTypeN : InvalidType<"InvalidTypeN", "invalid_n"> {
   let parameters = (ins OptionalParameter<"int">:$a);
   // CHECK: optional group anchor must be a parameter or directive
   let assemblyFormat = "(`(` $a `)`^)?";
+}
+
+def InvalidTypeO : InvalidType<"InvalidTypeO", "invalid_o"> {
+  let parameters = (ins "int":$a);
+  // CHECK: `ref` is only allowed inside custom directives
+  let assemblyFormat = "$a ref($a)";
+}
+
+def InvalidTypeP : InvalidType<"InvalidTypeP", "invalid_p"> {
+  let parameters = (ins "int":$a);
+  // CHECK: parameter 'a' must be bound before it is referenced
+  let assemblyFormat = "custom<Foo>(ref($a)) $a";
+}
+
+def InvalidTypeQ : InvalidType<"InvalidTypeQ", "invalid_q"> {
+  let parameters = (ins "int":$a);
+  // CHECK: `params` can only be used at the top-level context or within a `struct` directive
+  let assemblyFormat = "custom<Foo>(params)";
+}
+
+def InvalidTypeR : InvalidType<"InvalidTypeR", "invalid_r"> {
+  let parameters = (ins "int":$a);
+  // CHECK: `struct` can only be used at the top-level context
+  let assemblyFormat = "custom<Foo>(struct(params))";
 }

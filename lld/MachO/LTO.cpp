@@ -79,11 +79,15 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // be removed.
     r.Prevailing = !objSym.isUndefined() && sym->getFile() == &f;
 
-    if (const auto *defined = dyn_cast<Defined>(sym))
+    if (const auto *defined = dyn_cast<Defined>(sym)) {
       r.ExportDynamic =
           defined->isExternal() && !defined->privateExtern && exportDynamic;
-    else if (const auto *common = dyn_cast<CommonSymbol>(sym))
+      r.FinalDefinitionInLinkageUnit =
+          !defined->isExternalWeakDef() && !defined->interposable;
+    } else if (const auto *common = dyn_cast<CommonSymbol>(sym)) {
       r.ExportDynamic = !common->privateExtern && exportDynamic;
+      r.FinalDefinitionInLinkageUnit = true;
+    }
 
     r.VisibleToRegularObj =
         sym->isUsedInRegularObj || (r.Prevailing && r.ExportDynamic);

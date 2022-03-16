@@ -15,6 +15,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
@@ -44,6 +45,12 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 
   /// All operations within toy can be inlined.
   bool isLegalToInline(Operation *, Region *, bool,
+                       BlockAndValueMapping &) const final {
+    return true;
+  }
+
+  // All functions within toy can be inlined.
+  bool isLegalToInline(Region *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
   }
@@ -180,7 +187,7 @@ mlir::ParseResult ConstantOp::parse(mlir::OpAsmParser &parser,
 void ConstantOp::print(mlir::OpAsmPrinter &printer) {
   printer << " ";
   printer.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"value"});
-  printer << value();
+  printer << getValue();
 }
 
 /// Verifier for the constant operation. This corresponds to the
@@ -194,7 +201,7 @@ mlir::LogicalResult ConstantOp::verify() {
 
   // Check that the rank of the attribute type matches the rank of the constant
   // result type.
-  auto attrType = value().getType().cast<mlir::TensorType>();
+  auto attrType = getValue().getType().cast<mlir::TensorType>();
   if (attrType.getRank() != resultType.getRank()) {
     return emitOpError("return type must match the one of the attached value "
                        "attribute: ")
@@ -258,6 +265,48 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 //===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
+
+void FuncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
+                   llvm::StringRef name, mlir::FunctionType type,
+                   llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+  // FunctionOpInterface provides a convenient `build` method that will populate
+  // the state of our FuncOp, and create an entry block.
+  buildWithEntryBlock(builder, state, name, type, attrs, type.getInputs());
+}
+
+mlir::ParseResult FuncOp::parse(mlir::OpAsmParser &parser,
+                                mlir::OperationState &result) {
+  // Dispatch to the FunctionOpInterface provided utility method that parses the
+  // function operation.
+  auto buildFuncType =
+      [](mlir::Builder &builder, llvm::ArrayRef<mlir::Type> argTypes,
+         llvm::ArrayRef<mlir::Type> results,
+         mlir::function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  return mlir::function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false, buildFuncType);
+}
+
+void FuncOp::print(mlir::OpAsmPrinter &p) {
+  // Dispatch to the FunctionOpInterface provided utility method that prints the
+  // function operation.
+  mlir::function_interface_impl::printFunctionOp(p, *this,
+                                                 /*isVariadic=*/false);
+}
+
+/// Returns the region on the function operation that is callable.
+mlir::Region *FuncOp::getCallableRegion() { return &getBody(); }
+
+/// Returns the results types that the callable region produces when
+/// executed.
+llvm::ArrayRef<mlir::Type> FuncOp::getCallableResults() {
+  return getType().getResults();
+}
+
+//===----------------------------------------------------------------------===//
 // GenericCallOp
 //===----------------------------------------------------------------------===//
 
@@ -278,7 +327,7 @@ CallInterfaceCallable GenericCallOp::getCallableForCallee() {
 
 /// Get the argument operands to the called function, this is required by the
 /// call interface.
-Operation::operand_range GenericCallOp::getArgOperands() { return inputs(); }
+Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
 
 //===----------------------------------------------------------------------===//
 // MulOp

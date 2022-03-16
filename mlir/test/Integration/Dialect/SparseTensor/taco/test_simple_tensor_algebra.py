@@ -31,5 +31,31 @@ indices, values = D.get_coordinates_and_values()
 passed = np.array_equal(indices, [[0, 0], [0, 1], [1, 2]])
 passed += np.allclose(values, [20.0, 5.0, 63.0])
 
-# CHECK: Number of passed: 2
+# PyTACO doesn't allow the use of index values, but MLIR-PyTACO removes this
+# restriction.
+E = pt.tensor([3])
+E[i] = i
+indices, values = E.get_coordinates_and_values()
+passed += np.array_equal(indices, [[0], [1], [2]])
+passed += np.allclose(values, [0.0, 1.0, 2.0])
+
+F = pt.tensor([3])
+G = pt.tensor([3])
+F.insert([0], 10)
+F.insert([2], 40)
+G[i] = F[i] + i
+indices, values = G.get_coordinates_and_values()
+passed += np.array_equal(indices, [[0], [1], [2]])
+passed += np.allclose(values, [10.0, 1.0, 42.0])
+
+H = pt.tensor([3])
+I = pt.tensor([3])
+H.insert([0], 10)
+H.insert([2], 40)
+I[i] = H[i] * i
+indices, values = I.get_coordinates_and_values()
+passed += np.array_equal(indices, [[0], [2]])
+passed += np.allclose(values, [0.0, 80.0])
+
+# CHECK: Number of passed: 8
 print("Number of passed:", passed)

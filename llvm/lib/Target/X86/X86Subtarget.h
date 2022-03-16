@@ -50,23 +50,13 @@ enum class Style {
 } // end namespace PICStyles
 
 class X86Subtarget final : public X86GenSubtargetInfo {
-  // NOTE: Do not add anything new to this list. Coarse, CPU name based flags
-  // are not a good idea. We should be migrating away from these.
-  enum X86ProcFamilyEnum {
-    Others,
-    IntelAtom
-  };
-
   enum X86SSEEnum {
-    NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512F
+    NoSSE, SSE1, SSE2, SSE3, SSSE3, SSE41, SSE42, AVX, AVX2, AVX512
   };
 
   enum X863DNowEnum {
     NoThreeDNow, MMX, ThreeDNow, ThreeDNowA
   };
-
-  /// X86 processor family: Intel Atom, and others
-  X86ProcFamilyEnum X86ProcFamily = Others;
 
   /// Which PIC style to use
   PICStyles::Style PICStyle;
@@ -78,6 +68,9 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 
   /// MMX, 3DNow, 3DNow Athlon, or none supported.
   X863DNowEnum X863DNowLevel = NoThreeDNow;
+
+  /// Is this a Intel Atom processor?
+  bool IsAtom = false;
 
   /// True if the processor supports X87 instructions.
   bool HasX87 = false;
@@ -223,10 +216,10 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   bool IsPMADDWDSlow = false;
 
   /// True if unaligned memory accesses of 16-bytes are slow.
-  bool IsUAMem16Slow = false;
+  bool IsUnalignedMem16Slow = false;
 
   /// True if unaligned memory accesses of 32-bytes are slow.
-  bool IsUAMem32Slow = false;
+  bool IsUnalignedMem32Slow = false;
 
   /// True if SSE operations can have unaligned memory operands.
   /// This may require setting a configuration bit in the processor.
@@ -322,7 +315,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 
   /// True if the LEA instruction inputs have to be ready at address generation
   /// (AG) time.
-  bool LEAUsesAG = false;
+  bool LeaUsesAG = false;
 
   /// True if the LEA instruction with certain arguments is slow
   bool SlowLEA = false;
@@ -539,13 +532,13 @@ private:
   unsigned RequiredVectorWidth;
 
   /// True if compiling for 64-bit, false for 16-bit or 32-bit.
-  bool In64BitMode = false;
+  bool Is64Bit = false;
 
   /// True if compiling for 32-bit, false for 16-bit or 64-bit.
-  bool In32BitMode = false;
+  bool Is32Bit = false;
 
   /// True if compiling for 16-bit, false for 32-bit or 64-bit.
-  bool In16BitMode = false;
+  bool Is16Bit = false;
 
   X86SelectionDAGInfo TSInfo;
   // Ordering here is important. X86InstrInfo initializes X86RegisterInfo which
@@ -614,25 +607,25 @@ private:
 public:
   /// Is this x86_64? (disregarding specific ABI / programming model)
   bool is64Bit() const {
-    return In64BitMode;
+    return Is64Bit;
   }
 
   bool is32Bit() const {
-    return In32BitMode;
+    return Is32Bit;
   }
 
   bool is16Bit() const {
-    return In16BitMode;
+    return Is16Bit;
   }
 
   /// Is this x86_64 with the ILP32 programming model (x32 ABI)?
   bool isTarget64BitILP32() const {
-    return In64BitMode && (TargetTriple.isX32() || TargetTriple.isOSNaCl());
+    return Is64Bit && (TargetTriple.isX32() || TargetTriple.isOSNaCl());
   }
 
   /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
   bool isTarget64BitLP64() const {
-    return In64BitMode && (!TargetTriple.isX32() && !TargetTriple.isOSNaCl());
+    return Is64Bit && (!TargetTriple.isX32() && !TargetTriple.isOSNaCl());
   }
 
   PICStyles::Style getPICStyle() const { return PICStyle; }
@@ -652,12 +645,12 @@ public:
   bool hasSSE42() const { return X86SSELevel >= SSE42; }
   bool hasAVX() const { return X86SSELevel >= AVX; }
   bool hasAVX2() const { return X86SSELevel >= AVX2; }
-  bool hasAVX512() const { return X86SSELevel >= AVX512F; }
+  bool hasAVX512() const { return X86SSELevel >= AVX512; }
   bool hasInt256() const { return hasAVX2(); }
   bool hasSSE4A() const { return HasSSE4A; }
   bool hasMMX() const { return X863DNowLevel >= MMX; }
-  bool has3DNow() const { return X863DNowLevel >= ThreeDNow; }
-  bool has3DNowA() const { return X863DNowLevel >= ThreeDNowA; }
+  bool hasThreeDNow() const { return X863DNowLevel >= ThreeDNow; }
+  bool hasThreeDNowA() const { return X863DNowLevel >= ThreeDNowA; }
   bool hasPOPCNT() const { return HasPOPCNT; }
   bool hasAES() const { return HasAES; }
   bool hasVAES() const { return HasVAES; }
@@ -697,13 +690,13 @@ public:
     // its own CPUID bit as part of deprecating 3DNow. Intel eventually added
     // it and KNL has another that prefetches to L2 cache. We assume the
     // L1 version exists if the L2 version does.
-    return has3DNow() || hasPRFCHW() || hasPREFETCHWT1();
+    return hasThreeDNow() || hasPRFCHW() || hasPREFETCHWT1();
   }
   bool hasSSEPrefetch() const {
     // We implicitly enable these when we have a write prefix supporting cache
     // level OR if we have prfchw, but don't already have a read prefetch from
     // 3dnow.
-    return hasSSE1() || (hasPRFCHW() && !has3DNow()) || hasPREFETCHWT1();
+    return hasSSE1() || (hasPRFCHW() && !hasThreeDNow()) || hasPREFETCHWT1();
   }
   bool hasRDSEED() const { return HasRDSEED; }
   bool hasLAHFSAHF() const { return HasLAHFSAHF64 || !is64Bit(); }
@@ -716,8 +709,8 @@ public:
   bool isSHLDSlow() const { return IsSHLDSlow; }
   bool isPMULLDSlow() const { return IsPMULLDSlow; }
   bool isPMADDWDSlow() const { return IsPMADDWDSlow; }
-  bool isUnalignedMem16Slow() const { return IsUAMem16Slow; }
-  bool isUnalignedMem32Slow() const { return IsUAMem32Slow; }
+  bool isUnalignedMem16Slow() const { return IsUnalignedMem16Slow; }
+  bool isUnalignedMem32Slow() const { return IsUnalignedMem32Slow; }
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
   bool hasCmpxchg16b() const { return HasCmpxchg16b && is64Bit(); }
   bool useLeaForSP() const { return UseLeaForSP; }
@@ -749,7 +742,7 @@ public:
   bool hasSlowDivide64() const { return HasSlowDivide64; }
   bool padShortFunctions() const { return PadShortFunctions; }
   bool slowTwoMemOps() const { return SlowTwoMemOps; }
-  bool LEAusesAG() const { return LEAUsesAG; }
+  bool leaUsesAG() const { return LeaUsesAG; }
   bool slowLEA() const { return SlowLEA; }
   bool slow3OpsLEA() const { return Slow3OpsLEA; }
   bool slowIncDec() const { return SlowIncDec; }
@@ -840,7 +833,7 @@ public:
   bool isXRaySupported() const override { return is64Bit(); }
 
   /// TODO: to be removed later and replaced with suitable properties
-  bool isAtom() const { return X86ProcFamily == IntelAtom; }
+  bool isAtom() const { return IsAtom; }
   bool useSoftFloat() const { return UseSoftFloat; }
   bool useAA() const override { return UseAA; }
 
@@ -895,9 +888,9 @@ public:
 
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
-  bool isTargetWin64() const { return In64BitMode && isOSWindows(); }
+  bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
-  bool isTargetWin32() const { return !In64BitMode && isOSWindows(); }
+  bool isTargetWin32() const { return !Is64Bit && isOSWindows(); }
 
   bool isPICStyleGOT() const { return PICStyle == PICStyles::Style::GOT; }
   bool isPICStyleRIPRel() const { return PICStyle == PICStyles::Style::RIPRel; }

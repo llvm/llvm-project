@@ -175,29 +175,12 @@ public:
   /// supposed to auto-generate them.
   Optional<StringRef> getMnemonic() const;
 
-  /// Returns the code to use as the types printer method. If not specified,
-  /// return a non-value. Otherwise, return the contents of that code block.
-  Optional<StringRef> getPrinterCode() const;
-
-  /// Returns the code to use as the parser method. If not specified, returns
-  /// None. Otherwise, returns the contents of that code block.
-  Optional<StringRef> getParserCode() const;
+  /// Returns if the attribute or type has a custom assembly format implemented
+  /// in C++. Corresponds to the `hasCustomAssemblyFormat` field.
+  bool hasCustomAssemblyFormat() const;
 
   /// Returns the custom assembly format, if one was specified.
   Optional<StringRef> getAssemblyFormat() const;
-
-  /// An attribute or type with parameters needs a parser.
-  bool needsParserPrinter() const { return getNumParameters() != 0; }
-
-  /// Returns true if this attribute or type has a generated parser.
-  bool hasGeneratedParser() const {
-    return getParserCode() || getAssemblyFormat();
-  }
-
-  /// Returns true if this attribute or type has a generated printer.
-  bool hasGeneratedPrinter() const {
-    return getPrinterCode() || getAssemblyFormat();
-  }
 
   /// Returns true if the accessors based on the parameters should be generated.
   bool genAccessors() const;

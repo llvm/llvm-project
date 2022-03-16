@@ -36,7 +36,7 @@ using RewriteFn = std::function<Value(OpBuilder &, Location, OpOperand &)>;
 /// * The result of `rewriteFunc` must usually be analyzed for inplacability.
 ///   This analysis can be skipped with `skipAnalysis`.
 LogicalResult
-eliminateInitTensors(Operation *op, bufferization::BufferizationState &state,
+eliminateInitTensors(Operation *op, bufferization::AnalysisState &state,
                      bufferization::BufferizationAliasInfo &aliasInfo,
                      AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc,
                      SmallVector<Operation *> &newOps);
@@ -45,7 +45,7 @@ eliminateInitTensors(Operation *op, bufferization::BufferizationState &state,
 /// InsertSliceOp, i.e., if it is eventually inserted into another tensor
 /// (and some other conditions are met).
 LogicalResult insertSliceAnchoredInitTensorEliminationStep(
-    Operation *op, bufferization::BufferizationState &state,
+    Operation *op, bufferization::AnalysisState &state,
     bufferization::BufferizationAliasInfo &aliasInfo,
     SmallVector<Operation *> &newOps);
 

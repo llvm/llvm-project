@@ -543,10 +543,9 @@ mlir::Value fir::factory::readCharLen(fir::FirOpBuilder &builder,
         return fir::factory::CharacterExprHelper{builder, loc}
             .readLengthFromBox(x.getAddr());
       },
-      [&](const fir::MutableBoxValue &) -> mlir::Value {
-        // MutableBoxValue must be read into another category to work with them
-        // outside of allocation/assignment contexts.
-        fir::emitFatalError(loc, "readCharLen on MutableBoxValue");
+      [&](const fir::MutableBoxValue &x) -> mlir::Value {
+        return readCharLen(builder, loc,
+                           fir::factory::genMutableBoxRead(builder, loc, x));
       },
       [&](const auto &) -> mlir::Value {
         fir::emitFatalError(

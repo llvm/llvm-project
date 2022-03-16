@@ -240,7 +240,7 @@ namespace {
     void ExitScopeIfDone(
         MachineDomTreeNode *Node,
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
-        DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
+        const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
     void HoistOutOfLoop(MachineDomTreeNode *HeaderN);
 
@@ -696,19 +696,16 @@ void MachineLICMBase::ExitScope(MachineBasicBlock *MBB) {
 /// destroy ancestors which are now done.
 void MachineLICMBase::ExitScopeIfDone(MachineDomTreeNode *Node,
     DenseMap<MachineDomTreeNode*, unsigned> &OpenChildren,
-    DenseMap<MachineDomTreeNode*, MachineDomTreeNode*> &ParentMap) {
+    const DenseMap<MachineDomTreeNode*, MachineDomTreeNode*> &ParentMap) {
   if (OpenChildren[Node])
     return;
 
-  // Pop scope.
-  ExitScope(Node->getBlock());
-
-  // Now traverse upwards to pop ancestors whose offsprings are all done.
-  while (MachineDomTreeNode *Parent = ParentMap[Node]) {
-    unsigned Left = --OpenChildren[Parent];
-    if (Left != 0)
+  for(;;) {
+    ExitScope(Node->getBlock());
+    // Now traverse upwards to pop ancestors whose offsprings are all done.
+    MachineDomTreeNode *Parent = ParentMap.lookup(Node);
+    if (!Parent || --OpenChildren[Parent] != 0)
       break;
-    ExitScope(Parent->getBlock());
     Node = Parent;
   }
 }
