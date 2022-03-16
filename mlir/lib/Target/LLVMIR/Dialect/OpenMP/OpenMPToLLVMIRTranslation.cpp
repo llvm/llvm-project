@@ -1100,14 +1100,13 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
 
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
-  llvm::UnreachableInst *unreachableInst;
   if (allocaIP.getPoint() == ompLoc.IP.getPoint()) {
     // Same point => split basic block and make them unambigous.
-    unreachableInst = builder.CreateUnreachable();
+    llvm::UnreachableInst *unreachableInst = builder.CreateUnreachable();
     builder.SetInsertPoint(builder.GetInsertBlock()->splitBasicBlock(
         unreachableInst, "alloca_split"));
     ompLoc.IP = builder.saveIP();
-    unreachableInst->removeFromParent();
+    unreachableInst->eraseFromParent();
   }
   builder.restoreIP(ompBuilder->createAtomicUpdate(
       ompLoc, findAllocaInsertPoint(builder, moduleTranslation), llvmAtomicX,
