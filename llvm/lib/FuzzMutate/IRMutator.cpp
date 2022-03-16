@@ -116,16 +116,6 @@ void InjectorIRStrategy::mutate(BasicBlock &BB, RandomIRBuilder &IB) {
   auto InstsBefore = makeArrayRef(Insts).slice(0, IP);
   auto InstsAfter = makeArrayRef(Insts).slice(IP);
 
-  if (!InstsBefore.empty()) {
-    // Don't insert instructions after a musttail call.
-    Instruction *InstBefore = InstsBefore.back();
-    if (isa<BitCastInst>(InstBefore))
-      InstBefore = InstBefore->getPrevNode();
-    CallBase *CallBefore = dyn_cast_or_null<CallBase>(InstBefore);
-    if (CallBefore && CallBefore->isMustTailCall())
-      return;
-  }
-
   // Choose a source, which will be used to constrain the operation selection.
   SmallVector<Value *, 2> Srcs;
   Srcs.push_back(IB.findOrCreateSource(BB, InstsBefore));
