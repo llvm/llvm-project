@@ -266,6 +266,8 @@ struct IntrinsicLibrary {
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAll(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genAllocated(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
@@ -376,6 +378,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"all",
      &I::genAll,
      {{{"mask", asAddr}, {"dim", asValue}}},
+     /*isElemental=*/false},
+    {"allocated",
+     &I::genAllocated,
+     {{{"array", asInquired}, {"scalar", asInquired}}},
      /*isElemental=*/false},
     {"any",
      &I::genAny,
@@ -1164,6 +1170,21 @@ IntrinsicLibrary::genAll(mlir::Type resultType,
           [&](const auto &) -> fir::ExtendedValue {
             fir::emitFatalError(loc, "Invalid result for ALL");
           });
+}
+
+// ALLOCATED
+fir::ExtendedValue
+IntrinsicLibrary::genAllocated(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  return args[0].match(
+      [&](const fir::MutableBoxValue &x) -> fir::ExtendedValue {
+        return fir::factory::genIsAllocatedOrAssociatedTest(builder, loc, x);
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc,
+                            "allocated arg not lowered to MutableBoxValue");
+      });
 }
 
 // ANY
