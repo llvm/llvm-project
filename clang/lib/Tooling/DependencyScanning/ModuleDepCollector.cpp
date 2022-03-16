@@ -23,9 +23,21 @@ static void optimizeHeaderSearchOpts(HeaderSearchOptions &Opts,
   // Only preserve search paths that were used during the dependency scan.
   std::vector<HeaderSearchOptions::Entry> Entries = Opts.UserEntries;
   Opts.UserEntries.clear();
-  for (unsigned I = 0; I < Entries.size(); ++I)
-    if (MF.SearchPathUsage[I])
-      Opts.UserEntries.push_back(Entries[I]);
+
+  llvm::BitVector SearchPathUsage(Entries.size());
+  llvm::DenseSet<const serialization::ModuleFile *> Visited;
+  std::function<void(const serialization::ModuleFile *)> VisitMF =
+      [&](const serialization::ModuleFile *MF) {
+        SearchPathUsage |= MF->SearchPathUsage;
+        Visited.insert(MF);
+        for (const serialization::ModuleFile *Import : MF->Imports)
+          if (!Visited.contains(Import))
+            VisitMF(Import);
+      };
+  VisitMF(&MF);
+
+  for (auto Idx : SearchPathUsage.set_bits())
+    Opts.UserEntries.push_back(Entries[Idx]);
 }
 
 CompilerInvocation ModuleDepCollector::makeInvocationForModuleBuildWithoutPaths(
