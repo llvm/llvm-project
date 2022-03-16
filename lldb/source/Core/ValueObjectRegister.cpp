@@ -203,7 +203,7 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
         auto type_system_or_err =
             exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
         if (auto err = type_system_or_err.takeError()) {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Commands), std::move(err),
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
                          "Unable to get CompilerType from TypeSystem");
         } else {
           m_compiler_type =

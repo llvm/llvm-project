@@ -201,7 +201,7 @@ bool ValueObjectDynamicValue::UpdateValue() {
 
   Value old_value(m_value);
 
-  Log *log = GetLog(LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Types);
 
   bool has_changed_type = false;
 

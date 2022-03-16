@@ -107,7 +107,7 @@ TypeFromUser ThreadPlanAssemblyTracer::GetIntPointerType() {
       auto type_system_or_err =
           target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Commands), std::move(err),
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
                        "Unable to get integer pointer type from TypeSystem");
       } else {
         m_intptr_type = TypeFromUser(
