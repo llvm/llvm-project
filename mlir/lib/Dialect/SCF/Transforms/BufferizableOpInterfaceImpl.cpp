@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
@@ -272,17 +273,13 @@ struct ForOpInterface
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    // Tensor iter_args of scf::ForOps are always considered as a write. This is
-    // to simplify the analysis.
-    // TODO: Consider doing sth. like isValueWritten.
+    // Tensor iter_args of scf::ForOps are always considered as a write.
     return true;
   }
 
   SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     auto forOp = cast<scf::ForOp>(op);
-    if (!opOperand.get().getType().isa<RankedTensorType>())
-      return {};
     return {forOp.getResultForOpOperand(opOperand)};
   }
 
@@ -293,7 +290,8 @@ struct ForOpInterface
     auto forOp = cast<scf::ForOp>(op);
     OpOperand &forOperand = forOp.getOpOperandForResult(opResult);
     auto bbArg = forOp.getRegionIterArgForOpOperand(forOperand);
-    auto yieldOp = cast<scf::YieldOp>(&forOp.getLoopBody().front().back());
+    auto yieldOp =
+        cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
     bool equivalentYield = state.areEquivalentBufferizedValues(
         bbArg, yieldOp->getOperand(opResult.getResultNumber()));
     return equivalentYield ? BufferRelation::Equivalent : BufferRelation::None;
@@ -313,14 +311,25 @@ struct ForOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto forOp = cast<scf::ForOp>(op);
+    auto bufferizableOp = cast<BufferizableOpInterface>(op);
     Block *oldLoopBody = &forOp.getLoopBody().front();
 
     // Indices of all iter_args that have tensor type. These are the ones that
     // are bufferized.
     DenseSet<int64_t> indices;
-    for (const auto &it : llvm::enumerate(forOp.getInitArgs()))
-      if (it.value().getType().isa<TensorType>())
+    // For every yielded value, is the value equivalent to its corresponding
+    // bbArg?
+    SmallVector<bool> equivalentYields;
+    for (const auto &it : llvm::enumerate(forOp.getInitArgs())) {
+      if (it.value().getType().isa<TensorType>()) {
         indices.insert(it.index());
+        BufferRelation relation = bufferizableOp.bufferRelation(
+            forOp->getResult(it.index()), state.getAnalysisState());
+        equivalentYields.push_back(relation == BufferRelation::Equivalent);
+      } else {
+        equivalentYields.push_back(false);
+      }
+    }
 
     // Given a range of values, apply `func` to those marked in `indices`.
     // Otherwise, store the unmodified value in the result vector.
@@ -374,8 +383,35 @@ struct ForOpInterface
     SmallVector<Value> yieldValues =
         convert(yieldOp.getResults(), [&](Value val, int64_t index) {
           ensureToMemrefOpIsValid(val, initArgs[index].getType());
-          return rewriter.create<bufferization::ToMemrefOp>(
+          Value yieldedVal = rewriter.create<bufferization::ToMemrefOp>(
               val.getLoc(), initArgs[index].getType(), val);
+
+          if (equivalentYields[index])
+            // Yielded value is equivalent to the corresponding iter_arg bbArg.
+            // Yield the value directly. Most IR should be like that. Everything
+            // else must be resolved with copies and is potentially inefficient.
+            // By default, such problematic IR would already have been rejected
+            // during `verifyAnalysis`, unless `allow-return-allocs`.
+            return yieldedVal;
+
+          // It is not certain that the yielded value and the iter_arg bbArg
+          // have the same buffer. Allocate a new buffer and copy. The yielded
+          // buffer will get deallocated by `deallocateBuffers`.
+
+          // TODO: There are cases in which it is not neccessary to return a new
+          // buffer allocation. E.g., when equivalent values are yielded in a
+          // different order. This could be resolved with copies.
+          Optional<Value> yieldedAlloc = state.createAlloc(
+              rewriter, val.getLoc(), yieldedVal, /*deallocMemref=*/false);
+          // TODO: We should rollback, but for now just assume that this always
+          // succeeds.
+          assert(yieldedAlloc.hasValue() && "could not create alloc");
+          LogicalResult copyStatus =
+              bufferization::createMemCpy(rewriter, val.getLoc(), yieldedVal,
+                                          *yieldedAlloc, state.getOptions());
+          (void)copyStatus;
+          assert(succeeded(copyStatus) && "could not create memcpy");
+          return *yieldedAlloc;
         });
     yieldOp.getResultsMutable().assign(yieldValues);
 
@@ -385,12 +421,17 @@ struct ForOpInterface
     return success();
   }
 
-  /// Assert that yielded values of an scf.for op are aliasing with their
-  /// corresponding bbArgs. This is required because the i-th OpResult of an
-  /// scf.for op is currently assumed to alias with the i-th iter_arg (in the
-  /// absence of conflicts).
+  /// Assert that yielded values of an scf.for op are equivalent to their
+  /// corresponding bbArgs. Otherwise, an alloc+copy are inserted and yielded
+  /// from the loop. This could be a performance problem, so it must be
+  /// explicitly activated with `alloc-return-allocs`.
   LogicalResult verifyAnalysis(Operation *op,
                                const AnalysisState &state) const {
+    const auto &options =
+        static_cast<const OneShotBufferizationOptions &>(state.getOptions());
+    if (options.allowReturnAllocs)
+      return success();
+
     auto forOp = cast<scf::ForOp>(op);
     auto yieldOp =
         cast<scf::YieldOp>(forOp.getLoopBody().front().getTerminator());
@@ -405,13 +446,10 @@ struct ForOpInterface
       // Note: This is overly strict. We should check for aliasing bufferized
       // values. But we don't have a "must-alias" analysis yet.
       if (!state.areEquivalentBufferizedValues(operand.get(), bbArg))
-        // TODO: this could get resolved with copies but it can also turn into
-        // swaps so we need to be careful about order of copies.
         return yieldOp->emitError()
                << "Yield operand #" << operand.getOperandNumber()
                << " does not bufferize to a buffer that is aliasing the "
-                  "matching"
-               << " enclosing scf::for operand";
+                  "matching enclosing scf::for operand";
     }
     return success();
   }
