@@ -26,7 +26,7 @@ write_lit_config("lit_site_cfg") {
     "CMAKE_CURRENT_SOURCE_DIR=" +
         rebase_path("//clang-tools-extra/pseudo/test"),
 
-    "CLANG_TOOLS_DIR=",
+    "CURRENT_TOOLS_DIR=",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "TARGET_TRIPLE=$llvm_target_triple",

@@ -5,7 +5,6 @@ import sys
 config.llvm_plugin_ext = "@LLVM_PLUGIN_EXT@"
 config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
 config.clang_tools_binary_dir = "@CLANG_TOOLS_BINARY_DIR@"
-config.clang_tools_dir = "@CLANG_TOOLS_DIR@"
 config.llvm_shlib_dir = "@SHLIBDIR@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
@@ -16,7 +15,7 @@ config.has_plugins = @CLANG_PLUGIN_SUPPORT@ & ~@LLVM_INSTALL_TOOLCHAIN_ONLY@
 # used when we can't determine the tool dir at configuration time.
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
-config.clang_tools_dir = lit_config.substitute("@CLANG_TOOLS_DIR@")
+config.clang_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
