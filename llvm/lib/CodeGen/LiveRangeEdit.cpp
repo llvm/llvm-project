@@ -371,7 +371,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
       const MachineOperand &MO = MI->getOperand(i-1);
       if (MO.isReg() && Register::isPhysicalRegister(MO.getReg()))
         continue;
-      MI->RemoveOperand(i-1);
+      MI->removeOperand(i-1);
     }
     LLVM_DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
   } else {

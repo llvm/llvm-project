@@ -141,12 +141,10 @@ private:
                        RTLIB::Libcall Call_F128,
                        RTLIB::Libcall Call_PPCF128,
                        SmallVectorImpl<SDValue> &Results);
-  SDValue ExpandIntLibCall(SDNode *Node, bool isSigned,
-                           RTLIB::Libcall Call_I8,
-                           RTLIB::Libcall Call_I16,
-                           RTLIB::Libcall Call_I32,
-                           RTLIB::Libcall Call_I64,
-                           RTLIB::Libcall Call_I128);
+  SDValue ExpandIntLibCall(SDNode *Node, bool isSigned, RTLIB::Libcall Call_I8,
+                           RTLIB::Libcall Call_I16, RTLIB::Libcall Call_I32,
+                           RTLIB::Libcall Call_I64, RTLIB::Libcall Call_I128,
+                           RTLIB::Libcall Call_IEXT);
   void ExpandArgFPLibCall(SDNode *Node,
                           RTLIB::Libcall Call_F32, RTLIB::Libcall Call_F64,
                           RTLIB::Libcall Call_F80, RTLIB::Libcall Call_F128,
@@ -2105,15 +2103,17 @@ void SelectionDAGLegalize::ExpandFPLibCall(SDNode* Node,
   ExpandFPLibCall(Node, LC, Results);
 }
 
-SDValue SelectionDAGLegalize::ExpandIntLibCall(SDNode* Node, bool isSigned,
-                                               RTLIB::Libcall Call_I8,
-                                               RTLIB::Libcall Call_I16,
-                                               RTLIB::Libcall Call_I32,
-                                               RTLIB::Libcall Call_I64,
-                                               RTLIB::Libcall Call_I128) {
+SDValue SelectionDAGLegalize::ExpandIntLibCall(
+    SDNode *Node, bool isSigned, RTLIB::Libcall Call_I8,
+    RTLIB::Libcall Call_I16, RTLIB::Libcall Call_I32, RTLIB::Libcall Call_I64,
+    RTLIB::Libcall Call_I128, RTLIB::Libcall Call_IEXT) {
   RTLIB::Libcall LC;
   switch (Node->getSimpleValueType(0).SimpleTy) {
-  default: llvm_unreachable("Unexpected request for libcall!");
+
+  default:
+    LC = Call_IEXT;
+    break;
+
   case MVT::i8:   LC = Call_I8; break;
   case MVT::i16:  LC = Call_I16; break;
   case MVT::i32:  LC = Call_I32; break;
@@ -2148,7 +2148,11 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
 
   RTLIB::Libcall LC;
   switch (Node->getSimpleValueType(0).SimpleTy) {
-  default: llvm_unreachable("Unexpected request for libcall!");
+
+  default:
+    LC = isSigned ? RTLIB::SDIVREM_IEXT : RTLIB::UDIVREM_IEXT;
+    break;
+
   case MVT::i8:   LC= isSigned ? RTLIB::SDIVREM_I8  : RTLIB::UDIVREM_I8;  break;
   case MVT::i16:  LC= isSigned ? RTLIB::SDIVREM_I16 : RTLIB::UDIVREM_I16; break;
   case MVT::i32:  LC= isSigned ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32; break;
@@ -4319,28 +4323,24 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                     RTLIB::SUB_PPCF128, Results);
     break;
   case ISD::SREM:
-    Results.push_back(ExpandIntLibCall(Node, true,
-                                       RTLIB::SREM_I8,
-                                       RTLIB::SREM_I16, RTLIB::SREM_I32,
-                                       RTLIB::SREM_I64, RTLIB::SREM_I128));
+    Results.push_back(ExpandIntLibCall(
+        Node, true, RTLIB::SREM_I8, RTLIB::SREM_I16, RTLIB::SREM_I32,
+        RTLIB::SREM_I64, RTLIB::SREM_I128, RTLIB::SREM_IEXT));
     break;
   case ISD::UREM:
-    Results.push_back(ExpandIntLibCall(Node, false,
-                                       RTLIB::UREM_I8,
-                                       RTLIB::UREM_I16, RTLIB::UREM_I32,
-                                       RTLIB::UREM_I64, RTLIB::UREM_I128));
+    Results.push_back(ExpandIntLibCall(
+        Node, false, RTLIB::UREM_I8, RTLIB::UREM_I16, RTLIB::UREM_I32,
+        RTLIB::UREM_I64, RTLIB::UREM_I128, RTLIB::UREM_IEXT));
     break;
   case ISD::SDIV:
-    Results.push_back(ExpandIntLibCall(Node, true,
-                                       RTLIB::SDIV_I8,
-                                       RTLIB::SDIV_I16, RTLIB::SDIV_I32,
-                                       RTLIB::SDIV_I64, RTLIB::SDIV_I128));
+    Results.push_back(ExpandIntLibCall(
+        Node, true, RTLIB::SDIV_I8, RTLIB::SDIV_I16, RTLIB::SDIV_I32,
+        RTLIB::SDIV_I64, RTLIB::SDIV_I128, RTLIB::SDIV_IEXT));
     break;
   case ISD::UDIV:
-    Results.push_back(ExpandIntLibCall(Node, false,
-                                       RTLIB::UDIV_I8,
-                                       RTLIB::UDIV_I16, RTLIB::UDIV_I32,
-                                       RTLIB::UDIV_I64, RTLIB::UDIV_I128));
+    Results.push_back(ExpandIntLibCall(
+        Node, false, RTLIB::UDIV_I8, RTLIB::UDIV_I16, RTLIB::UDIV_I32,
+        RTLIB::UDIV_I64, RTLIB::UDIV_I128, RTLIB::UDIV_IEXT));
     break;
   case ISD::SDIVREM:
   case ISD::UDIVREM:
@@ -4348,10 +4348,9 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
     ExpandDivRemLibCall(Node, Results);
     break;
   case ISD::MUL:
-    Results.push_back(ExpandIntLibCall(Node, false,
-                                       RTLIB::MUL_I8,
-                                       RTLIB::MUL_I16, RTLIB::MUL_I32,
-                                       RTLIB::MUL_I64, RTLIB::MUL_I128));
+    Results.push_back(ExpandIntLibCall(
+        Node, false, RTLIB::MUL_I8, RTLIB::MUL_I16, RTLIB::MUL_I32,
+        RTLIB::MUL_I64, RTLIB::MUL_I128, RTLIB::MUL_IEXT));
     break;
   case ISD::CTLZ_ZERO_UNDEF:
     switch (Node->getSimpleValueType(0).SimpleTy) {

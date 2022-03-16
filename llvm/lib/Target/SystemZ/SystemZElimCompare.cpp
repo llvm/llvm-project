@@ -224,7 +224,7 @@ bool SystemZElimCompare::convertToBRCT(
   // The transformation is OK.  Rebuild Branch as a BRCT(G) or BRCTH.
   MachineOperand Target(Branch->getOperand(2));
   while (Branch->getNumOperands())
-    Branch->RemoveOperand(0);
+    Branch->removeOperand(0);
   Branch->setDesc(TII->get(BRCT));
   MachineInstrBuilder MIB(*Branch->getParent()->getParent(), Branch);
   MIB.add(MI.getOperand(0)).add(MI.getOperand(1)).add(Target);
@@ -267,7 +267,7 @@ bool SystemZElimCompare::convertToLoadAndTrap(
 
   // The transformation is OK.  Rebuild Branch as a load-and-trap.
   while (Branch->getNumOperands())
-    Branch->RemoveOperand(0);
+    Branch->removeOperand(0);
   Branch->setDesc(TII->get(LATOpcode));
   MachineInstrBuilder(*Branch->getParent()->getParent(), Branch)
       .add(MI.getOperand(0))
@@ -649,16 +649,16 @@ bool SystemZElimCompare::fuseCompareOperations(
   // Clear out all current operands.
   int CCUse = MBBI->findRegisterUseOperandIdx(SystemZ::CC, false, TRI);
   assert(CCUse >= 0 && "BRC/BCR must use CC");
-  Branch->RemoveOperand(CCUse);
+  Branch->removeOperand(CCUse);
   // Remove regmask (sibcall).
   if (Type == SystemZII::CompareAndSibcall)
-    Branch->RemoveOperand(3);
+    Branch->removeOperand(3);
   // Remove target (branch or sibcall).
   if (Type == SystemZII::CompareAndBranch ||
       Type == SystemZII::CompareAndSibcall)
-    Branch->RemoveOperand(2);
-  Branch->RemoveOperand(1);
-  Branch->RemoveOperand(0);
+    Branch->removeOperand(2);
+  Branch->removeOperand(1);
+  Branch->removeOperand(0);
 
   // Rebuild Branch as a fused compare and branch.
   // SrcNOps is the number of MI operands of the compare instruction

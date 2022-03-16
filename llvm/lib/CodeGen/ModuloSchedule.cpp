@@ -814,8 +814,8 @@ static void removePhis(MachineBasicBlock *BB, MachineBasicBlock *Incoming) {
       break;
     for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2)
       if (MI.getOperand(i + 1).getMBB() == Incoming) {
-        MI.RemoveOperand(i + 1);
-        MI.RemoveOperand(i);
+        MI.removeOperand(i + 1);
+        MI.removeOperand(i);
         break;
       }
   }
@@ -1930,8 +1930,8 @@ void PeelingModuloScheduleExpander::fixupBranches() {
       // blocks. Leave it to unreachable-block-elim to clean up.
       Prolog->removeSuccessor(Fallthrough);
       for (MachineInstr &P : Fallthrough->phis()) {
-        P.RemoveOperand(2);
-        P.RemoveOperand(1);
+        P.removeOperand(2);
+        P.removeOperand(1);
       }
       TII->insertUnconditionalBranch(*Prolog, Epilog, DebugLoc());
       KernelDisposed = true;
@@ -1940,8 +1940,8 @@ void PeelingModuloScheduleExpander::fixupBranches() {
       // Prolog always falls through; remove incoming values in epilog.
       Prolog->removeSuccessor(Epilog);
       for (MachineInstr &P : Epilog->phis()) {
-        P.RemoveOperand(4);
-        P.RemoveOperand(3);
+        P.removeOperand(4);
+        P.removeOperand(3);
       }
     }
   }

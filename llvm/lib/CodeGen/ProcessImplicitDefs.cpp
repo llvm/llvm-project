@@ -125,7 +125,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   // Using instr wasn't found, it could be in another block.
   // Leave the physreg IMPLICIT_DEF, but trim any extra operands.
   for (unsigned i = MI->getNumOperands() - 1; i; --i)
-    MI->RemoveOperand(i);
+    MI->removeOperand(i);
   LLVM_DEBUG(dbgs() << "Keeping physreg: " << *MI);
 }
 

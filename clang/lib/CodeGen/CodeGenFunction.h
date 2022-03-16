@@ -4649,6 +4649,11 @@ public:
   /// Set the codegen fast-math flags.
   void SetFastMathFlags(FPOptions FPFeatures);
 
+  // Truncate or extend a boolean vector to the requested number of elements.
+  llvm::Value *emitBoolVecConversion(llvm::Value *SrcVec,
+                                     unsigned NumElementsDst,
+                                     const llvm::Twine &Name = "");
+
 private:
   llvm::MDNode *getRangeForLoadFromType(QualType Ty);
   void EmitReturnOfRValue(RValue RV, QualType Ty);

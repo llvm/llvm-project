@@ -266,8 +266,6 @@
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-DEFAULT-NEXT: Running pass: RelLookupTableConverterPass
 ; CHECK-LTO-NOT: Running pass: RelLookupTableConverterPass
-; CHECK-DEFAULT-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-LTO-NOT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-LTO-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-LTO-NEXT: Running pass: NameAnonGlobalPass

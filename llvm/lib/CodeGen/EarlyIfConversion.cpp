@@ -663,8 +663,8 @@ void SSAIfConv::rewritePHIOperands() {
         PI.PHI->getOperand(i-1).setMBB(Head);
         PI.PHI->getOperand(i-2).setReg(DstReg);
       } else if (MBB == getFPred()) {
-        PI.PHI->RemoveOperand(i-1);
-        PI.PHI->RemoveOperand(i-2);
+        PI.PHI->removeOperand(i-1);
+        PI.PHI->removeOperand(i-2);
       }
     }
     LLVM_DEBUG(dbgs() << "          --> " << *PI.PHI);

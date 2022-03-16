@@ -266,6 +266,10 @@ struct FrontendOptions {
   /// The name of the action to run when using a plugin action.
   std::string ActionName;
 
+  /// A list of arguments to forward to LLVM's option processing; this
+  /// should only be used for debugging and experimental features.
+  std::vector<std::string> llvmArgs;
+
   // Return the appropriate input kind for a file extension. For example,
   /// "*.f" would return Language::Fortran.
   ///

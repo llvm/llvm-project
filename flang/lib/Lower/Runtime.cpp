@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
 #include "flang/Runtime/random.h"
 #include "flang/Runtime/stop.h"
@@ -232,4 +233,65 @@ void Fortran::lower::genRandomSeed(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, funcTy, argBox, sourceFile, sourceLine);
   builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// generate runtime call to transfer intrinsic with no size argument
+void Fortran::lower::genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value resultBox, mlir::Value sourceBox,
+                                 mlir::Value moldBox) {
+
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(Transfer)>(loc, builder);
+  mlir::FunctionType fTy = func.getType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, fTy, resultBox, sourceBox, moldBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// generate runtime call to transfer intrinsic with size argument
+void Fortran::lower::genTransferSize(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value resultBox,
+                                     mlir::Value sourceBox, mlir::Value moldBox,
+                                     mlir::Value size) {
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(TransferSize)>(loc, builder);
+  mlir::FunctionType fTy = func.getType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, fTy, resultBox, sourceBox,
+                                    moldBox, sourceFile, sourceLine, size);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// generate system_clock runtime call/s
+/// all intrinsic arguments are optional and may appear here as mlir::Value{}
+void Fortran::lower::genSystemClock(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, mlir::Value count,
+                                    mlir::Value rate, mlir::Value max) {
+  auto makeCall = [&](mlir::FuncOp func, mlir::Value arg) {
+    mlir::Type kindTy = func.getType().getInput(0);
+    int integerKind = 8;
+    if (auto intType =
+            fir::unwrapRefType(arg.getType()).dyn_cast<mlir::IntegerType>())
+      integerKind = intType.getWidth() / 8;
+    mlir::Value kind = builder.createIntegerConstant(loc, kindTy, integerKind);
+    mlir::Value res =
+        builder.create<fir::CallOp>(loc, func, mlir::ValueRange{kind})
+            .getResult(0);
+    mlir::Value castRes =
+        builder.createConvert(loc, fir::dyn_cast_ptrEleTy(arg.getType()), res);
+    builder.create<fir::StoreOp>(loc, castRes, arg);
+  };
+  using fir::runtime::getRuntimeFunc;
+  if (count)
+    makeCall(getRuntimeFunc<mkRTKey(SystemClockCount)>(loc, builder), count);
+  if (rate)
+    makeCall(getRuntimeFunc<mkRTKey(SystemClockCountRate)>(loc, builder), rate);
+  if (max)
+    makeCall(getRuntimeFunc<mkRTKey(SystemClockCountMax)>(loc, builder), max);
 }

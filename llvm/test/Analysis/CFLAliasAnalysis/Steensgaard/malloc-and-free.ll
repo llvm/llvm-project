@@ -10,6 +10,8 @@ declare void @free(i8* nocapture)
 ; CHECK: NoAlias: i8* %p, i8* %q
 define void @test_malloc(i8* %p) {
 	%q = call i8* @malloc(i64 4)
+  load i8, i8* %p
+  load i8, i8* %q
 	ret void
 }
 
@@ -17,6 +19,8 @@ define void @test_malloc(i8* %p) {
 ; CHECK: NoAlias: i8* %p, i8* %q
 define void @test_calloc(i8* %p) {
 	%q = call i8* @calloc(i64 2, i64 4)
+  load i8, i8* %p
+  load i8, i8* %q
 	ret void
 }
 
@@ -25,5 +29,7 @@ define void @test_calloc(i8* %p) {
 define void @test_free(i8* %p) {
 	%q = alloca i8, align 4
 	call void @free(i8* %q)
+  load i8, i8* %p
+  load i8, i8* %q
 	ret void
 }
