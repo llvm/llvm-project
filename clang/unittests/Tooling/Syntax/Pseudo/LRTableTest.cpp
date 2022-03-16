@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/LRTable.h"
-#include "clang-pseudo/Grammar.h"
+#include "clang/Tooling/Syntax/Pseudo/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <vector>
 
 namespace clang {
+namespace syntax {
 namespace pseudo {
 namespace {
 
@@ -51,4 +52,5 @@ TEST(LRTable, Builder) {
 
 } // namespace
 } // namespace pseudo
+} // namespace syntax
 } // namespace clang

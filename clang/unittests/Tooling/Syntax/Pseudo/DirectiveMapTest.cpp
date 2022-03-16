@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang-pseudo/DirectiveMap.h"
+#include "clang/Tooling/Syntax/Pseudo/DirectiveMap.h"
 
-#include "clang-pseudo/Token.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Tooling/Syntax/Pseudo/Token.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
+namespace syntax {
 namespace pseudo {
 namespace {
 
@@ -147,4 +148,5 @@ TEST(DirectiveMap, ParseBroken) {
 
 } // namespace
 } // namespace pseudo
+} // namespace syntax
 } // namespace clang

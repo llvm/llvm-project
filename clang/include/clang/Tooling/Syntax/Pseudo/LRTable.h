@@ -34,15 +34,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_LRTABLE_H
-#define CLANG_PSEUDO_LRTABLE_H
+#ifndef LLVM_CLANG_TOOLING_SYNTAX_PSEUDO_LRTABLE_H
+#define LLVM_CLANG_TOOLING_SYNTAX_PSEUDO_LRTABLE_H
 
-#include "clang-pseudo/Grammar.h"
+#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
 #include "llvm/ADT/ArrayRef.h"
 #include <cstdint>
 #include <vector>
 
 namespace clang {
+namespace syntax {
 namespace pseudo {
 
 // Represents the LR parsing table, which can efficiently the question "what is
@@ -175,6 +176,7 @@ private:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const LRTable::Action &);
 
 } // namespace pseudo
+} // namespace syntax
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLING_SYNTAX_PSEUDO_LRTABLE_H

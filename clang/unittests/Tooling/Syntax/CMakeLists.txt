@@ -28,3 +28,5 @@ target_link_libraries(SyntaxTests
   PRIVATE
   LLVMTestingSupport
 )
+
+add_subdirectory(Pseudo)

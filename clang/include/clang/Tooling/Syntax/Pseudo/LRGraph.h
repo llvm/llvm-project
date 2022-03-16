@@ -28,14 +28,15 @@
 //  in making decisions.
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_PSEUDO_LRGRAPH_H
-#define CLANG_PSEUDO_LRGRAPH_H
+#ifndef LLVM_CLANG_TOOLING_SYNTAX_PSEUDO_LRGRAPH_H
+#define LLVM_CLANG_TOOLING_SYNTAX_PSEUDO_LRGRAPH_H
 
-#include "clang-pseudo/Grammar.h"
+#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
 #include "llvm/ADT/Hashing.h"
 #include <vector>
 
 namespace clang {
+namespace syntax {
 namespace pseudo {
 
 // An LR item -- a grammar rule with a dot at some position of the body.
@@ -151,22 +152,23 @@ private:
 };
 
 } // namespace pseudo
+} // namespace syntax
 } // namespace clang
 
 namespace llvm {
-// Support clang::pseudo::Item as DenseMap keys.
-template <> struct DenseMapInfo<clang::pseudo::Item> {
-  static inline clang::pseudo::Item getEmptyKey() {
-    return clang::pseudo::Item::sentinel(-1);
+// Support clang::syntax::pseudo::Item as DenseMap keys.
+template <> struct DenseMapInfo<clang::syntax::pseudo::Item> {
+  static inline clang::syntax::pseudo::Item getEmptyKey() {
+    return clang::syntax::pseudo::Item::sentinel(-1);
   }
-  static inline clang::pseudo::Item getTombstoneKey() {
-    return clang::pseudo::Item::sentinel(-2);
+  static inline clang::syntax::pseudo::Item getTombstoneKey() {
+    return clang::syntax::pseudo::Item::sentinel(-2);
   }
-  static unsigned getHashValue(const clang::pseudo::Item &I) {
+  static unsigned getHashValue(const clang::syntax::pseudo::Item &I) {
     return hash_value(I);
   }
-  static bool isEqual(const clang::pseudo::Item &LHS,
-                      const clang::pseudo::Item &RHS) {
+  static bool isEqual(const clang::syntax::pseudo::Item &LHS,
+                      const clang::syntax::pseudo::Item &RHS) {
     return LHS == RHS;
   }
 };
