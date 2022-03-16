@@ -733,7 +733,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
 
     // Add the offset to the SB register.
     MIB->setDesc(TII.get(Opcodes.ADDrr));
-    MIB->RemoveOperand(1);
+    MIB->removeOperand(1);
     MIB.addReg(ARM::R9) // FIXME: don't hardcode R9
         .addReg(Offset)
         .add(predOps(ARMCC::AL))
@@ -748,7 +748,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     } else {
       // Load the global's address from the constant pool.
       MIB->setDesc(TII.get(Opcodes.ConstPoolLoad));
-      MIB->RemoveOperand(1);
+      MIB->removeOperand(1);
       addOpsForConstantPoolLoad(MIB, GV, /*IsSBREL*/ false);
     }
   } else if (STI.isTargetMachO()) {
@@ -997,7 +997,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
     auto CPIndex =
         ConstPool->getConstantPoolIndex(I.getOperand(1).getFPImm(), Alignment);
     MIB->setDesc(TII.get(LoadOpcode));
-    MIB->RemoveOperand(1);
+    MIB->removeOperand(1);
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
         .addMemOperand(
             MF.getMachineMemOperand(MachinePointerInfo::getConstantPool(MF),

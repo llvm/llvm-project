@@ -228,7 +228,7 @@ void HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     case Hexagon::PS_fia:
       MI.setDesc(HII.get(Hexagon::A2_addi));
       MI.getOperand(FIOp).ChangeToImmediate(RealOffset);
-      MI.RemoveOperand(FIOp+1);
+      MI.removeOperand(FIOp+1);
       return;
     case Hexagon::PS_fi:
       // Set up the instruction for updating below.

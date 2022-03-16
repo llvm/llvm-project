@@ -1716,7 +1716,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
           // Rewrite MBB operands to be depth immediates.
           SmallVector<MachineOperand, 4> Ops(MI.operands());
           while (MI.getNumOperands() > 0)
-            MI.RemoveOperand(MI.getNumOperands() - 1);
+            MI.removeOperand(MI.getNumOperands() - 1);
           for (auto MO : Ops) {
             if (MO.isMBB()) {
               if (MI.getOpcode() == WebAssembly::DELEGATE)

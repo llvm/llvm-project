@@ -368,8 +368,8 @@ void TailDuplicator::processPHI(
     return;
 
   // Remove PredBB from the PHI node.
-  MI->RemoveOperand(SrcOpIdx + 1);
-  MI->RemoveOperand(SrcOpIdx);
+  MI->removeOperand(SrcOpIdx + 1);
+  MI->removeOperand(SrcOpIdx);
   if (MI->getNumOperands() == 1)
     MI->eraseFromParent();
 }
@@ -494,15 +494,15 @@ void TailDuplicator::updateSuccessorsPHIs(
         for (unsigned i = MI.getNumOperands() - 2; i != Idx; i -= 2) {
           MachineOperand &MO = MI.getOperand(i + 1);
           if (MO.getMBB() == FromBB) {
-            MI.RemoveOperand(i + 1);
-            MI.RemoveOperand(i);
+            MI.removeOperand(i + 1);
+            MI.removeOperand(i);
           }
         }
       } else
         Idx = 0;
 
       // If Idx is set, the operands at Idx and Idx+1 must be removed.
-      // We reuse the location to avoid expensive RemoveOperand calls.
+      // We reuse the location to avoid expensive removeOperand calls.
 
       DenseMap<Register, AvailableValsTy>::iterator LI =
           SSAUpdateVals.find(Reg);
@@ -539,8 +539,8 @@ void TailDuplicator::updateSuccessorsPHIs(
         }
       }
       if (Idx != 0) {
-        MI.RemoveOperand(Idx + 1);
-        MI.RemoveOperand(Idx);
+        MI.removeOperand(Idx + 1);
+        MI.removeOperand(Idx);
       }
     }
   }

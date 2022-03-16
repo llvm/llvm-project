@@ -537,12 +537,12 @@ bool X86InstructionSelector::selectLoadStoreOp(MachineInstr &I,
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
   if (Opc == TargetOpcode::G_LOAD) {
-    I.RemoveOperand(1);
+    I.removeOperand(1);
     addFullAddress(MIB, AM);
   } else {
     // G_STORE (VAL, Addr), X86Store instruction (Addr, VAL)
-    I.RemoveOperand(1);
-    I.RemoveOperand(0);
+    I.removeOperand(1);
+    I.removeOperand(0);
     addFullAddress(MIB, AM).addUse(DefReg);
   }
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
@@ -625,7 +625,7 @@ bool X86InstructionSelector::selectGlobalValue(MachineInstr &I,
   I.setDesc(TII.get(NewOpc));
   MachineInstrBuilder MIB(MF, I);
 
-  I.RemoveOperand(1);
+  I.removeOperand(1);
   addFullAddress(MIB, AM);
 
   return constrainSelectedInstRegOperands(I, TII, TRI, RBI);

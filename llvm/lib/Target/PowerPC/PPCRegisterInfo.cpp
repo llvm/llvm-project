@@ -1108,7 +1108,7 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   MBB.erase(II);
   if (SpillsKnownBit && KillsCRBit && !SeenUse) {
     Ins->setDesc(TII.get(PPC::UNENCODED_NOP));
-    Ins->RemoveOperand(0);
+    Ins->removeOperand(0);
   }
 }
 

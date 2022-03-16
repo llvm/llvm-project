@@ -130,7 +130,7 @@ MachineBasicBlock *fixBrTableDefault(MachineInstr &MI, MachineBasicBlock *MBB,
       return nullptr;
 
     // Remove the dummy default target and install the real one.
-    MI.RemoveOperand(MI.getNumExplicitOperands() - 1);
+    MI.removeOperand(MI.getNumExplicitOperands() - 1);
     MI.addOperand(MF, MachineOperand::CreateMBB(TBB));
   }
 

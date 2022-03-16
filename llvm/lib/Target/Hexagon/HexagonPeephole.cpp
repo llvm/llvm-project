@@ -208,14 +208,14 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
           // Try to find in the map.
           if (unsigned PeepholeSrc = PeepholeMap.lookup(SrcReg)) {
             // Change the 1st operand.
-            MI.RemoveOperand(1);
+            MI.removeOperand(1);
             MI.addOperand(MachineOperand::CreateReg(PeepholeSrc, false));
           } else  {
             DenseMap<unsigned, std::pair<unsigned, unsigned> >::iterator DI =
               PeepholeDoubleRegsMap.find(SrcReg);
             if (DI != PeepholeDoubleRegsMap.end()) {
               std::pair<unsigned,unsigned> PeepholeSrc = DI->second;
-              MI.RemoveOperand(1);
+              MI.removeOperand(1);
               MI.addOperand(MachineOperand::CreateReg(
                   PeepholeSrc.first, false /*isDef*/, false /*isImp*/,
                   false /*isKill*/, false /*isDead*/, false /*isUndef*/,

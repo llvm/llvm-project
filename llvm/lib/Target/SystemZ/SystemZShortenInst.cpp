@@ -162,10 +162,10 @@ bool SystemZShortenInst::shortenFPConv(MachineInstr &MI, unsigned Opcode) {
     MachineOperand Src(MI.getOperand(1));
     MachineOperand Suppress(MI.getOperand(2));
     MachineOperand Mode(MI.getOperand(3));
-    MI.RemoveOperand(3);
-    MI.RemoveOperand(2);
-    MI.RemoveOperand(1);
-    MI.RemoveOperand(0);
+    MI.removeOperand(3);
+    MI.removeOperand(2);
+    MI.removeOperand(1);
+    MI.removeOperand(0);
     MI.setDesc(TII->get(Opcode));
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
         .add(Dest)
@@ -190,9 +190,9 @@ bool SystemZShortenInst::shortenFusedFPOp(MachineInstr &MI, unsigned Opcode) {
     MachineOperand Lhs(LHSMO);
     MachineOperand Rhs(RHSMO);
     MachineOperand Src(AccMO);
-    MI.RemoveOperand(3);
-    MI.RemoveOperand(2);
-    MI.RemoveOperand(1);
+    MI.removeOperand(3);
+    MI.removeOperand(2);
+    MI.removeOperand(1);
     MI.setDesc(TII->get(Opcode));
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
         .add(Src)

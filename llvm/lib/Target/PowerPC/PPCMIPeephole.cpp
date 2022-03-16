@@ -986,7 +986,7 @@ bool PPCMIPeephole::simplifyCode() {
                   LiMI->getOpcode() == PPC::LI8) &&
                  "Invalid Opcode!");
           auto LiImm = LiMI->getOperand(1).getImm(); // save the imm of LI
-          LiMI->RemoveOperand(1);                    // remove the imm of LI
+          LiMI->removeOperand(1);                    // remove the imm of LI
           LiMI->setDesc(TII->get(LiMI->getOpcode() == PPC::LI ? PPC::ADDI
                                                               : PPC::ADDI8));
           MachineInstrBuilder(*LiMI->getParent()->getParent(), *LiMI)

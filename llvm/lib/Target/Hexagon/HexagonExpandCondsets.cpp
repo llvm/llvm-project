@@ -696,7 +696,7 @@ bool HexagonExpandCondsets::split(MachineInstr &MI,
       MI.setDesc(HII->get(TargetOpcode::COPY));
       unsigned S = getRegState(ST);
       while (MI.getNumOperands() > 1)
-        MI.RemoveOperand(MI.getNumOperands()-1);
+        MI.removeOperand(MI.getNumOperands()-1);
       MachineFunction &MF = *MI.getParent()->getParent();
       MachineInstrBuilder(MF, MI).addReg(RT.Reg, S, RT.Sub);
       return true;

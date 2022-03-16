@@ -356,8 +356,8 @@ static void canonicalizePHIOperands(MachineFunction &MF) {
         int OpIdx = DupIndices.pop_back_val();
         // Remove both the block and value operand, again in reverse order to
         // preserve indices.
-        MI.RemoveOperand(OpIdx + 1);
-        MI.RemoveOperand(OpIdx);
+        MI.removeOperand(OpIdx + 1);
+        MI.removeOperand(OpIdx);
       }
 
       Preds.clear();
