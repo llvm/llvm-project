@@ -363,6 +363,8 @@ struct Ctx {
   // Symbols in a non-prevailing COMDAT group which should be changed to an
   // Undefined.
   SmallVector<std::pair<Symbol *, unsigned>, 0> nonPrevailingSyms;
+  // True if SHT_LLVM_SYMPART is used.
+  std::atomic<bool> hasSympart{false};
 };
 
 // The only instance of Ctx struct.

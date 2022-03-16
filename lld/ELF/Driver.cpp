@@ -2601,26 +2601,28 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   {
     llvm::TimeTraceScope timeScope("Strip sections");
-    llvm::erase_if(inputSections, [](InputSectionBase *s) {
-      if (s->type == SHT_LLVM_SYMPART) {
+    if (ctx->hasSympart.load(std::memory_order_relaxed)) {
+      llvm::erase_if(inputSections, [](InputSectionBase *s) {
+        if (s->type != SHT_LLVM_SYMPART)
+          return false;
         invokeELFT(readSymbolPartitionSection, s);
         return true;
-      }
+      });
+    }
+    // We do not want to emit debug sections if --strip-all
+    // or --strip-debug are given.
+    if (config->strip != StripPolicy::None) {
+      llvm::erase_if(inputSections, [](InputSectionBase *s) {
+        if (isDebugSection(*s))
+          return true;
+        if (auto *isec = dyn_cast<InputSection>(s))
+          if (InputSectionBase *rel = isec->getRelocatedSection())
+            if (isDebugSection(*rel))
+              return true;
 
-      // We do not want to emit debug sections if --strip-all
-      // or --strip-debug are given.
-      if (config->strip == StripPolicy::None)
         return false;
-
-      if (isDebugSection(*s))
-        return true;
-      if (auto *isec = dyn_cast<InputSection>(s))
-        if (InputSectionBase *rel = isec->getRelocatedSection())
-          if (isDebugSection(*rel))
-            return true;
-
-      return false;
-    });
+      });
+    }
   }
 
   // Since we now have a complete set of input files, we can create
