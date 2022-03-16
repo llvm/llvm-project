@@ -23,6 +23,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
@@ -34,6 +35,17 @@
 
 using namespace llvm;
 using namespace bolt;
+
+namespace opts {
+
+extern cl::OptionCategory BoltOptCategory;
+
+static cl::opt<bool> X86StripRedundantAddressSize(
+    "x86-strip-redundant-address-size",
+    cl::desc("Remove redundant Address-Size override prefix"), cl::init(true),
+    cl::ZeroOrMore, cl::cat(BoltOptCategory));
+
+} // namespace opts
 
 namespace {
 
@@ -2031,14 +2043,26 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  bool shortenInstruction(MCInst &Inst) const override {
+  bool shortenInstruction(MCInst &Inst,
+                          const MCSubtargetInfo &STI) const override {
     unsigned OldOpcode = Inst.getOpcode();
     unsigned NewOpcode = OldOpcode;
 
-    // Check and remove EIZ/RIZ. These cases represent ambiguous cases where SIB
-    // byte is present, but no index is used and modrm alone shoud have been
-    // enough. Converting to NoRegister effectively removes the SIB byte.
     int MemOpNo = getMemoryOperandNo(Inst);
+
+    // Check and remove redundant Address-Size override prefix.
+    if (opts::X86StripRedundantAddressSize) {
+      uint64_t TSFlags = Info->get(OldOpcode).TSFlags;
+      unsigned Flags = Inst.getFlags();
+
+      if (!X86_MC::needsAddressSizeOverride(Inst, STI, MemOpNo, TSFlags) &&
+          Flags & X86::IP_HAS_AD_SIZE)
+        Inst.setFlags(Flags ^ X86::IP_HAS_AD_SIZE);
+    }
+
+    // Check and remove EIZ/RIZ. These cases represent ambiguous cases where
+    // SIB byte is present, but no index is used and modrm alone should have
+    // been enough. Converting to NoRegister effectively removes the SIB byte.
     if (MemOpNo >= 0) {
       MCOperand &IndexOp =
           Inst.getOperand(static_cast<unsigned>(MemOpNo) + X86::AddrIndexReg);
@@ -3877,7 +3901,7 @@ public:
         return BlocksVectorTy();
 
       CompareInst.addOperand(MCOperand::createImm(CaseIdx));
-      shortenInstruction(CompareInst);
+      shortenInstruction(CompareInst, *Ctx->getSubtargetInfo());
 
       // jump to next target compare.
       NextTarget =

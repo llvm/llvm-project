@@ -1282,7 +1282,8 @@ public:
 
   /// Replace instruction with a shorter version that could be relaxed later
   /// if needed.
-  virtual bool shortenInstruction(MCInst &Inst) const {
+  virtual bool shortenInstruction(MCInst &Inst,
+                                  const MCSubtargetInfo &STI) const {
     llvm_unreachable("not implemented");
     return false;
   }

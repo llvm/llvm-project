@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BOLTCore
+  BOLTUtils
   MC
   Object
   Support
