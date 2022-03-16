@@ -325,7 +325,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
         continue;
       }
 
-      for (size_t I = 0; I < DI.getNumberOfFrames(); I++) {
+      for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
+           I++) {
         const auto &Frame = DI.getFrame(I);
         LLVM_DEBUG(
             // Print out the name to guid mapping for debugging.
@@ -340,8 +341,8 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
             // these suffixes will not be present.
             Function::getGUID(trimSuffix(Frame.FunctionName)),
             Frame.Line - Frame.StartLine, Frame.Column,
-            // Only the first entry is not an inlined location.
-            I != 0);
+            // Only the last entry is not an inlined location.
+            I != NumFrames - 1);
       }
     }
 

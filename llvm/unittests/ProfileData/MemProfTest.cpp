@@ -169,13 +169,13 @@ TEST(MemProf, FillsValue) {
 
   EXPECT_EQ(Records[0].Info.getAllocCount(), 1U);
   EXPECT_EQ(Records[1].Info.getAllocCount(), 2U);
-  EXPECT_THAT(Records[0].CallStack[0], FrameContains("foo", 5U, 30U, false));
-  EXPECT_THAT(Records[0].CallStack[1], FrameContains("bar", 51U, 20U, true));
+  EXPECT_THAT(Records[0].CallStack[0], FrameContains("foo", 5U, 30U, true));
+  EXPECT_THAT(Records[0].CallStack[1], FrameContains("bar", 51U, 20U, false));
 
-  EXPECT_THAT(Records[1].CallStack[0], FrameContains("baz", 5U, 30U, false));
-  EXPECT_THAT(Records[1].CallStack[1], FrameContains("qux", 5U, 10U, true));
-  EXPECT_THAT(Records[1].CallStack[2], FrameContains("foo", 5U, 30U, false));
-  EXPECT_THAT(Records[1].CallStack[3], FrameContains("bar", 51U, 20U, true));
+  EXPECT_THAT(Records[1].CallStack[0], FrameContains("baz", 5U, 30U, true));
+  EXPECT_THAT(Records[1].CallStack[1], FrameContains("qux", 5U, 10U, false));
+  EXPECT_THAT(Records[1].CallStack[2], FrameContains("foo", 5U, 30U, true));
+  EXPECT_THAT(Records[1].CallStack[3], FrameContains("bar", 51U, 20U, false));
 }
 
 TEST(MemProf, PortableWrapper) {
