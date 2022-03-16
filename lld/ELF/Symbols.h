@@ -377,7 +377,6 @@ public:
 
   // The section index if in a discarded section, 0 otherwise.
   uint32_t discardedSecIdx;
-  bool nonPrevailing = false;
 };
 
 class SharedSymbol : public Symbol {
@@ -559,7 +558,7 @@ template <typename... T> Defined *makeDefined(T &&...args) {
       Defined(std::forward<T>(args)...);
 }
 
-void reportDuplicate(const Symbol &sym, const InputFile *newFile,
+void reportDuplicate(const Symbol &sym, InputFile *newFile,
                      InputSectionBase *errSec, uint64_t errOffset);
 void maybeWarnUnorderableSymbol(const Symbol *sym);
 bool computeIsPreemptible(const Symbol &sym);
