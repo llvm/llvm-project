@@ -175,6 +175,10 @@ mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
     // TODO: where to get VoidTy?
     resultType = nullptr;
     break;
+  case ABIArgInfo::Direct:
+    resultType = retAI.getCoerceToType();
+    break;
+
   default:
     assert(false && "NYI");
   }
