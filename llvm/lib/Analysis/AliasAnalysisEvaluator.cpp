@@ -100,11 +100,6 @@ static inline void PrintLoadStoreResults(AliasResult AR, bool P,
   }
 }
 
-static inline bool isInterestingPointer(Value *V) {
-  return V->getType()->isPointerTy()
-      && !isa<ConstantPointerNull>(V);
-}
-
 PreservedAnalyses AAEvaluator::run(Function &F, FunctionAnalysisManager &AM) {
   runInternal(F, AM.getResult<AAManager>(F));
   return PreservedAnalyses::all();
