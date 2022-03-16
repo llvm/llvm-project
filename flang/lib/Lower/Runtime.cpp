@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Runtime/misc-intrinsic.h"
 #include "flang/Runtime/pointer.h"
 #include "flang/Runtime/random.h"
 #include "flang/Runtime/stop.h"
@@ -231,6 +232,39 @@ void Fortran::lower::genRandomSeed(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, funcTy.getInput(2));
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, funcTy, argBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// generate runtime call to transfer intrinsic with no size argument
+void Fortran::lower::genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value resultBox, mlir::Value sourceBox,
+                                 mlir::Value moldBox) {
+
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(Transfer)>(loc, builder);
+  mlir::FunctionType fTy = func.getType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+      builder, loc, fTy, resultBox, sourceBox, moldBox, sourceFile, sourceLine);
+  builder.create<fir::CallOp>(loc, func, args);
+}
+
+/// generate runtime call to transfer intrinsic with size argument
+void Fortran::lower::genTransferSize(fir::FirOpBuilder &builder,
+                                     mlir::Location loc, mlir::Value resultBox,
+                                     mlir::Value sourceBox, mlir::Value moldBox,
+                                     mlir::Value size) {
+  mlir::FuncOp func =
+      fir::runtime::getRuntimeFunc<mkRTKey(TransferSize)>(loc, builder);
+  mlir::FunctionType fTy = func.getType();
+  mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
+  mlir::Value sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
+  llvm::SmallVector<mlir::Value> args =
+      fir::runtime::createArguments(builder, loc, fTy, resultBox, sourceBox,
+                                    moldBox, sourceFile, sourceLine, size);
   builder.create<fir::CallOp>(loc, func, args);
 }
 
