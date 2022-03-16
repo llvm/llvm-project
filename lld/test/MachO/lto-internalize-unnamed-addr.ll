@@ -7,19 +7,53 @@
 ; RUN: opt -module-summary %t/test.ll -o %t/test.thinlto.o
 ; RUN: opt -module-summary %t/test2.ll -o %t/test2.thinlto.o
 
-; RUN: %lld -lSystem %t/test.o %t/test2.o -o %t/test
+; RUN: %lld -lSystem %t/test.o %t/test2.o -o %t/test -save-temps
+; RUN: llvm-dis < %t/test.0.2.internalize.bc | FileCheck %s --check-prefix=LTO-BC
 ; RUN: llvm-nm -m %t/test | FileCheck %s --check-prefix=LTO
 
-; RUN: %lld -lSystem -dylib %t/test.o %t/test2.o -o %t/test.dylib
+; RUN: %lld -lSystem -dylib %t/test.o %t/test2.o -o %t/test.dylib -save-temps
+; RUN: llvm-dis < %t/test.dylib.0.2.internalize.bc | FileCheck %s --check-prefix=LTO-BC-DYLIB
 ; RUN: llvm-nm -m %t/test.dylib | FileCheck %s --check-prefix=LTO-DYLIB
 
-; RUN: %lld -lSystem %t/test.thinlto.o %t/test2.thinlto.o -o %t/test.thinlto
+; RUN: %lld -lSystem %t/test.thinlto.o %t/test2.thinlto.o -o %t/test.thinlto \
+; RUN:   -save-temps
+; RUN: llvm-dis < %t/test.thinlto.o.2.internalize.bc | FileCheck %s --check-prefix=THINLTO-BC
+; RUN: llvm-dis < %t/test2.thinlto.o.2.internalize.bc | FileCheck %s --check-prefix=THINLTO-BC-2
 ; RUN: llvm-nm -m %t/test.thinlto | FileCheck %s --check-prefix=THINLTO
 
-; RUN: %lld -lSystem -dylib %t/test.thinlto.o %t/test2.thinlto.o -o %t/test.thinlto.dylib
+; RUN: %lld -lSystem -dylib %t/test.thinlto.o %t/test2.thinlto.o -o \
+; RUN:   %t/test.thinlto.dylib -save-temps
+; RUN: llvm-dis < %t/test.thinlto.o.2.internalize.bc | FileCheck %s --check-prefix=THINLTO-BC
+; RUN: llvm-dis < %t/test2.thinlto.o.2.internalize.bc | FileCheck %s --check-prefix=THINLTO-BC-2
 ; RUN: llvm-nm -m %t/test.thinlto.dylib | FileCheck %s --check-prefix=THINLTO
 
+; LTO-BC-DAG: @global_unnamed = internal unnamed_addr global i8 42
+; LTO-BC-DAG: @global_unnamed_sometimes_linkonce = internal unnamed_addr global i8 42
+; LTO-BC-DAG: @local_unnamed_const = internal constant i8 42
+; LTO-BC-DAG: @local_unnamed = internal global i8 42
+; LTO-BC-DAG: @local_unnamed_always_const = internal constant i8 42
+; LTO-BC-DAG: @local_unnamed_sometimes_const = internal constant i8 42
+
+; LTO-BC-DYLIB-DAG: @global_unnamed = internal unnamed_addr global i8 42
+; LTO-BC-DYLIB-DAG: @local_unnamed_const = internal constant i8 42
+; LTO-BC-DYLIB-DAG: @local_unnamed = weak_odr global i8 42
+; LTO-BC-DYLIB-DAG: @global_unnamed_sometimes_linkonce = weak_odr unnamed_addr global i8 42
+; LTO-BC-DYLIB-DAG: @local_unnamed_always_const = internal constant i8 42
+; LTO-BC-DYLIB-DAG: @local_unnamed_sometimes_const = weak_odr constant i8 42
+
+; THINLTO-BC-DAG: @global_unnamed = weak_odr hidden unnamed_addr global i8 42
+; THINLTO-BC-DAG: @global_unnamed_sometimes_linkonce = weak_odr unnamed_addr global i8 42
+; THINLTO-BC-DAG: @local_unnamed_const = weak_odr hidden local_unnamed_addr constant i8 42
+; THINLTO-BC-DAG: @local_unnamed_always_const = weak_odr hidden local_unnamed_addr constant i8 42
+; THINLTO-BC-DAG: @local_unnamed_sometimes_const = weak_odr local_unnamed_addr constant i8 42
+; THINLTO-BC-DAG: @local_unnamed = weak_odr local_unnamed_addr global i8 42
+
+; THINLTO-BC-2-DAG: @global_unnamed_sometimes_linkonce = available_externally unnamed_addr global i8 42
+; THINLTO-BC-2-DAG: @local_unnamed_always_const = available_externally local_unnamed_addr constant i8 42
+; THINLTO-BC-2-DAG: @local_unnamed_sometimes_const = available_externally local_unnamed_addr global i8 42
+
 ; LTO-DAG: (__DATA,__data) non-external _global_unnamed
+; LTO-DAG: (__DATA,__data) non-external _global_unnamed_sometimes_linkonce
 ; LTO-DAG: (__DATA,__data) non-external _local_unnamed
 ;; LD64 marks this with (was a private external). IMO both LD64 and LLD should
 ;; mark all the other internalized symbols with (was a private external).
@@ -33,12 +67,16 @@
 ;; symbols here are all marked as (was a private external) by LD64. LLD should
 ;; follow suit.
 ; LTO-DYLIB-DAG: (__DATA,__data) non-external _global_unnamed
+; LTO-DYLIB-DAG: (__DATA,__data) weak external _global_unnamed_sometimes_linkonce
 ; LTO-DYLIB-DAG: (__DATA,__data) weak external _local_unnamed
 ; LTO-DYLIB-DAG: (__TEXT,__const) non-external _local_unnamed_always_const
 ; LTO-DYLIB-DAG: (__TEXT,__const) non-external _local_unnamed_const
 ; LTO-DYLIB-DAG: (__TEXT,__const) weak external _local_unnamed_sometimes_const
 
 ; THINLTO-DAG: (__DATA,__data) non-external (was a private external) _global_unnamed
+;; FIXME: These next two symbols should probably be internalized, just like they
+;; are under fullLTO.
+; THINLTO-DAG: (__DATA,__data) weak external _global_unnamed_sometimes_linkonce
 ; THINLTO-DAG: (__DATA,__data) weak external _local_unnamed
 ; THINLTO-DAG: (__TEXT,__const) non-external (was a private external) _local_unnamed_always_const
 ; THINLTO-DAG: (__TEXT,__const) non-external (was a private external) _local_unnamed_const
@@ -52,14 +90,16 @@ target triple = "x86_64-apple-darwin"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
 @global_unnamed = linkonce_odr unnamed_addr global i8 42
+@global_unnamed_sometimes_linkonce = linkonce_odr unnamed_addr global i8 42
 @local_unnamed_const = linkonce_odr local_unnamed_addr constant i8 42
 @local_unnamed_always_const = linkonce_odr local_unnamed_addr constant i8 42
 @local_unnamed_sometimes_const = linkonce_odr local_unnamed_addr constant i8 42
 @local_unnamed = linkonce_odr local_unnamed_addr global i8 42
-@used = hidden constant [5 x i8*] [i8* @global_unnamed, i8* @local_unnamed,
+@used = hidden constant [6 x i8*] [i8* @global_unnamed,
+  i8* @global_unnamed_sometimes_linkonce, i8* @local_unnamed,
   i8* @local_unnamed_const, i8* @local_unnamed_always_const,
   i8* @local_unnamed_sometimes_const]
-@llvm.used = appending global [1 x [5 x i8*]*] [[5 x i8*]* @used]
+@llvm.used = appending global [1 x [6 x i8*]*] [[6 x i8*]* @used]
 
 define void @main() {
   ret void
@@ -69,5 +109,6 @@ define void @main() {
 target triple = "x86_64-apple-darwin"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
+@global_unnamed_sometimes_linkonce = weak_odr unnamed_addr global i8 42
 @local_unnamed_always_const = linkonce_odr local_unnamed_addr constant i8 42
 @local_unnamed_sometimes_const = linkonce_odr local_unnamed_addr global i8 42
