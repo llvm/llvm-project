@@ -821,7 +821,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RC == &AMDGPU::AGPR_32RegClass) {
-    if (AMDGPU::VGPR_32RegClass.contains(SrcReg)) {
+    if (AMDGPU::VGPR_32RegClass.contains(SrcReg) ||
+        (ST.hasGFX940Insts() && AMDGPU::SReg_32RegClass.contains(SrcReg))) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
@@ -947,7 +948,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (RI.isAGPRClass(RC)) {
     if (ST.hasGFX90AInsts() && RI.isAGPRClass(SrcRC))
       Opcode = AMDGPU::V_ACCVGPR_MOV_B32;
-    else if (RI.hasVGPRs(SrcRC))
+    else if (RI.hasVGPRs(SrcRC) ||
+             (ST.hasGFX940Insts() && RI.isSGPRClass(SrcRC)))
       Opcode = AMDGPU::V_ACCVGPR_WRITE_B32_e64;
     else
       Opcode = AMDGPU::INSTRUCTION_LIST_END;
@@ -4650,6 +4652,16 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     }
   }
 
+  if (MI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+      !ST.hasGFX940Insts()) {
+    const MachineOperand *Src = getNamedOperand(MI, AMDGPU::OpName::src0);
+    if (Src->isReg() && RI.isSGPRReg(MRI, Src->getReg())) {
+      ErrInfo = "Invalid register class: "
+                "v_accvgpr_write with an SGPR is not supported on this GPU";
+      return false;
+    }
+  }
+
   if (Desc.getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS) {
     const MachineOperand &SrcOp = MI.getOperand(1);
     if (!SrcOp.isReg() || SrcOp.getReg().isVirtual()) {
@@ -5026,7 +5038,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
           RI.isAGPR(MRI, MI.getOperand(Data1Idx).getReg()) != IsAGPR)
         return false;
     }
-    if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+    if (Opc == AMDGPU::V_ACCVGPR_WRITE_B32_e64 && !ST.hasGFX940Insts() &&
         (int)OpIdx == AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0) &&
         RI.isSGPRReg(MRI, MO->getReg()))
       return false;

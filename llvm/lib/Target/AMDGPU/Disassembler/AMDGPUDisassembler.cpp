@@ -385,14 +385,6 @@ static DecodeStatus decodeOperand_SReg_32(MCInst &Inst,
   return addOperand(Inst, DAsm->decodeOperand_SReg_32(Imm));
 }
 
-static DecodeStatus decodeOperand_VGPR_32(MCInst &Inst,
-                                         unsigned Imm,
-                                         uint64_t Addr,
-                                         const void *Decoder) {
-  auto DAsm = static_cast<const AMDGPUDisassembler*>(Decoder);
-  return addOperand(Inst, DAsm->decodeSrcOp(AMDGPUDisassembler::OPW32, Imm));
-}
-
 #define DECODE_SDWA(DecName) \
 DECODE_OPERAND(decodeSDWA##DecName, decodeSDWA##DecName)
 

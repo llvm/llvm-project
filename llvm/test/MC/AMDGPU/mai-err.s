@@ -29,7 +29,7 @@ v_accvgpr_write_b32 a0, a0
 // GFX900: error: instruction not supported on this GPU
 
 v_accvgpr_write_b32 a0, s0
-// GFX908: error: invalid operand for instruction
+// GFX908: error: source operand must be either a VGPR or an inline constant
 // GFX900: error: instruction not supported on this GPU
 
 v_accvgpr_write_b32 a0, 65
