@@ -14,6 +14,7 @@ static_library("FrontendTool") {
     "//clang/lib/Driver",
     "//clang/lib/Frontend",
     "//clang/lib/Frontend/Rewrite",
+    "//clang/lib/SymbolGraph",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
   ]
