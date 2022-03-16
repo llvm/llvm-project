@@ -166,6 +166,12 @@ public:
                       AggValueSlot aggSlot = AggValueSlot::ignored(),
                       bool ignoreResult = false);
 
+  /// GetUndefRValue - Get an appropriate 'undef' rvalue for the given type.
+  /// TODO: What's the equivalent for MLIR? Currently we're only using this for
+  /// void types so it just returns RValue::get(nullptr) but it'll need
+  /// addressed later.
+  RValue GetUndefRValue(clang::QualType Ty);
+
   mlir::Type convertType(clang::QualType T);
 };
 
