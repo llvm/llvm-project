@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "AMDGPUAsmUtils.h"
+#include "AMDGPUBaseInfo.h"
 #include "SIDefines.h"
-
-#include "llvm/ADT/StringRef.h"
 
 namespace llvm {
 namespace AMDGPU {
@@ -54,49 +53,62 @@ const char *const OpGsSymbolic[OP_GS_LAST_] = {
 
 namespace Hwreg {
 
-// This must be in sync with llvm::AMDGPU::Hwreg::ID_SYMBOLIC_FIRST_/LAST_, see SIDefines.h.
-const char* const IdSymbolic[] = {
-  nullptr,
-  "HW_REG_MODE",
-  "HW_REG_STATUS",
-  "HW_REG_TRAPSTS",
-  "HW_REG_HW_ID",
-  "HW_REG_GPR_ALLOC",
-  "HW_REG_LDS_ALLOC",
-  "HW_REG_IB_STS",
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  "HW_REG_SH_MEM_BASES",
-  "HW_REG_TBA_LO",
-  "HW_REG_TBA_HI",
-  "HW_REG_TMA_LO",
-  "HW_REG_TMA_HI",
-  "HW_REG_FLAT_SCR_LO",
-  "HW_REG_FLAT_SCR_HI",
-  "HW_REG_XNACK_MASK",
-  "HW_REG_HW_ID1",
-  "HW_REG_HW_ID2",
-  "HW_REG_POPS_PACKER",
-  nullptr,
-  nullptr,
-  nullptr,
-  "HW_REG_SHADER_CYCLES"
-};
+// Disable lint checking for this block since it makes the table unreadable.
+// NOLINTBEGIN
+const CustomOperand<const MCSubtargetInfo &> Opr[] = {
+  {},
+  {{"HW_REG_MODE"},          ID_MODE},
+  {{"HW_REG_STATUS"},        ID_STATUS},
+  {{"HW_REG_TRAPSTS"},       ID_TRAPSTS},
+  {{"HW_REG_HW_ID"},         ID_HW_ID,
+                                     [](const MCSubtargetInfo &STI) {
+                                       return isSI(STI) || isCI(STI) ||
+                                              isVI(STI) || isGFX9(STI);
+                                     }},
+  {{"HW_REG_GPR_ALLOC"},     ID_GPR_ALLOC},
+  {{"HW_REG_LDS_ALLOC"},     ID_LDS_ALLOC},
+  {{"HW_REG_IB_STS"},        ID_IB_STS},
+  {},
+  {},
+  {},
+  {},
+  {},
+  {},
+  {},
+  {{"HW_REG_SH_MEM_BASES"},  ID_MEM_BASES,   isGFX9Plus},
+  {{"HW_REG_TBA_LO"},        ID_TBA_LO,      isGFX9_GFX10},
+  {{"HW_REG_TBA_HI"},        ID_TBA_HI,      isGFX9_GFX10},
+  {{"HW_REG_TMA_LO"},        ID_TMA_LO,      isGFX9_GFX10},
+  {{"HW_REG_TMA_HI"},        ID_TMA_HI,      isGFX9_GFX10},
+  {{"HW_REG_FLAT_SCR_LO"},   ID_FLAT_SCR_LO, isGFX10Plus},
+  {{"HW_REG_FLAT_SCR_HI"},   ID_FLAT_SCR_HI, isGFX10Plus},
+  {{"HW_REG_XNACK_MASK"},    ID_XNACK_MASK,
+                                     [](const MCSubtargetInfo &STI) {
+                                       return isGFX10(STI) &&
+                                              !AMDGPU::isGFX10_BEncoding(STI);
+                                     }},
+  {{"HW_REG_HW_ID1"},        ID_HW_ID1,      isGFX10Plus},
+  {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
+  {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
+  {},
+  {},
+  {},
+  {{"HW_REG_SHADER_CYCLES"}, ID_SHADER_CYCLES, isGFX10_BEncoding},
 
-// This is gfx940 specific portion from ID_SYMBOLIC_FIRST_GFX940_ to
-// ID_SYMBOLIC_LAST_GFX940_
-const char* const IdSymbolicGFX940Specific[] = {
-  "HW_REG_XCC_ID",
-  "HW_REG_SQ_PERF_SNAPSHOT_DATA",
-  "HW_REG_SQ_PERF_SNAPSHOT_DATA1",
-  "HW_REG_SQ_PERF_SNAPSHOT_PC_LO",
-  "HW_REG_SQ_PERF_SNAPSHOT_PC_HI"
+  // GFX940 specific registers
+  {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},
+  {{"HW_REG_SQ_PERF_SNAPSHOT_DATA"},  ID_SQ_PERF_SNAPSHOT_DATA,  isGFX940},
+  {{"HW_REG_SQ_PERF_SNAPSHOT_DATA1"}, ID_SQ_PERF_SNAPSHOT_DATA1, isGFX940},
+  {{"HW_REG_SQ_PERF_SNAPSHOT_PC_LO"}, ID_SQ_PERF_SNAPSHOT_PC_LO, isGFX940},
+  {{"HW_REG_SQ_PERF_SNAPSHOT_PC_HI"}, ID_SQ_PERF_SNAPSHOT_PC_HI, isGFX940},
+
+  // Aliases
+  {{"HW_REG_HW_ID"},                  ID_HW_ID1,                 isGFX10},
 };
+// NOLINTEND
+
+const int OPR_SIZE = static_cast<int>(
+    sizeof(Opr) / sizeof(CustomOperand<const MCSubtargetInfo &>));
 
 } // namespace Hwreg
 

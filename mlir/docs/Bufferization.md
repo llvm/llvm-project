@@ -125,7 +125,7 @@ buffers in the future to achieve a better quality of bufferization.
 Tensor ops that are not in destination-passing style always bufferize to a
 memory allocation. E.g.:
 
-```
+```mlir
 %0 = tensor.generate %sz {
 ^bb0(%i : index):
   %cst = arith.constant 0.0 : f32
@@ -138,7 +138,7 @@ allocates a new buffer. This could be avoided by choosing an op such as
 `linalg.generic`, which can express the same computation with a destination
 ("out") tensor:
 
-```
+```mlir
 #map = affine_map<(i) -> (i)>
 %0 = linalg.generic {indexing_maps = [#map], iterator_types = ["parallel"]}
                     outs(%t : tensor<?xf32>) {
@@ -153,7 +153,7 @@ the output tensor `%t` is entirely overwritten. Why pass the tensor `%t` as an
 operand in the first place? As an example, this can be useful for overwriting a
 slice of a tensor:
 
-```
+```mlir
 %t = tensor.extract_slice %s [%idx] [%sz] [1] : tensor<?xf32> to tensor<?xf32>
 %0 = linalg.generic ... outs(%t) { ... } -> tensor<?xf32>
 %1 = tensor.insert_slice %0 into %s [%idx] [%sz] [1]
@@ -170,7 +170,7 @@ later). One-Shot Bufferize works best if there is a single SSA use-def chain,
 where the result of a tensor op is the "destination" operand of the next tensor
 ops, e.g.:
 
-```
+```mlir
 %0 = "my_dialect.some_op"(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
 %1 = "my_dialect.another_op"(%0) : (tensor<?xf32>) -> (tensor<?xf32>)
 %2 = "my_dialect.yet_another_op"(%1) : (tensor<?xf32>) -> (tensor<?xf32>)
@@ -179,7 +179,7 @@ ops, e.g.:
 Buffer copies are likely inserted if the SSA use-def chain splits at some point,
 e.g.:
 
-```
+```mlir
 %0 = "my_dialect.some_op"(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
 %1 = "my_dialect.another_op"(%0) : (tensor<?xf32>) -> (tensor<?xf32>)
 %2 = "my_dialect.yet_another_op"(%0) : (tensor<?xf32>) -> (tensor<?xf32>)
@@ -230,13 +230,13 @@ One-Shot Bufferize deallocates all buffers that it allocates. This is in
 contrast to the dialect conversion-based bufferization that delegates this job
 to the
 [`-buffer-deallocation`](https://mlir.llvm.org/docs/Passes/#-buffer-deallocation-adds-all-required-dealloc-operations-for-all-allocations-in-the-input-program)
-pass. One-Shot Bufferize cannot handle IR where a newly allocated buffer is
-returned from a block. Such IR will fail bufferization.
+pass. By default, One-Shot Bufferize rejects IR where a newly allocated buffer
+is returned from a block. Such IR will fail bufferization.
 
 A new buffer allocation is returned from a block when the result of an op that
 is not in destination-passing style is returned. E.g.:
 
-```
+```mlir
 %0 = scf.if %c -> (tensor<?xf32>) {
   %1 = tensor.generate ... -> tensor<?xf32>
   scf.yield %1 : tensor<?xf32>
@@ -251,7 +251,7 @@ branch will be rejected.
 Another case in which a buffer allocation may be returned is when a buffer copy
 must be inserted due to a RaW conflict. E.g.:
 
-```
+```mlir
 %0 = scf.if %c -> (tensor<?xf32>) {
   %1 = tensor.insert %cst into %another_tensor[%idx] : tensor<?xf32>
   "my_dialect.reading_tensor_op"(%another_tensor) : (tensor<?xf32>) -> ()
@@ -266,10 +266,44 @@ In the above example, a buffer copy of buffer(`%another_tensor`) (with `%cst`
 inserted) is yielded from the "then" branch.
 
 In both examples, a buffer is allocated inside of a block and then yielded from
-the block. This is not supported in One-Shot Bufferize. Alternatively, One-Shot
-Bufferize can be configured to leak all memory and not generate any buffer
-deallocations with `create-deallocs=0 allowReturnMemref`. The buffers can then
-be deallocated by running `-buffer-deallocation` after One-Shot Bufferize.
+the block. Deallocation of such buffers is tricky and not currently implemented
+in an efficient way. For this reason, One-Shot Bufferize must be explicitly
+configured with `allow-return-allocs` to support such IR.
+
+When running with `allow-return-allocs`, One-Shot Bufferize resolves yields of
+newly allocated buffers with copies. E.g., the `scf.if` example above would
+bufferize to IR similar to the following:
+
+```mlir
+%0 = scf.if %c -> (memref<?xf32>) {
+  %1 = memref.alloc(...) : memref<?xf32>
+  ...
+  scf.yield %1 : memref<?xf32>
+} else {
+  %2 = memref.alloc(...) : memref<?xf32>
+  memref.copy %another_memref, %2
+  scf.yield %2 : memref<?xf32>
+}
+```
+
+In the bufferized IR, both branches return a newly allocated buffer, so it does
+not matter which if-branch was taken. In both cases, the resulting buffer `%0`
+must be deallocated at some point after the `scf.if` (unless the `%0` is
+returned/yielded from its block).
+
+One-Shot Bufferize internally utilizes functionality from the
+[Buffer Deallocation](https://mlir.llvm.org/docs/BufferDeallocationInternals/)
+pass to deallocate yielded buffers. Therefore, ops with regions must implement
+the `RegionBranchOpInterface` when `allow-return-allocs`.
+
+Note: Buffer allocations that are returned from a function are not deallocated.
+It is the caller's responsibility to deallocate the buffer. In the future, this
+could be automated with allocation hoisting (across function boundaries) or
+reference counting.
+
+One-Shot Bufferize can be configured to leak all memory and not generate any
+buffer deallocations with `create-deallocs=0`. This can be useful for
+compatibility with legacy code that has its own method of deallocating buffers.
 
 ## Memory Layouts
 
@@ -279,7 +313,7 @@ ops are bufferizable. However, when encountering a non-bufferizable tensor with
 bufferization boundary and decide on a memref type. By default, One-Shot
 Bufferize choose the most dynamic memref type wrt. layout maps. E.g.:
 
-```
+```mlir
 %0 = "my_dialect.unbufferizable_op(%t) : (tensor<?x?xf32>) -> (tensor<?x?xf32>)
 %1 = tensor.extract %0[%idx1, %idx2] : tensor<?xf32>
 ```
@@ -287,7 +321,7 @@ Bufferize choose the most dynamic memref type wrt. layout maps. E.g.:
 When bufferizing the above IR, One-Shot Bufferize inserts a `to_memref` ops with
 dynamic offset and strides:
 
-```
+```mlir
 #map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 %0 = "my_dialect.unbufferizable_op(%t) : (tensor<?x?xf32>) -> (tensor<?x?xf32>)
 %0_m = bufferization.to_memref %0 : memref<?x?xf32, #map>

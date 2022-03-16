@@ -15,6 +15,9 @@ struct OneShotBufferizationOptions;
 /// buffers.
 std::unique_ptr<Pass> createBufferDeallocationPass();
 
+/// Run buffer deallocation.
+LogicalResult deallocateBuffers(Operation *op);
+
 /// Creates a pass that moves allocations upwards to reduce the number of
 /// required copies that are inserted during the BufferDeallocation pass.
 std::unique_ptr<Pass> createBufferHoistingPass();
@@ -54,6 +57,9 @@ createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
 //===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
+
+/// Register external models for AllocationOpInterface.
+void registerAllocationOpInterfaceExternalModels(DialectRegistry &registry);
 
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION

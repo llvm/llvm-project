@@ -39,10 +39,18 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
       return rewriter.notifyMatchFailure(
           op, "UnrankedMemRefType is not supported.");
     }
+    MemRefType memrefType = type.cast<MemRefType>();
+    MemRefLayoutAttrInterface layout;
+    auto allocType =
+        MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
+                        layout, memrefType.getMemorySpace());
+    // Since this implementation always allocates, certain result types of the
+    // clone op cannot be lowered.
+    if (!memref::CastOp::areCastCompatible({allocType}, {memrefType}))
+      return failure();
 
     // Transform a clone operation into alloc + copy operation and pay
     // attention to the shape dimensions.
-    MemRefType memrefType = type.cast<MemRefType>();
     Location loc = op->getLoc();
     SmallVector<Value, 4> dynamicOperands;
     for (int i = 0; i < memrefType.getRank(); ++i) {
@@ -52,8 +60,14 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
       Value dim = rewriter.createOrFold<memref::DimOp>(loc, op.input(), size);
       dynamicOperands.push_back(dim);
     }
-    Value alloc = rewriter.replaceOpWithNewOp<memref::AllocOp>(op, memrefType,
-                                                               dynamicOperands);
+
+    // Allocate a memref with identity layout.
+    Value alloc = rewriter.create<memref::AllocOp>(op->getLoc(), allocType,
+                                                   dynamicOperands);
+    // Cast the allocation to the specified type if needed.
+    if (memrefType != allocType)
+      alloc = rewriter.create<memref::CastOp>(op->getLoc(), memrefType, alloc);
+    rewriter.replaceOp(op, alloc);
     rewriter.create<memref::CopyOp>(loc, op.input(), alloc);
     return success();
   }

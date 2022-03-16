@@ -158,3 +158,19 @@ define void @PR50910() {
   call void @llvm.memset.p0i8.i64(i8* align 8 %t1, i8 0, i64 4294967296, i1 false)
   ret void
 }
+
+define i1 @presplit_overlarge_load() {
+; CHECK-LABEL: @presplit_overlarge_load(
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i8, align 2
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L11:%.*]] = load i8, i8* [[A_SROA_0]], align 2
+; CHECK-NEXT:    [[A_SROA_0_0_A_1_SROA_CAST3:%.*]] = bitcast i8* [[A_SROA_0]] to i1*
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L2:%.*]] = load i1, i1* [[A_SROA_0_0_A_1_SROA_CAST3]], align 2
+; CHECK-NEXT:    ret i1 [[A_SROA_0_0_A_SROA_0_0_L2]]
+;
+  %A = alloca i16
+  %A.32 = bitcast i16* %A to i32*
+  %A.1 = bitcast i16* %A to i1*
+  %L1 = load i32, i32* %A.32
+  %L2 = load i1, i1* %A.1
+  ret i1 %L2
+}

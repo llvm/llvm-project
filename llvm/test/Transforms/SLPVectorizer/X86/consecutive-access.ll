@@ -511,9 +511,9 @@ define double @bar(double* nocapture readonly %a, i32 %n) local_unnamed_addr #0 
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A]], i64 [[IDXPROM2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, <2 x double>* [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP6]] = fadd <2 x double> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD5]] = add i32 [[I_018]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD5]], [[N]]
+; CHECK-NEXT:    [[TMP6]] = fadd <2 x double> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP]]
 ;
 entry:
