@@ -84,6 +84,10 @@ std::string x86::getX86TargetCPU(const Driver &D, const ArgList &Args,
     // Simulators can still run on 10.11 though, like Xcode.
     if (Triple.isMacOSX() && !Triple.isOSVersionLT(10, 12))
       return "penryn";
+
+    if (Triple.isDriverKit())
+      return "nehalem";
+
     // The oldest x86_64 Macs have core2/Merom; the oldest x86 Macs have Yonah.
     return Is64Bit ? "core2" : "yonah";
   }

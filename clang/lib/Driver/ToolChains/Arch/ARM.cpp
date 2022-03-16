@@ -320,6 +320,7 @@ arm::FloatABI arm::getDefaultFloatABI(const llvm::Triple &Triple) {
   case llvm::Triple::MacOSX:
   case llvm::Triple::IOS:
   case llvm::Triple::TvOS:
+  case llvm::Triple::DriverKit:
     // Darwin defaults to "softfp" for v6 and v7.
     if (Triple.isWatchABI())
       return FloatABI::Hard;

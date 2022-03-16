@@ -3914,6 +3914,7 @@ def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">
   Flags<[CC1Option]>, HelpText<"Do not link device library for CUDA/HIP device compilation">;
 def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">;
+def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
 def nomultidefs : Flag<["-"], "nomultidefs">;

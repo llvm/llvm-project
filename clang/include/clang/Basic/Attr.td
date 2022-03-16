@@ -870,6 +870,7 @@ def Availability : InheritableAttr {
              .Case("macos", "macOS")
              .Case("tvos", "tvOS")
              .Case("watchos", "watchOS")
+             .Case("driverkit", "DriverKit")
              .Case("ios_app_extension", "iOS (App Extension)")
              .Case("macos_app_extension", "macOS (App Extension)")
              .Case("tvos_app_extension", "tvOS (App Extension)")

@@ -76,7 +76,10 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
 #if defined(CLANG_DEFAULT_STD_CXX)
     return CLANG_DEFAULT_STD_CXX;
 #else
-    return LangStandard::lang_gnucxx14;
+    if (T.isDriverKit())
+      return LangStandard::lang_gnucxx17;
+    else
+      return LangStandard::lang_gnucxx14;
 #endif
   case Language::RenderScript:
     return LangStandard::lang_c99;

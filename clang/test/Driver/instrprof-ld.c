@@ -107,6 +107,14 @@
 // CHECK-WATCHOS-ARMV7: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}darwin{{/|\\\\}}libclang_rt.profile_watchos.a"
 //
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -target x86_64-apple-driverkit19.0 -arch x86_64 -fprofile-instr-generate -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:   | FileCheck --check-prefix=CHECK-DRIVERKIT-X86_64 %s
+//
+// CHECK-DRIVERKIT-X86_64: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-DRIVERKIT-X86_64: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}darwin{{/|\\\\}}libclang_rt.profile_driverkit.a"
+//
+// RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i386-pc-win32 -fprofile-instr-generate \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:   | FileCheck --check-prefix=CHECK-WINDOWS-I386 %s

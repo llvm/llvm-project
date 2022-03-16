@@ -66,6 +66,9 @@
 // RUN: %clang -### -c -g %s -target arm64-apple-tvos9.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_STANDALONE \
 // RUN:                         -check-prefix=G_DWARF4 %s
+// RUN: %clang -### -c -g %s -target x86_64-apple-driverkit19.0 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_STANDALONE \
+// RUN:                         -check-prefix=G_DWARF4 %s
 // RUN: %clang -### -c -fsave-optimization-record %s \
 // RUN:        -target x86_64-apple-darwin 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLTO_ONLY %s
