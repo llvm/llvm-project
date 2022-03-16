@@ -5,10 +5,11 @@ target datalayout = "p:64:64:64"
 ; %gep.idx and %gep.6 must-alias if %mul overflows (e.g. %idx == 52).
 define void @may_overflow_mul_add_i8([16 x i8]* %ptr, i8 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_add_i8: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 6): [16 x i8]* %ptr, i8* %gep.6
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -6): i8* %gep.6, [16 x i8]* %ptr
 ; CHECK-NEXT:    MayAlias:  i8* %gep.6, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul i8 %idx, 5
   %add = add i8 %mul, 2
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i8 %add
@@ -20,10 +21,11 @@ define void @may_overflow_mul_add_i8([16 x i8]* %ptr, i8 %idx) {
 
 define void @nuw_nsw_mul_add_i8([16 x i8]* %ptr, i8 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_mul_add_i8: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias: [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 6): [16 x i8]* %ptr, i8* %gep.6
+; CHECK-NEXT:    MayAlias: i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -6): i8* %gep.6, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.6, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul nuw nsw i8 %idx, 5
   %add = add nuw nsw i8 %mul, 2
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i8 %add
@@ -36,10 +38,11 @@ define void @nuw_nsw_mul_add_i8([16 x i8]* %ptr, i8 %idx) {
 ; %gep.idx and %gep.3 must-alias if %mul overflows (e.g. %idx == 52).
 define void @may_overflow_mul_sub_i8([16 x i8]* %ptr, i8 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_sub_i8: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul i8 %idx, 5
   %sub = sub i8 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i8 %sub
@@ -51,10 +54,11 @@ define void @may_overflow_mul_sub_i8([16 x i8]* %ptr, i8 %idx) {
 
 define void @nuw_nsw_mul_sub_i8([16 x i8]* %ptr, i8 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_mul_sub_i8: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul nuw nsw i8 %idx, 5
   %sub = sub nuw nsw i8 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i8 %sub
@@ -68,10 +72,11 @@ define void @nuw_nsw_mul_sub_i8([16 x i8]* %ptr, i8 %idx) {
 ; (e.g. %idx == 3689348814741910323).
 define void @may_overflow_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_sub_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul i64 %idx, 5
   %sub = sub i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -83,10 +88,11 @@ define void @may_overflow_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 
 define void @nuw_nsw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_mul_sub_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul nuw nsw i64 %idx, 5
   %sub = sub nuw nsw i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -98,10 +104,11 @@ define void @nuw_nsw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 
 define void @only_nsw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: only_nsw_mul_sub_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul nsw i64 %idx, 5
   %sub = sub nsw i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -113,10 +120,11 @@ define void @only_nsw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 
 define void @only_nuw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: only_nuw_mul_sub_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul nuw i64 %idx, 5
   %sub = sub nuw i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -130,10 +138,11 @@ define void @only_nuw_mul_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; because we multiply by a power-of-2.
 define void @may_overflow_mul_pow2_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: may_overflow_mul_pow2_sub_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul i64 %idx, 8
   %sub = sub i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -146,10 +155,11 @@ define void @may_overflow_mul_pow2_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; Multiplies by power-of-2 preserves modulo and the sub does not wrap.
 define void @mul_pow2_sub_nsw_nuw_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: mul_pow2_sub_nsw_nuw_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul i64 %idx, 8
   %sub = sub nuw nsw i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -161,10 +171,11 @@ define void @mul_pow2_sub_nsw_nuw_i64([16 x i8]* %ptr, i64 %idx) {
 
 define void @may_overflow_shl_sub_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: may_overflow_shl_sub_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = shl i64 %idx, 2
   %sub = sub i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -176,10 +187,11 @@ define void @may_overflow_shl_sub_i64([16 x i8]* %ptr, i64 %idx) {
 
 define void @shl_sub_nsw_nuw_i64([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: shl_sub_nsw_nuw_i64: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3): [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3): i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = shl i64 %idx, 3
   %sub = sub nsw nuw i64 %mul, 1
   %gep.idx = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %sub
@@ -192,10 +204,11 @@ define void @shl_sub_nsw_nuw_i64([16 x i8]* %ptr, i64 %idx) {
 ; %gep.idx and %gep.3 must-alias if %mul overflows (e.g. %idx == 110).
 define void @may_overflow_i32_sext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: may_overflow_i32_sext: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3):  i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul i32 %idx, 678152731
   %sub = sub i32 %mul, 1582356375
   %sub.ext = sext i32 %sub to i64
@@ -208,10 +221,11 @@ define void @may_overflow_i32_sext([16 x i8]* %ptr, i32 %idx) {
 
 define void @nuw_nsw_i32_sext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_i32_sext: 3 pointers, 0 call sites
-; CHECK-NEXT:    NoAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    NoAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3):  i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:   i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul nuw nsw i32 %idx, 678152731
   %sub = sub nuw nsw i32 %mul, 1582356375
   %sub.ext = sext i32 %sub to i64
@@ -225,10 +239,11 @@ define void @nuw_nsw_i32_sext([16 x i8]* %ptr, i32 %idx) {
 ; %gep.idx and %gep.3 must-alias if %mul overflows (e.g. %idx == 110).
 define void @may_overflow_i32_zext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: may_overflow_i32_zext: 3 pointers, 0 call sites
-; CHECK-NEXT:    MayAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    MayAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3):  i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    MayAlias:  i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul i32 %idx, 678152731
   %sub = sub i32 %mul, 1582356375
   %sub.ext = zext i32 %sub to i64
@@ -241,10 +256,11 @@ define void @may_overflow_i32_zext([16 x i8]* %ptr, i32 %idx) {
 
 define void @nuw_nsw_i32_zext([16 x i8]* %ptr, i32 %idx) {
 ; CHECK-LABEL: Function: nuw_nsw_i32_zext: 3 pointers, 0 call sites
-; CHECK-NEXT:    NoAlias:  [16 x i8]* %ptr, i8* %gep.idx
-; CHECK-NEXT:    PartialAlias (off 3):  [16 x i8]* %ptr, i8* %gep.3
+; CHECK-NEXT:    NoAlias:  i8* %gep.idx, [16 x i8]* %ptr
+; CHECK-NEXT:    PartialAlias (off -3):  i8* %gep.3, [16 x i8]* %ptr
 ; CHECK-NEXT:    NoAlias:   i8* %gep.3, i8* %gep.idx
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul = mul nuw nsw i32 %idx, 678152731
   %sub = sub nuw nsw i32 %mul, 1582356375
   %sub.ext = zext i32 %sub to i64
@@ -259,10 +275,11 @@ define void @nuw_nsw_i32_zext([16 x i8]* %ptr, i32 %idx) {
 ; %gep.mul.1 and %gep.sub.2 may alias.
 define void @may_overflow_pointer_diff([16 x i8]* %ptr, i64 %idx) {
 ; CHECK-LABEL: Function: may_overflow_pointer_diff: 3 pointers, 0 call sites
-; CHECK-NEXT:  MayAlias: [16 x i8]* %ptr, i8* %gep.mul.1
-; CHECK-NEXT:  MayAlias: [16 x i8]* %ptr, i8* %gep.sub.2
+; CHECK-NEXT:  MayAlias: i8* %gep.mul.1, [16 x i8]* %ptr
+; CHECK-NEXT:  MayAlias: i8* %gep.sub.2, [16 x i8]* %ptr
 ; CHECK-NEXT:  MayAlias:  i8* %gep.mul.1, i8* %gep.sub.2
 ;
+  load [16 x i8], [16 x i8]* %ptr
   %mul.1 = mul i64 %idx, 6148914691236517207
   %gep.mul.1  = getelementptr [16 x i8], [16 x i8]* %ptr, i32 0, i64 %mul.1
   store i8 1, i8* %gep.mul.1, align 1
@@ -278,19 +295,21 @@ define void @may_overflow_pointer_diff([16 x i8]* %ptr, i64 %idx) {
 ;  (((18446744073709551614 * 8) % 2^64 + 6 * 2) % 2^64 + 10) % 2^64 == 6.
 define void @may_overflow_mul_scale_neg([200 x [ 6 x i8]]* %ptr, i64 %idx.1,i64 %idx.2) {
 ; CHECK-LABEL: Function: may_overflow_mul_scale_neg: 4 pointers, 2 call sites
-; CHECK-NEXT:  MustAlias:   [200 x [6 x i8]]* %ptr, i8* %bc
-; CHECK-NEXT:  PartialAlias (off 6):    [200 x [6 x i8]]* %ptr, i8* %gep.1
+; CHECK-NEXT:  MustAlias:   i8* %bc, [200 x [6 x i8]]* %ptr
+; CHECK-NEXT:  PartialAlias (off -6):    i8* %gep.1, [200 x [6 x i8]]* %ptr
 ; CHECK-NEXT:  NoAlias: i8* %bc, i8* %gep.1
-; CHECK-NEXT:  MayAlias:    [200 x [6 x i8]]* %ptr, i8* %gep.idx
+; CHECK-NEXT:  MayAlias:    i8* %gep.idx, [200 x [6 x i8]]* %ptr
 ; CHECK-NEXT:  MayAlias: i8* %bc, i8* %gep.idx
 ; CHECK-NEXT:  MayAlias: i8* %gep.1, i8* %gep.idx
 ;
+  load [200 x [6 x i8]], [200 x [6 x i8]]* %ptr
   %idx.1.pos = icmp sge i64 %idx.1, 0
   call void @llvm.assume(i1 %idx.1.pos)
   %idx.2.pos = icmp sge i64 %idx.2, 0
   call void @llvm.assume(i1 %idx.2.pos)
 
   %bc = bitcast [ 200 x [ 6 x i8 ] ]* %ptr to i8*
+  load i8, i8* %bc
   %gep.1 = getelementptr i8, i8* %bc, i64 6
   store i8 1, i8* %gep.1, align 1
 
@@ -311,6 +330,7 @@ define i8 @mul_may_overflow_var_nonzero_minabsvarindex_one_index([2000 x i8]* %a
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.idx
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.917
 ;
+  load [2000 x i8], [2000 x i8]* %arr
   %or = or i64 %v, 1
   %idx = mul i64 %or, 1844674407370955
   %gep.idx = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i64 %idx
@@ -331,7 +351,7 @@ define i8 @mul_nsw_var_nonzero_minabsvarindex_one_index([2000 x i8]* %arr, i8 %x
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.idx
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.917
 ;
-
+  load [2000 x i8], [2000 x i8]* %arr
   %or = or i64 %v, 1
   %idx = mul nsw i64 %or, 1844674407370955
   %gep.idx = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i64 %idx

@@ -6,6 +6,8 @@ declare void @llvm.experimental.guard(i1, ...)
 declare void @unknown_but_readonly() readonly
 
 define void @test1(i8* %P, i8* %Q) {
+  load i8, i8* %P
+  load i8, i8* %Q
   tail call void(i1,...) @llvm.experimental.guard(i1 true) [ "deopt"() ]
   tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %P, i8* %Q, i64 12, i1 false)
   ret void

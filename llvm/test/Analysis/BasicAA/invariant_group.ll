@@ -35,9 +35,12 @@ define i8 @testLaunderInvariantGroupIsNotEscapeSource() {
 entry:
   %a = alloca %struct.A, align 8
   %a.bitcast = bitcast %struct.A* %a to i8*
+  load %struct.A, %struct.A* %a
+  load i8, i8* %a.bitcast
   %n = getelementptr inbounds %struct.A, %struct.A* %a, i64 0, i32 1
   store i8 42, i8* %n
   %a.laundered = call i8* @llvm.launder.invariant.group.p0i8(i8* nonnull %a.bitcast)
+  load i8, i8* %a.laundered
   %n.laundered = getelementptr inbounds i8, i8* %a.laundered, i64 8
   %v = load i8, i8* %n.laundered
 ; make sure that the load from %n.laundered to %v aliases the store of 42 to %n

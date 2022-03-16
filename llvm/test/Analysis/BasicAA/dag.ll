@@ -11,12 +11,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: MustAlias: i16* %bigbase, i8* %phi
 define i8 @foo(i8* %base, i1 %x, i1 %w) {
 entry:
+  load i8, i8* %base
   br i1 %w, label %wa, label %wb
 wa:
   %wwa = bitcast i8* %base to i8*
+  load i8, i8* %wwa
   br label %wc
 wb:
   %wwb = bitcast i8* %base to i8*
+  load i8, i8* %wwb
   br label %wc
 wc:
   %first = phi i8* [ %wwa, %wa ], [ %wwb, %wb ]
