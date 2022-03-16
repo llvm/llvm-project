@@ -21,8 +21,10 @@ template <int KIND>
 bool EditRealInput(IoStatementState &, const DataEdit &, void *);
 
 bool EditLogicalInput(IoStatementState &, const DataEdit &, bool &);
-bool EditDefaultCharacterInput(
-    IoStatementState &, const DataEdit &, char *, std::size_t);
+
+template <typename CHAR>
+bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, CHAR *, std::size_t);
 
 extern template bool EditRealInput<2>(
     IoStatementState &, const DataEdit &, void *);
@@ -37,5 +39,13 @@ extern template bool EditRealInput<10>(
 // TODO: double/double
 extern template bool EditRealInput<16>(
     IoStatementState &, const DataEdit &, void *);
+
+extern template bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char *, std::size_t);
+extern template bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char16_t *, std::size_t);
+extern template bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char32_t *, std::size_t);
+
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_EDIT_INPUT_H_

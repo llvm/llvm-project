@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "unit.h"
-#include "environment.h"
 #include "io-error.h"
 #include "lock.h"
 #include "unit-map.h"
@@ -233,7 +232,6 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   error.isUnformatted = false;
   errorOutput = &error;
 
-  // TODO: Set UTF-8 mode from the environment
   unitMap = newUnitMap;
   return *unitMap;
 }
@@ -372,18 +370,6 @@ std::size_t ExternalFileUnit::GetNextInputBytes(
   }
   p = FrameNextInput(handler, length);
   return p ? length : 0;
-}
-
-std::optional<char32_t> ExternalFileUnit::GetCurrentChar(
-    IoErrorHandler &handler) {
-  const char *p{nullptr};
-  std::size_t bytes{GetNextInputBytes(p, handler)};
-  if (bytes == 0) {
-    return std::nullopt;
-  } else {
-    // TODO: UTF-8 decoding; may have to get more bytes in a loop
-    return *p;
-  }
 }
 
 const char *ExternalFileUnit::FrameNextInput(

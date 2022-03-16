@@ -66,6 +66,7 @@ enum Iostat {
   IostatShortRead,
   IostatMissingTerminator,
   IostatBadUnformattedRecord,
+  IostatUTF8Decoding,
 };
 
 const char *IostatErrorString(int);

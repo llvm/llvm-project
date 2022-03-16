@@ -94,10 +94,30 @@ private:
 bool ListDirectedLogicalOutput(
     IoStatementState &, ListDirectedStatementState<Direction::Output> &, bool);
 bool EditLogicalOutput(IoStatementState &, const DataEdit &, bool);
-bool ListDirectedDefaultCharacterOutput(IoStatementState &,
-    ListDirectedStatementState<Direction::Output> &, const char *, std::size_t);
-bool EditDefaultCharacterOutput(
-    IoStatementState &, const DataEdit &, const char *, std::size_t);
+
+template <typename CHAR>
+bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const CHAR *,
+    std::size_t chars);
+extern template bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const char *,
+    std::size_t chars);
+extern template bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const char16_t *,
+    std::size_t chars);
+extern template bool ListDirectedCharacterOutput(IoStatementState &,
+    ListDirectedStatementState<Direction::Output> &, const char32_t *,
+    std::size_t chars);
+
+template <typename CHAR>
+bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const CHAR *, std::size_t chars);
+extern template bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char *, std::size_t chars);
+extern template bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char16_t *, std::size_t chars);
+extern template bool EditCharacterOutput(
+    IoStatementState &, const DataEdit &, const char32_t *, std::size_t chars);
 
 extern template bool EditIntegerOutput<1>(
     IoStatementState &, const DataEdit &, std::int8_t);
