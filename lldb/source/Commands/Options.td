@@ -138,17 +138,17 @@ let Command = "breakpoint set" in {
   def breakpoint_set_name : Option<"name", "n">, Group<3>, Arg<"FunctionName">,
     Completion<"Symbol">, Required,
     Desc<"Set the breakpoint by function name.  Can be repeated multiple times "
-    "to makeone breakpoint for multiple names">;
+    "to make one breakpoint for multiple names.">;
   def breakpoint_set_source_regexp_function :
     Option<"source-regexp-function", "X">, Group<9>, Arg<"FunctionName">,
     Completion<"Symbol">,
     Desc<"When used with '-p' limits the source regex to source contained in "
-    "the namedfunctions.  Can be repeated multiple times.">;
+    "the named functions.  Can be repeated multiple times.">;
   def breakpoint_set_fullname : Option<"fullname", "F">, Group<4>,
     Arg<"FullName">, Required, Completion<"Symbol">,
     Desc<"Set the breakpoint by fully qualified function names. For C++ this "
     "means namespaces and all arguments, and for Objective-C this means a full "
-    "functionprototype with class and selector.  Can be repeated multiple times"
+    "function prototype with class and selector.  Can be repeated multiple times"
     " to make one breakpoint for multiple names.">;
   def breakpoint_set_selector : Option<"selector", "S">, Group<5>,
     Arg<"Selector">, Required,
@@ -163,8 +163,8 @@ let Command = "breakpoint set" in {
   def breakpoint_set_basename : Option<"basename", "b">, Group<8>,
     Arg<"FunctionName">, Required, Completion<"Symbol">,
     Desc<"Set the breakpoint by function basename (C++ namespaces and arguments"
-    " will beignored).  Can be repeated multiple times to make one breakpoint "
-    "for multiplesymbols.">;
+    " will be ignored).  Can be repeated multiple times to make one breakpoint "
+    "for multiple symbols.">;
   def breakpoint_set_source_pattern_regexp :
     Option<"source-pattern-regexp", "p">, Group<9>, Arg<"RegularExpression">,
     Required, Desc<"Set the breakpoint by specifying a regular expression which"
@@ -335,7 +335,7 @@ let Command = "disassemble" in {
     Arg<"AddressOrExpression">,
     Desc<"Disassemble function containing this address.">;
   def disassemble_options_force : Option<"force", "\\x01">, Groups<[2,3,4,5,7]>,
-    Desc<"Force dissasembly of large functions.">;
+    Desc<"Force disassembly of large functions.">;
 }
 
 let Command = "expression" in {
@@ -410,7 +410,7 @@ let Command = "frame recognizer add" in {
     Desc<"If true, only apply this recognizer to frames whose PC currently points to the "
     "first instruction of the specified function. If false, the recognizer "
     "will always be applied, regardless of the current position within the specified function. The "
-    "implementor should keep in mind that some features, e.g. accessing function argument "
+    "implementer should keep in mind that some features, e.g. accessing function argument "
     "values via $arg<N>, are not guaranteed to work reliably in this case, so extra care must "
     "be taken to make the recognizer operate correctly. Defaults to true.">;
 }
