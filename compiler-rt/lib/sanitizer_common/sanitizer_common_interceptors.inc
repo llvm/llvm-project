@@ -7974,7 +7974,7 @@ INTERCEPTOR(int, regcomp, void *preg, const char *pattern, int cflags) {
   if (pattern)
     COMMON_INTERCEPTOR_READ_RANGE(ctx, pattern, internal_strlen(pattern) + 1);
   int res = REAL(regcomp)(preg, pattern, cflags);
-  if (!res)
+  if (preg)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, preg, struct_regex_sz);
   return res;
 }
