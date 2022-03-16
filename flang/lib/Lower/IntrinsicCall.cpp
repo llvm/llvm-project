@@ -427,6 +427,10 @@ struct IntrinsicLibrary {
   /// if the argument is an integer, into llvm intrinsics if the argument is
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
+                                mlir::Value, mlir::Value)>
+  fir::ExtendedValue genAdjustRtCall(mlir::Type,
+                                     llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAll(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAllocated(mlir::Type,
@@ -562,6 +566,14 @@ static constexpr bool handleDynamicOptional = true;
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
+    {"adjustl",
+     &I::genAdjustRtCall<fir::runtime::genAdjustL>,
+     {{{"string", asAddr}}},
+     /*isElemental=*/true},
+    {"adjustr",
+     &I::genAdjustRtCall<fir::runtime::genAdjustR>,
+     {{{"string", asAddr}}},
+     /*isElemental=*/true},
     {"aimag", &I::genAimag},
     {"all",
      &I::genAll,
@@ -1428,6 +1440,37 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
     return genRuntimeCall("hypot", resultType, args);
   }
   llvm_unreachable("unexpected type in ABS argument");
+}
+
+// ADJUSTL & ADJUSTR
+template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
+                              mlir::Value, mlir::Value)>
+fir::ExtendedValue
+IntrinsicLibrary::genAdjustRtCall(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value string = builder.createBox(loc, args[0]);
+  // Create a mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  // Call the runtime -- the runtime will allocate the result.
+  CallRuntime(builder, loc, resultIrBox, string);
+
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  fir::ExtendedValue res =
+      fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+        addCleanUpForTemp(loc, fir::getBase(box));
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "result of ADJUSTL is not a scalar character");
+      });
 }
 
 // AIMAG
