@@ -419,6 +419,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     // Succ (e.g. the case when adding a condition from a pre-header to a loop
     // header).
     auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
+      if (BB.getSingleSuccessor()) {
+        assert(BB.getSingleSuccessor() == Succ);
+        return true;
+      }
       return any_of(successors(&BB),
                     [Succ](const BasicBlock *S) { return S != Succ; }) &&
              all_of(predecessors(Succ), [&BB, &DT, Succ](BasicBlock *Pred) {
