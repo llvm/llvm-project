@@ -218,7 +218,7 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
 
 template <class _Context>
 _LIBCPP_HIDE_FROM_ABI constexpr uint32_t
-__substitute_arg_id(basic_format_arg<_Context> __arg) {
+__substitute_arg_id(basic_format_arg<_Context> _Arg) {
   return visit_format_arg(
       [](auto __arg) -> uint32_t {
         using _Type = decltype(__arg);
@@ -242,7 +242,7 @@ __substitute_arg_id(basic_format_arg<_Context> __arg) {
           __throw_format_error("A format-spec arg-id replacement argument "
                                "isn't an integral type");
       },
-      __arg);
+      _Arg);
 }
 
 class _LIBCPP_TYPE_VIS __parser_width {
@@ -1037,7 +1037,7 @@ concept __utf16_or_32_character = __utf16_character<_CharT> || __utf32_character
  * character.
  */
 _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_3(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c < 0x1'0000,
+  _LIBCPP_ASSERT(__c < 0x10000,
                  "Use __column_width_4 or __column_width for larger values");
 
   // clang-format off
@@ -1062,7 +1062,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_3(uint32_t __c) noexce
  * 4-byte UTF-8 character.
  */
 _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_4(uint32_t __c) noexcept {
-  _LIBCPP_ASSERT(__c >= 0x1'0000,
+  _LIBCPP_ASSERT(__c >= 0x10000,
                  "Use __column_width_3 or __column_width for smaller values");
 
   // clang-format off
@@ -1080,7 +1080,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width_4(uint32_t __c) noexce
  * The general case, accepting all values.
  */
 _LIBCPP_HIDE_FROM_ABI inline constexpr int __column_width(uint32_t __c) noexcept {
-  if (__c < 0x1'0000)
+  if (__c < 0x10000)
     return __column_width_3(__c);
 
   return __column_width_4(__c);
@@ -1240,7 +1240,7 @@ __estimate_column_width(const _CharT* __first, const _CharT* __last,
       __c -= 0xd800;
       __c <<= 10;
       __c += (*(__first + 1) - 0xdc00);
-      __c += 0x10'000;
+      __c += 0x10000;
 
       __result += __column_width_4(__c);
       if (__result > __maximum)

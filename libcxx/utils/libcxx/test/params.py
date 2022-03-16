@@ -20,7 +20,6 @@ _warningFlags = [
   '-Wno-attributes',
   '-Wno-pessimizing-move',
   '-Wno-c++11-extensions',
-  '-Wno-user-defined-literals',
   '-Wno-noexcept-type',
   '-Wno-aligned-allocation-unavailable',
   '-Wno-atomic-alignment',
@@ -28,6 +27,11 @@ _warningFlags = [
   # GCC warns about places where we might want to add sized allocation/deallocation
   # functions, but we know better what we're doing/testing in the test suite.
   '-Wno-sized-deallocation',
+
+  # Turn off warnings about user-defined literals with reserved suffixes. Those are
+  # just noise since we are testing the Standard Library itself.
+  '-Wno-literal-suffix', # GCC
+  '-Wno-user-defined-literals', # Clang
 
   # These warnings should be enabled in order to support the MSVC
   # team using the test suite; They enable the warnings below and
@@ -117,9 +121,10 @@ DEFAULT_PARAMETERS = [
 
   Parameter(name='enable_warnings', choices=[True, False], type=bool, default=True,
             help="Whether to enable warnings when compiling the test suite.",
-            actions=lambda warnings: [] if not warnings else [
-              AddOptionalWarningFlag(w) for w in _warningFlags
-            ]),
+            actions=lambda warnings: [] if not warnings else
+              [AddOptionalWarningFlag(w) for w in _warningFlags] +
+              [AddCompileFlag('-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER')]
+            ),
 
   Parameter(name='debug_level', choices=['', '0', '1'], type=str, default='',
             help="The debugging level to enable in the test suite.",

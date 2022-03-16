@@ -211,16 +211,6 @@ void test_T_assignment_basic() {
     assert(v.index() == 1);
     assert(std::get<1>(v) == nullptr);
   }
-  {
-    std::variant<bool volatile, int> v = 42;
-    v = false;
-    assert(v.index() == 0);
-    assert(!std::get<0>(v));
-    bool lvt = true;
-    v = lvt;
-    assert(v.index() == 0);
-    assert(std::get<0>(v));
-  }
 #if !defined(TEST_VARIANT_HAS_NO_REFERENCES)
   {
     using V = std::variant<int &, int &&, long>;

@@ -1470,6 +1470,7 @@ public:
   simd operator+() const;
   simd operator-() const;
 
+#if 0
   // binary operators [simd.binary]
   friend simd operator+(const simd&, const simd&);
   friend simd operator-(const simd&, const simd&);
@@ -1506,6 +1507,7 @@ public:
   friend mask_type operator<=(const simd&, const simd&);
   friend mask_type operator>(const simd&, const simd&);
   friend mask_type operator<(const simd&, const simd&);
+#endif
 };
 
 // [simd.mask.class]
@@ -1545,6 +1547,7 @@ public:
   // unary operators [simd.mask.unary]
   simd_mask operator!() const noexcept;
 
+#if 0
   // simd_mask binary operators [simd.mask.binary]
   friend simd_mask operator&&(const simd_mask&, const simd_mask&) noexcept;
   friend simd_mask operator||(const simd_mask&, const simd_mask&) noexcept;
@@ -1560,6 +1563,7 @@ public:
   // simd_mask compares [simd.mask.comparison]
   friend simd_mask operator==(const simd_mask&, const simd_mask&) noexcept;
   friend simd_mask operator!=(const simd_mask&, const simd_mask&) noexcept;
+#endif
 };
 
 #endif // _LIBCPP_STD_VER >= 17
