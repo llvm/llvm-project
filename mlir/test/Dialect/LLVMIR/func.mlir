@@ -180,19 +180,9 @@ module {
 // -----
 
 module {
-  // expected-error@+1 {{entry block argument #0 is not of LLVM type}}
+  // expected-error@+1 {{entry block argument #0('tensor<*xf32>') must match the type of the corresponding argument in function signature('i64')}}
   "llvm.func"() ({
   ^bb0(%arg0: tensor<*xf32>):
-    llvm.return
-  }) {sym_name = "wrong_arg_number", type = !llvm.func<void (i64)>} : () -> ()
-}
-
-// -----
-
-module {
-  // expected-error@+1 {{entry block argument #0 does not match the function signature}}
-  "llvm.func"() ({
-  ^bb0(%arg0: i32):
     llvm.return
   }) {sym_name = "wrong_arg_number", type = !llvm.func<void (i64)>} : () -> ()
 }
