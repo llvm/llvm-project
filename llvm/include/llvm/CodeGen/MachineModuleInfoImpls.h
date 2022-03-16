@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include <cassert>
 
 namespace llvm {
