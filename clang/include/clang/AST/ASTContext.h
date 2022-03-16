@@ -264,6 +264,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<PipeType> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::FoldingSet<DependentBitIntType> DependentBitIntTypes;
+  llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
 
   mutable llvm::FoldingSet<QualifiedTemplateName> QualifiedTemplateNames;
   mutable llvm::FoldingSet<DependentTemplateName> DependentTemplateNames;
@@ -1594,6 +1595,9 @@ public:
   QualType getAttributedType(attr::Kind attrKind,
                              QualType modifiedType,
                              QualType equivalentType);
+
+  QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
+                                   QualType Wrapped);
 
   QualType getSubstTemplateTypeParmType(const TemplateTypeParmType *Replaced,
                                         QualType Replacement) const;
