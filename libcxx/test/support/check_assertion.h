@@ -42,9 +42,9 @@ struct DebugInfoMatcher {
   static constexpr const char* any_file = "*";
   static constexpr const char* any_msg = "*";
 
-  constexpr DebugInfoMatcher() : is_empty(true), msg(any_msg, __builtin_strlen(any_msg)), file(any_file, __builtin_strlen(any_file)), line(any_line) { }
-  constexpr DebugInfoMatcher(const char* msg_, const char* file_ = any_file, int line_ = any_line)
-    : is_empty(false), msg(msg_, __builtin_strlen(msg_)), file(file_, __builtin_strlen(file_)), line(line_) {}
+  constexpr DebugInfoMatcher() : is_empty_(true), msg_(any_msg, __builtin_strlen(any_msg)), file_(any_file, __builtin_strlen(any_file)), line_(any_line) { }
+  constexpr DebugInfoMatcher(const char* msg, const char* file = any_file, int line = any_line)
+    : is_empty_(false), msg_(msg, __builtin_strlen(msg)), file_(file, __builtin_strlen(file)), line_(line) {}
 
   bool Matches(std::__libcpp_debug_info const& got) const {
     assert(!empty() && "empty matcher");
@@ -59,25 +59,25 @@ struct DebugInfoMatcher {
   }
 
   std::string ToString() const {
-    std::string result = "msg = \""; result += msg; result += "\"\n";
-    result += "line = " + (line == any_line ? "'*'" : std::to_string(line)) + "\n";
-    result += "file = " + (file == any_file ? "'*'" : std::string(any_file));
+    std::string result = "msg = \""; result += msg_; result += "\"\n";
+    result += "line = " + (line_ == any_line ? "'*'" : std::to_string(line_)) + "\n";
+    result += "file = " + (file_ == any_file ? "'*'" : std::string(file_));
     return result;
   }
 
-  bool empty() const { return is_empty; }
+  bool empty() const { return is_empty_; }
 private:
   bool CheckLineMatches(int got_line) const {
-    if (line == any_line)
+    if (line_ == any_line)
       return true;
-    return got_line == line;
+    return got_line == line_;
   }
 
   bool CheckFileMatches(std::string_view got_file) const {
     assert(!empty() && "empty matcher");
-    if (file == any_file)
+    if (file_ == any_file)
       return true;
-    std::size_t found_at = got_file.find(file);
+    std::size_t found_at = got_file.find(file_);
     if (found_at == std::string_view::npos)
       return false;
     // require the match start at the beginning of the file or immediately after
@@ -88,24 +88,24 @@ private:
         return false;
     }
     // require the match goes until the end of the string.
-    return got_file.substr(found_at) == file;
+    return got_file.substr(found_at) == file_;
   }
 
   bool CheckMessageMatches(std::string_view got_msg) const {
     assert(!empty() && "empty matcher");
-    if (msg == any_msg)
+    if (msg_ == any_msg)
       return true;
-    std::size_t found_at = got_msg.find(msg);
+    std::size_t found_at = got_msg.find(msg_);
     if (found_at == std::string_view::npos)
       return false;
     // Allow any match
     return true;
   }
 private:
-  bool is_empty;
-  std::string_view msg;
-  std::string_view file;
-  int line;
+  bool is_empty_;
+  std::string_view msg_;
+  std::string_view file_;
+  int line_;
 };
 
 static constexpr DebugInfoMatcher AnyMatcher(DebugInfoMatcher::any_msg);
@@ -143,7 +143,6 @@ struct DeathTest {
     }
     std::exit(RK_MatchFailure);
   }
-
 
   DeathTest(DebugInfoMatcher const& Matcher) : matcher_(Matcher) {}
 
