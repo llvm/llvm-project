@@ -165,7 +165,7 @@ struct OneShotBufferizePass
     if (!options) {
       // Make new bufferization options if none were provided when creating the
       // pass.
-      opt.allowReturnMemref = allowReturnMemref;
+      opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
       opt.createDeallocs = createDeallocs;

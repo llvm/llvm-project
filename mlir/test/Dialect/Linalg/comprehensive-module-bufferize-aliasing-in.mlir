@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-memref always-aliasing-with-dest=0" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-comprehensive-module-bufferize="allow-return-allocs always-aliasing-with-dest=0" -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @linalg_op_bufferizes_inplace_with_input
 //  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>, %[[t3:.*]]: memref<?x?xf32, #{{.*}}>

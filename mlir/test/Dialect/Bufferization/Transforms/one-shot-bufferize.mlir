@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref allow-unknown-ops" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops" -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // CHECK-LABEL: func @use_tensor_func_arg(
 //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
@@ -35,6 +35,7 @@ func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[casted]]
   %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
+  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
 }
@@ -104,31 +105,4 @@ func @copy_deallocated() -> tensor<10xf32> {
   return %0 : tensor<10xf32>
 }
 
-// -----
-
-// CHECK-LABEL: func @buffer_not_deallocated(
-//  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
-func @buffer_not_deallocated(%t : tensor<?xf32>, %c : i1) -> tensor<?xf32> {
-  // CHECK: %[[r:.*]] = scf.if %{{.*}} {
-  %r = scf.if %c -> tensor<?xf32> {
-    // CHECK: %[[some_op:.*]] = "test.some_op"
-    // CHECK: %[[alloc:.*]] = memref.alloc(%[[some_op]])
-    // CHECK: %[[casted:.*]] = memref.cast %[[alloc]]
-    // CHECK-NOT: dealloc
-    // CHECK: scf.yield %[[casted]]
-    %sz = "test.some_op"() : () -> (index)
-    %0 = linalg.init_tensor[%sz] : tensor<?xf32>
-    scf.yield %0 : tensor<?xf32>
-  } else {
-  // CHECK: } else {
-    // CHECK: %[[m:.*]] = bufferization.to_memref %[[t]]
-    // CHECK: scf.yield %[[m]]
-    scf.yield %t : tensor<?xf32>
-  }
-  // CHECK: }
-  // CHECK-NOT: dealloc
-  // CHECK: %[[r_tensor:.*]] = bufferization.to_tensor %[[r]]
-  // CHECK: return %[[r_tensor]]
-  return %r : tensor<?xf32>
-}
 

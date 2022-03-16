@@ -1045,7 +1045,7 @@ LogicalResult mlir::linalg::comprehensive_bufferize::runModuleBufferize(
     if (failed(bufferizeFuncOpBoundary(funcOp, rewriter, bufferizationState)))
       return failure();
 
-    if (!options.allowReturnMemref &&
+    if (!options.allowReturnAllocs &&
         llvm::any_of(funcOp.getType().getResults(), [](Type t) {
           return t.isa<MemRefType, UnrankedMemRefType>();
         })) {

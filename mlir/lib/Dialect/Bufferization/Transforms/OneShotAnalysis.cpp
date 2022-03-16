@@ -37,7 +37,7 @@
 //
 // This analysis caters to high-performance codegen where buffer reuse is deemed
 // critical: the analysis should fail if the bufferized form of the function
-// needs to return a buffer, unless `allowReturnMemref` is enabled.
+// needs to return a buffer, unless `allowReturnAllocs` is enabled.
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 
@@ -811,7 +811,7 @@ LogicalResult bufferization::analyzeOp(Operation *op,
   }
 
   bool failedAnalysis = false;
-  if (!options.allowReturnMemref) {
+  if (!options.allowReturnAllocs) {
     SmallVector<Operation *> newOps;
     failedAnalysis |=
         failed(assertDestinationPassingStyle(op, state, aliasInfo, newOps));
