@@ -188,4 +188,12 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::FuncOp"> {
   let constructor = "::fir::createMemoryAllocationPass()";
 }
 
+def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
+  let summary = "Region simplification";
+  let description = [{
+    Run region DCE and erase unreachable blocks in regions.
+  }];
+  let constructor = "::fir::createSimplifyRegionLitePass()";
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

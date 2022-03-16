@@ -159,6 +159,11 @@ public:
   /// Generate the type from a Variable
   virtual mlir::Type genType(const pft::Variable &) = 0;
 
+  /// Register a runtime derived type information object symbol to ensure its
+  /// object will be generated as a global.
+  virtual void registerRuntimeTypeInfo(mlir::Location loc,
+                                       SymbolRef typeInfoSym) = 0;
+
   //===--------------------------------------------------------------------===//
   // Locations
   //===--------------------------------------------------------------------===//

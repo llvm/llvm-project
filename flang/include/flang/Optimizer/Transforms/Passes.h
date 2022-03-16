@@ -38,6 +38,7 @@ std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
 std::unique_ptr<mlir::Pass>
 createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);
 std::unique_ptr<mlir::Pass> createAnnotateConstantOperandsPass();
+std::unique_ptr<mlir::Pass> createSimplifyRegionLitePass();
 
 // declarative passes
 #define GEN_PASS_REGISTRATION
