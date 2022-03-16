@@ -53,10 +53,6 @@ enum class MutexError : int {
 
 namespace __llvm_libc {
 
-static_assert(sizeof(Mutex) <= sizeof(mtx_t),
-              "The public mtx_t type cannot accommodate the internal mutex "
-              "type.");
-
 // An RAII class for easy locking and unlocking of mutexes.
 class MutexLock {
   Mutex *mutex;

@@ -16,7 +16,6 @@
 #include <linux/futex.h>
 #include <stdint.h>
 #include <sys/syscall.h> // For syscall numbers.
-#include <threads.h>
 
 namespace __llvm_libc {
 
@@ -55,12 +54,7 @@ public:
     return MutexError::NONE;
   }
 
-  static MutexError init(mtx_t *m, bool istimed, bool isrecur, bool isrobust) {
-    auto *mutex = reinterpret_cast<Mutex *>(m);
-    return init(mutex, istimed, isrecur, isrobust);
-  }
-
-  static MutexError destroy(mtx_t *) { return MutexError::NONE; }
+  static MutexError destroy(Mutex *) { return MutexError::NONE; }
 
   MutexError reset();
 
