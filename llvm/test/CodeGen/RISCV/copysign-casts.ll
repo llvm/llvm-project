@@ -280,12 +280,11 @@ define float @fold_demote_s_d(float %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: fold_demote_s_d:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a2, a2, 63
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    srli a0, a0, 33
+; RV64I-NEXT:    srli a1, a1, 63
+; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    srli a1, a1, 32
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -431,12 +430,11 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ;
 ; RV64I-LABEL: fold_demote_h_d:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a2, a2, 63
-; RV64I-NEXT:    and a1, a1, a2
-; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    slli a0, a0, 49
 ; RV64I-NEXT:    srli a0, a0, 49
+; RV64I-NEXT:    srli a1, a1, 63
+; RV64I-NEXT:    slli a1, a1, 63
+; RV64I-NEXT:    srli a1, a1, 48
 ; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -474,15 +472,14 @@ define half @fold_demote_h_d(half %a, double %b) nounwind {
 ;
 ; RV64IFD-LABEL: fold_demote_h_d:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    fmv.x.w a0, fa0
-; RV64IFD-NEXT:    fmv.x.d a1, fa1
-; RV64IFD-NEXT:    li a2, -1
-; RV64IFD-NEXT:    slli a2, a2, 63
-; RV64IFD-NEXT:    and a1, a1, a2
-; RV64IFD-NEXT:    srli a1, a1, 48
-; RV64IFD-NEXT:    slli a0, a0, 49
-; RV64IFD-NEXT:    srli a0, a0, 49
-; RV64IFD-NEXT:    or a0, a0, a1
+; RV64IFD-NEXT:    fmv.x.d a0, fa1
+; RV64IFD-NEXT:    fmv.x.w a1, fa0
+; RV64IFD-NEXT:    slli a1, a1, 49
+; RV64IFD-NEXT:    srli a1, a1, 49
+; RV64IFD-NEXT:    srli a0, a0, 63
+; RV64IFD-NEXT:    slli a0, a0, 63
+; RV64IFD-NEXT:    srli a0, a0, 48
+; RV64IFD-NEXT:    or a0, a1, a0
 ; RV64IFD-NEXT:    lui a1, 1048560
 ; RV64IFD-NEXT:    or a0, a0, a1
 ; RV64IFD-NEXT:    fmv.w.x fa0, a0
