@@ -85,6 +85,7 @@ namespace std {
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
+#include <__utility/unreachable.h>
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
@@ -366,6 +367,7 @@ namespace __any_imp
         case _Action::_TypeInfo:
           return __type_info();
         }
+        __libcpp_unreachable();
     }
 
     template <class ..._Args>
@@ -449,6 +451,7 @@ namespace __any_imp
         case _Action::_TypeInfo:
           return __type_info();
         }
+        __libcpp_unreachable();
     }
 
     template <class ..._Args>

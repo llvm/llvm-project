@@ -1231,8 +1231,10 @@ clang::QualType PdbAstBuilder::CreateEnumType(PdbTypeSymId id,
 clang::QualType PdbAstBuilder::CreateArrayType(const ArrayRecord &ar) {
   clang::QualType element_type = GetOrCreateType(ar.ElementType);
 
-  uint64_t element_count =
-      ar.Size / GetSizeOfType({ar.ElementType}, m_index.tpi());
+  uint64_t element_size = GetSizeOfType({ar.ElementType}, m_index.tpi());
+  if (element_size == 0)
+    return {};
+  uint64_t element_count = ar.Size / element_size;
 
   CompilerType array_ct = m_clang.CreateArrayType(ToCompilerType(element_type),
                                                   element_count, false);

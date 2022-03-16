@@ -1942,6 +1942,11 @@ class SizedRegion<int numBlocks> : Region<
   CPred<"::llvm::hasNItems($_self, " # numBlocks # ")">,
   "region with " # numBlocks # " blocks">;
 
+// A region with at least the given number of blocks.
+class MinSizedRegion<int numBlocks> : Region<
+  CPred<"::llvm::hasNItemsOrMore($_self, " # numBlocks # ")">,
+  "region with at least " # numBlocks # " blocks">;
+
 // A variadic region constraint. It expands to zero or more of the base region.
 class VariadicRegion<Region region>
   : Region<region.predicate, region.summary>;

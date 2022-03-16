@@ -783,7 +783,7 @@ private:
     OpeningBrace.ParentBracket = Contexts.back().ContextKind;
 
     if (Contexts.back().CaretFound)
-      OpeningBrace.setType(TT_ObjCBlockLBrace);
+      OpeningBrace.overwriteFixedType(TT_ObjCBlockLBrace);
     Contexts.back().CaretFound = false;
 
     ScopedContextCreator ContextCreator(*this, tok::l_brace, 1);

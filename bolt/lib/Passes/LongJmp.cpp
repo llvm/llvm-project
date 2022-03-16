@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/LongJmp.h"
-#include "llvm/Support/Alignment.h"
 
 #define DEBUG_TYPE "longjmp"
 
@@ -19,7 +18,7 @@ using namespace llvm;
 
 namespace opts {
 extern cl::OptionCategory BoltOptCategory;
-
+extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
@@ -295,6 +294,7 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
 uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     const BinaryContext &BC, std::vector<BinaryFunction *> &SortedFunctions,
     uint64_t DotAddress) {
+  DotAddress = alignTo(DotAddress, llvm::Align(opts::AlignFunctions));
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;

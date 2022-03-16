@@ -15,6 +15,7 @@ add_subdirectory(clang-include-fixer)
 add_subdirectory(clang-move)
 add_subdirectory(clang-query)
 add_subdirectory(pp-trace)
+add_subdirectory(pseudo)
 add_subdirectory(tool-template)
 
 option(CLANG_ENABLE_AMDCLANG "Enable amdclang" ON)

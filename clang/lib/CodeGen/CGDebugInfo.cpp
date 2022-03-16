@@ -444,7 +444,8 @@ CGDebugInfo::createFile(StringRef FileName,
       File = FileBuf;
     }
   } else {
-    Dir = CurDir;
+    if (!llvm::sys::path::is_absolute(FileName))
+      Dir = CurDir;
     File = RemappedFile;
   }
   llvm::DIFile *F = DBuilder.createFile(File, Dir, CSInfo, Source);

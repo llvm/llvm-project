@@ -644,6 +644,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
   EXPECT_TOKEN(Tokens[4], tok::r_brace, TT_InlineASMBrace);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
+  auto Tokens = annotate("int (^)() = ^ ()\n"
+                         "  external_source_symbol() { //\n"
+                         "  return 1;\n"
+                         "};");
+  ASSERT_EQ(Tokens.size(), 21u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_ObjCBlockLParen);
+  EXPECT_TOKEN(Tokens[13], tok::l_brace, TT_ObjCBlockLBrace);
+
+  Tokens = annotate("int *p = ^int*(){ //\n"
+                    "  return nullptr;\n"
+                    "}();");
+  ASSERT_EQ(Tokens.size(), 19u) << Tokens;
+  EXPECT_TOKEN(Tokens[9], tok::l_brace, TT_ObjCBlockLBrace);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang
