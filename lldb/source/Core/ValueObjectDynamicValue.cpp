@@ -121,7 +121,7 @@ lldb::ValueType ValueObjectDynamicValue::GetValueType() const {
 }
 
 bool ValueObjectDynamicValue::UpdateValue() {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  Log *log = GetLog(LLDBLog::Types);
 
   SetValueIsValid(false);
   m_error.Clear();
