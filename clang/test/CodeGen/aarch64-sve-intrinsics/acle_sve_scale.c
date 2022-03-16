@@ -17,14 +17,14 @@
 // CHECK-LABEL: @test_svscale_f16_z(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.sel.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer)
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fscale.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x i16> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svscale_f16_zu10__SVBool_tu13__SVFloat16_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.sel.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fscale.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[TMP1]], <vscale x 8 x i16> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP2]]
 //
@@ -36,14 +36,14 @@ svfloat16_t test_svscale_f16_z(svbool_t pg, svfloat16_t op1, svint16_t op2)
 // CHECK-LABEL: @test_svscale_f32_z(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.sel.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer)
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fscale.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[TMP1]], <vscale x 4 x i32> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svscale_f32_zu10__SVBool_tu13__SVFloat32_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.sel.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fscale.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[TMP1]], <vscale x 4 x i32> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP2]]
 //
@@ -55,14 +55,14 @@ svfloat32_t test_svscale_f32_z(svbool_t pg, svfloat32_t op1, svint32_t op2)
 // CHECK-LABEL: @test_svscale_f64_z(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer)
+// CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer
 // CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fscale.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[TMP1]], <vscale x 2 x i64> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 //
 // CPP-CHECK-LABEL: @_Z18test_svscale_f64_zu10__SVBool_tu13__SVFloat64_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = select <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fscale.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[TMP1]], <vscale x 2 x i64> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP2]]
 //
@@ -178,7 +178,7 @@ svfloat64_t test_svscale_f64_x(svbool_t pg, svfloat64_t op1, svint64_t op2)
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[OP2:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.sel.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fscale.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x i16> [[TMP1]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP3]]
 //
@@ -187,7 +187,7 @@ svfloat64_t test_svscale_f64_x(svbool_t pg, svfloat64_t op1, svint64_t op2)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[OP2:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.sel.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.fscale.nxv8f16(<vscale x 8 x i1> [[TMP0]], <vscale x 8 x half> [[TMP2]], <vscale x 8 x i16> [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP3]]
 //
@@ -201,7 +201,7 @@ svfloat16_t test_svscale_n_f16_z(svbool_t pg, svfloat16_t op1, int16_t op2)
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[OP2:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.sel.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fscale.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[TMP2]], <vscale x 4 x i32> [[TMP1]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
 //
@@ -210,7 +210,7 @@ svfloat16_t test_svscale_n_f16_z(svbool_t pg, svfloat16_t op1, int16_t op2)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[OP2:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.sel.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fscale.nxv4f32(<vscale x 4 x i1> [[TMP0]], <vscale x 4 x float> [[TMP2]], <vscale x 4 x i32> [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP3]]
 //
@@ -224,7 +224,7 @@ svfloat32_t test_svscale_n_f32_z(svbool_t pg, svfloat32_t op1, int32_t op2)
 // CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP2:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer)
+// CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer
 // CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fscale.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[TMP2]], <vscale x 2 x i64> [[TMP1]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
 //
@@ -233,7 +233,7 @@ svfloat32_t test_svscale_n_f32_z(svbool_t pg, svfloat32_t op1, int32_t op2)
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[OP2:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// CPP-CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.sel.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer)
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = select <vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> zeroinitializer
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.fscale.nxv2f64(<vscale x 2 x i1> [[TMP0]], <vscale x 2 x double> [[TMP2]], <vscale x 2 x i64> [[TMP1]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP3]]
 //

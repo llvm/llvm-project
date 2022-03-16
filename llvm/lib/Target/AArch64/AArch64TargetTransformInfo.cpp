@@ -525,6 +525,14 @@ static Optional<Instruction *> instCombineConvertFromSVBool(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, EarliestReplacement);
 }
 
+static Optional<Instruction *> instCombineSVESel(InstCombiner &IC,
+                                                 IntrinsicInst &II) {
+  IRBuilder<> Builder(&II);
+  auto Select = Builder.CreateSelect(II.getOperand(0), II.getOperand(1),
+                                     II.getOperand(2));
+  return IC.replaceInstUsesWith(II, Select);
+}
+
 static Optional<Instruction *> instCombineSVEDup(InstCombiner &IC,
                                                  IntrinsicInst &II) {
   IntrinsicInst *Pg = dyn_cast<IntrinsicInst>(II.getArgOperand(1));
@@ -1229,6 +1237,8 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEST1(IC, II, DL);
   case Intrinsic::aarch64_sve_sdiv:
     return instCombineSVESDIV(IC, II);
+  case Intrinsic::aarch64_sve_sel:
+    return instCombineSVESel(IC, II);
   }
 
   return None;
