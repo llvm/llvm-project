@@ -137,7 +137,7 @@ static uint32_t DumpTargetList(TargetList &target_list,
 
 // Note that the negation in the argument name causes a slightly confusing
 // mapping of the enum values.
-static constexpr OptionEnumValueElement g_dependents_enumaration[] = {
+static constexpr OptionEnumValueElement g_dependents_enumeration[] = {
     {
         eLoadDependentsDefault,
         "default",

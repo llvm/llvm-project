@@ -863,7 +863,7 @@ let Command = "source list" in {
 
 let Command = "target dependents" in {
   def dependents_no_dependents : Option<"no-dependents", "d">, Group<1>,
-    OptionalEnumArg<"Value", "OptionEnumValues(g_dependents_enumaration)">,
+    OptionalEnumArg<"Value", "OptionEnumValues(g_dependents_enumeration)">,
     Desc<"Whether or not to load dependents when creating a target. If the "
          "option is not specified, the value is implicitly 'default'. If the "
          "option is specified but without a value, the value is implicitly "
