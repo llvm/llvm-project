@@ -59,6 +59,7 @@ public:
   ~DiagnosticEventData() {}
 
   const std::string &GetMessage() const { return m_message; }
+  bool IsDebuggerSpecific() const { return m_debugger_specific; }
   Type GetType() const { return m_type; }
 
   llvm::StringRef GetPrefix() const;
