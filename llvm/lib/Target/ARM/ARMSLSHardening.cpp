@@ -322,8 +322,8 @@ MachineBasicBlock &ARMSLSHardening::ConvertIndirectCallToIndirectJump(
   assert(ImpSPOpIdx != -1);
   int FirstOpIdxToRemove = std::max(ImpLROpIdx, ImpSPOpIdx);
   int SecondOpIdxToRemove = std::min(ImpLROpIdx, ImpSPOpIdx);
-  BL->RemoveOperand(FirstOpIdxToRemove);
-  BL->RemoveOperand(SecondOpIdxToRemove);
+  BL->removeOperand(FirstOpIdxToRemove);
+  BL->removeOperand(SecondOpIdxToRemove);
   // Now copy over the implicit operands from the original IndirectCall
   BL->copyImplicitOps(MF, IndirectCall);
   MF.moveCallSiteInfo(&IndirectCall, BL);

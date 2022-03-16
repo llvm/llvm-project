@@ -235,7 +235,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
         TII->get(IsVCCZ ? AMDGPU::S_CBRANCH_EXECZ : AMDGPU::S_CBRANCH_EXECNZ));
   }
 
-  MI.RemoveOperand(MI.findRegisterUseOperandIdx(CondReg, false /*Kill*/, TRI));
+  MI.removeOperand(MI.findRegisterUseOperandIdx(CondReg, false /*Kill*/, TRI));
   MI.addImplicitDefUseOperands(*MBB.getParent());
 
   return true;
