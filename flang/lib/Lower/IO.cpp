@@ -420,8 +420,10 @@ static mlir::FuncOp getOutputFunc(mlir::Location loc,
       return getIORuntimeFunc<mkIOKey(OutputInteger32)>(loc, builder);
     case 64:
       return getIORuntimeFunc<mkIOKey(OutputInteger64)>(loc, builder);
+#ifdef __SIZEOF_INT128__
     case 128:
       return getIORuntimeFunc<mkIOKey(OutputInteger128)>(loc, builder);
+#endif
     }
     llvm_unreachable("unknown OutputInteger kind");
   }
