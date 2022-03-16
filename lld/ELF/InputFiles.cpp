@@ -1025,19 +1025,13 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
   SmallVector<unsigned, 32> undefineds;
   for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
     const Elf_Sym &eSym = eSyms[i];
-    uint8_t binding = eSym.getBinding();
-    if (LLVM_UNLIKELY(binding == STB_LOCAL)) {
-      errorOrWarn(toString(this) + ": STB_LOCAL symbol (" + Twine(i) +
-                  ") found at index >= .symtab's sh_info (" +
-                  Twine(firstGlobal) + ")");
-      continue;
-    }
     uint32_t secIdx = eSym.st_shndx;
     if (secIdx == SHN_UNDEF) {
       undefineds.push_back(i);
       continue;
     }
 
+    uint8_t binding = eSym.getBinding();
     uint8_t stOther = eSym.st_other;
     uint8_t type = eSym.getType();
     uint64_t value = eSym.st_value;
@@ -1056,14 +1050,8 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     }
 
     // Handle global defined symbols. Defined::section will be set in postParse.
-    if (binding == STB_GLOBAL || binding == STB_WEAK ||
-        binding == STB_GNU_UNIQUE) {
-      sym->resolve(Defined{this, StringRef(), binding, stOther, type, value,
-                           size, nullptr});
-      continue;
-    }
-
-    fatal(toString(this) + ": unexpected binding: " + Twine((int)binding));
+    sym->resolve(Defined{this, StringRef(), binding, stOther, type, value, size,
+                         nullptr});
   }
 
   // Undefined symbols (excluding those defined relative to non-prevailing
@@ -1130,6 +1118,11 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
     const Elf_Sym &eSym = eSyms[i];
     Symbol &sym = *symbols[i];
     uint32_t secIdx = eSym.st_shndx;
+    uint8_t binding = eSym.getBinding();
+    if (LLVM_UNLIKELY(binding != STB_GLOBAL && binding != STB_WEAK &&
+                      binding != STB_GNU_UNIQUE))
+      errorOrWarn(toString(this) + ": symbol (" + Twine(i) +
+                  ") has invalid binding: " + Twine((int)binding));
 
     // st_value of STT_TLS represents the assigned offset, not the actual
     // address which is used by STT_FUNC and STT_OBJECT. STT_TLS symbols can
@@ -1171,7 +1164,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
       continue;
     }
 
-    if (eSym.getBinding() == STB_WEAK)
+    if (binding == STB_WEAK)
       continue;
     std::lock_guard<std::mutex> lock(mu);
     ctx->duplicates.push_back({&sym, this, sec, eSym.st_value});
