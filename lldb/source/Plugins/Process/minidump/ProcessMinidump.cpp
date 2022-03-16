@@ -292,9 +292,9 @@ Status ProcessMinidump::DoLoadCore() {
 
   llvm::Optional<lldb::pid_t> pid = m_minidump_parser->GetPid();
   if (!pid) {
-    GetTarget().GetDebugger().GetAsyncErrorStream()->PutCString(
-        "Unable to retrieve process ID from minidump file, setting process ID "
-        "to 1.\n");
+    Debugger::ReportWarning("unable to retrieve process ID from minidump file, "
+                            "setting process ID to 1",
+                            GetTarget().GetDebugger().GetID());
     pid = 1;
   }
   SetID(pid.getValue());

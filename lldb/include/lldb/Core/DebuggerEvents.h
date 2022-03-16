@@ -46,6 +46,40 @@ private:
   ProgressEventData(const ProgressEventData &) = delete;
   const ProgressEventData &operator=(const ProgressEventData &) = delete;
 };
+
+class DiagnosticEventData : public EventData {
+public:
+  enum class Type {
+    Warning,
+    Error,
+  };
+  DiagnosticEventData(Type type, std::string message, bool debugger_specific)
+      : m_message(std::move(message)), m_type(type),
+        m_debugger_specific(debugger_specific) {}
+  ~DiagnosticEventData() {}
+
+  const std::string &GetMessage() const { return m_message; }
+  Type GetType() const { return m_type; }
+
+  llvm::StringRef GetPrefix() const;
+
+  void Dump(Stream *s) const override;
+
+  static ConstString GetFlavorString();
+  ConstString GetFlavor() const override;
+
+  static const DiagnosticEventData *
+  GetEventDataFromEvent(const Event *event_ptr);
+
+protected:
+  std::string m_message;
+  Type m_type;
+  const bool m_debugger_specific;
+
+  DiagnosticEventData(const DiagnosticEventData &) = delete;
+  const DiagnosticEventData &operator=(const DiagnosticEventData &) = delete;
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_CORE_DEBUGGER_EVENTS_H

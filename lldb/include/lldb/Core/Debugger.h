@@ -14,6 +14,7 @@
 #include <memory>
 #include <vector>
 
+#include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
@@ -57,7 +58,6 @@ class Process;
 class Stream;
 class SymbolContext;
 class Target;
-class ProgressEventData;
 
 namespace repro {
 class DataRecorder;
@@ -77,6 +77,8 @@ public:
   /// Broadcaster event bits definitions.
   enum {
     eBroadcastBitProgress = (1 << 0),
+    eBroadcastBitWarning = (1 << 1),
+    eBroadcastBitError = (1 << 2),
   };
 
   static ConstString GetStaticBroadcasterClass();
@@ -375,6 +377,50 @@ public:
     return m_broadcaster_manager_sp;
   }
 
+  /// Report warning events.
+  ///
+  /// Progress events will be delivered to any debuggers that have listeners
+  /// for the eBroadcastBitError.
+  ///
+  /// \param[in] message
+  ///   The warning message to be reported.
+  ///
+  /// \param [in] debugger_id
+  ///   If this optional parameter has a value, it indicates the unique
+  ///   debugger identifier that this progress should be delivered to. If this
+  ///   optional parameter does not have a value, the progress will be
+  ///   delivered to all debuggers.
+  ///
+  /// \param [in] once
+  ///   If a pointer is passed to a std::once_flag, then it will be used to
+  ///   ensure the given warning is only broadcast once.
+  static void
+  ReportWarning(std::string messsage,
+                llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
+                std::once_flag *once = nullptr);
+
+  /// Report error events.
+  ///
+  /// Progress events will be delivered to any debuggers that have listeners
+  /// for the eBroadcastBitError.
+  ///
+  /// \param[in] message
+  ///   The error message to be reported.
+  ///
+  /// \param [in] debugger_id
+  ///   If this optional parameter has a value, it indicates the unique
+  ///   debugger identifier that this progress should be delivered to. If this
+  ///   optional parameter does not have a value, the progress will be
+  ///   delivered to all debuggers.
+  ///
+  /// \param [in] once
+  ///   If a pointer is passed to a std::once_flag, then it will be used to
+  ///   ensure the given error is only broadcast once.
+  static void
+  ReportError(std::string messsage,
+              llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
+              std::once_flag *once = nullptr);
+
 protected:
   friend class CommandInterpreter;
   friend class REPL;
@@ -413,6 +459,11 @@ protected:
                              uint64_t completed, uint64_t total,
                              llvm::Optional<lldb::user_id_t> debugger_id);
 
+  static void ReportDiagnosticImpl(DiagnosticEventData::Type type,
+                                   std::string message,
+                                   llvm::Optional<lldb::user_id_t> debugger_id,
+                                   std::once_flag *once);
+
   void PrintProgress(const ProgressEventData &data);
 
   bool StartEventHandlerThread();
@@ -443,6 +494,8 @@ protected:
   void HandleThreadEvent(const lldb::EventSP &event_sp);
 
   void HandleProgressEvent(const lldb::EventSP &event_sp);
+
+  void HandleDiagnosticEvent(const lldb::EventSP &event_sp);
 
   // Ensures two threads don't attempt to flush process output in parallel.
   std::mutex m_output_flush_mutex;

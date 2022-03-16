@@ -400,10 +400,12 @@ bool DynamicLoaderMacOSXDYLD::NotifyBreakpointHit(
       }
     }
   } else {
-    process->GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
-        "No ABI plugin located for triple %s -- shared libraries will not be "
-        "registered!\n",
-        process->GetTarget().GetArchitecture().GetTriple().getTriple().c_str());
+    Target &target = process->GetTarget();
+    Debugger::ReportWarning(
+        "no ABI plugin located for triple " +
+            target.GetArchitecture().GetTriple().getTriple() +
+            ": shared libraries will not be registered",
+        target.GetDebugger().GetID());
   }
 
   // Return true to stop the target, false to just let the target run
