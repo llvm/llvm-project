@@ -197,6 +197,33 @@ genProdOrSum(FN func, FD funcDim, mlir::Type resultType,
                     args[1], mask, rank);
 }
 
+/// Process calls to DotProduct
+template <typename FN>
+static fir::ExtendedValue
+genDotProd(FN func, mlir::Type resultType, fir::FirOpBuilder &builder,
+           mlir::Location loc, Fortran::lower::StatementContext *stmtCtx,
+           llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 2);
+
+  // Handle required vector arguments
+  mlir::Value vectorA = fir::getBase(args[0]);
+  mlir::Value vectorB = fir::getBase(args[1]);
+
+  mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(vectorA.getType())
+                         .cast<fir::SequenceType>()
+                         .getEleTy();
+  if (fir::isa_complex(eleTy)) {
+    mlir::Value result = builder.createTemporary(loc, eleTy);
+    func(builder, loc, vectorA, vectorB, result);
+    return builder.create<fir::LoadOp>(loc, result);
+  }
+
+  auto resultBox = builder.create<fir::AbsentOp>(
+      loc, fir::BoxType::get(builder.getI1Type()));
+  return func(builder, loc, vectorA, vectorB, resultBox);
+}
+
 // TODO error handling -> return a code or directly emit messages ?
 struct IntrinsicLibrary {
 
@@ -240,11 +267,15 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genDotProduct(mlir::Type,
+                                   llvm::ArrayRef<fir::ExtendedValue>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -351,7 +382,13 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
     {"char", &I::genChar},
+    {"dim", &I::genDim},
+    {"dot_product",
+     &I::genDotProduct,
+     {{{"vector_a", asBox}, {"vector_b", asBox}}},
+     /*isElemental=*/false},
     {"iand", &I::genIand},
+    {"ibits", &I::genIbits},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"sum",
      &I::genSum,
@@ -1226,11 +1263,65 @@ IntrinsicLibrary::genChar(mlir::Type type,
   return fir::CharBoxValue{cast, len};
 }
 
+// DIM
+mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  if (resultType.isa<mlir::IntegerType>()) {
+    mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+    auto diff = builder.create<mlir::arith::SubIOp>(loc, args[0], args[1]);
+    auto cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::sgt, diff, zero);
+    return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
+  }
+  assert(fir::isa_real(resultType) && "Only expects real and integer in DIM");
+  mlir::Value zero = builder.createRealZeroConstant(loc, resultType);
+  auto diff = builder.create<mlir::arith::SubFOp>(loc, args[0], args[1]);
+  auto cmp = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::OGT, diff, zero);
+  return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
+}
+
+// DOT_PRODUCT
+fir::ExtendedValue
+IntrinsicLibrary::genDotProduct(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genDotProd(fir::runtime::genDotProduct, resultType, builder, loc,
+                    stmtCtx, args);
+}
+
 // IAND
 mlir::Value IntrinsicLibrary::genIand(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   return builder.create<mlir::arith::AndIOp>(loc, args[0], args[1]);
+}
+
+// IBITS
+mlir::Value IntrinsicLibrary::genIbits(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // A conformant IBITS(I,POS,LEN) call satisfies:
+  //     POS >= 0
+  //     LEN >= 0
+  //     POS + LEN <= BIT_SIZE(I)
+  // Return:  LEN == 0 ? 0 : (I >> POS) & (-1 >> (BIT_SIZE(I) - LEN))
+  // For a conformant call, implementing (I >> POS) with a signed or an
+  // unsigned shift produces the same result.  For a nonconformant call,
+  // the two choices may produce different results.
+  assert(args.size() == 3);
+  mlir::Value pos = builder.createConvert(loc, resultType, args[1]);
+  mlir::Value len = builder.createConvert(loc, resultType, args[2]);
+  mlir::Value bitSize = builder.createIntegerConstant(
+      loc, resultType, resultType.cast<mlir::IntegerType>().getWidth());
+  auto shiftCount = builder.create<mlir::arith::SubIOp>(loc, bitSize, len);
+  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  auto mask = builder.create<mlir::arith::ShRUIOp>(loc, ones, shiftCount);
+  auto res1 = builder.create<mlir::arith::ShRSIOp>(loc, args[0], pos);
+  auto res2 = builder.create<mlir::arith::AndIOp>(loc, res1, mask);
+  auto lenIsZero = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq, len, zero);
+  return builder.create<mlir::arith::SelectOp>(loc, lenIsZero, zero, res2);
 }
 
 // Compare two FIR values and return boolean result as i1.

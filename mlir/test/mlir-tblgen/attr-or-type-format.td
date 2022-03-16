@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-attrdef-defs -I %S/../../include %s | FileCheck %s --check-prefix=ATTR
 // RUN: mlir-tblgen -gen-typedef-defs -I %S/../../include %s | FileCheck %s --check-prefix=TYPE
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 
 /// Test that attribute and type printers and parsers are correctly generated.
@@ -498,4 +499,28 @@ def TypeI : TestType<"TestK"> {
   let parameters = (ins DefaultValuedParameter<"int", "10">:$a);
   let mnemonic = "type_k";
   let assemblyFormat = "$a";
+}
+
+// TYPE: ::mlir::Type TestLType::parse
+// TYPE:   auto odsCustomLoc = odsParser.getCurrentLocation()
+// TYPE:   auto odsCustomResult = parseA(odsParser,
+// TYPE-NEXT: _result_a
+// TYPE:   if (::mlir::failed(odsCustomResult)) return {}
+// TYPE:   if (::mlir::failed(_result_a))
+// TYPE-NEXT: odsParser.emitError(odsCustomLoc,
+// TYPE:   auto odsCustomResult = parseB(odsParser,
+// TYPE-NEXT: _result_b
+// TYPE-NEXT: *_result_a
+
+// TYPE: void TestLType::print
+// TYPE:   printA(odsPrinter
+// TYPE-NEXT: getA()
+// TYPE:   printB(odsPrinter
+// TYPE-NEXT: getB()
+// TYPE-NEXT: getA()
+
+def TypeJ : TestType<"TestL"> {
+  let parameters = (ins "int":$a, OptionalParameter<"Attribute">:$b);
+  let mnemonic = "type_j";
+  let assemblyFormat = "custom<A>($a) custom<B>($b, ref($a))";
 }

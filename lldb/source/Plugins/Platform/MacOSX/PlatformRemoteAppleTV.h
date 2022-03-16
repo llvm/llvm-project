@@ -9,13 +9,17 @@
 #ifndef LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H
 
-#include <string>
-
+#include "PlatformRemoteDarwinDevice.h"
 #include "lldb/Utility/FileSpec.h"
-
+#include "lldb/lldb-forward.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 
-#include "PlatformRemoteDarwinDevice.h"
+#include <string>
+#include <vector>
+
+namespace lldb_private {
+class ArchSpec;
 
 class PlatformRemoteAppleTV : public PlatformRemoteDarwinDevice {
 public:
@@ -47,5 +51,7 @@ protected:
   llvm::StringRef GetDeviceSupportDirectoryName() override;
   llvm::StringRef GetPlatformName() override;
 };
+
+} // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMREMOTEAPPLETV_H

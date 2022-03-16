@@ -880,6 +880,82 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   return success();
 }
 
+/// Converts an OpenMP simd loop into LLVM IR using OpenMPIRBuilder.
+static LogicalResult
+convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
+                   LLVM::ModuleTranslation &moduleTranslation) {
+  auto loop = cast<omp::SimdLoopOp>(opInst);
+
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+
+  // Generator of the canonical loop body.
+  // TODO: support error propagation in OpenMPIRBuilder and use it instead of
+  // relying on captured variables.
+  SmallVector<llvm::CanonicalLoopInfo *> loopInfos;
+  SmallVector<llvm::OpenMPIRBuilder::InsertPointTy> bodyInsertPoints;
+  LogicalResult bodyGenStatus = success();
+  auto bodyGen = [&](llvm::OpenMPIRBuilder::InsertPointTy ip, llvm::Value *iv) {
+    // Make sure further conversions know about the induction variable.
+    moduleTranslation.mapValue(
+        loop.getRegion().front().getArgument(loopInfos.size()), iv);
+
+    // Capture the body insertion point for use in nested loops. BodyIP of the
+    // CanonicalLoopInfo always points to the beginning of the entry block of
+    // the body.
+    bodyInsertPoints.push_back(ip);
+
+    if (loopInfos.size() != loop.getNumLoops() - 1)
+      return;
+
+    // Convert the body of the loop.
+    llvm::BasicBlock *entryBlock = ip.getBlock();
+    llvm::BasicBlock *exitBlock =
+        entryBlock->splitBasicBlock(ip.getPoint(), "omp.simdloop.exit");
+    convertOmpOpRegions(loop.region(), "omp.simdloop.region", *entryBlock,
+                        *exitBlock, builder, moduleTranslation, bodyGenStatus);
+  };
+
+  // Delegate actual loop construction to the OpenMP IRBuilder.
+  // TODO: this currently assumes SimdLoop is semantically similar to SCF loop,
+  // i.e. it has a positive step, uses signed integer semantics. Reconsider
+  // this code when SimdLoop clearly supports more cases.
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  for (unsigned i = 0, e = loop.getNumLoops(); i < e; ++i) {
+    llvm::Value *lowerBound =
+        moduleTranslation.lookupValue(loop.lowerBound()[i]);
+    llvm::Value *upperBound =
+        moduleTranslation.lookupValue(loop.upperBound()[i]);
+    llvm::Value *step = moduleTranslation.lookupValue(loop.step()[i]);
+
+    // Make sure loop trip count are emitted in the preheader of the outermost
+    // loop at the latest so that they are all available for the new collapsed
+    // loop will be created below.
+    llvm::OpenMPIRBuilder::LocationDescription loc = ompLoc;
+    llvm::OpenMPIRBuilder::InsertPointTy computeIP = ompLoc.IP;
+    if (i != 0) {
+      loc = llvm::OpenMPIRBuilder::LocationDescription(bodyInsertPoints.back(),
+                                                       ompLoc.DL);
+      computeIP = loopInfos.front()->getPreheaderIP();
+    }
+    loopInfos.push_back(ompBuilder->createCanonicalLoop(
+        loc, bodyGen, lowerBound, upperBound, step,
+        /*IsSigned=*/true, /*Inclusive=*/true, computeIP));
+
+    if (failed(bodyGenStatus))
+      return failure();
+  }
+
+  // Collapse loops.
+  llvm::IRBuilderBase::InsertPoint afterIP = loopInfos.front()->getAfterIP();
+  llvm::CanonicalLoopInfo *loopInfo =
+      ompBuilder->collapseLoops(ompLoc.DL, loopInfos, {});
+
+  ompBuilder->applySimd(ompLoc.DL, loopInfo);
+
+  builder.restoreIP(afterIP);
+  return success();
+}
+
 /// Convert an Atomic Ordering attribute to llvm::AtomicOrdering.
 llvm::AtomicOrdering
 convertAtomicOrdering(Optional<omp::ClauseMemoryOrderKind> ao) {
@@ -1159,6 +1235,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::WsLoopOp) {
         return convertOmpWsLoop(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::SimdLoopOp) {
+        return convertOmpSimdLoop(*op, builder, moduleTranslation);
       })
       .Case([&](omp::AtomicReadOp) {
         return convertOmpAtomicRead(*op, builder, moduleTranslation);

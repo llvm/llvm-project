@@ -43742,17 +43742,6 @@ static SDValue combineVSelectToBLENDV(SDNode *N, SelectionDAG &DAG,
   if (VT.is512BitVector())
     return SDValue();
 
-  // PreAVX512, without mask-registers, attempt to sign-extend bool vectors to
-  // allow us to use BLENDV.
-  if (!Subtarget.hasAVX512() && BitWidth == 1) {
-    EVT CondVT = VT.changeVectorElementTypeToInteger();
-    if (SDValue ExtCond = combineToExtendBoolVectorInReg(
-            ISD::SIGN_EXTEND, SDLoc(N), CondVT, Cond, DAG, DCI, Subtarget)) {
-      return DAG.getNode(X86ISD::BLENDV, SDLoc(N), VT, ExtCond,
-                         N->getOperand(1), N->getOperand(2));
-    }
-  }
-
   // Don't optimize before the condition has been transformed to a legal type
   // and don't ever optimize vector selects that map to AVX512 mask-registers.
   if (BitWidth < 8 || BitWidth > 64)
@@ -44235,13 +44224,26 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // If this an avx512 target we can improve the use of zero masking by
   // swapping the operands and inverting the condition.
   if (N->getOpcode() == ISD::VSELECT && Cond.hasOneUse() &&
-       Subtarget.hasAVX512() && CondVT.getVectorElementType() == MVT::i1 &&
+      Subtarget.hasAVX512() && CondVT.getVectorElementType() == MVT::i1 &&
       ISD::isBuildVectorAllZeros(LHS.getNode()) &&
       !ISD::isBuildVectorAllZeros(RHS.getNode())) {
     // Invert the cond to not(cond) : xor(op,allones)=not(op)
     SDValue CondNew = DAG.getNOT(DL, Cond, CondVT);
     // Vselect cond, op1, op2 = Vselect not(cond), op2, op1
     return DAG.getSelect(DL, VT, CondNew, RHS, LHS);
+  }
+
+  // Attempt to convert a (vXi1 bitcast(iX Cond)) selection mask before it might
+  // get split by legalization.
+  if (N->getOpcode() == ISD::VSELECT && Cond.getOpcode() == ISD::BITCAST &&
+      CondVT.getVectorElementType() == MVT::i1 && Cond.hasOneUse() && 
+      TLI.isTypeLegal(VT.getScalarType())) {
+    EVT ExtCondVT = VT.changeVectorElementTypeToInteger();
+    if (SDValue ExtCond = combineToExtendBoolVectorInReg(
+            ISD::SIGN_EXTEND, DL, ExtCondVT, Cond, DAG, DCI, Subtarget)) {
+      ExtCond = DAG.getNode(ISD::TRUNCATE, DL, CondVT, ExtCond);
+      return DAG.getSelect(DL, VT, ExtCond, LHS, RHS);
+    }
   }
 
   // Early exit check

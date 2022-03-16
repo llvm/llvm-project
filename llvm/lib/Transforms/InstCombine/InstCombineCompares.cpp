@@ -4134,6 +4134,13 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
         return new ICmpInst(Pred, A, NewAdd);
       }
     }
+    Constant *Cst1, *Cst2;
+    if (match(B, m_ImmConstant(Cst1)) && match(D, m_ImmConstant(Cst2)) &&
+        ICmpInst::isEquality(Pred)) {
+      Constant *Diff = ConstantExpr::getSub(Cst2, Cst1);
+      Value *NewAdd = Builder.CreateAdd(C, Diff);
+      return new ICmpInst(Pred, A, NewAdd);
+    }
   }
 
   // Analyze the case when either Op0 or Op1 is a sub instruction.

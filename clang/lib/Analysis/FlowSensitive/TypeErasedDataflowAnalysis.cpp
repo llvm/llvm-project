@@ -170,6 +170,8 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
   }
 
   llvm::Optional<TypeErasedDataflowAnalysisState> MaybeState;
+  bool ApplyBuiltinTransfer = Analysis.applyBuiltinTransfer();
+
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
@@ -183,11 +185,13 @@ static TypeErasedDataflowAnalysisState computeBlockInputState(
       continue;
 
     TypeErasedDataflowAnalysisState PredState = MaybePredState.getValue();
-    if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
-      const StmtToEnvMapImpl StmtToEnv(CFCtx, BlockStates);
-      TerminatorVisitor(StmtToEnv, PredState.Env,
-                        blockIndexInPredecessor(*Pred, Block))
-          .Visit(PredTerminatorStmt);
+    if (ApplyBuiltinTransfer) {
+      if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
+        const StmtToEnvMapImpl StmtToEnv(CFCtx, BlockStates);
+        TerminatorVisitor(StmtToEnv, PredState.Env,
+                          blockIndexInPredecessor(*Pred, Block))
+            .Visit(PredTerminatorStmt);
+      }
     }
 
     if (MaybeState.hasValue()) {

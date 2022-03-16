@@ -1324,12 +1324,14 @@ bool IsSaved(const Symbol &original) {
     // BLOCK DATA entities must all be in COMMON,
     // which was checked above.
     return true;
-  } else if (scope.kind() == Scope::Kind::Subprogram &&
-      scope.context().languageFeatures().IsEnabled(
-          common::LanguageFeature::DefaultSave) &&
-      !(scope.symbol() && scope.symbol()->attrs().test(Attr::RECURSIVE))) {
-    // -fno-automatic/-save/-Msave option applies to objects in
-    // executable subprograms unless they are explicitly RECURSIVE.
+  } else if (scope.context().languageFeatures().IsEnabled(
+                 common::LanguageFeature::DefaultSave) &&
+      (scopeKind == Scope::Kind::MainProgram ||
+          (scope.kind() == Scope::Kind::Subprogram &&
+              !(scope.symbol() &&
+                  scope.symbol()->attrs().test(Attr::RECURSIVE))))) {
+    // -fno-automatic/-save/-Msave option applies to all objects in executable
+    // main programs and subprograms unless they are explicitly RECURSIVE.
     return true;
   } else if (symbol.test(Symbol::Flag::InDataStmt)) {
     return true;

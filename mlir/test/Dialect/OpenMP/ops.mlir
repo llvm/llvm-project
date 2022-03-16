@@ -299,6 +299,37 @@ func @omp_wsloop_pretty_multiple(%lb1 : i32, %ub1 : i32, %step1 : i32, %lb2 : i3
   return
 }
 
+// CHECK-LABEL: omp_simdloop
+func @omp_simdloop(%lb : index, %ub : index, %step : index) -> () {
+  // CHECK: omp.simdloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+  "omp.simdloop" (%lb, %ub, %step) ({
+    ^bb0(%iv: index):
+      omp.yield
+  }) {operand_segment_sizes = dense<[1,1,1]> : vector<3xi32>} :
+    (index, index, index) -> () 
+
+  return
+}
+
+
+// CHECK-LABEL: omp_simdloop_pretty
+func @omp_simdloop_pretty(%lb : index, %ub : index, %step : index) -> () {
+  // CHECK: omp.simdloop (%{{.*}}) : index = (%{{.*}}) to (%{{.*}}) step (%{{.*}})
+  omp.simdloop (%iv) : index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// CHECK-LABEL: omp_simdloop_pretty_multiple
+func @omp_simdloop_pretty_multiple(%lb1 : index, %ub1 : index, %step1 : index, %lb2 : index, %ub2 : index, %step2 : index) -> () {
+  // CHECK: omp.simdloop (%{{.*}}, %{{.*}}) : index = (%{{.*}}, %{{.*}}) to (%{{.*}}, %{{.*}}) step (%{{.*}}, %{{.*}})
+  omp.simdloop (%iv1, %iv2) : index = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) {
+    omp.yield
+  }
+  return
+}
+
 // CHECK-LABEL: omp_target
 func @omp_target(%if_cond : i1, %device : si32,  %num_threads : si32) -> () {
 

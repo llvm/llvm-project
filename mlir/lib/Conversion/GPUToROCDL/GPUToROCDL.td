@@ -13,6 +13,7 @@
 #ifndef MLIR_CONVERSION_GPUTOROCDL_TD
 #define MLIR_CONVERSION_GPUTOROCDL_TD
 
+include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/GPU/GPUOps.td"
 include "mlir/Dialect/LLVMIR/ROCDLOps.td"
 

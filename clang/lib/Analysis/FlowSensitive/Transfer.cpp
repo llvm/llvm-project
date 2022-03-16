@@ -179,6 +179,11 @@ public:
       Env.setValue(ExprLoc, *SubExprVal);
       break;
     }
+    case CK_UncheckedDerivedToBase:
+    case CK_ConstructorConversion:
+    case CK_UserDefinedConversion:
+      // FIXME: Add tests that excercise CK_UncheckedDerivedToBase,
+      // CK_ConstructorConversion, and CK_UserDefinedConversion.
     case CK_NoOp: {
       // FIXME: Consider making `Environment::getStorageLocation` skip noop
       // expressions (this and other similar expressions in the file) instead of
@@ -191,8 +196,6 @@ public:
       break;
     }
     default:
-      // FIXME: Add support for CK_UserDefinedConversion,
-      // CK_ConstructorConversion, CK_UncheckedDerivedToBase.
       break;
     }
   }

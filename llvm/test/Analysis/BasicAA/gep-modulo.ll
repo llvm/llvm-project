@@ -301,4 +301,46 @@ define void @may_overflow_mul_scale_neg([200 x [ 6 x i8]]* %ptr, i64 %idx.1,i64 
   ret void
 }
 
+; If %v == 10581764700698480926, %idx == 917, so %gep.917 and %gep.idx may alias.
+define i8 @mul_may_overflow_var_nonzero_minabsvarindex_one_index([2000 x i8]* %arr, i8 %x, i64 %v) {
+; CHECK-LABEL: Function: mul_may_overflow_var_nonzero_minabsvarindex_one_index: 4 pointers, 0 call sites
+; CHECK-NEXT:  NoAlias: [2000 x i8]* %arr, i8* %gep.idx
+; CHECK-NEXT:  PartialAlias (off 917): [2000 x i8]* %arr, i8* %gep.917
+; CHECK-NEXT:  NoAlias: i8* %gep.917, i8* %gep.idx
+; CHECK-NEXT:  MustAlias: [2000 x i8]* %arr, i8* %gep.0
+; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.idx
+; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.917
+;
+  %or = or i64 %v, 1
+  %idx = mul i64 %or, 1844674407370955
+  %gep.idx = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i64 %idx
+  %l = load i8, i8* %gep.idx
+  %gep.917 = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i32 917
+  store i8 0, i8* %gep.917
+  %gep.0 = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i32 0
+  store i8 0, i8* %gep.0
+  ret i8 %l
+}
+
+define i8 @mul_nsw_var_nonzero_minabsvarindex_one_index([2000 x i8]* %arr, i8 %x, i64 %v) {
+; CHECK-LABEL: Function: mul_nsw_var_nonzero_minabsvarindex_one_index: 4 pointers, 0 call sites
+; CHECK-NEXT:  NoAlias: [2000 x i8]* %arr, i8* %gep.idx
+; CHECK-NEXT:  PartialAlias (off 917): [2000 x i8]* %arr, i8* %gep.917
+; CHECK-NEXT:  NoAlias: i8* %gep.917, i8* %gep.idx
+; CHECK-NEXT:  MustAlias: [2000 x i8]* %arr, i8* %gep.0
+; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.idx
+; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.917
+;
+
+  %or = or i64 %v, 1
+  %idx = mul nsw i64 %or, 1844674407370955
+  %gep.idx = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i64 %idx
+  %l = load i8, i8* %gep.idx
+  %gep.917 = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i32 917
+  store i8 0, i8* %gep.917
+  %gep.0 = getelementptr inbounds [2000 x i8], [2000 x i8]* %arr, i32 0, i32 0
+  store i8 0, i8* %gep.0
+  ret i8 %l
+}
+
 declare void @llvm.assume(i1)

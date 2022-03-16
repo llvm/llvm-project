@@ -15,6 +15,7 @@
 
 // To get the test dialect definition.
 include "TestDialect.td"
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"
 
@@ -42,6 +43,7 @@ def CompoundAttrA : Test_Attr<"CompoundA"> {
       "An example of an array of ints" // Parameter description.
       >: $arrayOfInts
   );
+  let hasCustomAssemblyFormat = 1;
 }
 def CompoundAttrNested : Test_Attr<"CompoundAttrNested"> {
   let mnemonic = "cmpnd_nested";
@@ -53,6 +55,7 @@ def CompoundAttrNested : Test_Attr<"CompoundAttrNested"> {
 def AttrWithSelfTypeParam : Test_Attr<"AttrWithSelfTypeParam"> {
   let mnemonic = "attr_with_self_type_param";
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let hasCustomAssemblyFormat = 1;
 }
 
 // An attribute testing AttributeSelfTypeParameter.
@@ -60,6 +63,7 @@ def AttrWithTypeBuilder : Test_Attr<"AttrWithTypeBuilder"> {
   let mnemonic = "attr_with_type_builder";
   let parameters = (ins "::mlir::IntegerAttr":$attr);
   let typeBuilder = "$_attr.getType()";
+  let hasCustomAssemblyFormat = 1;
 }
 
 def TestAttrTrait : NativeAttrTrait<"TestAttrTrait">;
@@ -67,7 +71,6 @@ def TestAttrTrait : NativeAttrTrait<"TestAttrTrait">;
 // The definition of a singleton attribute that has a trait.
 def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
   let mnemonic = "attr_with_trait";
-  let parameters = (ins );
 }
 
 // Test support for ElementsAttrInterface.
@@ -105,6 +108,7 @@ def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [
     }
   }];
   let genVerifyDecl = 1;
+  let hasCustomAssemblyFormat = 1;
 }
 
 def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess", [
@@ -119,6 +123,7 @@ def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess", [
     "::mlir::Attribute":$second,
     "::mlir::Attribute":$third
   );
+  let hasCustomAssemblyFormat = 1;
 }
 
 // A more complex parameterized attribute with multiple level of nesting.

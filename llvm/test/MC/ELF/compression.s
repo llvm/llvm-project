@@ -143,26 +143,12 @@ foo:
 .endr
 
 # pad out the line table to make sure it's big enough to warrant compression
-	.loc 1 2 1
-        nop
-	.loc 1 3 2
-        nop
-	.loc 1 4 1
-        nop
-	.loc 1 5 2
-        nop
-	.loc 1 6 1
-        nop
-	.loc 1 7 2
-        nop
-	.loc 1 8 1
-        nop
-	.loc 1 9 2
-        nop
-	.loc 1 10 1
-        nop
-	.loc 1 11 2
-        nop
+	.irpc i, 123456789
+	  .irpc j, 0123456789
+	    .loc 1 \i\j \j
+	    nop
+	   .endr
+	.endr
 	.cfi_endproc
 	.cfi_sections .debug_frame
 

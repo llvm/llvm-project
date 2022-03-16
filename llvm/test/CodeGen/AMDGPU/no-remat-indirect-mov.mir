@@ -29,41 +29,47 @@ liveins:
 body:             |
   ; GFX9-LABEL: name: index_vgpr_waterfall_loop
   ; GFX9: bb.0:
-  ; GFX9:   successors: %bb.1(0x80000000)
-  ; GFX9:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16
-  ; GFX9:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr16
-  ; GFX9:   undef %18.sub15:vreg_512 = COPY $vgpr15
-  ; GFX9:   %18.sub14:vreg_512 = COPY $vgpr14
-  ; GFX9:   %18.sub13:vreg_512 = COPY $vgpr13
-  ; GFX9:   %18.sub12:vreg_512 = COPY $vgpr12
-  ; GFX9:   %18.sub11:vreg_512 = COPY $vgpr11
-  ; GFX9:   %18.sub10:vreg_512 = COPY $vgpr10
-  ; GFX9:   %18.sub9:vreg_512 = COPY $vgpr9
-  ; GFX9:   %18.sub8:vreg_512 = COPY $vgpr8
-  ; GFX9:   %18.sub7:vreg_512 = COPY $vgpr7
-  ; GFX9:   %18.sub6:vreg_512 = COPY $vgpr6
-  ; GFX9:   %18.sub5:vreg_512 = COPY $vgpr5
-  ; GFX9:   %18.sub4:vreg_512 = COPY $vgpr4
-  ; GFX9:   %18.sub3:vreg_512 = COPY $vgpr3
-  ; GFX9:   %18.sub2:vreg_512 = COPY $vgpr2
-  ; GFX9:   %18.sub1:vreg_512 = COPY $vgpr1
-  ; GFX9:   %18.sub0:vreg_512 = COPY $vgpr0
-  ; GFX9:   [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 15, [[COPY1]], implicit $exec
-  ; GFX9:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
-  ; GFX9: bb.1:
-  ; GFX9:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GFX9:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[V_AND_B32_e32_]], implicit $exec
-  ; GFX9:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]], [[V_AND_B32_e32_]], implicit $exec
-  ; GFX9:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; GFX9:   S_SET_GPR_IDX_ON [[V_READFIRSTLANE_B32_]], 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
-  ; GFX9:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 undef %18.sub0, implicit $exec, implicit %18, implicit $m0
-  ; GFX9:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
-  ; GFX9:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
-  ; GFX9:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
-  ; GFX9: bb.2:
-  ; GFX9:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX9:   $vgpr0 = COPY [[V_MOV_B32_e32_]]
-  ; GFX9:   S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
+  ; GFX9-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX9-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_sgpr31
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
+  ; GFX9-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr16
+  ; GFX9-NEXT:   undef %18.sub15:vreg_512 = COPY $vgpr15
+  ; GFX9-NEXT:   %18.sub14:vreg_512 = COPY $vgpr14
+  ; GFX9-NEXT:   %18.sub13:vreg_512 = COPY $vgpr13
+  ; GFX9-NEXT:   %18.sub12:vreg_512 = COPY $vgpr12
+  ; GFX9-NEXT:   %18.sub11:vreg_512 = COPY $vgpr11
+  ; GFX9-NEXT:   %18.sub10:vreg_512 = COPY $vgpr10
+  ; GFX9-NEXT:   %18.sub9:vreg_512 = COPY $vgpr9
+  ; GFX9-NEXT:   %18.sub8:vreg_512 = COPY $vgpr8
+  ; GFX9-NEXT:   %18.sub7:vreg_512 = COPY $vgpr7
+  ; GFX9-NEXT:   %18.sub6:vreg_512 = COPY $vgpr6
+  ; GFX9-NEXT:   %18.sub5:vreg_512 = COPY $vgpr5
+  ; GFX9-NEXT:   %18.sub4:vreg_512 = COPY $vgpr4
+  ; GFX9-NEXT:   %18.sub3:vreg_512 = COPY $vgpr3
+  ; GFX9-NEXT:   %18.sub2:vreg_512 = COPY $vgpr2
+  ; GFX9-NEXT:   %18.sub1:vreg_512 = COPY $vgpr1
+  ; GFX9-NEXT:   %18.sub0:vreg_512 = COPY $vgpr0
+  ; GFX9-NEXT:   [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 15, [[COPY1]], implicit $exec
+  ; GFX9-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT: bb.1:
+  ; GFX9-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sgpr_32 = V_READFIRSTLANE_B32 [[V_AND_B32_e32_]], implicit $exec
+  ; GFX9-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_READFIRSTLANE_B32_]], [[V_AND_B32_e32_]], implicit $exec
+  ; GFX9-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64 = S_AND_SAVEEXEC_B64 [[V_CMP_EQ_U32_e64_]], implicit-def $exec, implicit-def dead $scc, implicit $exec
+  ; GFX9-NEXT:   S_SET_GPR_IDX_ON [[V_READFIRSTLANE_B32_]], 1, implicit-def $m0, implicit-def $mode, implicit undef $m0, implicit $mode
+  ; GFX9-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 undef %18.sub0, implicit $exec, implicit %18, implicit $m0
+  ; GFX9-NEXT:   S_SET_GPR_IDX_OFF implicit-def $mode, implicit $mode
+  ; GFX9-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def dead $scc
+  ; GFX9-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
+  ; GFX9-NEXT: {{  $}}
+  ; GFX9-NEXT: bb.2:
+  ; GFX9-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
+  ; GFX9-NEXT:   $sgpr30_sgpr31 = COPY [[COPY]]
+  ; GFX9-NEXT:   $vgpr0 = COPY [[V_MOV_B32_e32_]]
+  ; GFX9-NEXT:   S_SETPC_B64_return $sgpr30_sgpr31, implicit $vgpr0, implicit undef $vgpr1, implicit undef $vgpr2, implicit undef $vgpr3
   bb.0:
     successors: %bb.1
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $sgpr30_sgpr31

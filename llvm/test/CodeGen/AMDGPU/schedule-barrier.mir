@@ -12,32 +12,33 @@ body: |
 
     ; CHECK-LABEL: name: test
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9
-    ; CHECK: undef %0.sub3:vreg_128 = COPY $vgpr9
-    ; CHECK: undef %1.sub2:vreg_128 = COPY $vgpr8
-    ; CHECK: undef %2.sub1:vreg_128 = COPY $vgpr7
-    ; CHECK: undef %8.sub1:vreg_64 = COPY $vgpr1
-    ; CHECK: %8.sub0:vreg_64 = COPY $vgpr0
-    ; CHECK: undef %3.sub0:vreg_128 = COPY $vgpr6
-    ; CHECK: undef %4.sub3:vreg_128 = COPY $vgpr5
-    ; CHECK: undef %5.sub2:vreg_128 = COPY $vgpr4
-    ; CHECK: undef %6.sub1:vreg_128 = COPY $vgpr3
-    ; CHECK: undef %7.sub0:vreg_128 = COPY $vgpr2
-    ; CHECK: undef %9.sub0:sgpr_128 = V_READFIRSTLANE_B32 %7.sub0, implicit $exec
-    ; CHECK: %9.sub1:sgpr_128 = V_READFIRSTLANE_B32 %6.sub1, implicit $exec
-    ; CHECK: %9.sub2:sgpr_128 = V_READFIRSTLANE_B32 %5.sub2, implicit $exec
-    ; CHECK: %9.sub3:sgpr_128 = V_READFIRSTLANE_B32 %4.sub3, implicit $exec
-    ; CHECK: S_BARRIER
-    ; CHECK: [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %9, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK: undef %12.sub0:sgpr_128 = V_READFIRSTLANE_B32 %3.sub0, implicit $exec
-    ; CHECK: %12.sub1:sgpr_128 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
-    ; CHECK: %12.sub2:sgpr_128 = V_READFIRSTLANE_B32 %1.sub2, implicit $exec
-    ; CHECK: %12.sub3:sgpr_128 = V_READFIRSTLANE_B32 %0.sub3, implicit $exec
-    ; CHECK: [[BUFFER_LOAD_DWORD_OFFSET1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %12, 0, 0, 0, 0, 0, implicit $exec
-    ; CHECK: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[BUFFER_LOAD_DWORD_OFFSET]], [[BUFFER_LOAD_DWORD_OFFSET]], implicit $exec
-    ; CHECK: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[BUFFER_LOAD_DWORD_OFFSET1]], [[BUFFER_LOAD_DWORD_OFFSET1]], implicit $exec
-    ; CHECK: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_MUL_LO_U32_e64_]], [[V_MUL_LO_U32_e64_1]], implicit $exec
-    ; CHECK: GLOBAL_STORE_DWORD %8, [[V_ADD_U32_e32_]], 0, 0, implicit $exec
-    ; CHECK: S_ENDPGM 0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: undef %0.sub3:vreg_128 = COPY $vgpr9
+    ; CHECK-NEXT: undef %1.sub2:vreg_128 = COPY $vgpr8
+    ; CHECK-NEXT: undef %2.sub1:vreg_128 = COPY $vgpr7
+    ; CHECK-NEXT: undef %8.sub1:vreg_64 = COPY $vgpr1
+    ; CHECK-NEXT: %8.sub0:vreg_64 = COPY $vgpr0
+    ; CHECK-NEXT: undef %3.sub0:vreg_128 = COPY $vgpr6
+    ; CHECK-NEXT: undef %4.sub3:vreg_128 = COPY $vgpr5
+    ; CHECK-NEXT: undef %5.sub2:vreg_128 = COPY $vgpr4
+    ; CHECK-NEXT: undef %6.sub1:vreg_128 = COPY $vgpr3
+    ; CHECK-NEXT: undef %7.sub0:vreg_128 = COPY $vgpr2
+    ; CHECK-NEXT: undef %9.sub0:sgpr_128 = V_READFIRSTLANE_B32 %7.sub0, implicit $exec
+    ; CHECK-NEXT: %9.sub1:sgpr_128 = V_READFIRSTLANE_B32 %6.sub1, implicit $exec
+    ; CHECK-NEXT: %9.sub2:sgpr_128 = V_READFIRSTLANE_B32 %5.sub2, implicit $exec
+    ; CHECK-NEXT: %9.sub3:sgpr_128 = V_READFIRSTLANE_B32 %4.sub3, implicit $exec
+    ; CHECK-NEXT: S_BARRIER
+    ; CHECK-NEXT: [[BUFFER_LOAD_DWORD_OFFSET:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %9, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: undef %12.sub0:sgpr_128 = V_READFIRSTLANE_B32 %3.sub0, implicit $exec
+    ; CHECK-NEXT: %12.sub1:sgpr_128 = V_READFIRSTLANE_B32 %2.sub1, implicit $exec
+    ; CHECK-NEXT: %12.sub2:sgpr_128 = V_READFIRSTLANE_B32 %1.sub2, implicit $exec
+    ; CHECK-NEXT: %12.sub3:sgpr_128 = V_READFIRSTLANE_B32 %0.sub3, implicit $exec
+    ; CHECK-NEXT: [[BUFFER_LOAD_DWORD_OFFSET1:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFSET %12, 0, 0, 0, 0, 0, implicit $exec
+    ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[BUFFER_LOAD_DWORD_OFFSET]], [[BUFFER_LOAD_DWORD_OFFSET]], implicit $exec
+    ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = V_MUL_LO_U32_e64 [[BUFFER_LOAD_DWORD_OFFSET1]], [[BUFFER_LOAD_DWORD_OFFSET1]], implicit $exec
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[V_MUL_LO_U32_e64_]], [[V_MUL_LO_U32_e64_1]], implicit $exec
+    ; CHECK-NEXT: GLOBAL_STORE_DWORD %8, [[V_ADD_U32_e32_]], 0, 0, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
     undef %43.sub3:vreg_128 = COPY $vgpr9
     undef %42.sub2:vreg_128 = COPY $vgpr8
     undef %41.sub1:vreg_128 = COPY $vgpr7

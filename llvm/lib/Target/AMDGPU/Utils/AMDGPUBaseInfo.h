@@ -612,8 +612,8 @@ namespace Hwreg {
 LLVM_READONLY
 int64_t getHwregId(const StringRef Name, const MCSubtargetInfo &STI);
 
-LLVM_READNONE
-bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI);
+LLVM_READONLY
+bool isValidHwreg(int64_t Id, const MCSubtargetInfo &STI, StringRef Name);
 
 LLVM_READNONE
 bool isValidHwreg(int64_t Id);

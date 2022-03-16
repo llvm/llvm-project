@@ -70,3 +70,32 @@ define i64 @and64_0xfff(i64 %x) {
   ret i64 %a
 }
 
+define i32 @and32_0xfffff000(i32 %x) {
+; RV32I-LABEL: and32_0xfffff000:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 1048575
+; RV32I-NEXT:    and a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and32_0xfffff000:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1048575
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+  %a = and i32 %x, -4096
+  ret i32 %a
+}
+
+define i32 @and32_0xfffffa00(i32 %x) {
+; RV32I-LABEL: and32_0xfffffa00:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, -1536
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: and32_0xfffffa00:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, -1536
+; RV64I-NEXT:    ret
+  %a = and i32 %x, -1536
+  ret i32 %a
+}

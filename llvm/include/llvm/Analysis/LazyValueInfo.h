@@ -114,6 +114,9 @@ public:
   /// Inform the analysis cache that we have erased a block.
   void eraseBlock(BasicBlock *BB);
 
+  /// Complete flush all previously computed values
+  void clear(const Module *M);
+
   /// Print the \LazyValueInfo Analysis.
   /// We pass in the DTree that is required for identifying which basic blocks
   /// we can solve/print for, in the LVIPrinter.

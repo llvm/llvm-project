@@ -15,13 +15,13 @@ using namespace llvm;
 using namespace lld;
 using namespace lld::macho;
 
-static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 48,
+static_assert(sizeof(void *) != 8 || sizeof(Symbol) == 56,
               "Try to minimize Symbol's size; we create many instances");
 
 // The Microsoft ABI doesn't support using parent class tail padding for child
 // members, hence the _MSC_VER check.
 #if !defined(_MSC_VER)
-static_assert(sizeof(void *) != 8 || sizeof(Defined) == 80,
+static_assert(sizeof(void *) != 8 || sizeof(Defined) == 88,
               "Try to minimize Defined's size; we create many instances");
 #endif
 
@@ -44,12 +44,14 @@ Defined::Defined(StringRefZ name, InputFile *file, InputSection *isec,
                  uint64_t value, uint64_t size, bool isWeakDef, bool isExternal,
                  bool isPrivateExtern, bool isThumb,
                  bool isReferencedDynamically, bool noDeadStrip,
-                 bool canOverrideWeakDef, bool isWeakDefCanBeHidden)
+                 bool canOverrideWeakDef, bool isWeakDefCanBeHidden,
+                 bool interposable)
     : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
       privateExtern(isPrivateExtern), includeInSymtab(true), thumb(isThumb),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
-      weakDefCanBeHidden(isWeakDefCanBeHidden), weakDef(isWeakDef),
-      external(isExternal), isec(isec), value(value), size(size) {
+      interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
+      weakDef(isWeakDef), external(isExternal), isec(isec), value(value),
+      size(size) {
   if (isec) {
     isec->symbols.push_back(this);
     // Maintain sorted order.

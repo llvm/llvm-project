@@ -36,6 +36,12 @@ void dfsan_clear_arg_tls(uptr offset, uptr size);
 // Zero out the TLS storage.
 void dfsan_clear_thread_local_state();
 
+// Set DFSan label and origin TLS of argument for a call.
+// Note that offset may not correspond with argument number.
+// Some arguments (aggregate/array) will use several offsets.
+void dfsan_set_arg_tls(uptr offset, dfsan_label label);
+void dfsan_set_arg_origin_tls(uptr offset, dfsan_origin o);
+
 // Return the origin associated with the first taint byte in the size bytes
 // from the address addr.
 dfsan_origin dfsan_read_origin_of_first_taint(const void *addr, uptr size);
