@@ -12,11 +12,9 @@
 #if !SCUDO_ANDROID || !_BIONIC
 
 #include "allocator_config.h"
+#include "wrappers_c.h"
 
 #include <stdint.h>
-
-extern "C" void malloc_postinit();
-extern HIDDEN scudo::Allocator<scudo::Config, malloc_postinit> Allocator;
 
 namespace std {
 struct nothrow_t {};
