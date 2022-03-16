@@ -15,8 +15,6 @@
 #ifndef LLVM_CODEGEN_INTRINSICLOWERING_H
 #define LLVM_CODEGEN_INTRINSICLOWERING_H
 
-#include "llvm/IR/Intrinsics.h"
-
 namespace llvm {
 class CallInst;
 class DataLayout;
