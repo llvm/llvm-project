@@ -365,9 +365,6 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
       break;
   }
 
-  if (Module)
-    noteLookupUsage(It.Idx, ImportLoc);
-
   return Module;
 }
 

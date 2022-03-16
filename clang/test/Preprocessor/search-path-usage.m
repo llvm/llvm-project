@@ -129,7 +129,7 @@
 #endif
 #endif
 
-// Check that search paths with module maps are reported.
+// Check that search paths with module maps are NOT reported.
 //
 // RUN: mkdir %t/modulemap_abs
 // RUN: sed "s|DIR|%/S/Inputs/search-path-usage|g"                            \
@@ -142,5 +142,5 @@
 // RUN:   -DMODMAP_ABS -verify
 #ifdef MODMAP_ABS
 @import b; // \
-// expected-remark-re {{search path used: '{{.*}}/modulemap_abs'}}
+// expected-no-diagnostics
 #endif
