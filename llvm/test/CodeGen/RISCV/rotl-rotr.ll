@@ -11,9 +11,6 @@
 ; These IR sequences are idioms for rotates. If rotate instructions are
 ; supported, they will be turned into ISD::ROTL or ISD::ROTR.
 
-; FIXME: We don't match 32-bit rotates with Zbb even though we have ROLW/RORW
-; instructions.
-
 define i32 @rotl_32(i32 %x, i32 %y) nounwind {
 ; RV32I-LABEL: rotl_32:
 ; RV32I:       # %bb.0:
