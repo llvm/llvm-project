@@ -11,9 +11,7 @@ define protected amdgpu_kernel void @load_from_other_as(<4 x float>* nocapture n
 ; CHECK-LABEL: @load_from_other_as(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[STRUCT_HOGE:%.*]], align 4, addrspace(5)
-; CHECK-NEXT:    [[B:%.*]] = addrspacecast [[STRUCT_HOGE]] addrspace(5)* [[A]] to %struct.hoge*
-; CHECK-NEXT:    [[C:%.*]] = getelementptr inbounds [[STRUCT_HOGE]], %struct.hoge* [[B]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[C]] to <1 x float>*
+; CHECK-NEXT:    [[TMP0:%.*]] = addrspacecast [[STRUCT_HOGE]] addrspace(5)* [[A]] to <1 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x float>, <1 x float>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[E:%.*]] = shufflevector <1 x float> [[TMP1]], <1 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    store <4 x float> [[E]], <4 x float>* [[RESULTPTR:%.*]], align 16
