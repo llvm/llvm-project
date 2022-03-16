@@ -3279,9 +3279,8 @@ define i64 @packu_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: packu_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srli a0, a0, 32
-; RV64I-NEXT:    li a2, -1
-; RV64I-NEXT:    slli a2, a2, 32
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    slli a1, a1, 32
 ; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
