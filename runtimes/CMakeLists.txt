@@ -176,6 +176,8 @@ if(LLVM_INCLUDE_TESTS)
     set(LIT_ARGS_DEFAULT "${LIT_ARGS_DEFAULT} --no-progress-bar")
   endif()
   set(LLVM_LIT_ARGS "${LIT_ARGS_DEFAULT}" CACHE STRING "Default options for lit")
+
+  umbrella_lit_testsuite_begin(check-runtimes)
 endif()
 
 # llvm-libgcc incorporates both compiler-rt and libunwind as subprojects with very
@@ -200,36 +202,13 @@ endif()
 foreach(entry ${runtimes})
   get_filename_component(projName ${entry} NAME)
 
-  # Between each sub-project we want to cache and clear the LIT properties
-  set_property(GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  set_property(GLOBAL PROPERTY LLVM_LIT_PARAMS)
-  set_property(GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  set_property(GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-
   add_subdirectory(${entry} ${projName})
-
-  get_property(LLVM_LIT_TESTSUITES GLOBAL PROPERTY LLVM_LIT_TESTSUITES)
-  get_property(LLVM_LIT_PARAMS GLOBAL PROPERTY LLVM_LIT_PARAMS)
-  get_property(LLVM_LIT_DEPENDS GLOBAL PROPERTY LLVM_LIT_DEPENDS)
-  get_property(LLVM_LIT_EXTRA_ARGS GLOBAL PROPERTY LLVM_LIT_EXTRA_ARGS)
-
-  list(APPEND RUNTIMES_LIT_TESTSUITES ${LLVM_LIT_TESTSUITES})
-  list(APPEND RUNTIMES_LIT_PARAMS ${LLVM_LIT_PARAMS})
-  list(APPEND RUNTIMES_LIT_DEPENDS ${LLVM_LIT_DEPENDS})
-  list(APPEND RUNTIMES_LIT_EXTRA_ARGS ${LLVM_LIT_EXTRA_ARGS})
 endforeach()
 
 if(LLVM_INCLUDE_TESTS)
   # Add a global check rule now that all subdirectories have been traversed
   # and we know the total set of lit testsuites.
-  add_lit_target(check-runtimes
-    "Running all regression tests"
-    ${RUNTIMES_LIT_TESTSUITES}
-    PARAMS ${RUNTIMES_LIT_PARAMS}
-    DEPENDS ${RUNTIMES_LIT_DEPENDS}
-    ARGS ${RUNTIMES_LIT_EXTRA_ARGS}
-    )
-  add_custom_target(runtimes-test-depends DEPENDS ${RUNTIMES_LIT_DEPENDS})
+  umbrella_lit_testsuite_end(check-runtimes)
 
   if (NOT HAVE_LLVM_LIT)
     # If built by manually invoking cmake on this directory, we don't have
