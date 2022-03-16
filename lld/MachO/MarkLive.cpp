@@ -160,11 +160,16 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
     // Mark things reachable from GC roots as live.
     while (!worklist.empty()) {
       WorklistEntry *entry = worklist.pop_back_val();
-      assert(cast<ConcatInputSection>(getInputSection(entry))->live &&
+      // Entries that get placed onto the worklist always contain
+      // ConcatInputSections. `WhyLiveEntry::prev` may point to entries that
+      // contain other types of InputSections (due to S_ATTR_LIVE_SUPPORT), but
+      // those entries should never be pushed onto the worklist.
+      auto *isec = cast<ConcatInputSection>(getInputSection(entry));
+      assert(isec->live &&
              "We mark as live when pushing onto the worklist!");
 
       // Mark all symbols listed in the relocation table for this section.
-      for (const Reloc &r : getInputSection(entry)->relocs) {
+      for (const Reloc &r : isec->relocs) {
         if (auto *s = r.referent.dyn_cast<Symbol *>())
           addSym(s, entry);
         else
