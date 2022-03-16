@@ -14757,6 +14757,10 @@ TreeTransform<Derived>::RebuildCXXOperatorCallExpr(OverloadedOperatorKind Op,
       return getSema().CreateBuiltinArraySubscriptExpr(
           First, Callee->getBeginLoc(), Second, OpLoc);
   } else if (Op == OO_Arrow) {
+    // It is possible that the type refers to a RecoveryExpr created earlier
+    // in the tree transformation.
+    if (First->getType()->isDependentType())
+      return ExprError();
     // -> is never a builtin operation.
     return SemaRef.BuildOverloadedArrowExpr(nullptr, First, OpLoc);
   } else if (Second == nullptr || isPostIncDec) {
