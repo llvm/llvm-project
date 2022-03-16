@@ -5912,6 +5912,14 @@ void Process::PrintWarningCantLoadSwiftModule(const Module &module,
 }
 
 void Process::PrintWarningToolchainMismatch(const SymbolContext &sc) {
+  if (GetTarget().GetProcessLaunchInfo().IsScriptedProcess())
+    // It's very likely that the debugger used to launch the ScriptedProcess
+    // will not match the compiler version used to build the target, and we
+    // shouldn't need Swift's serialized AST to symbolicate the frame where we
+    // stopped. However, because this is called from a generic place
+    // (Thread::FrameSelectedCallback), it's safe to silence the warning for
+    // Scripted Processes.
+    return;
   if (!GetWarningsToolchainMismatch())
     return;
   if (!sc.module_sp || !sc.comp_unit)
