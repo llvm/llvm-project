@@ -923,6 +923,8 @@ public:
 
   bool hasMovB64() const { return GFX940Insts; }
 
+  bool hasLshlAddB64() const { return GFX940Insts; }
+
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }

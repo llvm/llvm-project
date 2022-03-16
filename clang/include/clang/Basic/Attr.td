@@ -1770,7 +1770,7 @@ def NoInline : DeclOrStmtAttr {
   let Accessors = [Accessor<"isClangNoInline", [CXX11<"clang", "noinline">,
                                                 C2x<"clang", "noinline">]>];
   let Documentation = [NoInlineDocs];
-  let Subjects = SubjectList<[Function, Stmt], ErrorDiag,
+  let Subjects = SubjectList<[Function, Stmt], WarnDiag,
                              "functions and statements">;
   let SimpleHandler = 1;
 }
