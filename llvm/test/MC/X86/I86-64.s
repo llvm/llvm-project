@@ -873,11 +873,11 @@ cmpsb %es:(%rdi), %gs:(%rsi)
 cmpsl %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: cmpsq %es:(%rdi), %gs:(%rsi) 
-// CHECK: encoding: [0x48,0x65,0xa7]        
+// CHECK: encoding: [0x65,0x48,0xa7]        
 cmpsq %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: cmpsw %es:(%rdi), %gs:(%rsi) 
-// CHECK: encoding: [0x66,0x65,0xa7]        
+// CHECK: encoding: [0x65,0x66,0xa7]        
 cmpsw %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: cmpw $0, 485498096 
@@ -1645,7 +1645,7 @@ leal (%rdx), %r13d
 lodsb %gs:(%rsi), %al 
 
 // CHECK: lodsw %gs:(%rsi), %ax 
-// CHECK: encoding: [0x66,0x65,0xad]        
+// CHECK: encoding: [0x65,0x66,0xad]        
 lodsw %gs:(%rsi), %ax 
 
 // CHECK: loop 64 
@@ -1821,11 +1821,11 @@ movsb %gs:(%rsi), %es:(%rdi)
 movsl %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: movsq %gs:(%rsi), %es:(%rdi) 
-// CHECK: encoding: [0x48,0x65,0xa5]        
+// CHECK: encoding: [0x65,0x48,0xa5]        
 movsq %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: movsw %gs:(%rsi), %es:(%rdi) 
-// CHECK: encoding: [0x66,0x65,0xa5]        
+// CHECK: encoding: [0x65,0x66,0xa5]        
 movsw %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: movw $0, 485498096 
@@ -2985,11 +2985,11 @@ rep cmpsb %es:(%rdi), %gs:(%rsi)
 rep cmpsl %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: rep cmpsq %es:(%rdi), %gs:(%rsi) 
-// CHECK: encoding: [0xf3,0x48,0x65,0xa7]       
+// CHECK: encoding: [0xf3,0x65,0x48,0xa7]       
 rep cmpsq %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: rep cmpsw %es:(%rdi), %gs:(%rsi) 
-// CHECK: encoding: [0xf3,0x66,0x65,0xa7]       
+// CHECK: encoding: [0xf3,0x65,0x66,0xa7]       
 rep cmpsw %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: rep lodsb %gs:(%rsi), %al 
@@ -2997,7 +2997,7 @@ rep cmpsw %es:(%rdi), %gs:(%rsi)
 rep lodsb %gs:(%rsi), %al 
 
 // CHECK: rep lodsw %gs:(%rsi), %ax 
-// CHECK: encoding: [0xf3,0x66,0x65,0xad]       
+// CHECK: encoding: [0xf3,0x65,0x66,0xad]       
 rep lodsw %gs:(%rsi), %ax 
 
 // CHECK: rep movsb %gs:(%rsi), %es:(%rdi) 
@@ -3009,11 +3009,11 @@ rep movsb %gs:(%rsi), %es:(%rdi)
 rep movsl %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: rep movsq %gs:(%rsi), %es:(%rdi) 
-// CHECK: encoding: [0xf3,0x48,0x65,0xa5]       
+// CHECK: encoding: [0xf3,0x65,0x48,0xa5]       
 rep movsq %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: rep movsw %gs:(%rsi), %es:(%rdi) 
-// CHECK: encoding: [0xf3,0x66,0x65,0xa5]       
+// CHECK: encoding: [0xf3,0x65,0x66,0xa5]       
 rep movsw %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: repne cmpsb %es:(%rdi), %gs:(%rsi) 
@@ -3025,11 +3025,11 @@ repne cmpsb %es:(%rdi), %gs:(%rsi)
 repne cmpsl %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: repne cmpsq %es:(%rdi), %gs:(%rsi) 
-// CHECK: encoding: [0xf2,0x48,0x65,0xa7]       
+// CHECK: encoding: [0xf2,0x65,0x48,0xa7]       
 repne cmpsq %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: repne cmpsw %es:(%rdi), %gs:(%rsi) 
-// CHECK: encoding: [0xf2,0x66,0x65,0xa7]       
+// CHECK: encoding: [0xf2,0x65,0x66,0xa7]       
 repne cmpsw %es:(%rdi), %gs:(%rsi) 
 
 // CHECK: repne lodsb %gs:(%rsi), %al 
@@ -3037,7 +3037,7 @@ repne cmpsw %es:(%rdi), %gs:(%rsi)
 repne lodsb %gs:(%rsi), %al 
 
 // CHECK: repne lodsw %gs:(%rsi), %ax 
-// CHECK: encoding: [0xf2,0x66,0x65,0xad]       
+// CHECK: encoding: [0xf2,0x65,0x66,0xad]       
 repne lodsw %gs:(%rsi), %ax 
 
 // CHECK: repne movsb %gs:(%rsi), %es:(%rdi) 
@@ -3049,11 +3049,11 @@ repne movsb %gs:(%rsi), %es:(%rdi)
 repne movsl %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: repne movsq %gs:(%rsi), %es:(%rdi) 
-// CHECK: encoding: [0xf2,0x48,0x65,0xa5]       
+// CHECK: encoding: [0xf2,0x65,0x48,0xa5]       
 repne movsq %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: repne movsw %gs:(%rsi), %es:(%rdi) 
-// CHECK: encoding: [0xf2,0x66,0x65,0xa5]       
+// CHECK: encoding: [0xf2,0x65,0x66,0xa5]       
 repne movsw %gs:(%rsi), %es:(%rdi) 
 
 // CHECK: repne scasb %es:(%rdi), %al 
