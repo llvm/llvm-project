@@ -676,3 +676,28 @@ void tds(int argc) {
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
+
+// CHECK-LABEL:  void teamsloop(int argc)
+void teamsloop(int argc) {
+  int x, cond, fp, rd, lin, step, map;
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#TDS:]]: #pragma omp teams loop firstprivate(fp) reduction(+: rd)
+// CHECK-DAG:  [[#TDS-2]]: [B1.[[#TDS+1]]]
+// CHECK-DAG:  [[#TDS-1]]: [B1.[[#TDS+2]]]
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#TDSB:]]];
+// CHECK-DAG:  [[#TDS+1]]: fp
+// CHECK-DAG:  [[#TDS+2]]: rd
+// CHECK-DAG:  [[#TDS+3]]: argc
+// CHECK-DAG:  [[#TDS+4]]: x
+// CHECK-DAG:  [[#TDS+5]]: #pragma omp target
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#TDSB-3]]: x
+// CHECK-DAG:  [[#TDSB-2]]: [B3.[[#TDSB-3]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#TDSB-1]]: argc
+// CHECK-DAG:  [[#TDSB]]: [B3.[[#TDSB-1]]] = [B3.[[#TDSB-2]]]
+#pragma omp target
+#pragma omp teams loop firstprivate(fp) reduction(+:rd)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}

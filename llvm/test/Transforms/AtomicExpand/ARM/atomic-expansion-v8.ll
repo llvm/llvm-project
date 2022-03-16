@@ -5,10 +5,10 @@ define i8 @test_atomic_xchg_i8(i8* %ptr, i8 %xchgend) {
 ; CHECK-NOT: fence
 ; CHECK: br label %[[LOOP:.*]]
 ; CHECK: [[LOOP]]:
-; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldrex.p0i8(i8* %ptr)
+; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldrex.p0i8(i8* elementtype(i8) %ptr)
 ; CHECK: [[OLDVAL:%.*]] = trunc i32 [[OLDVAL32]] to i8
 ; CHECK: [[NEWVAL32:%.*]] = zext i8 %xchgend to i32
-; CHECK: [[TRYAGAIN:%.*]] = call i32 @llvm.arm.strex.p0i8(i32 [[NEWVAL32]], i8* %ptr)
+; CHECK: [[TRYAGAIN:%.*]] = call i32 @llvm.arm.strex.p0i8(i32 [[NEWVAL32]], i8* elementtype(i8) %ptr)
 ; CHECK: [[TST:%.*]] = icmp ne i32 [[TRYAGAIN]], 0
 ; CHECK: br i1 [[TST]], label %[[LOOP]], label %[[END:.*]]
 ; CHECK: [[END]]:
@@ -23,11 +23,11 @@ define i16 @test_atomic_add_i16(i16* %ptr, i16 %addend) {
 ; CHECK-NOT: fence
 ; CHECK: br label %[[LOOP:.*]]
 ; CHECK: [[LOOP]]:
-; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i16(i16* %ptr)
+; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i16(i16* elementtype(i16) %ptr)
 ; CHECK: [[OLDVAL:%.*]] = trunc i32 [[OLDVAL32]] to i16
 ; CHECK: [[NEWVAL:%.*]] = add i16 [[OLDVAL]], %addend
 ; CHECK: [[NEWVAL32:%.*]] = zext i16 [[NEWVAL]] to i32
-; CHECK: [[TRYAGAIN:%.*]] = call i32 @llvm.arm.stlex.p0i16(i32 [[NEWVAL32]], i16* %ptr)
+; CHECK: [[TRYAGAIN:%.*]] = call i32 @llvm.arm.stlex.p0i16(i32 [[NEWVAL32]], i16* elementtype(i16) %ptr)
 ; CHECK: [[TST:%.*]] = icmp ne i32 [[TRYAGAIN]], 0
 ; CHECK: br i1 [[TST]], label %[[LOOP]], label %[[END:.*]]
 ; CHECK: [[END]]:
@@ -42,9 +42,9 @@ define i32 @test_atomic_sub_i32(i32* %ptr, i32 %subend) {
 ; CHECK-NOT: fence
 ; CHECK: br label %[[LOOP:.*]]
 ; CHECK: [[LOOP]]:
-; CHECK: [[OLDVAL:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* %ptr)
+; CHECK: [[OLDVAL:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* elementtype(i32) %ptr)
 ; CHECK: [[NEWVAL:%.*]] = sub i32 [[OLDVAL]], %subend
-; CHECK: [[TRYAGAIN:%.*]] = call i32 @llvm.arm.strex.p0i32(i32 [[NEWVAL]], i32* %ptr)
+; CHECK: [[TRYAGAIN:%.*]] = call i32 @llvm.arm.strex.p0i32(i32 [[NEWVAL]], i32* elementtype(i32) %ptr)
 ; CHECK: [[TST:%.*]] = icmp ne i32 [[TRYAGAIN]], 0
 ; CHECK: br i1 [[TST]], label %[[LOOP]], label %[[END:.*]]
 ; CHECK: [[END]]:
@@ -88,7 +88,7 @@ define i8 @test_cmpxchg_i8_seqcst_seqcst(i8* %ptr, i8 %desired, i8 %newval) {
 ; CHECK: br label %[[LOOP:.*]]
 
 ; CHECK: [[LOOP]]:
-; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i8(i8* %ptr)
+; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i8(i8* elementtype(i8) %ptr)
 ; CHECK: [[OLDVAL:%.*]] = trunc i32 %1 to i8
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i8 [[OLDVAL]], %desired
 ; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
@@ -99,7 +99,7 @@ define i8 @test_cmpxchg_i8_seqcst_seqcst(i8* %ptr, i8 %desired, i8 %newval) {
 ; CHECK: [[TRY_STORE]]:
 ; CHECK: [[LOADED_TRYSTORE:%.*]] = phi i8 [ [[OLDVAL]], %[[FENCED_STORE]] ]
 ; CHECK: [[NEWVAL32:%.*]] = zext i8 %newval to i32
-; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.stlex.p0i8(i32 [[NEWVAL32]], i8* %ptr)
+; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.stlex.p0i8(i32 [[NEWVAL32]], i8* elementtype(i8) %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
 ; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[LOOP]]
 
@@ -133,7 +133,7 @@ define i16 @test_cmpxchg_i16_seqcst_monotonic(i16* %ptr, i16 %desired, i16 %newv
 ; CHECK: br label %[[LOOP:.*]]
 
 ; CHECK: [[LOOP]]:
-; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i16(i16* %ptr)
+; CHECK: [[OLDVAL32:%.*]] = call i32 @llvm.arm.ldaex.p0i16(i16* elementtype(i16) %ptr)
 ; CHECK: [[OLDVAL:%.*]] = trunc i32 %1 to i16
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i16 [[OLDVAL]], %desired
 ; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
@@ -144,7 +144,7 @@ define i16 @test_cmpxchg_i16_seqcst_monotonic(i16* %ptr, i16 %desired, i16 %newv
 ; CHECK: [[TRY_STORE]]:
 ; CHECK: [[LOADED_TRYSTORE:%.*]] = phi i16 [ [[OLDVAL]], %[[FENCED_STORE]] ]
 ; CHECK: [[NEWVAL32:%.*]] = zext i16 %newval to i32
-; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.stlex.p0i16(i32 [[NEWVAL32]], i16* %ptr)
+; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.stlex.p0i16(i32 [[NEWVAL32]], i16* elementtype(i16) %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
 ; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[LOOP]]
 
@@ -179,7 +179,7 @@ define i32 @test_cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %desired, i32 %newva
 ; CHECK: br label %[[LOOP:.*]]
 
 ; CHECK: [[LOOP]]:
-; CHECK: [[OLDVAL:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* %ptr)
+; CHECK: [[OLDVAL:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* elementtype(i32) %ptr)
 ; CHECK: [[SHOULD_STORE:%.*]] = icmp eq i32 [[OLDVAL]], %desired
 ; CHECK: br i1 [[SHOULD_STORE]], label %[[FENCED_STORE:.*]], label %[[NO_STORE_BB:.*]]
 
@@ -188,7 +188,7 @@ define i32 @test_cmpxchg_i32_acquire_acquire(i32* %ptr, i32 %desired, i32 %newva
 
 ; CHECK: [[TRY_STORE]]:
 ; CHECK: [[LOADED_TRYSTORE:%.*]] = phi i32 [ [[OLDVAL]], %[[FENCED_STORE]] ]
-; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.strex.p0i32(i32 %newval, i32* %ptr)
+; CHECK: [[TRYAGAIN:%.*]] =  call i32 @llvm.arm.strex.p0i32(i32 %newval, i32* elementtype(i32) %ptr)
 ; CHECK: [[TST:%.*]] = icmp eq i32 [[TRYAGAIN]], 0
 ; CHECK: br i1 [[TST]], label %[[SUCCESS_BB:.*]], label %[[LOOP]]
 

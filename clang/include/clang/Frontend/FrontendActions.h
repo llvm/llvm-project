@@ -271,12 +271,6 @@ protected:
   bool usesPreprocessorOnly() const override { return true; }
 };
 
-class ExtractAPIAction : public ASTFrontendAction {
-protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override;
-};
-
 //===----------------------------------------------------------------------===//
 // Preprocessor Actions
 //===----------------------------------------------------------------------===//

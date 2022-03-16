@@ -774,7 +774,8 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
         // (srli (slli x, c3-c2), c3).
         // Skip it in order to select sraiw.
         bool Skip = Subtarget->hasStdExtZba() && C3 == 32 &&
-                    X.getOpcode() == ISD::SIGN_EXTEND_INREG;
+                    X.getOpcode() == ISD::SIGN_EXTEND_INREG &&
+                    cast<VTSDNode>(X.getOperand(1))->getVT() == MVT::i32;
         if (OneUseOrZExtW && !IsANDI && !Skip) {
           SDNode *SLLI = CurDAG->getMachineNode(
               RISCV::SLLI, DL, XLenVT, X,
