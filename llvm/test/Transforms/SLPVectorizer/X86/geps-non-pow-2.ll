@@ -25,22 +25,22 @@ define dso_local i32 @g() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32*> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = ptrtoint i32* [[TMP5]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP6]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32*> [[TMP4]], i32 1
-; CHECK-NEXT:    store i32 [[TMP7]], i32* [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, <2 x i32*> [[TMP1]], <2 x i64> <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32*> [[TMP4]], i32 1
+; CHECK-NEXT:    store i32 [[TMP7]], i32* [[TMP9]], align 4
 ; CHECK-NEXT:    [[INCDEC_PTR5:%.*]] = getelementptr inbounds i32, i32* [[C_022]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i32, <2 x i32*> [[TMP1]], <2 x i64> <i64 2, i64 2>
 ; CHECK-NEXT:    br label [[WHILE_BODY_BACKEDGE]]
 ; CHECK:       sw.bb6:
 ; CHECK-NEXT:    [[INCDEC_PTR8:%.*]] = getelementptr inbounds i32, i32* [[C_022]], i64 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint i32* [[INCDEC_PTR]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32*> [[TMP4]], i32 0
-; CHECK-NEXT:    store i32 [[TMP11]], i32* [[TMP12]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i32, <2 x i32*> [[TMP1]], <2 x i64> <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i32, <2 x i32*> [[TMP1]], <2 x i64> <i64 2, i64 2>
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32*> [[TMP4]], i32 0
+; CHECK-NEXT:    store i32 [[TMP11]], i32* [[TMP13]], align 4
 ; CHECK-NEXT:    br label [[WHILE_BODY_BACKEDGE]]
 ; CHECK:       while.body.backedge:
 ; CHECK-NEXT:    [[C_022_BE]] = phi i32* [ [[INCDEC_PTR]], [[WHILE_BODY]] ], [ [[INCDEC_PTR8]], [[SW_BB6]] ], [ [[INCDEC_PTR5]], [[SW_BB]] ]
-; CHECK-NEXT:    [[TMP14]] = phi <2 x i32*> [ [[TMP4]], [[WHILE_BODY]] ], [ [[TMP13]], [[SW_BB6]] ], [ [[TMP9]], [[SW_BB]] ]
+; CHECK-NEXT:    [[TMP14]] = phi <2 x i32*> [ [[TMP4]], [[WHILE_BODY]] ], [ [[TMP12]], [[SW_BB6]] ], [ [[TMP8]], [[SW_BB]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY]]
 ; CHECK:       while.end:
 ; CHECK-NEXT:    ret i32 undef
