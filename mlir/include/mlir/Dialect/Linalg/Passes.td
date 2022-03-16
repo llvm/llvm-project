@@ -45,7 +45,7 @@ def LinalgComprehensiveModuleBufferize :
            "Annotates IR with RaW conflicts. Requires test-analysis-only.">,
     Option<"allowReturnAllocs", "allow-return-allocs", "bool",
             /*default=*/"false",
-           "Allows the return of new allocations (for testing purposes only)">,
+           "Allows returning/yielding new allocations from a block.">,
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
