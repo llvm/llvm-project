@@ -36,7 +36,7 @@ declare i32 @llvm.arm.stlexd(i32, i32, i8*) nounwind
 ; CHECK-NOT: uxtb
 ; CHECK-NOT: and
 define zeroext i8 @test_load_i8(i8* %addr) {
-  %val = call i32 @llvm.arm.ldaex.p0i8(i8* %addr)
+  %val = call i32 @llvm.arm.ldaex.p0i8(i8* elementtype(i8) %addr)
   %val8 = trunc i32 %val to i8
   ret i8 %val8
 }
@@ -46,7 +46,7 @@ define zeroext i8 @test_load_i8(i8* %addr) {
 ; CHECK-NOT: uxth
 ; CHECK-NOT: and
 define zeroext i16 @test_load_i16(i16* %addr) {
-  %val = call i32 @llvm.arm.ldaex.p0i16(i16* %addr)
+  %val = call i32 @llvm.arm.ldaex.p0i16(i16* elementtype(i16) %addr)
   %val16 = trunc i32 %val to i16
   ret i16 %val16
 }
@@ -54,7 +54,7 @@ define zeroext i16 @test_load_i16(i16* %addr) {
 ; CHECK-LABEL: test_load_i32:
 ; CHECK: ldaex r0, [r0]
 define i32 @test_load_i32(i32* %addr) {
-  %val = call i32 @llvm.arm.ldaex.p0i32(i32* %addr)
+  %val = call i32 @llvm.arm.ldaex.p0i32(i32* elementtype(i32) %addr)
   ret i32 %val
 }
 
@@ -67,7 +67,7 @@ declare i32 @llvm.arm.ldaex.p0i32(i32*) nounwind readonly
 ; CHECK: stlexb r0, r1, [r2]
 define i32 @test_store_i8(i32, i8 %val, i8* %addr) {
   %extval = zext i8 %val to i32
-  %res = call i32 @llvm.arm.stlex.p0i8(i32 %extval, i8* %addr)
+  %res = call i32 @llvm.arm.stlex.p0i8(i32 %extval, i8* elementtype(i8) %addr)
   ret i32 %res
 }
 
@@ -76,14 +76,14 @@ define i32 @test_store_i8(i32, i8 %val, i8* %addr) {
 ; CHECK: stlexh r0, r1, [r2]
 define i32 @test_store_i16(i32, i16 %val, i16* %addr) {
   %extval = zext i16 %val to i32
-  %res = call i32 @llvm.arm.stlex.p0i16(i32 %extval, i16* %addr)
+  %res = call i32 @llvm.arm.stlex.p0i16(i32 %extval, i16* elementtype(i16) %addr)
   ret i32 %res
 }
 
 ; CHECK-LABEL: test_store_i32:
 ; CHECK: stlex r0, r1, [r2]
 define i32 @test_store_i32(i32, i32 %val, i32* %addr) {
-  %res = call i32 @llvm.arm.stlex.p0i32(i32 %val, i32* %addr)
+  %res = call i32 @llvm.arm.stlex.p0i32(i32 %val, i32* elementtype(i32) %addr)
   ret i32 %res
 }
 
