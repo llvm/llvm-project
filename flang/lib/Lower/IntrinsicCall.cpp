@@ -453,8 +453,12 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genFraction(mlir::Type resultType,
+                          mlir::ArrayRef<mlir::Value> args);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -466,13 +470,18 @@ struct IntrinsicLibrary {
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
@@ -636,6 +645,9 @@ static constexpr IntrinsicHandler handlers[]{
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
      /*isElemental=*/false},
+    {"exponent", &I::genExponent},
+    {"floor", &I::genFloor},
+    {"fraction", &I::genFraction},
     {"iachar", &I::genIchar},
     {"iand", &I::genIand},
     {"ibclr", &I::genIbclr},
@@ -684,7 +696,17 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"mod", &I::genMod},
+    {"modulo", &I::genModulo},
+    {"nint", &I::genNint},
+    {"not", &I::genNot},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
+    {"product",
+     &I::genProduct,
+     {{{"array", asBox},
+       {"dim", asValue},
+       {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"random_init",
      &I::genRandomInit,
      {{{"repeatable", asValue}, {"image_distinct", asValue}}},
@@ -795,12 +817,33 @@ static mlir::FunctionType genF64F64F64FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t, t}, {t});
 }
 
+template <int Bits>
+static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF64(context);
+  auto r = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {t}, {r});
+}
+
+template <int Bits>
+static mlir::FunctionType genIntF32FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF32(context);
+  auto r = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {t}, {r});
+}
+
 // TODO : Fill-up this table with more intrinsic.
 // Note: These are also defined as operations in LLVM dialect. See if this
 // can be use and has advantages.
 static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"abs", "llvm.fabs.f32", genF32F32FuncType},
     {"abs", "llvm.fabs.f64", genF64F64FuncType},
+    // llvm.floor is used for FLOOR, but returns real.
+    {"floor", "llvm.floor.f32", genF32F32FuncType},
+    {"floor", "llvm.floor.f64", genF64F64FuncType},
+    {"nint", "llvm.lround.i64.f64", genIntF64FuncType<64>},
+    {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>},
+    {"nint", "llvm.lround.i32.f64", genIntF64FuncType<32>},
+    {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>},
     {"pow", "llvm.pow.f32", genF32F32F32FuncType},
     {"pow", "llvm.pow.f64", genF64F64F64FuncType},
 };
@@ -1890,6 +1933,38 @@ IntrinsicLibrary::genEoshift(mlir::Type resultType,
                            "unexpected result for EOSHIFT");
 }
 
+// EXPONENT
+mlir::Value IntrinsicLibrary::genExponent(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genExponent(builder, loc, resultType,
+                                fir::getBase(args[0])));
+}
+
+// FLOOR
+mlir::Value IntrinsicLibrary::genFloor(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // Optional KIND argument.
+  assert(args.size() >= 1);
+  mlir::Value arg = args[0];
+  // Use LLVM floor that returns real.
+  mlir::Value floor = genRuntimeCall("floor", arg.getType(), {arg});
+  return builder.createConvert(loc, resultType, floor);
+}
+
+// FRACTION
+mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
+}
+
 // IAND
 mlir::Value IntrinsicLibrary::genIand(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
@@ -2238,6 +2313,83 @@ mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
   return result;
 }
 
+// MOD
+mlir::Value IntrinsicLibrary::genMod(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  if (resultType.isa<mlir::IntegerType>())
+    return builder.create<mlir::arith::RemSIOp>(loc, args[0], args[1]);
+
+  // Use runtime. Note that mlir::arith::RemFOp implements floating point
+  // remainder, but it does not work with fir::Real type.
+  // TODO: consider using mlir::arith::RemFOp when possible, that may help
+  // folding and  optimizations.
+  return genRuntimeCall("mod", resultType, args);
+}
+
+// MODULO
+mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
+                                        llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  // No floored modulo op in LLVM/MLIR yet. TODO: add one to MLIR.
+  // In the meantime, use a simple inlined implementation based on truncated
+  // modulo (MOD(A, P) implemented by RemIOp, RemFOp). This avoids making manual
+  // division and multiplication from MODULO formula.
+  //  - If A/P > 0 or MOD(A,P)=0, then INT(A/P) = FLOOR(A/P), and MODULO = MOD.
+  //  - Otherwise, when A/P < 0 and MOD(A,P) !=0, then MODULO(A, P) =
+  //    A-FLOOR(A/P)*P = A-(INT(A/P)-1)*P = A-INT(A/P)*P+P = MOD(A,P)+P
+  // Note that A/P < 0 if and only if A and P signs are different.
+  if (resultType.isa<mlir::IntegerType>()) {
+    auto remainder =
+        builder.create<mlir::arith::RemSIOp>(loc, args[0], args[1]);
+    auto argXor = builder.create<mlir::arith::XOrIOp>(loc, args[0], args[1]);
+    mlir::Value zero = builder.createIntegerConstant(loc, argXor.getType(), 0);
+    auto argSignDifferent = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::slt, argXor, zero);
+    auto remainderIsNotZero = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::ne, remainder, zero);
+    auto mustAddP = builder.create<mlir::arith::AndIOp>(loc, remainderIsNotZero,
+                                                        argSignDifferent);
+    auto remPlusP =
+        builder.create<mlir::arith::AddIOp>(loc, remainder, args[1]);
+    return builder.create<mlir::arith::SelectOp>(loc, mustAddP, remPlusP,
+                                                 remainder);
+  }
+  // Real case
+  auto remainder = builder.create<mlir::arith::RemFOp>(loc, args[0], args[1]);
+  mlir::Value zero = builder.createRealZeroConstant(loc, remainder.getType());
+  auto remainderIsNotZero = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::UNE, remainder, zero);
+  auto aLessThanZero = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::OLT, args[0], zero);
+  auto pLessThanZero = builder.create<mlir::arith::CmpFOp>(
+      loc, mlir::arith::CmpFPredicate::OLT, args[1], zero);
+  auto argSignDifferent =
+      builder.create<mlir::arith::XOrIOp>(loc, aLessThanZero, pLessThanZero);
+  auto mustAddP = builder.create<mlir::arith::AndIOp>(loc, remainderIsNotZero,
+                                                      argSignDifferent);
+  auto remPlusP = builder.create<mlir::arith::AddFOp>(loc, remainder, args[1]);
+  return builder.create<mlir::arith::SelectOp>(loc, mustAddP, remPlusP,
+                                               remainder);
+}
+
+// NINT
+mlir::Value IntrinsicLibrary::genNint(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() >= 1);
+  // Skip optional kind argument to search the runtime; it is already reflected
+  // in result type.
+  return genRuntimeCall("nint", resultType, {args[0]});
+}
+
+// NOT
+mlir::Value IntrinsicLibrary::genNot(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  mlir::Value allOnes = builder.createIntegerConstant(loc, resultType, -1);
+  return builder.create<mlir::arith::XOrIOp>(loc, args[0], allOnes);
+}
+
 // NULL
 fir::ExtendedValue
 IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
@@ -2253,6 +2405,15 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
       builder, loc, boxType, mold->nonDeferredLenParams());
   builder.create<fir::StoreOp>(loc, box, boxStorage);
   return fir::MutableBoxValue(boxStorage, mold->nonDeferredLenParams(), {});
+}
+
+// PRODUCT
+fir::ExtendedValue
+IntrinsicLibrary::genProduct(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genProdOrSum(fir::runtime::genProduct, fir::runtime::genProductDim,
+                      resultType, builder, loc, stmtCtx,
+                      "unexpected result for Product", args);
 }
 
 // RANDOM_INIT
