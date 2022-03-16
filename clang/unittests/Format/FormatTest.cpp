@@ -12113,6 +12113,7 @@ TEST_F(FormatTest, IncorrectCodeMissingParens) {
   verifyFormat("if {\n  foo;\n  foo();\n}");
   verifyFormat("switch {\n  foo;\n  foo();\n}");
   verifyIncompleteFormat("for {\n  foo;\n  foo();\n}");
+  verifyIncompleteFormat("ERROR: for target;");
   verifyFormat("while {\n  foo;\n  foo();\n}");
   verifyFormat("do {\n  foo;\n  foo();\n} while;");
 }
