@@ -4,7 +4,6 @@
 #if defined(__x86_64__)
 #include "sanitizer_common/sanitizer_platform.h"
 
-.section .text
 .file "asan_rtl_x86_64.S"
 
 #define NAME(n, reg, op, s, i) n##_##op##_##i##_##s##_##reg
@@ -15,6 +14,7 @@
 #define FLABEL(reg, op, s, i) NAME(.fail, reg, op, s, i)
 
 #define BEGINF(reg, op, s, i) \
+.section .text.FNAME(reg, op, s, i),"ax",@progbits ;\
 .globl  FNAME(reg, op, s, i) ;\
 ASM_TYPE_FUNCTION(FNAME(reg, op, s, i)) ;\
 .cfi_startproc ;\
