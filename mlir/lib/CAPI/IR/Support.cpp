@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir-c/Support.h"
+#include "mlir/CAPI/Support.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstring>
@@ -18,4 +18,41 @@ MlirStringRef mlirStringRefCreateFromCString(const char *str) {
 bool mlirStringRefEqual(MlirStringRef string, MlirStringRef other) {
   return llvm::StringRef(string.data, string.length) ==
          llvm::StringRef(other.data, other.length);
+}
+
+//===----------------------------------------------------------------------===//
+// TypeID API.
+//===----------------------------------------------------------------------===//
+
+MlirTypeID mlirTypeIDCreate(const void *ptr) {
+  assert(reinterpret_cast<uintptr_t>(ptr) % 8 == 0 &&
+         "ptr must be 8 byte aligned");
+  // This is essentially a no-op that returns back `ptr`, but by going through
+  // the `TypeID` functions we can get compiler errors in case the `TypeID`
+  // api/representation changes
+  return wrap(mlir::TypeID::getFromOpaquePointer(ptr));
+}
+
+bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2) {
+  return unwrap(typeID1) == unwrap(typeID2);
+}
+
+size_t mlirTypeIDHashValue(MlirTypeID typeID) {
+  return hash_value(unwrap(typeID));
+}
+
+//===----------------------------------------------------------------------===//
+// TypeIDAllocator API.
+//===----------------------------------------------------------------------===//
+
+MlirTypeIDAllocator mlirTypeIDAllocatorCreate() {
+  return wrap(new mlir::TypeIDAllocator());
+}
+
+void mlirTypeIDAllocatorDestroy(MlirTypeIDAllocator allocator) {
+  delete unwrap(allocator);
+}
+
+MlirTypeID mlirTypeIDAllocatorAllocateTypeID(MlirTypeIDAllocator allocator) {
+  return wrap(unwrap(allocator)->allocate());
 }

@@ -50,6 +50,17 @@
 extern "C" {
 #endif
 
+#define DEFINE_C_API_STRUCT(name, storage)                                     \
+  struct name {                                                                \
+    storage *ptr;                                                              \
+  };                                                                           \
+  typedef struct name name
+
+DEFINE_C_API_STRUCT(MlirTypeID, const void);
+DEFINE_C_API_STRUCT(MlirTypeIDAllocator, void);
+
+#undef DEFINE_C_API_STRUCT
+
 //===----------------------------------------------------------------------===//
 // MlirStringRef.
 //===----------------------------------------------------------------------===//
@@ -126,6 +137,38 @@ inline static MlirLogicalResult mlirLogicalResultFailure() {
   MlirLogicalResult res = {0};
   return res;
 }
+
+//===----------------------------------------------------------------------===//
+// TypeID API.
+//===----------------------------------------------------------------------===//
+
+/// `ptr` must be 8 byte aligned and unique to a type valid for the duration of
+/// the returned type id's usage
+MLIR_CAPI_EXPORTED MlirTypeID mlirTypeIDCreate(const void *ptr);
+
+/// Checks whether a type id is null.
+static inline bool mlirTypeIDIsNull(MlirTypeID typeID) { return !typeID.ptr; }
+
+/// Checks if two type ids are equal.
+MLIR_CAPI_EXPORTED bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2);
+
+/// Returns the hash value of the type id.
+MLIR_CAPI_EXPORTED size_t mlirTypeIDHashValue(MlirTypeID typeID);
+
+//===----------------------------------------------------------------------===//
+// TypeIDAllocator API.
+//===----------------------------------------------------------------------===//
+
+/// Creates a type id allocator for dynamic type id creation
+MLIR_CAPI_EXPORTED MlirTypeIDAllocator mlirTypeIDAllocatorCreate();
+
+/// Deallocates the allocator and all allocated type ids
+MLIR_CAPI_EXPORTED void
+mlirTypeIDAllocatorDestroy(MlirTypeIDAllocator allocator);
+
+/// Allocates a type id that is valid for the lifetime of the allocator
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirTypeIDAllocatorAllocateTypeID(MlirTypeIDAllocator allocator);
 
 #ifdef __cplusplus
 }

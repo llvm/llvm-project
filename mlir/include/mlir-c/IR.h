@@ -62,7 +62,6 @@ DEFINE_C_API_STRUCT(MlirIdentifier, const void);
 DEFINE_C_API_STRUCT(MlirLocation, const void);
 DEFINE_C_API_STRUCT(MlirModule, const void);
 DEFINE_C_API_STRUCT(MlirType, const void);
-DEFINE_C_API_STRUCT(MlirTypeID, const void);
 DEFINE_C_API_STRUCT(MlirValue, const void);
 
 #undef DEFINE_C_API_STRUCT
@@ -756,19 +755,6 @@ MLIR_CAPI_EXPORTED bool mlirIdentifierEqual(MlirIdentifier ident,
 
 /// Gets the string value of the identifier.
 MLIR_CAPI_EXPORTED MlirStringRef mlirIdentifierStr(MlirIdentifier ident);
-
-//===----------------------------------------------------------------------===//
-// TypeID API.
-//===----------------------------------------------------------------------===//
-
-/// Checks whether a type id is null.
-static inline bool mlirTypeIDIsNull(MlirTypeID typeID) { return !typeID.ptr; }
-
-/// Checks if two type ids are equal.
-MLIR_CAPI_EXPORTED bool mlirTypeIDEqual(MlirTypeID typeID1, MlirTypeID typeID2);
-
-/// Returns the hash value of the type id.
-MLIR_CAPI_EXPORTED size_t mlirTypeIDHashValue(MlirTypeID typeID);
 
 //===----------------------------------------------------------------------===//
 // Symbol and SymbolTable API.
