@@ -11,6 +11,10 @@
 ; when the profile uses md5.
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.md5.prof -sample-profile-merge-inlinee=true -use-profiled-call-graph=0 -S | FileCheck -check-prefix=MERGE  %s
 
+; Test we properly merge not inlined profile with '--sample-profile-merge-inlinee' even if '--disable-sample-loader-inlining' is true
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.md5.prof -sample-profile-merge-inlinee=true --disable-sample-loader-inlining -use-profiled-call-graph=0 -S | FileCheck -check-prefix=MERGE  %s
+; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-mergeprof.prof -sample-profile-merge-inlinee=true --disable-sample-loader-inlining -use-profiled-call-graph=0 -enable-new-pm=0 -S | FileCheck -check-prefix=SCALE %s
+
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
 
 define i32 @main() #0 !dbg !6 {
