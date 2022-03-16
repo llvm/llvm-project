@@ -1,8 +1,8 @@
 # clang-format off
-# REQUIRES: lld, system-windows
+# REQUIRES: lld
 
-# RUN: %clang_cl --target=x86_64-windows-msvc /Fo%t.obj %s
-# RUN: lld-link /debug %t.obj /out:%t.exe /base:0x140000000
+# RUN: llvm-mc -triple=x86_64-windows-msvc --filetype=obj %s > %t.obj
+# RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe /base:0x140000000
 # RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 # RUN:     %p/Inputs/local-variables-registers.lldbinit 2>&1 | FileCheck %s
 
