@@ -466,48 +466,48 @@ define <4 x i32> @trunc_sat_u_v4i32(<4 x float> %x) {
   ret <4 x i32> %a
 }
 
-; CHECK-LABEL: trunc_sat_zero_s_v4i32:
-; CHECK-NEXT: .functype trunc_sat_zero_s_v4i32 (v128) -> (v128){{$}}
-; CHECK-NEXT: i32x4.trunc_sat_zero_f64x2_s $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: trunc_sat_s_zero_v4i32:
+; CHECK-NEXT: .functype trunc_sat_s_zero_v4i32 (v128) -> (v128){{$}}
+; CHECK-NEXT: i32x4.trunc_sat_f64x2_s_zero $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double>)
-define <4 x i32> @trunc_sat_zero_s_v4i32(<2 x double> %x) {
+define <4 x i32> @trunc_sat_s_zero_v4i32(<2 x double> %x) {
   %v = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %x)
   %a = shufflevector <2 x i32> %v, <2 x i32> <i32 0, i32 0>,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %a
 }
 
-; CHECK-LABEL: trunc_sat_zero_s_v4i32_2:
-; CHECK-NEXT: .functype trunc_sat_zero_s_v4i32_2 (v128) -> (v128){{$}}
-; SLOW-NEXT: i32x4.trunc_sat_zero_f64x2_s $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: trunc_sat_s_zero_v4i32_2:
+; CHECK-NEXT: .functype trunc_sat_s_zero_v4i32_2 (v128) -> (v128){{$}}
+; SLOW-NEXT: i32x4.trunc_sat_f64x2_s_zero $push[[R:[0-9]+]]=, $0{{$}}
 ; SLOW-NEXT: return $pop[[R]]{{$}}
 declare <4 x i32> @llvm.fptosi.sat.v4i32.v4f64(<4 x double>)
-define <4 x i32> @trunc_sat_zero_s_v4i32_2(<2 x double> %x) {
+define <4 x i32> @trunc_sat_s_zero_v4i32_2(<2 x double> %x) {
   %v = shufflevector <2 x double> %x, <2 x double> zeroinitializer,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %a = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f64(<4 x double> %v)
   ret <4 x i32> %a
 }
 
-; CHECK-LABEL: trunc_sat_zero_u_v4i32:
-; CHECK-NEXT: .functype trunc_sat_zero_u_v4i32 (v128) -> (v128){{$}}
-; CHECK-NEXT: i32x4.trunc_sat_zero_f64x2_u $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: trunc_sat_u_zero_v4i32:
+; CHECK-NEXT: .functype trunc_sat_u_zero_v4i32 (v128) -> (v128){{$}}
+; CHECK-NEXT: i32x4.trunc_sat_f64x2_u_zero $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 declare <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double>)
-define <4 x i32> @trunc_sat_zero_u_v4i32(<2 x double> %x) {
+define <4 x i32> @trunc_sat_u_zero_v4i32(<2 x double> %x) {
   %v = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double> %x)
   %a = shufflevector <2 x i32> %v, <2 x i32> <i32 0, i32 0>,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i32> %a
 }
 
-; CHECK-LABEL: trunc_sat_zero_u_v4i32_2:
-; CHECK-NEXT: .functype trunc_sat_zero_u_v4i32_2 (v128) -> (v128){{$}}
-; SLOW-NEXT: i32x4.trunc_sat_zero_f64x2_u $push[[R:[0-9]+]]=, $0{{$}}
+; CHECK-LABEL: trunc_sat_u_zero_v4i32_2:
+; CHECK-NEXT: .functype trunc_sat_u_zero_v4i32_2 (v128) -> (v128){{$}}
+; SLOW-NEXT: i32x4.trunc_sat_f64x2_u_zero $push[[R:[0-9]+]]=, $0{{$}}
 ; SLOW-NEXT: return $pop[[R]]{{$}}
 declare <4 x i32> @llvm.fptoui.sat.v4i32.v4f64(<4 x double>)
-define <4 x i32> @trunc_sat_zero_u_v4i32_2(<2 x double> %x) {
+define <4 x i32> @trunc_sat_u_zero_v4i32_2(<2 x double> %x) {
   %v = shufflevector <2 x double> %x, <2 x double> zeroinitializer,
            <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %a = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f64(<4 x double> %v)
@@ -548,23 +548,23 @@ define <4 x i32> @relaxed_trunc_u(<4 x float> %x) {
   ret <4 x i32> %a
 }
 
-; CHECK-LABEL: relaxed_trunc_zero_s:
-; CHECK-NEXT: .functype relaxed_trunc_zero_s (v128) -> (v128){{$}}
+; CHECK-LABEL: relaxed_trunc_s_zero:
+; CHECK-NEXT: .functype relaxed_trunc_s_zero (v128) -> (v128){{$}}
 ; CHECK-NEXT: i32x4.relaxed_trunc_f64x2_s_zero $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.relaxed.trunc.zero.signed(<2 x double>)
-define <4 x i32> @relaxed_trunc_zero_s(<2 x double> %x) {
-  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.zero.signed(<2 x double> %x)
+declare <4 x i32> @llvm.wasm.relaxed.trunc.signed.zero(<2 x double>)
+define <4 x i32> @relaxed_trunc_s_zero(<2 x double> %x) {
+  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.signed.zero(<2 x double> %x)
   ret <4 x i32> %a
 }
 
-; CHECK-LABEL: relaxed_trunc_zero_u:
-; CHECK-NEXT: .functype relaxed_trunc_zero_u (v128) -> (v128){{$}}
+; CHECK-LABEL: relaxed_trunc_u_zero:
+; CHECK-NEXT: .functype relaxed_trunc_u_zero (v128) -> (v128){{$}}
 ; CHECK-NEXT: i32x4.relaxed_trunc_f64x2_u_zero $push[[R:[0-9]+]]=, $0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
-declare <4 x i32> @llvm.wasm.relaxed.trunc.zero.unsigned(<2 x double>)
-define <4 x i32> @relaxed_trunc_zero_u(<2 x double> %x) {
-  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.zero.unsigned(<2 x double> %x)
+declare <4 x i32> @llvm.wasm.relaxed.trunc.unsigned.zero(<2 x double>)
+define <4 x i32> @relaxed_trunc_u_zero(<2 x double> %x) {
+  %a = call <4 x i32> @llvm.wasm.relaxed.trunc.unsigned.zero(<2 x double> %x)
   ret <4 x i32> %a
 }
 

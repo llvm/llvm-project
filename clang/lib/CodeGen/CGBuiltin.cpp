@@ -18411,15 +18411,15 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(IntNo, {ConvertType(E->getType()), Low->getType()});
     return Builder.CreateCall(Callee, {Low, High});
   }
-  case WebAssembly::BI__builtin_wasm_trunc_sat_zero_s_f64x2_i32x4:
-  case WebAssembly::BI__builtin_wasm_trunc_sat_zero_u_f64x2_i32x4: {
+  case WebAssembly::BI__builtin_wasm_trunc_sat_s_zero_f64x2_i32x4:
+  case WebAssembly::BI__builtin_wasm_trunc_sat_u_zero_f64x2_i32x4: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
     unsigned IntNo;
     switch (BuiltinID) {
-    case WebAssembly::BI__builtin_wasm_trunc_sat_zero_s_f64x2_i32x4:
+    case WebAssembly::BI__builtin_wasm_trunc_sat_s_zero_f64x2_i32x4:
       IntNo = Intrinsic::fptosi_sat;
       break;
-    case WebAssembly::BI__builtin_wasm_trunc_sat_zero_u_f64x2_i32x4:
+    case WebAssembly::BI__builtin_wasm_trunc_sat_u_zero_f64x2_i32x4:
       IntNo = Intrinsic::fptoui_sat;
       break;
     default:
@@ -18510,8 +18510,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   }
   case WebAssembly::BI__builtin_wasm_relaxed_trunc_s_i32x4_f32x4:
   case WebAssembly::BI__builtin_wasm_relaxed_trunc_u_i32x4_f32x4:
-  case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_s_i32x4_f64x2:
-  case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_u_i32x4_f64x2: {
+  case WebAssembly::BI__builtin_wasm_relaxed_trunc_s_zero_i32x4_f64x2:
+  case WebAssembly::BI__builtin_wasm_relaxed_trunc_u_zero_i32x4_f64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
     unsigned IntNo;
     switch (BuiltinID) {
@@ -18521,11 +18521,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     case WebAssembly::BI__builtin_wasm_relaxed_trunc_u_i32x4_f32x4:
       IntNo = Intrinsic::wasm_relaxed_trunc_unsigned;
       break;
-    case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_s_i32x4_f64x2:
-      IntNo = Intrinsic::wasm_relaxed_trunc_zero_signed;
+    case WebAssembly::BI__builtin_wasm_relaxed_trunc_s_zero_i32x4_f64x2:
+      IntNo = Intrinsic::wasm_relaxed_trunc_signed_zero;
       break;
-    case WebAssembly::BI__builtin_wasm_relaxed_trunc_zero_u_i32x4_f64x2:
-      IntNo = Intrinsic::wasm_relaxed_trunc_zero_unsigned;
+    case WebAssembly::BI__builtin_wasm_relaxed_trunc_u_zero_i32x4_f64x2:
+      IntNo = Intrinsic::wasm_relaxed_trunc_unsigned_zero;
       break;
     default:
       llvm_unreachable("unexpected builtin ID");

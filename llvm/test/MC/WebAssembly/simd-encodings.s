@@ -313,8 +313,8 @@ main:
     # CHECK: v128.load64_zero 32 # encoding: [0xfd,0x5d,0x03,0x20]
     v128.load64_zero 32
 
-    # CHECK: f32x4.demote_zero_f64x2 # encoding: [0xfd,0x5e]
-    f32x4.demote_zero_f64x2
+    # CHECK: f32x4.demote_f64x2_zero # encoding: [0xfd,0x5e]
+    f32x4.demote_f64x2_zero
 
     # CHECK: f64x2.promote_low_f32x4 # encoding: [0xfd,0x5f]
     f64x2.promote_low_f32x4
@@ -767,11 +767,11 @@ main:
     # CHECK: f32x4.convert_i32x4_u # encoding: [0xfd,0xfb,0x01]
     f32x4.convert_i32x4_u
 
-    # CHECK: i32x4.trunc_sat_zero_f64x2_s # encoding: [0xfd,0xfc,0x01]
-    i32x4.trunc_sat_zero_f64x2_s
+    # CHECK: i32x4.trunc_sat_f64x2_s_zero # encoding: [0xfd,0xfc,0x01]
+    i32x4.trunc_sat_f64x2_s_zero
 
-    # CHECK: i32x4.trunc_sat_zero_f64x2_u # encoding: [0xfd,0xfd,0x01]
-    i32x4.trunc_sat_zero_f64x2_u
+    # CHECK: i32x4.trunc_sat_f64x2_u_zero # encoding: [0xfd,0xfd,0x01]
+    i32x4.trunc_sat_f64x2_u_zero
 
     # CHECK: f64x2.convert_low_i32x4_s # encoding: [0xfd,0xfe,0x01]
     f64x2.convert_low_i32x4_s

@@ -636,15 +636,15 @@ u16x8 narrow_u_i16x8_i32x4(i32x4 low, i32x4 high) {
   // WEBASSEMBLY: ret
 }
 
-i32x4 trunc_sat_zero_s_f64x2_i32x4(f64x2 x) {
-  return __builtin_wasm_trunc_sat_zero_s_f64x2_i32x4(x);
+i32x4 trunc_sat_s_zero_f64x2_i32x4(f64x2 x) {
+  return __builtin_wasm_trunc_sat_s_zero_f64x2_i32x4(x);
   // WEBASSEMBLY: %0 = tail call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %x)
   // WEBASSEMBLY: %1 = shufflevector <2 x i32> %0, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // WEBASSEMBLY: ret <4 x i32> %1
 }
 
-u32x4 trunc_sat_zero_u_f64x2_i32x4(f64x2 x) {
-  return __builtin_wasm_trunc_sat_zero_u_f64x2_i32x4(x);
+u32x4 trunc_sat_u_zero_f64x2_i32x4(f64x2 x) {
+  return __builtin_wasm_trunc_sat_u_zero_f64x2_i32x4(x);
   // WEBASSEMBLY: %0 = tail call <2 x i32> @llvm.fptoui.sat.v2i32.v2f64(<2 x double> %x)
   // WEBASSEMBLY: %1 = shufflevector <2 x i32> %0, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   // WEBASSEMBLY: ret <4 x i32> %1
@@ -766,14 +766,14 @@ u32x4 relaxed_trunc_u_i32x4_f32x4(f32x4 f) {
   // WEBASSEMBLY-NEXT: ret
 }
 
-i32x4 relaxed_trunc_zero_s_i32x4_f64x2(f64x2 x) {
-  return __builtin_wasm_relaxed_trunc_zero_s_i32x4_f64x2(x);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.zero.signed(<2 x double> %x)
+i32x4 relaxed_trunc_s_zero_i32x4_f64x2(f64x2 x) {
+  return __builtin_wasm_relaxed_trunc_s_zero_i32x4_f64x2(x);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.signed.zero(<2 x double> %x)
   // WEBASSEMBLY-NEXT: ret
 }
 
-u32x4 relaxed_trunc_zero_u_i32x4_f64x2(f64x2 x) {
-  return __builtin_wasm_relaxed_trunc_zero_u_i32x4_f64x2(x);
-  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.zero.unsigned(<2 x double> %x)
+u32x4 relaxed_trunc_u_zero_i32x4_f64x2(f64x2 x) {
+  return __builtin_wasm_relaxed_trunc_u_zero_i32x4_f64x2(x);
+  // WEBASSEMBLY: call <4 x i32> @llvm.wasm.relaxed.trunc.unsigned.zero(<2 x double> %x)
   // WEBASSEMBLY-NEXT: ret
 }

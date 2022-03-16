@@ -1229,9 +1229,9 @@ def trunc_sat_zero_s :
   SDNode<"WebAssemblyISD::TRUNC_SAT_ZERO_S", trunc_sat_zero_t>;
 def trunc_sat_zero_u :
   SDNode<"WebAssemblyISD::TRUNC_SAT_ZERO_U", trunc_sat_zero_t>;
-defm "" : SIMDConvert<I32x4, F64x2, trunc_sat_zero_s, "trunc_sat_zero_f64x2_s",
+defm "" : SIMDConvert<I32x4, F64x2, trunc_sat_zero_s, "trunc_sat_f64x2_s_zero",
                       0xfc>;
-defm "" : SIMDConvert<I32x4, F64x2, trunc_sat_zero_u, "trunc_sat_zero_f64x2_u",
+defm "" : SIMDConvert<I32x4, F64x2, trunc_sat_zero_u, "trunc_sat_f64x2_u_zero",
                       0xfd>;
 
 // Integer to floating point: convert
@@ -1307,7 +1307,7 @@ defm "" : SIMDConvert<I32x4, I16x8, int_wasm_extadd_pairwise_unsigned,
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
 defm "" : SIMDConvert<F32x4, F64x2, demote_zero,
-                      "demote_zero_f64x2", 0x5e>;
+                      "demote_f64x2_zero", 0x5e>;
 
 def promote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def promote_low : SDNode<"WebAssemblyISD::PROMOTE_LOW", promote_t>;
@@ -1415,5 +1415,5 @@ multiclass SIMD_RELAXED_CONVERT<Vec vec, Vec arg, SDPatternOperator op, string n
 defm "" : SIMD_RELAXED_CONVERT<I32x4, F32x4, int_wasm_relaxed_trunc_signed, "relaxed_trunc_f32x4_s", 0xa5>;
 defm "" : SIMD_RELAXED_CONVERT<I32x4, F32x4, int_wasm_relaxed_trunc_unsigned, "relaxed_trunc_f32x4_u", 0xa6>;
 
-defm "" : SIMD_RELAXED_CONVERT<I32x4, F64x2, int_wasm_relaxed_trunc_zero_signed, "relaxed_trunc_f64x2_s_zero", 0xc5>;
-defm "" : SIMD_RELAXED_CONVERT<I32x4, F64x2, int_wasm_relaxed_trunc_zero_unsigned, "relaxed_trunc_f64x2_u_zero", 0xc6>;
+defm "" : SIMD_RELAXED_CONVERT<I32x4, F64x2, int_wasm_relaxed_trunc_signed_zero, "relaxed_trunc_f64x2_s_zero", 0xc5>;
+defm "" : SIMD_RELAXED_CONVERT<I32x4, F64x2, int_wasm_relaxed_trunc_unsigned_zero, "relaxed_trunc_f64x2_u_zero", 0xc6>;
