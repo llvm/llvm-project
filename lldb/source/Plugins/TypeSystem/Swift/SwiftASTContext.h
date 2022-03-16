@@ -285,21 +285,19 @@ public:
   // for all items in a swift::ASTContext have been setup to
   // allow for imports to happen correctly. Use with caution,
   // or use the GetModule() call that takes a FileSpec.
-  swift::ModuleDecl *GetModule(const SourceModule &module, Status &error);
+  swift::ModuleDecl *GetModule(const SourceModule &module, Status &error,
+                               bool *cached = nullptr);
 
   swift::ModuleDecl *GetModule(const FileSpec &module_spec, Status &error);
 
   void CacheModule(swift::ModuleDecl *module);
 
-  // Call this after the search paths are set up, it will find the module given
-  // by module, load the module into the AST context, and also load any
-  // "LinkLibraries" that the module requires.
-
-  swift::ModuleDecl *FindAndLoadModule(const SourceModule &module,
-                                       Process &process, Status &error);
-
-  swift::ModuleDecl *FindAndLoadModule(const FileSpec &module_spec,
-                                       Process &process, Status &error);
+  /// Call this after the search paths are set up, it will find the module given
+  /// by module, load the module into the AST context, and (if import_dylib is
+  /// set) also load any "LinkLibraries" that the module requires.
+  template <typename ModuleT>
+  swift::ModuleDecl *FindAndLoadModule(const ModuleT &module, Process &process,
+                                       bool import_dylib, Status &error);
 
   void LoadModule(swift::ModuleDecl *swift_module, Process &process,
                   Status &error);

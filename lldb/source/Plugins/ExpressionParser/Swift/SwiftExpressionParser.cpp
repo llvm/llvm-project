@@ -1278,8 +1278,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
     Status error;
     SourceModule module_info;
     module_info.path.emplace_back("Swift");
-    swift::ModuleDecl *module =
-        swift_ast_context.GetModule(module_info, error);
+    swift::ModuleDecl *module = swift_ast_context.GetModule(module_info, error);
 
     if (error.Fail() || !module) {
       LLDB_LOG(log, "couldn't load Swift Standard Library\n");

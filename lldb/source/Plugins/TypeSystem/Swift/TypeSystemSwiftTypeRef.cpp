@@ -1321,8 +1321,9 @@ TypeSystemSwiftTypeRefForExpressions::TypeSystemSwiftTypeRefForExpressions(
 void TypeSystemSwiftTypeRefForExpressions::PerformCompileUnitImports(
     SymbolContext &sc) {
   Status error;
-  // FIXME: this is uninitialized!
   lldb::ProcessSP process_sp;
+  if (auto target_sp = sc.target_sp)
+    process_sp = target_sp->GetProcessSP();
   if (m_swift_ast_context_initialized)
     GetSwiftASTContext()->PerformCompileUnitImports(sc, process_sp, error);
   else
@@ -1383,8 +1384,9 @@ TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext() const {
 
   if (m_initial_symbol_context) {
     Status error;
-    // FIXME: not initialized!
     lldb::ProcessSP process_sp;
+    if (TargetSP target_sp = GetTargetWP().lock())
+      process_sp = target_sp->GetProcessSP();
     m_swift_ast_context->PerformCompileUnitImports(*m_initial_symbol_context,
                                                    process_sp, error);
     m_initial_symbol_context.reset();

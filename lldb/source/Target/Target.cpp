@@ -4261,6 +4261,7 @@ bool TargetProperties::GetSwiftCreateModuleContextsInParallel() const {
     return true;
 }
 
+
 bool TargetProperties::GetSwiftReadMetadataFromFileCache() const {
   const Property *exp_property = m_collection_sp->GetPropertyAtIndex(
       nullptr, false, ePropertyExperimental);
@@ -4296,6 +4297,13 @@ bool TargetProperties::GetSwiftReadMetadataFromDSYM() const {
 
   return true;
 }
+
+bool TargetProperties::GetSwiftAutoImportFrameworks() const {
+  const uint32_t idx = ePropertySwiftAutoImportFrameworks;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_target_properties[idx].default_uint_value != 0);
+}
+
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
   OptionValueArch *value = m_collection_sp->GetPropertyAtIndexAsOptionValueArch(
       nullptr, ePropertyDefaultArch);

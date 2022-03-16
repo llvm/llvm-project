@@ -190,6 +190,9 @@ let Definition = "target" in {
   def SwiftExtraClangFlags: Property<"swift-extra-clang-flags", "String">,
     DefaultStringValue<"">,
     Desc<"Additional -Xcc flags to be passed to the Swift ClangImporter.">;
+  def SwiftAutoImportFrameworks : Property<"swift-auto-import-frameworks", "Boolean">,
+     DefaultFalse,
+     Desc<"Automatically import all frameworks and dynamic libraries that are autolinked by Swift modules in the target.">;
   def UseAllCompilerFlags: Property<"use-all-compiler-flags", "Boolean">,
     DefaultTrue,
     Desc<"Try to use compiler flags for all modules when setting up the Swift expression parser, not just the main executable.">;

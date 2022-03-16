@@ -37,6 +37,7 @@
 #include "swift/AST/SubstitutionMap.h"
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
+#include "swift/AST/ASTWalker.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
 #include "swift/Basic/DiagnosticOptions.h"
 #include "swift/Basic/Dwarf.h"
@@ -3386,7 +3387,10 @@ void SwiftASTContext::CacheModule(swift::ModuleDecl *module) {
 }
 
 swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
-                                              Status &error) {
+                                              Status &error, bool *cached) {
+  if (cached)
+    *cached = false;
+
   VALID_OR_RETURN(nullptr);
   if (!module.path.size())
     return nullptr;
@@ -3400,8 +3404,11 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
     return nullptr;
   }
 
-  if (swift::ModuleDecl *module_decl = GetCachedModule(module))
+  if (swift::ModuleDecl *module_decl = GetCachedModule(module)) {
+    if (cached)
+      *cached = true;
     return module_decl;
+  }
 
   LLDB_SCOPED_TIMER();
   swift::ASTContext *ast = GetASTContext();
@@ -3535,27 +3542,33 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
   return NULL;
 }
 
-swift::ModuleDecl *
-SwiftASTContext::FindAndLoadModule(const SourceModule &module, Process &process,
-                                   Status &error) {
+template<typename ModuleT> swift::ModuleDecl *
+SwiftASTContext::FindAndLoadModule(const ModuleT &module, Process &process,
+                                   bool import_dylib, Status &error) {
   VALID_OR_RETURN(nullptr);
 
-  swift::ModuleDecl *swift_module = GetModule(module, error);
+  bool cached = false;
+  swift::ModuleDecl *swift_module = GetModule(module, error, &cached);
+  
   if (!swift_module)
     return nullptr;
-  LoadModule(swift_module, process, error);
-  return swift_module;
-}
 
-swift::ModuleDecl *
-SwiftASTContext::FindAndLoadModule(const FileSpec &module_spec,
-                                   Process &process, Status &error) {
-  VALID_OR_RETURN(nullptr);
+  // If import_dylib is true, this is an explicit "import Module"
+  // declaration in a user expression, and we should load the dylib
+  // even if we already cached an implicit import (which may not have
+  // loaded the dylib).  If target.swift-auto-import-frameworks is
+  // set, all implicitly imported Swift modules' associated frameworks
+  // will be imported too.
+  TargetSP target_sp(GetTargetWP().lock());
+  if (target_sp)
+    import_dylib |= target_sp->GetSwiftAutoImportFrameworks();
 
-  swift::ModuleDecl *swift_module = GetModule(module_spec, error);
-  if (!swift_module)
-    return nullptr;
-  LoadModule(swift_module, process, error);
+  if (cached && !import_dylib)
+    return swift_module;
+
+  if (import_dylib)
+    LoadModule(swift_module, process, error);
+
   return swift_module;
 }
 
@@ -3623,6 +3636,13 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       // name are the same, and that we are contained in
       // FileName.framework with no other intervening frameworks.  We
       // can get more restrictive if this gives false positives.
+      //
+      // If the framework exists on disk but it's a static framework
+      // (i.e., the binary inside is a static archive instead of a
+      // dylib) this cannot be detected. The dlopen call will fail,
+      // and dlerror does not contain enough information to
+      // unambiguously identify this case. So it will look as if the
+      // framework hasn't been found.
       ConstString library_cstr(library_name);
 
       std::string framework_name(library_name);
@@ -8130,6 +8150,7 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
 static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
                                         SwiftASTContext &swift_ast_context,
                                         lldb::ProcessSP process_sp,
+                                        bool import_dylibs,
                                         Status &error) {
   LLDB_SCOPED_TIMER();
   if (!module.path.size())
@@ -8148,8 +8169,8 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
       toplevel.GetStringRef() == imported_header_module->getName().str())
     swift_module = imported_header_module;
   else if (process_sp)
-    swift_module =
-        swift_ast_context.FindAndLoadModule(module, *process_sp.get(), error);
+    swift_module = swift_ast_context.FindAndLoadModule(
+        module, *process_sp.get(), import_dylibs, error);
   else
     swift_module = swift_ast_context.GetModule(module, error);
 
@@ -8224,8 +8245,8 @@ bool SwiftASTContext::GetImplicitImports(
     // Otherwise, try reloading the ModuleDecl using the module name.
     SourceModule module_info;
     module_info.path.emplace_back(module_pair.first());
-    auto *module =
-        LoadOneModule(module_info, swift_ast_context, process_sp, error);
+    auto *module = LoadOneModule(module_info, swift_ast_context, process_sp,
+                                 /*import_dylibs=*/false, error);
     if (!module)
       return false;
 
@@ -8246,10 +8267,32 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
   auto *persistent_expression_state =
       sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
 
-  for (const auto &attributed_import : source_file.getImports()) {
-    swift::ModuleDecl *module = attributed_import.module.importedModule;
+  auto src_file_imports = source_file.getImports();
 
-    if (module) {
+  Progress progress(llvm::formatv("Caching Swift user imports from '{0}'",
+                                  source_file.getFilename().data()),
+                    src_file_imports.size());
+
+  size_t completion = 0;
+
+  /// Find all explicit imports in the expression.
+  struct UserImportFinder : public swift::ASTWalker {
+    llvm::SmallDenseSet<swift::ModuleDecl*, 1> imports;
+
+    bool walkToDeclPre(swift::Decl *D) override {
+      if (auto *ID = llvm::dyn_cast<swift::ImportDecl>(D))
+        if (auto *M = ID->getModule())
+          imports.insert(M);
+      return true;
+    }
+  };
+  UserImportFinder import_finder;
+  source_file.walk(import_finder);
+  
+  for (const auto &attributed_import : source_file.getImports()) {
+    progress.Increment(++completion);
+    swift::ModuleDecl *module = attributed_import.module.importedModule;
+    if (module && import_finder.imports.count(module)) {
       std::string module_name;
       GetNameFromModule(module, module_name);
       if (!module_name.empty()) {
@@ -8259,7 +8302,8 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
         LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                    "Performing auto import on found module: %s.\n",
                    module_name.c_str());
-        if (!LoadOneModule(module_info, swift_ast_context, process_sp, error))
+        if (!LoadOneModule(module_info, swift_ast_context, process_sp,
+                           /*import_dylibs=*/true, error))
           return false;
 
         // How do we tell we are in REPL or playground mode?
@@ -8313,8 +8357,8 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   // Import the Swift standard library and its dependencies.
   SourceModule swift_module;
   swift_module.path.emplace_back("Swift");
-  auto *stdlib =
-      LoadOneModule(swift_module, *this, process_sp, error);
+  auto *stdlib = LoadOneModule(swift_module, *this, process_sp,
+                               /*import_dylibs=*/true, error);
   if (!stdlib)
     return false;
 
@@ -8334,8 +8378,8 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
             .Default(false))
       continue;
 
-    auto *loaded_module =
-        LoadOneModule(module, *this, process_sp, error);
+    auto *loaded_module = LoadOneModule(module, *this, process_sp,
+                                        /*import_dylibs=*/false, error);
     if (!loaded_module)
       return false;
 

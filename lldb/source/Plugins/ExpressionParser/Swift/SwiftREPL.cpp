@@ -580,8 +580,7 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
     completion_module_info.path.push_back(ConstString("repl"));
     swift::ModuleDecl *repl_module = nullptr;
     if (m_completion_module_initialized)
-      repl_module =
-        swift_ast->GetModule(completion_module_info, error);
+      repl_module = swift_ast->GetModule(completion_module_info, error);
     if (repl_module == nullptr) {
       swift::ImplicitImportInfo importInfo;
       importInfo.StdlibKind = swift::ImplicitStdlibKind::Stdlib;
