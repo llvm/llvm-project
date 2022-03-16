@@ -299,20 +299,19 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
                                    SourceLocation ImportLoc,
                                    bool AllowExtraModuleMapSearch) {
   Module *Module = nullptr;
-  SearchDirIterator It = nullptr;
 
   // Look through the various header search paths to load any available module
   // maps, searching for a module map that describes this module.
-  for (It = search_dir_begin(); It != search_dir_end(); ++It) {
-    if (It->isFramework()) {
+  for (DirectoryLookup Dir : search_dir_range()) {
+    if (Dir.isFramework()) {
       // Search for or infer a module map for a framework. Here we use
       // SearchName rather than ModuleName, to permit finding private modules
       // named FooPrivate in buggy frameworks named Foo.
       SmallString<128> FrameworkDirName;
-      FrameworkDirName += It->getFrameworkDir()->getName();
+      FrameworkDirName += Dir.getFrameworkDir()->getName();
       llvm::sys::path::append(FrameworkDirName, SearchName + ".framework");
       if (auto FrameworkDir = FileMgr.getDirectory(FrameworkDirName)) {
-        bool IsSystem = It->getDirCharacteristic() != SrcMgr::C_User;
+        bool IsSystem = Dir.getDirCharacteristic() != SrcMgr::C_User;
         Module = loadFrameworkModule(ModuleName, *FrameworkDir, IsSystem);
         if (Module)
           break;
@@ -322,12 +321,12 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
     // FIXME: Figure out how header maps and module maps will work together.
 
     // Only deal with normal search directories.
-    if (!It->isNormalDir())
+    if (!Dir.isNormalDir())
       continue;
 
-    bool IsSystem = It->isSystemHeaderDirectory();
+    bool IsSystem = Dir.isSystemHeaderDirectory();
     // Search for a module map file in this directory.
-    if (loadModuleMapFile(It->getDir(), IsSystem,
+    if (loadModuleMapFile(Dir.getDir(), IsSystem,
                           /*IsFramework*/false) == LMM_NewlyLoaded) {
       // We just loaded a module map file; check whether the module is
       // available now.
@@ -339,7 +338,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
     // Search for a module map in a subdirectory with the same name as the
     // module.
     SmallString<128> NestedModuleMapDirName;
-    NestedModuleMapDirName = It->getDir()->getName();
+    NestedModuleMapDirName = Dir.getDir()->getName();
     llvm::sys::path::append(NestedModuleMapDirName, ModuleName);
     if (loadModuleMapFile(NestedModuleMapDirName, IsSystem,
                           /*IsFramework*/false) == LMM_NewlyLoaded){
@@ -351,13 +350,13 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
 
     // If we've already performed the exhaustive search for module maps in this
     // search directory, don't do it again.
-    if (It->haveSearchedAllModuleMaps())
+    if (Dir.haveSearchedAllModuleMaps())
       continue;
 
     // Load all module maps in the immediate subdirectories of this search
     // directory if ModuleName was from @import.
     if (AllowExtraModuleMapSearch)
-      loadSubdirectoryModuleMaps(*It);
+      loadSubdirectoryModuleMaps(Dir);
 
     // Look again for the module.
     Module = ModMap.findModule(ModuleName);
