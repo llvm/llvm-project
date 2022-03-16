@@ -13,6 +13,8 @@
 #ifndef TOY_OPS
 #define TOY_OPS
 
+include "mlir/IR/FunctionInterfaces.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // Provide a definition of the 'toy' dialect in the ODS framework so that we
@@ -103,6 +105,61 @@ def AddOp : Toy_Op<"add", [NoSideEffect]> {
   let builders = [
     OpBuilder<(ins "Value":$lhs, "Value":$rhs)>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
+
+def FuncOp : Toy_Op<"func", [
+    FunctionOpInterface, IsolatedFromAbove, Symbol
+  ]> {
+  let summary = "user defined function operation";
+  let description = [{
+    The "toy.func" operation represents a user defined function. These are
+    callable SSA-region operations that contain toy computations.
+
+    Example:
+
+    ```mlir
+    toy.func @main() {
+      %0 = toy.constant dense<5.500000e+00> : tensor<f64>
+      %1 = toy.reshape(%0 : tensor<f64>) to tensor<2x2xf64>
+      toy.print %1 : tensor<2x2xf64>
+      toy.return
+    }
+    ```
+  }];
+
+  let arguments = (ins
+    SymbolNameAttr:$sym_name,
+    TypeAttrOf<FunctionType>:$type
+  );
+  let regions = (region AnyRegion:$body);
+
+  let builders = [OpBuilder<(ins
+    "StringRef":$name, "FunctionType":$type,
+    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)
+  >];
+  let extraClassDeclaration = [{
+    /// Returns the type of this function.
+    /// FIXME: We should drive this via the ODS `type` param.
+    FunctionType getType() { 
+      return getTypeAttr().getValue().cast<FunctionType>();
+    }
+
+    //===------------------------------------------------------------------===//
+    // FunctionOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Returns the argument types of this function.
+    ArrayRef<Type> getArgumentTypes() { return type().getInputs(); }
+
+    /// Returns the result types of this function.
+    ArrayRef<Type> getResultTypes() { return type().getResults(); }
+  }];
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//
