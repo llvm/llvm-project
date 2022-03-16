@@ -2490,6 +2490,10 @@ void LinkerDriver::link(opt::InputArgList &args) {
   parallelForEach(bitcodeFiles, [](BitcodeFile *file) { file->postParse(); });
   for (auto &it : ctx->nonPrevailingSyms) {
     Symbol &sym = *it.first;
+    // See the FIXME in InputFiles.cpp.
+    if (sym.getName() == "__x86.get_pc_thunk.bx" ||
+        sym.getName() == "__i686.get_pc_thunk.bx")
+      continue;
     sym.replace(Undefined{sym.file, sym.getName(), sym.binding, sym.stOther,
                           sym.type, it.second});
     cast<Undefined>(sym).nonPrevailing = true;
