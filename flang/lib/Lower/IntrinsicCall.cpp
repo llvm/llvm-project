@@ -621,6 +621,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"random_init",
      &I::genRandomInit,
      {{{"repeatable", asValue}, {"image_distinct", asValue}}},
