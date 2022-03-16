@@ -2,7 +2,7 @@
 // Test that origin tracking is enabled at runtime.
 // RUN: %clangxx_lsan -O0 %s -DBUILD_SO -fPIC -shared -o %t-so.so
 // RUN: %clangxx_lsan -O0 %s -ldl -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx_lsan -O0 %s -ldl -o %t -DSUPPRESS_LEAK && %run %t 2>&1
+// RUN: %clangxx_lsan -O0 %s -ldl -o %t -DSUPPRESS_LEAK && %run %t
 
 #ifdef BUILD_SO
 
@@ -25,7 +25,6 @@ extern "C" const char *__lsan_default_suppressions() {
 }
 #  endif
 
-void *p;
 int main(int argc, char **argv) {
 
   std::string path = std::string(argv[0]) + "-so.so";
@@ -37,9 +36,8 @@ int main(int argc, char **argv) {
   typedef void *(*fn)(unsigned sz);
   fn my_alloc = (fn)dlsym(handle, "my_alloc");
 
-  p = my_alloc(1);
-  p = my_alloc(2);
-  p = my_alloc(3);
+  for (int i = 0; i < 100; ++i)
+    my_alloc(i);
 
   dlclose(handle);
   return 0;
