@@ -421,7 +421,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     auto CanAdd = [&BB, &DT](BasicBlock *Succ) {
       if (BB.getSingleSuccessor()) {
         assert(BB.getSingleSuccessor() == Succ);
-        return true;
+        return DT.properlyDominates(&BB, Succ);
       }
       return any_of(successors(&BB),
                     [Succ](const BasicBlock *S) { return S != Succ; }) &&
