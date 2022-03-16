@@ -39,13 +39,18 @@ define void @test_return_deref_arg_multilevel() {
   %p = alloca i32*, align 8
   %pp = alloca i32**, align 8
 
+  load i32, i32* %a
+  load i32, i32* %b
   store i32* %a, i32** %p
   store i32** %p, i32*** %pp
   %c = call i32* @return_deref_arg_multilevel_callee(i32*** %pp)
+  load i32, i32* %c
 
   %lpp = load i32**, i32*** %pp
   %lpp_deref = load i32*, i32** %lpp
   %lp = load i32*, i32** %p
+  load i32, i32* %lpp_deref
+  load i32, i32* %lp
 
   ret void
 }

@@ -379,7 +379,6 @@ LogicalResult bufferization::bufferizeOp(Operation *op,
 
 BufferizationOptions bufferization::getPartialBufferizationOptions() {
   BufferizationOptions options;
-  options.allowReturnMemref = true;
   options.allowUnknownOps = true;
   options.createDeallocs = false;
   options.fullyDynamicLayoutMaps = false;

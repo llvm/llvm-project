@@ -427,6 +427,10 @@ struct IntrinsicLibrary {
   /// if the argument is an integer, into llvm intrinsics if the argument is
   /// real and to the `hypot` math routine if the argument is of complex type.
   mlir::Value genAbs(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
+                                mlir::Value, mlir::Value)>
+  fir::ExtendedValue genAdjustRtCall(mlir::Type,
+                                     llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAll(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAllocated(mlir::Type,
@@ -449,6 +453,7 @@ struct IntrinsicLibrary {
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -463,6 +468,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genTransfer(mlir::Type,
+                                 llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
@@ -559,6 +566,14 @@ static constexpr bool handleDynamicOptional = true;
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
+    {"adjustl",
+     &I::genAdjustRtCall<fir::runtime::genAdjustL>,
+     {{{"string", asAddr}}},
+     /*isElemental=*/true},
+    {"adjustr",
+     &I::genAdjustRtCall<fir::runtime::genAdjustR>,
+     {{{"string", asAddr}}},
+     /*isElemental=*/true},
     {"aimag", &I::genAimag},
     {"all",
      &I::genAll,
@@ -595,6 +610,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"iand", &I::genIand},
     {"ibits", &I::genIbits},
+    {"ibset", &I::genIbset},
     {"len",
      &I::genLen,
      {{{"string", asInquired}, {"kind", asValue}}},
@@ -656,6 +672,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"system_clock",
      &I::genSystemClock,
      {{{"count", asAddr}, {"count_rate", asAddr}, {"count_max", asAddr}}},
+     /*isElemental=*/false},
+    {"transfer",
+     &I::genTransfer,
+     {{{"source", asAddr}, {"mold", asAddr}, {"size", asValue}}},
      /*isElemental=*/false},
     {"ubound",
      &I::genUbound,
@@ -1422,6 +1442,37 @@ mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
   llvm_unreachable("unexpected type in ABS argument");
 }
 
+// ADJUSTL & ADJUSTR
+template <void (*CallRuntime)(fir::FirOpBuilder &, mlir::Location loc,
+                              mlir::Value, mlir::Value)>
+fir::ExtendedValue
+IntrinsicLibrary::genAdjustRtCall(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value string = builder.createBox(loc, args[0]);
+  // Create a mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  // Call the runtime -- the runtime will allocate the result.
+  CallRuntime(builder, loc, resultIrBox, string);
+
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  fir::ExtendedValue res =
+      fir::factory::genMutableBoxRead(builder, loc, resultMutableBox);
+  return res.match(
+      [&](const fir::CharBoxValue &box) -> fir::ExtendedValue {
+        addCleanUpForTemp(loc, fir::getBase(box));
+        return box;
+      },
+      [&](const auto &) -> fir::ExtendedValue {
+        fir::emitFatalError(loc, "result of ADJUSTL is not a scalar character");
+      });
+}
+
 // AIMAG
 mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -1682,6 +1733,20 @@ mlir::Value IntrinsicLibrary::genIbits(mlir::Type resultType,
   return builder.create<mlir::arith::SelectOp>(loc, lenIsZero, zero, res2);
 }
 
+// IBSET
+mlir::Value IntrinsicLibrary::genIbset(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // A conformant IBSET(I,POS) call satisfies:
+  //     POS >= 0
+  //     POS < BIT_SIZE(I)
+  // Return:  I | (1 << POS)
+  assert(args.size() == 2);
+  mlir::Value pos = builder.createConvert(loc, resultType, args[1]);
+  mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
+  auto mask = builder.create<mlir::arith::ShLIOp>(loc, one, pos);
+  return builder.create<mlir::arith::OrIOp>(loc, args[0], mask);
+}
+
 // LEN
 // Note that this is only used for an unrestricted intrinsic LEN call.
 // Other uses of LEN are rewritten as descriptor inquiries by the front-end.
@@ -1931,6 +1996,53 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, size);
       })
       .getResults()[0];
+}
+
+// TRANSFER
+fir::ExtendedValue
+IntrinsicLibrary::genTransfer(mlir::Type resultType,
+                              llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() >= 2); // args.size() == 2 when size argument is omitted.
+
+  // Handle source argument
+  mlir::Value source = builder.createBox(loc, args[0]);
+
+  // Handle mold argument
+  mlir::Value mold = builder.createBox(loc, args[1]);
+  fir::BoxValue moldTmp = mold;
+  unsigned moldRank = moldTmp.rank();
+
+  bool absentSize = (args.size() == 2);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  mlir::Type type = (moldRank == 0 && absentSize)
+                        ? resultType
+                        : builder.getVarLenSeqTy(resultType, 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, type);
+
+  if (moldRank == 0 && absentSize) {
+    // This result is a scalar in this case.
+    mlir::Value resultIrBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+  } else {
+    // The result is a rank one array in this case.
+    mlir::Value resultIrBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    if (absentSize) {
+      Fortran::lower::genTransfer(builder, loc, resultIrBox, source, mold);
+    } else {
+      mlir::Value sizeArg = fir::getBase(args[2]);
+      Fortran::lower::genTransferSize(builder, loc, resultIrBox, source, mold,
+                                      sizeArg);
+    }
+  }
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for TRANSFER");
 }
 
 // LBOUND

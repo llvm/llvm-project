@@ -16,6 +16,7 @@ entry:
 define void @bar(i32* %A, i32* %B) {
 entry:
   store i32 0, i32* %A, align 4
+  load i32, i32* %B
   %arrayidx = getelementptr inbounds i32, i32* %B, i64 1
   store i32 0, i32* %arrayidx, align 4
   ret void

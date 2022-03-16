@@ -9,5 +9,9 @@ define void @foo(i32 %n) {
   %b = alloca [2 x i32], align 4
   %c = getelementptr inbounds [2 x i32], [2 x i32]* %a, i32 0, i32 %n
   %d = getelementptr inbounds [2 x i32], [2 x i32]* %b, i32 0, i32 %n
+  load [2 x i32], [2 x i32]* %a
+  load [2 x i32], [2 x i32]* %b
+  load i32, i32* %c
+  load i32, i32* %d
   ret void
 }

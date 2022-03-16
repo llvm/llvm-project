@@ -12,6 +12,8 @@ define void @f() {
   %idxprom5 = zext i32 %add4 to i64
   %arrayidx6 = getelementptr inbounds i32, i32* @c, i64 %idxprom5
   %arrayidx = getelementptr inbounds i32, i32* @c, i64 %idxprom
+  load i32, i32* %arrayidx
+  load i32, i32* %arrayidx6
   ret void
 }
 
