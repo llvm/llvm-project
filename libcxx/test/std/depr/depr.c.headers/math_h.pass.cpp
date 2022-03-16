@@ -108,10 +108,9 @@ struct has_abs : decltype(has_abs_imp<T>(0)) {};
 
 void test_abs()
 {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wabsolute-value"
-#endif
+  TEST_DIAGNOSTIC_PUSH
+  TEST_CLANG_DIAGNOSTIC_IGNORED("-Wabsolute-value")
+
   static_assert((std::is_same<decltype(abs((float)0)), float>::value), "");
   static_assert((std::is_same<decltype(abs((double)0)), double>::value), "");
   static_assert(
@@ -132,9 +131,7 @@ void test_abs()
   static_assert(!has_abs<unsigned long>::value, "");
   static_assert(!has_abs<unsigned long long>::value, "");
 
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
+  TEST_DIAGNOSTIC_POP
 
   assert(abs(-1.) == 1);
 }

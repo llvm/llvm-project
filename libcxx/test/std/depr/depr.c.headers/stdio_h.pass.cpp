@@ -98,10 +98,8 @@
 
 #include <cstdarg>
 
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic ignored "-Wformat-zero-length"
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations" // for tmpnam
-#endif
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wformat-zero-length")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wformat-zero-length")
 
 int main(int, char**)
 {
@@ -120,7 +118,11 @@ int main(int, char**)
     static_assert((std::is_same<decltype(remove("")), int>::value), "");
     static_assert((std::is_same<decltype(rename("","")), int>::value), "");
     static_assert((std::is_same<decltype(tmpfile()), FILE*>::value), "");
+    TEST_DIAGNOSTIC_PUSH
+    TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+    TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
     static_assert((std::is_same<decltype(tmpnam(cp)), char*>::value), "");
+    TEST_DIAGNOSTIC_POP
     static_assert((std::is_same<decltype(fclose(fp)), int>::value), "");
     static_assert((std::is_same<decltype(fflush(fp)), int>::value), "");
     static_assert((std::is_same<decltype(fopen("", "")), FILE*>::value), "");
@@ -148,7 +150,11 @@ int main(int, char**)
     static_assert((std::is_same<decltype(getc(fp)), int>::value), "");
     static_assert((std::is_same<decltype(getchar()), int>::value), "");
 #if TEST_STD_VER < 14
+    TEST_DIAGNOSTIC_PUSH
+    TEST_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
+    TEST_GCC_DIAGNOSTIC_IGNORED("-Wdeprecated-declarations")
     static_assert((std::is_same<decltype(gets(cp)), char*>::value), "");
+    TEST_DIAGNOSTIC_POP
 #endif
     static_assert((std::is_same<decltype(putc(0,fp)), int>::value), "");
     static_assert((std::is_same<decltype(putchar(0)), int>::value), "");
