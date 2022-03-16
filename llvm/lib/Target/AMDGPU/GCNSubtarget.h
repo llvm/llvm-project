@@ -571,6 +571,8 @@ public:
     return hasFlatScratchInsts() && (hasGFX10_3Insts() || hasGFX940Insts());
   }
 
+  bool hasFlatScratchSVSMode() const { return GFX940Insts; }
+
   bool hasScalarFlatScratchInsts() const {
     return ScalarFlatScratchInsts;
   }
