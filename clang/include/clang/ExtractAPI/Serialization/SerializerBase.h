@@ -34,6 +34,12 @@ public:
 
 protected:
   const APISet &API;
+
+  /// The product name of API.
+  ///
+  /// Note: This should be used for populating metadata about the API.
+  StringRef ProductName;
+
   APISerializerOption Options;
 
 public:
@@ -44,8 +50,9 @@ public:
   APISerializer &operator=(APISerializer &&) = delete;
 
 protected:
-  APISerializer(const APISet &API, APISerializerOption Options = {})
-      : API(API), Options(Options) {}
+  APISerializer(const APISet &API, StringRef ProductName,
+                APISerializerOption Options = {})
+      : API(API), ProductName(ProductName), Options(Options) {}
 
   virtual ~APISerializer() = default;
 };

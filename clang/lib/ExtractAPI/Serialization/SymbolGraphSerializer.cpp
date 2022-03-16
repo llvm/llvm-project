@@ -376,10 +376,9 @@ Object SymbolGraphSerializer::serializeMetadata() const {
 
 Object SymbolGraphSerializer::serializeModule() const {
   Object Module;
-  // FIXME: We might not be building a module, some Clang-based languages might
-  // not have a "module" concept. Figure out a way to provide a name to
-  // describe the API set.
-  Module["name"] = "";
+  // The user is expected to always pass `--product-name=` on the command line
+  // to populate this field.
+  Module["name"] = ProductName;
   serializeObject(Module, "platform", serializePlatform(API.getTarget()));
   return Module;
 }
