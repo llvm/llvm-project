@@ -4513,6 +4513,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::TypeOf:
     case Type::UnaryTransform:
     case Type::Attributed:
+    case Type::BTFTagAttributed:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
       // Keep walking after single level desugaring.

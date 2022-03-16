@@ -1146,7 +1146,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
   }
 
-  Log *log = GetLog(LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Types);
   LLDB_LOG(log,
            "error: need to add support for DW_TAG_base_type '{0}' "
            "encoded with DW_ATE = {1:x}, bit_size = {2}",

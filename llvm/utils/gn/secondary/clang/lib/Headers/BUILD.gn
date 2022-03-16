@@ -221,6 +221,7 @@ copy("Headers") {
     "varargs.h",
     "vecintrin.h",
     "velintrin.h",
+    "velintrin_approx.h",
     "velintrin_gen.h",
     "vpclmulqdqintrin.h",
     "waitpkgintrin.h",

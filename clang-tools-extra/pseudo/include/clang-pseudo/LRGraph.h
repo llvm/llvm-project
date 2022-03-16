@@ -172,4 +172,4 @@ template <> struct DenseMapInfo<clang::pseudo::Item> {
 };
 } // namespace llvm
 
-#endif // LLVM_CLANG_TOOLING_SYNTAX_PSEUDO_LRGRAPH_H
+#endif // CLANG_PSEUDO_LRGRAPH_H

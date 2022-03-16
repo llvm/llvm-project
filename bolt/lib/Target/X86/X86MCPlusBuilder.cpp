@@ -265,6 +265,10 @@ bool isTEST(unsigned Opcode) {
   }
 }
 
+bool isMOVSX64rm32(const MCInst &Inst) {
+  return Inst.getOpcode() == X86::MOVSX64rm32;
+}
+
 class X86MCPlusBuilder : public MCPlusBuilder {
 public:
   X86MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
@@ -540,10 +544,6 @@ public:
 
   bool isLEA64r(const MCInst &Inst) const override {
     return Inst.getOpcode() == X86::LEA64r;
-  }
-
-  bool isMOVSX64rm32(const MCInst &Inst) const override {
-    return Inst.getOpcode() == X86::MOVSX64rm32;
   }
 
   bool isLeave(const MCInst &Inst) const override {
