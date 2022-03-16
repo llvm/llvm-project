@@ -327,6 +327,11 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
 
       for (size_t I = 0; I < DI.getNumberOfFrames(); I++) {
         const auto &Frame = DI.getFrame(I);
+        LLVM_DEBUG(
+            // Print out the name to guid mapping for debugging.
+            llvm::dbgs() << "FunctionName: " << Frame.FunctionName << " GUID: "
+                         << Function::getGUID(trimSuffix(Frame.FunctionName))
+                         << "\n";);
         SymbolizedFrame[VAddr].emplace_back(
             // We use the function guid which we expect to be a uint64_t. At
             // this time, it is the lower 64 bits of the md5 of the function
