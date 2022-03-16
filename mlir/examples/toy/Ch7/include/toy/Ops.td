@@ -25,6 +25,7 @@ include "toy/ShapeInferenceInterface.td"
 def Toy_Dialect : Dialect {
   let name = "toy";
   let cppNamespace = "::mlir::toy";
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 
   // We set this bit to generate a declaration of the `materializeConstant`
   // method so that we can materialize constants for our toy operations.
@@ -191,21 +192,15 @@ def FuncOp : Toy_Op<"func", [
     CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)
   >];
   let extraClassDeclaration = [{
-    /// Returns the type of this function.
-    /// FIXME: We should drive this via the ODS `type` param.
-    FunctionType getType() { 
-      return getTypeAttr().getValue().cast<FunctionType>();
-    }
-
     //===------------------------------------------------------------------===//
     // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
 
     /// Returns the argument types of this function.
-    ArrayRef<Type> getArgumentTypes() { return type().getInputs(); }
+    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
 
     /// Returns the result types of this function.
-    ArrayRef<Type> getResultTypes() { return type().getResults(); }
+    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
   }];
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
