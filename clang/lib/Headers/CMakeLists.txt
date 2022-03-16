@@ -148,6 +148,7 @@ set(files
   xtestintrin.h
   velintrin.h
   velintrin_gen.h
+  velintrin_approx.h
   )
 
 set(cuda_wrapper_files
