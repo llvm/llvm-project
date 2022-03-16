@@ -2910,19 +2910,19 @@ def getFlatScratchInstSSfromSV : InstrMapping {
   let ValueCols = [["SS"]];
 }
 
-def getFlatScratchInstSVfromSS : InstrMapping {
-  let FilterClass = "FlatScratchInst";
-  let RowFields = ["SVOp"];
-  let ColFields = ["Mode"];
-  let KeyCol = ["SS"];
-  let ValueCols = [["SV"]];
-}
-
 def getFlatScratchInstSVfromSVS : InstrMapping {
   let FilterClass = "FlatScratchInst";
   let RowFields = ["SVOp"];
   let ColFields = ["Mode"];
   let KeyCol = ["SVS"];
+  let ValueCols = [["SV"]];
+}
+
+def getFlatScratchInstSVfromSS : InstrMapping {
+  let FilterClass = "FlatScratchInst";
+  let RowFields = ["SVOp"];
+  let ColFields = ["Mode"];
+  let KeyCol = ["SS"];
   let ValueCols = [["SV"]];
 }
 

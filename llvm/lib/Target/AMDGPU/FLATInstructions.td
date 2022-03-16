@@ -57,6 +57,8 @@ class FLAT_Pseudo<string opName, dag outs, dag ins,
   bits<1> dlcValue = 0;
   bits<1> has_sccb  = 1;
   bits<1> sccbValue = 0;
+  bits<1> has_sve  = 0; // Scratch VGPR Enable
+  bits<1> sve = 0;
 
   bits<1> has_sve  = 0; // Scratch VGPR Enable
   bits<1> sve = 0;
@@ -1193,7 +1195,7 @@ multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueTy
   }
 
   def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = isGFX11Plus;
+    let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
@@ -1209,7 +1211,7 @@ multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   }
 
   def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = isGFX11Plus;
+    let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
@@ -1224,7 +1226,7 @@ multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, Val
   }
 
   def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = isGFX11Plus;
+    let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
@@ -1512,7 +1514,23 @@ class FLAT_Real_gfx940 <bits<7> op, FLAT_Pseudo ps> :
   SIMCInstr <ps.PseudoInstr, SIEncodingFamily.GFX940> {
   let AssemblerPredicate = isGFX940Plus;
   let DecoderNamespace = "GFX9";
+  let Inst{13} = ps.sve;
   let Inst{25} = !if(ps.has_sccb, cpol{CPolBit.SCC}, ps.sccbValue);
+}
+
+multiclass FLAT_Real_AllAddr_SVE_vi<bits<7> op> {
+  def _vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME)> {
+    let AssemblerPredicate = isGFX8GFX9NotGFX940;
+    let OtherPredicates = [isGFX8GFX9NotGFX940];
+  }
+  def _SADDR_vi : FLAT_Real_vi<op, !cast<FLAT_Pseudo>(NAME#"_SADDR")> {
+    let DecoderNamespace = "GFX9";
+  }
+  let AssemblerPredicate = isGFX940Plus, SubtargetPredicate = isGFX940Plus in {
+    def _VE_gfx940  : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME)>;
+    def _SVS_gfx940 : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_SVS")>;
+    def _ST_gfx940  : FLAT_Real_gfx940<op, !cast<FLAT_Pseudo>(NAME#"_ST")>;
+  }
 }
 
 def FLAT_LOAD_UBYTE_vi         : FLAT_Real_vi <0x10, FLAT_LOAD_UBYTE>;
@@ -1634,28 +1652,28 @@ defm GLOBAL_ATOMIC_XOR_X2     : FLAT_Global_Real_Atomics_vi <0x6a>;
 defm GLOBAL_ATOMIC_INC_X2     : FLAT_Global_Real_Atomics_vi <0x6b>;
 defm GLOBAL_ATOMIC_DEC_X2     : FLAT_Global_Real_Atomics_vi <0x6c>;
 
-defm SCRATCH_LOAD_UBYTE         : FLAT_Real_AllAddr_vi <0x10>;
-defm SCRATCH_LOAD_SBYTE         : FLAT_Real_AllAddr_vi <0x11>;
-defm SCRATCH_LOAD_USHORT        : FLAT_Real_AllAddr_vi <0x12>;
-defm SCRATCH_LOAD_SSHORT        : FLAT_Real_AllAddr_vi <0x13>;
-defm SCRATCH_LOAD_DWORD         : FLAT_Real_AllAddr_vi <0x14>;
-defm SCRATCH_LOAD_DWORDX2       : FLAT_Real_AllAddr_vi <0x15>;
-defm SCRATCH_LOAD_DWORDX3       : FLAT_Real_AllAddr_vi <0x16>;
-defm SCRATCH_LOAD_DWORDX4       : FLAT_Real_AllAddr_vi <0x17>;
-defm SCRATCH_STORE_BYTE         : FLAT_Real_AllAddr_vi <0x18>;
-defm SCRATCH_STORE_BYTE_D16_HI  : FLAT_Real_AllAddr_vi <0x19>;
-defm SCRATCH_LOAD_UBYTE_D16     : FLAT_Real_AllAddr_vi <0x20>;
-defm SCRATCH_LOAD_UBYTE_D16_HI  : FLAT_Real_AllAddr_vi <0x21>;
-defm SCRATCH_LOAD_SBYTE_D16     : FLAT_Real_AllAddr_vi <0x22>;
-defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_AllAddr_vi <0x23>;
-defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_AllAddr_vi <0x24>;
-defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_AllAddr_vi <0x25>;
-defm SCRATCH_STORE_SHORT        : FLAT_Real_AllAddr_vi <0x1a>;
-defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Real_AllAddr_vi <0x1b>;
-defm SCRATCH_STORE_DWORD        : FLAT_Real_AllAddr_vi <0x1c>;
-defm SCRATCH_STORE_DWORDX2      : FLAT_Real_AllAddr_vi <0x1d>;
-defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_vi <0x1e>;
-defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_vi <0x1f>;
+defm SCRATCH_LOAD_UBYTE         : FLAT_Real_AllAddr_SVE_vi <0x10>;
+defm SCRATCH_LOAD_SBYTE         : FLAT_Real_AllAddr_SVE_vi <0x11>;
+defm SCRATCH_LOAD_USHORT        : FLAT_Real_AllAddr_SVE_vi <0x12>;
+defm SCRATCH_LOAD_SSHORT        : FLAT_Real_AllAddr_SVE_vi <0x13>;
+defm SCRATCH_LOAD_DWORD         : FLAT_Real_AllAddr_SVE_vi <0x14>;
+defm SCRATCH_LOAD_DWORDX2       : FLAT_Real_AllAddr_SVE_vi <0x15>;
+defm SCRATCH_LOAD_DWORDX3       : FLAT_Real_AllAddr_SVE_vi <0x16>;
+defm SCRATCH_LOAD_DWORDX4       : FLAT_Real_AllAddr_SVE_vi <0x17>;
+defm SCRATCH_STORE_BYTE         : FLAT_Real_AllAddr_SVE_vi <0x18>;
+defm SCRATCH_STORE_BYTE_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x19>;
+defm SCRATCH_LOAD_UBYTE_D16     : FLAT_Real_AllAddr_SVE_vi <0x20>;
+defm SCRATCH_LOAD_UBYTE_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x21>;
+defm SCRATCH_LOAD_SBYTE_D16     : FLAT_Real_AllAddr_SVE_vi <0x22>;
+defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x23>;
+defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_AllAddr_SVE_vi <0x24>;
+defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_AllAddr_SVE_vi <0x25>;
+defm SCRATCH_STORE_SHORT        : FLAT_Real_AllAddr_SVE_vi <0x1a>;
+defm SCRATCH_STORE_SHORT_D16_HI : FLAT_Real_AllAddr_SVE_vi <0x1b>;
+defm SCRATCH_STORE_DWORD        : FLAT_Real_AllAddr_SVE_vi <0x1c>;
+defm SCRATCH_STORE_DWORDX2      : FLAT_Real_AllAddr_SVE_vi <0x1d>;
+defm SCRATCH_STORE_DWORDX3      : FLAT_Real_AllAddr_SVE_vi <0x1e>;
+defm SCRATCH_STORE_DWORDX4      : FLAT_Real_AllAddr_SVE_vi <0x1f>;
 
 let SubtargetPredicate = isGFX8GFX9NotGFX940 in {
   // These instructions are encoded differently on gfx90* and gfx940.
