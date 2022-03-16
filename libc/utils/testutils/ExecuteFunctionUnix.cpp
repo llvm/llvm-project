@@ -35,50 +35,49 @@ int ProcessStatus::get_fatal_signal() const {
   return WTERMSIG(platform_defined);
 }
 
-ProcessStatus invoke_in_subprocess(FunctionCaller *Func, unsigned timeoutMS) {
-  std::unique_ptr<FunctionCaller> X(Func);
-  int pipeFDs[2];
-  if (::pipe(pipeFDs) == -1)
+ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
+  std::unique_ptr<FunctionCaller> X(func);
+  int pipe_fds[2];
+  if (::pipe(pipe_fds) == -1)
     return ProcessStatus::error("pipe(2) failed");
 
   // Don't copy the buffers into the child process and print twice.
   std::cout.flush();
   std::cerr.flush();
-  pid_t Pid = ::fork();
-  if (Pid == -1)
+  pid_t pid = ::fork();
+  if (pid == -1)
     return ProcessStatus::error("fork(2) failed");
 
-  if (!Pid) {
-    (*Func)();
+  if (!pid) {
+    (*func)();
     std::exit(0);
   }
-  ::close(pipeFDs[1]);
+  ::close(pipe_fds[1]);
 
-  struct pollfd pollFD {
-    pipeFDs[0], 0, 0
+  struct pollfd poll_fd {
+    pipe_fds[0], 0, 0
   };
   // No events requested so this call will only return after the timeout or if
   // the pipes peer was closed, signaling the process exited.
-  if (::poll(&pollFD, 1, timeoutMS) == -1)
+  if (::poll(&poll_fd, 1, timeout_ms) == -1)
     return ProcessStatus::error("poll(2) failed");
   // If the pipe wasn't closed by the child yet then timeout has expired.
-  if (!(pollFD.revents & POLLHUP)) {
-    ::kill(Pid, SIGKILL);
+  if (!(poll_fd.revents & POLLHUP)) {
+    ::kill(pid, SIGKILL);
     return ProcessStatus::timed_out_ps();
   }
 
-  int WStatus = 0;
+  int wstatus = 0;
   // Wait on the pid of the subprocess here so it gets collected by the system
   // and doesn't turn into a zombie.
-  pid_t status = ::waitpid(Pid, &WStatus, 0);
+  pid_t status = ::waitpid(pid, &wstatus, 0);
   if (status == -1)
     return ProcessStatus::error("waitpid(2) failed");
-  assert(status == Pid);
-  (void)status;
-  return {WStatus};
+  assert(status == pid);
+  return {wstatus};
 }
 
-const char *signal_as_string(int Signum) { return ::strsignal(Signum); }
+const char *signal_as_string(int signum) { return ::strsignal(signum); }
 
 } // namespace testutils
 } // namespace __llvm_libc

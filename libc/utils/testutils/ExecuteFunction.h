@@ -40,10 +40,10 @@ struct ProcessStatus {
   int get_fatal_signal() const;
 };
 
-ProcessStatus invoke_in_subprocess(FunctionCaller *Func,
-                                   unsigned TimeoutMS = -1);
+ProcessStatus invoke_in_subprocess(FunctionCaller *func,
+                                   unsigned timeout_ms = -1);
 
-const char *signal_as_string(int Signum);
+const char *signal_as_string(int signum);
 
 } // namespace testutils
 } // namespace __llvm_libc
