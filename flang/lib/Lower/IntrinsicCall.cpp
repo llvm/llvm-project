@@ -26,6 +26,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
+#include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Reduction.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -466,6 +467,8 @@ struct IntrinsicLibrary {
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genSetExponent(mlir::Type resultType,
+                             llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
@@ -668,6 +671,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genRandomSeed,
      {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
      /*isElemental=*/false},
+    {"set_exponent", &I::genSetExponent},
     {"sum",
      &I::genSum,
      {{{"array", asBox},
@@ -2000,6 +2004,17 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
       return;
     }
   Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
+}
+
+// SET_EXPONENT
+mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
+                                             llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSetExponent(builder, loc, fir::getBase(args[0]),
+                                   fir::getBase(args[1])));
 }
 
 // SUM
