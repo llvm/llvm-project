@@ -313,21 +313,26 @@ unsigned evaluateHighlightPriority(const HighlightingToken &Tok) {
 //
 // In particular, heuristically resolved dependent names get their heuristic
 // kind, plus the dependent modifier.
+llvm::Optional<HighlightingToken> resolveConflict(const HighlightingToken &A,
+                                                  const HighlightingToken &B) {
+  unsigned Priority1 = evaluateHighlightPriority(A);
+  unsigned Priority2 = evaluateHighlightPriority(B);
+  if (Priority1 == Priority2 && A.Kind != B.Kind)
+    return llvm::None;
+  auto Result = Priority1 > Priority2 ? A : B;
+  Result.Modifiers = A.Modifiers | B.Modifiers;
+  return Result;
+}
 llvm::Optional<HighlightingToken>
 resolveConflict(ArrayRef<HighlightingToken> Tokens) {
   if (Tokens.size() == 1)
     return Tokens[0];
 
-  if (Tokens.size() != 2)
-    return llvm::None;
-
-  unsigned Priority1 = evaluateHighlightPriority(Tokens[0]);
-  unsigned Priority2 = evaluateHighlightPriority(Tokens[1]);
-  if (Priority1 == Priority2 && Tokens[0].Kind != Tokens[1].Kind)
-    return llvm::None;
-  auto Result = Priority1 > Priority2 ? Tokens[0] : Tokens[1];
-  Result.Modifiers = Tokens[0].Modifiers | Tokens[1].Modifiers;
-  return Result;
+  assert(Tokens.size() >= 2);
+  Optional<HighlightingToken> Winner = resolveConflict(Tokens[0], Tokens[1]);
+  for (size_t I = 2; Winner && I < Tokens.size(); ++I)
+    Winner = resolveConflict(*Winner, Tokens[I]);
+  return Winner;
 }
 
 /// Consumes source locations and maps them to text ranges for highlightings.
