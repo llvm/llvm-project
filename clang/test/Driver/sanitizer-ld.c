@@ -30,6 +30,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-EXECUTABLE-LINUX %s
 //
+// CHECK-ASAN-EXECUTABLE-LINUX: libclang_rt.asan_static-x86_64
 // CHECK-ASAN-EXECUTABLE-LINUX: libclang_rt.asan-x86_64
 
 // RUN: %clang -fsanitize=address -shared %s -### -o %t.o 2>&1  \
@@ -38,6 +39,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-ASAN-SHARED-LINUX %s
 //
+// CHECK-ASAN-SHARED-LINUX: libclang_rt.asan_static-x86_64
 // CHECK-ASAN-SHARED-LINUX-NOT: libclang_rt.asan-x86_64
 
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
