@@ -23,11 +23,13 @@ namespace symbolgraph {
 
 APIRecord::~APIRecord() {}
 
-GlobalRecord *
-API::addGlobal(GVKind Kind, StringRef Name, StringRef USR, PresumedLoc Loc,
-               const AvailabilityInfo &Availability, LinkageInfo Linkage,
-               const DocComment &Comment, DeclarationFragments Fragments,
-               DeclarationFragments SubHeading, FunctionSignature Signature) {
+GlobalRecord *APISet::addGlobal(GVKind Kind, StringRef Name, StringRef USR,
+                                PresumedLoc Loc,
+                                const AvailabilityInfo &Availability,
+                                LinkageInfo Linkage, const DocComment &Comment,
+                                DeclarationFragments Fragments,
+                                DeclarationFragments SubHeading,
+                                FunctionSignature Signature) {
   auto Result = Globals.insert({Name, nullptr});
   if (Result.second) {
     GlobalRecord *Record = new (Allocator)
@@ -38,32 +40,33 @@ API::addGlobal(GVKind Kind, StringRef Name, StringRef USR, PresumedLoc Loc,
   return Result.first->second;
 }
 
-GlobalRecord *API::addGlobalVar(StringRef Name, StringRef USR, PresumedLoc Loc,
-                                const AvailabilityInfo &Availability,
-                                LinkageInfo Linkage, const DocComment &Comment,
-                                DeclarationFragments Fragments,
-                                DeclarationFragments SubHeading) {
+GlobalRecord *
+APISet::addGlobalVar(StringRef Name, StringRef USR, PresumedLoc Loc,
+                     const AvailabilityInfo &Availability, LinkageInfo Linkage,
+                     const DocComment &Comment, DeclarationFragments Fragments,
+                     DeclarationFragments SubHeading) {
   return addGlobal(GVKind::Variable, Name, USR, Loc, Availability, Linkage,
                    Comment, Fragments, SubHeading, {});
 }
 
-GlobalRecord *API::addFunction(StringRef Name, StringRef USR, PresumedLoc Loc,
-                               const AvailabilityInfo &Availability,
-                               LinkageInfo Linkage, const DocComment &Comment,
-                               DeclarationFragments Fragments,
-                               DeclarationFragments SubHeading,
-                               FunctionSignature Signature) {
+GlobalRecord *
+APISet::addFunction(StringRef Name, StringRef USR, PresumedLoc Loc,
+                    const AvailabilityInfo &Availability, LinkageInfo Linkage,
+                    const DocComment &Comment, DeclarationFragments Fragments,
+                    DeclarationFragments SubHeading,
+                    FunctionSignature Signature) {
   return addGlobal(GVKind::Function, Name, USR, Loc, Availability, Linkage,
                    Comment, Fragments, SubHeading, Signature);
 }
 
-StringRef API::recordUSR(const Decl *D) {
+StringRef APISet::recordUSR(const Decl *D) {
   SmallString<128> USR;
   index::generateUSRForDecl(D, USR);
   return copyString(USR);
 }
 
-StringRef API::copyString(StringRef String, llvm::BumpPtrAllocator &Allocator) {
+StringRef APISet::copyString(StringRef String,
+                             llvm::BumpPtrAllocator &Allocator) {
   if (String.empty())
     return {};
 
@@ -75,7 +78,7 @@ StringRef API::copyString(StringRef String, llvm::BumpPtrAllocator &Allocator) {
   return StringRef(reinterpret_cast<const char *>(Ptr), String.size());
 }
 
-StringRef API::copyString(StringRef String) {
+StringRef APISet::copyString(StringRef String) {
   return copyString(String, Allocator);
 }
 

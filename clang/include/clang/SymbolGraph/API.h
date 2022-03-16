@@ -88,9 +88,9 @@ struct GlobalRecord : APIRecord {
   }
 };
 
-class API {
+class APISet {
 public:
-  API(const llvm::Triple &Target, const LangOptions &LangOpts)
+  APISet(const llvm::Triple &Target, const LangOptions &LangOpts)
       : Target(Target), LangOpts(LangOpts) {}
 
   const llvm::Triple &getTarget() const { return Target; }
