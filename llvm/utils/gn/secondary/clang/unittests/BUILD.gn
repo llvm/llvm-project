@@ -21,7 +21,6 @@ group("unittests") {
     "Serialization:SerializationTests",
     "Tooling:ToolingTests",
     "Tooling/Syntax:SyntaxTests",
-    "Tooling/Syntax/Pseudo:ClangPseudoTests",
   ]
   if (clang_enable_static_analyzer) {
     deps += [

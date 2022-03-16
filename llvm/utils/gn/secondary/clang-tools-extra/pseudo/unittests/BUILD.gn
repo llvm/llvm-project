@@ -6,10 +6,10 @@ unittest("ClangPseudoTests") {
     "//clang/lib/Basic",
     "//clang/lib/Lex",
     "//clang/lib/Testing",
-    "//clang/lib/Tooling/Syntax/Pseudo",
+    "//clang-tools-extra/pseudo/lib",
     "//llvm/lib/Support",
-    "//llvm/lib/Testing/Support",
   ]
+  include_dirs = [ "../include" ]
   sources = [
     "DirectiveMapTest.cpp",
     "GrammarTest.cpp",
