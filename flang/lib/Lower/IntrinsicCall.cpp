@@ -34,6 +34,7 @@
 #include "flang/Optimizer/Support/FatalError.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-lower-intrinsic"
 
@@ -460,6 +461,7 @@ struct IntrinsicLibrary {
   mlir::Value genIbclr(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -634,10 +636,12 @@ static constexpr IntrinsicHandler handlers[]{
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
      /*isElemental=*/false},
+    {"iachar", &I::genIchar},
     {"iand", &I::genIand},
     {"ibclr", &I::genIbclr},
     {"ibits", &I::genIbits},
     {"ibset", &I::genIbset},
+    {"ichar", &I::genIchar},
     {"ieor", &I::genIeor},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
@@ -1948,6 +1952,42 @@ mlir::Value IntrinsicLibrary::genIbset(mlir::Type resultType,
   mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
   auto mask = builder.create<mlir::arith::ShLIOp>(loc, one, pos);
   return builder.create<mlir::arith::OrIOp>(loc, args[0], mask);
+}
+
+// ICHAR
+fir::ExtendedValue
+IntrinsicLibrary::genIchar(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  // There can be an optional kind in second argument.
+  assert(args.size() == 2);
+  const fir::CharBoxValue *charBox = args[0].getCharBox();
+  if (!charBox)
+    llvm::report_fatal_error("expected character scalar");
+
+  fir::factory::CharacterExprHelper helper{builder, loc};
+  mlir::Value buffer = charBox->getBuffer();
+  mlir::Type bufferTy = buffer.getType();
+  mlir::Value charVal;
+  if (auto charTy = bufferTy.dyn_cast<fir::CharacterType>()) {
+    assert(charTy.singleton());
+    charVal = buffer;
+  } else {
+    // Character is in memory, cast to fir.ref<char> and load.
+    mlir::Type ty = fir::dyn_cast_ptrEleTy(bufferTy);
+    if (!ty)
+      llvm::report_fatal_error("expected memory type");
+    // The length of in the character type may be unknown. Casting
+    // to a singleton ref is required before loading.
+    fir::CharacterType eleType = helper.getCharacterType(ty);
+    fir::CharacterType charType =
+        fir::CharacterType::get(builder.getContext(), eleType.getFKind(), 1);
+    mlir::Type toTy = builder.getRefType(charType);
+    mlir::Value cast = builder.createConvert(loc, toTy, buffer);
+    charVal = builder.create<fir::LoadOp>(loc, cast);
+  }
+  LLVM_DEBUG(llvm::dbgs() << "ichar(" << charVal << ")\n");
+  auto code = helper.extractCodeFromSingleton(charVal);
+  return builder.create<mlir::arith::ExtUIOp>(loc, resultType, code);
 }
 
 // IEOR
