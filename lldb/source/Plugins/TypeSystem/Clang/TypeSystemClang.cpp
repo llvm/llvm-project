@@ -4177,6 +4177,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
     break;
 
   case clang::Type::Attributed:
+  case clang::Type::BTFTagAttributed:
     break;
   case clang::Type::TemplateTypeParm:
     break;
@@ -5102,6 +5103,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::DependentSizedExtVector:
   case clang::Type::UnresolvedUsing:
   case clang::Type::Attributed:
+  case clang::Type::BTFTagAttributed:
   case clang::Type::TemplateTypeParm:
   case clang::Type::SubstTemplateTypeParm:
   case clang::Type::SubstTemplateTypeParmPack:
@@ -5255,6 +5257,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::DependentSizedExtVector:
   case clang::Type::UnresolvedUsing:
   case clang::Type::Attributed:
+  case clang::Type::BTFTagAttributed:
   case clang::Type::TemplateTypeParm:
   case clang::Type::SubstTemplateTypeParm:
   case clang::Type::SubstTemplateTypeParmPack:
