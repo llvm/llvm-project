@@ -33,8 +33,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLING_SYNTAX_GRAMMAR_H
-#define LLVM_CLANG_TOOLING_SYNTAX_GRAMMAR_H
+#ifndef CLANG_PSEUDO_GRAMMAR_H
+#define CLANG_PSEUDO_GRAMMAR_H
 
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -44,7 +44,6 @@
 #include <vector>
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 // A SymbolID uniquely identifies a terminal/non-terminal symbol in a grammar.
 // Non-terminal IDs are indexes into a table of non-terminal symbols.
@@ -178,7 +177,6 @@ struct GrammarTable {
 };
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang
 
 #endif // LLVM_CLANG_TOOLING_SYNTAX_GRAMMAR_H

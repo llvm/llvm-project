@@ -6,23 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang-pseudo/Grammar.h"
+#include "clang-pseudo/LRGraph.h"
+#include "clang-pseudo/LRTable.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
-#include "clang/Tooling/Syntax/Pseudo/LRGraph.h"
-#include "clang/Tooling/Syntax/Pseudo/LRTable.h"
 #include <cstdint>
 
 namespace llvm {
-template <> struct DenseMapInfo<clang::syntax::pseudo::LRTable::Entry> {
-  using Entry = clang::syntax::pseudo::LRTable::Entry;
+template <> struct DenseMapInfo<clang::pseudo::LRTable::Entry> {
+  using Entry = clang::pseudo::LRTable::Entry;
   static inline Entry getEmptyKey() {
-    static Entry E{static_cast<clang::syntax::pseudo::SymbolID>(-1), 0,
-                   clang::syntax::pseudo::LRTable::Action::sentinel()};
+    static Entry E{static_cast<clang::pseudo::SymbolID>(-1), 0,
+                   clang::pseudo::LRTable::Action::sentinel()};
     return E;
   }
   static inline Entry getTombstoneKey() {
-    static Entry E{static_cast<clang::syntax::pseudo::SymbolID>(-2), 0,
-                   clang::syntax::pseudo::LRTable::Action::sentinel()};
+    static Entry E{static_cast<clang::pseudo::SymbolID>(-2), 0,
+                   clang::pseudo::LRTable::Action::sentinel()};
     return E;
   }
   static unsigned getHashValue(const Entry &I) {
@@ -36,7 +36,6 @@ template <> struct DenseMapInfo<clang::syntax::pseudo::LRTable::Entry> {
 } // namespace llvm
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 
 class LRTable::Builder {
@@ -139,5 +138,4 @@ LRTable LRTable::buildSLR(const Grammar &G) {
 }
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang

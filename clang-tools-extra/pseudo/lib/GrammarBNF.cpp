@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang-pseudo/Grammar.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <memory>
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 
 namespace {
@@ -244,5 +243,4 @@ Grammar::parseBNF(llvm::StringRef BNF, std::vector<std::string> &Diagnostics) {
 }
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang

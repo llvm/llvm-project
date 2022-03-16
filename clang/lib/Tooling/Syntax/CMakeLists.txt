@@ -19,5 +19,3 @@ add_clang_library(clangToolingSyntax
   DEPENDS
   omp_gen
   )
-
-add_subdirectory(Pseudo)
