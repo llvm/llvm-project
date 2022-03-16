@@ -249,6 +249,7 @@ cc_library(
     name = "TestPass",
     srcs = glob(["lib/Pass/*.cpp"]),
     deps = [
+        ":TestDialect",
         "//llvm:Support",
         "//mlir:IR",
         "//mlir:Pass",
