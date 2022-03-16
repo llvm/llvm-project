@@ -18,6 +18,7 @@ using namespace llvm;
 
 namespace opts {
 extern cl::OptionCategory BoltOptCategory;
+extern llvm::cl::opt<unsigned> AlignText;
 extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
@@ -342,7 +343,7 @@ uint64_t LongJmpPass::tentativeLayoutRelocMode(
           tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
       ColdLayoutDone = true;
       if (opts::HotFunctionsAtEnd)
-        DotAddress = alignTo(DotAddress, BC.PageAlign);
+        DotAddress = alignTo(DotAddress, opts::AlignText);
     }
 
     DotAddress = alignTo(DotAddress, BinaryFunction::MinAlign);
@@ -390,11 +391,11 @@ void LongJmpPass::tentativeLayout(
   // Initial padding
   if (opts::UseOldText && EstimatedTextSize <= BC.OldTextSectionSize) {
     DotAddress = BC.OldTextSectionAddress;
-    uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(BC.PageAlign));
+    uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(opts::AlignText));
     if (Pad + EstimatedTextSize <= BC.OldTextSectionSize)
       DotAddress += Pad;
   } else {
-    DotAddress = alignTo(BC.LayoutStartAddress, BC.PageAlign);
+    DotAddress = alignTo(BC.LayoutStartAddress, opts::AlignText);
   }
 
   tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
