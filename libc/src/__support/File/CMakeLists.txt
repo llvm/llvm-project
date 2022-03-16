@@ -5,6 +5,7 @@ add_object_library(
   HDRS
     file.h
   DEPENDS
+    libc.src.__support.threads.thread
     libc.include.errno
     libc.src.errno.errno
 )
