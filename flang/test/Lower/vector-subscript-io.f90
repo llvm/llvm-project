@@ -1,5 +1,6 @@
 ! Test lowering of IO input items with vector subscripts
 ! RUN: bbc %s -o - | FileCheck %s
+! UNSUPPORTED: system-windows
 
 ! CHECK-LABEL: func @_QPsimple(
 ! CHECK-SAME: %[[VAL_20:.*]]: !fir.ref<!fir.array<10xi32>>{{.*}}, %[[VAL_16:.*]]: !fir.ref<!fir.array<3xi32>>{{.*}}) {
