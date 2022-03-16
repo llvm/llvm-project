@@ -2152,6 +2152,18 @@ static unsigned getBoxRank(mlir::Type boxTy) {
   return 0;
 }
 
+/// Test if \p t1 and \p t2 are compatible character types (if they can
+/// represent the same type at runtime).
+static bool areCompatibleCharacterTypes(mlir::Type t1, mlir::Type t2) {
+  auto c1 = t1.dyn_cast<fir::CharacterType>();
+  auto c2 = t2.dyn_cast<fir::CharacterType>();
+  if (!c1 || !c2)
+    return false;
+  if (c1.hasDynamicLen() || c2.hasDynamicLen())
+    return true;
+  return c1.getLen() == c2.getLen();
+}
+
 mlir::LogicalResult ReboxOp::verify() {
   auto inputBoxTy = getBox().getType();
   if (fir::isa_unknown_size_box(inputBoxTy))
@@ -2205,12 +2217,21 @@ mlir::LogicalResult ReboxOp::verify() {
       return emitOpError("result type and shape operand ranks must match");
   }
 
-  if (inputEleTy != outEleTy)
+  if (inputEleTy != outEleTy) {
     // TODO: check that outBoxTy is a parent type of inputBoxTy for derived
     // types.
-    if (!inputEleTy.isa<fir::RecordType>())
+    // Character input and output types with constant length may be different if
+    // there is a substring in the slice, otherwise, they must match. If any of
+    // the types is a character with dynamic length, the other type can be any
+    // character type.
+    const bool typeCanMismatch =
+        inputEleTy.isa<fir::RecordType>() ||
+        (getSlice() && inputEleTy.isa<fir::CharacterType>()) ||
+        areCompatibleCharacterTypes(inputEleTy, outEleTy);
+    if (!typeCanMismatch)
       return emitOpError(
           "op input and output element types must match for intrinsic types");
+  }
   return mlir::success();
 }
 

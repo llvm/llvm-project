@@ -132,6 +132,16 @@ func @bad_rebox_11(%arg0: !fir.box<!fir.array<?x?xf32>>) {
 
 // -----
 
+func @test_rebox_char(%arg0: !fir.box<!fir.array<?x!fir.char<1,20>>>) {
+  %c10 = arith.constant 10 : index
+  %1 = fir.shape %c10, %c10 : (index, index) -> !fir.shape<2>
+  // expected-error@+1{{op input and output element types must match for intrinsic types}}
+  %2 = fir.rebox %arg0(%1) : (!fir.box<!fir.array<?x!fir.char<1,20>>>, !fir.shape<2>) -> !fir.box<!fir.array<10x10x!fir.char<1,10>>>
+  return
+}
+
+// -----
+
 func @array_access(%arr : !fir.ref<!fir.array<?x?xf32>>) {
   %c1 = arith.constant 1 : index
   %c100 = arith.constant 100 : index
