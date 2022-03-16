@@ -1421,19 +1421,18 @@ void Sema::ActOnEndOfTranslationUnit() {
 // Helper functions.
 //===----------------------------------------------------------------------===//
 
-DeclContext *Sema::getFunctionLevelDeclContext() {
+DeclContext *Sema::getFunctionLevelDeclContext(bool AllowLambda) {
   DeclContext *DC = CurContext;
 
   while (true) {
     if (isa<BlockDecl>(DC) || isa<EnumDecl>(DC) || isa<CapturedDecl>(DC) ||
         isa<RequiresExprBodyDecl>(DC)) {
       DC = DC->getParent();
-    } else if (isa<CXXMethodDecl>(DC) &&
+    } else if (!AllowLambda && isa<CXXMethodDecl>(DC) &&
                cast<CXXMethodDecl>(DC)->getOverloadedOperator() == OO_Call &&
                cast<CXXRecordDecl>(DC->getParent())->isLambda()) {
       DC = DC->getParent()->getParent();
-    }
-    else break;
+    } else break;
   }
 
   return DC;
@@ -1442,8 +1441,8 @@ DeclContext *Sema::getFunctionLevelDeclContext() {
 /// getCurFunctionDecl - If inside of a function body, this returns a pointer
 /// to the function decl for the function being parsed.  If we're currently
 /// in a 'block', this returns the containing context.
-FunctionDecl *Sema::getCurFunctionDecl() {
-  DeclContext *DC = getFunctionLevelDeclContext();
+FunctionDecl *Sema::getCurFunctionDecl(bool AllowLambda) {
+  DeclContext *DC = getFunctionLevelDeclContext(AllowLambda);
   return dyn_cast<FunctionDecl>(DC);
 }
 
