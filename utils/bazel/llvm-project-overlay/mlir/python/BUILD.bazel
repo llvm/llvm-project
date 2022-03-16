@@ -43,6 +43,13 @@ filegroup(
 )
 
 filegroup(
+    name = "ExecutionEnginePyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlirExecutionEngine.pyi",
+    ],
+)
+
+filegroup(
     name = "IRPyFiles",
     srcs = [
         "mlir/ir.py",
@@ -50,9 +57,24 @@ filegroup(
 )
 
 filegroup(
+    name = "IRPyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlir/__init__.pyi",
+        "mlir/_mlir_libs/_mlir/ir.pyi",
+    ],
+)
+
+filegroup(
     name = "PassManagerPyFiles",
     srcs = [
         "mlir/passmanager.py",
+    ],
+)
+
+filegroup(
+    name = "PassManagerPyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlir/passmanager.pyi",
     ],
 )
 
@@ -318,15 +340,55 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
-# Quant dialect.
+# PDL dialect.
 ##---------------------------------------------------------------------------##
 
-filegroup(
-    name = "QuantPyFiles",
+td_library(
+    name = "PDLPyTdFiles",
     srcs = [
-        "mlir/dialects/quant.py",
+        "//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    includes = ["../include"],
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:PDLDialectTdFiles",
     ],
 )
+
+gentbl_filegroup(
+    name = "PDLPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=pdl",
+            ],
+            "mlir/dialects/_pdl_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/PDLOps.td",
+    deps = [
+        ":PDLPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "PDLPyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlir/dialects/pdl.pyi",
+    ],
+)
+
+filegroup(
+    name = "PDLPyFiles",
+    srcs = [
+        "mlir/dialects/_pdl_ops_ext.py",
+        "mlir/dialects/pdl.py",
+        ":PDLPyGen",
+    ],
+)
+
 
 ##---------------------------------------------------------------------------##
 # PythonTest dialect.
@@ -368,6 +430,25 @@ filegroup(
         ":PythonTestPyGen",
     ],
 )
+
+##---------------------------------------------------------------------------##
+# Quant dialect.
+##---------------------------------------------------------------------------##
+
+filegroup(
+    name = "QuantPyIFiles",
+    srcs = [
+        "mlir/_mlir_libs/_mlir/dialects/quant.pyi",
+    ],
+)
+
+filegroup(
+    name = "QuantPyFiles",
+    srcs = [
+        "mlir/dialects/quant.py",
+    ],
+)
+
 
 ##---------------------------------------------------------------------------##
 # SCF dialect.
