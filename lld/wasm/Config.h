@@ -18,7 +18,7 @@ namespace lld {
 namespace wasm {
 
 // For --unresolved-symbols.
-enum class UnresolvedPolicy { ReportError, Warn, Ignore };
+enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
 
 // This struct contains the global configuration for the linker.
 // Most fields are direct mapping from the command line options
