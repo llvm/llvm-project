@@ -5,7 +5,7 @@ __i686.get_pc_thunk.bx:
     ret
 
 .section .text
-.global _strchr1
+.weak _strchr1
 _strchr1:
     call __i686.get_pc_thunk.bx
     ret
