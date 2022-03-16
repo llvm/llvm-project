@@ -207,7 +207,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
     V.push_back(std::make_pair(ClassId, P));
   }
   scudo::uptr Found = 0;
-  auto Lambda = [V, &Found](scudo::uptr Block) {
+  auto Lambda = [&V, &Found](scudo::uptr Block) {
     for (const auto &Pair : V) {
       if (Pair.second == reinterpret_cast<void *>(Block))
         Found++;
