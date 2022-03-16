@@ -365,6 +365,9 @@ def warn_drv_preprocessed_input_file_unused : Warning<
 def warn_drv_unused_argument : Warning<
   "argument unused during compilation: '%0'">,
   InGroup<UnusedCommandLineArgument>;
+def warn_drv_unused_x : Warning<
+  "'-x %0' after last input file has no effect">,
+  InGroup<UnusedCommandLineArgument>;
 def warn_drv_empty_joined_argument : Warning<
   "joined argument expects additional value: '%0'">,
   InGroup<UnusedCommandLineArgument>;
