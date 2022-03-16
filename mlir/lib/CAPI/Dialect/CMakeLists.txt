@@ -13,6 +13,15 @@ add_mlir_upstream_c_api_library(MLIRCAPIAsync
   MLIRPass
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPIControlFlow
+  ControlFlow.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRControlFlow
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIGPU
   GPU.cpp
   GPUPasses.cpp
