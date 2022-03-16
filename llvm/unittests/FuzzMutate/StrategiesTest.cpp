@@ -100,36 +100,6 @@ TEST(InjectorIRStrategyTest, EmptyModule) {
   EXPECT_TRUE(!verifyModule(*M, &errs()));
 }
 
-TEST(InjectorIRStrategyTest, MustTailCall) {
-  // Test that we don't insert after a musttail call.
-  StringRef Source = ""
-      "define i32 @func() {\n"
-        "%v = musttail call i32 @func()\n"
-        "ret i32 %v\n"
-      "}\n";
-
-  auto Mutator = createInjectorMutator();
-  ASSERT_TRUE(Mutator);
-
-  IterateOnSource(Source, *Mutator);
-}
-
-TEST(InjectorIRStrategyTest, MustTailCallBitCast) {
-  // Test that we don't insert after a musttail call bitcast.
-  StringRef Source = ""
-      "declare i32* @func2()\n"
-      "define i8* @func() {\n"
-        "%v = musttail call i32* @func2()\n"
-        "%v2 = bitcast i32* %v to i8*\n"
-        "ret i8* %v2\n"
-      "}\n";
-
-  auto Mutator = createInjectorMutator();
-  ASSERT_TRUE(Mutator);
-
-  IterateOnSource(Source, *Mutator);
-}
-
 TEST(InstDeleterIRStrategyTest, EmptyFunction) {
   // Test that we don't crash even if we can't remove from one of the functions.
 
