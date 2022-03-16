@@ -748,8 +748,8 @@ bool SystemZInstrInfo::PredicateInstruction(
   if (Opcode == SystemZ::CallJG) {
     MachineOperand FirstOp = MI.getOperand(0);
     const uint32_t *RegMask = MI.getOperand(1).getRegMask();
-    MI.RemoveOperand(1);
-    MI.RemoveOperand(0);
+    MI.removeOperand(1);
+    MI.removeOperand(0);
     MI.setDesc(get(SystemZ::CallBRCL));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addImm(CCValid)
@@ -762,8 +762,8 @@ bool SystemZInstrInfo::PredicateInstruction(
   if (Opcode == SystemZ::CallBR) {
     MachineOperand Target = MI.getOperand(0);
     const uint32_t *RegMask = MI.getOperand(1).getRegMask();
-    MI.RemoveOperand(1);
-    MI.RemoveOperand(0);
+    MI.removeOperand(1);
+    MI.removeOperand(0);
     MI.setDesc(get(SystemZ::CallBCR));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
       .addImm(CCValid).addImm(CCMask)

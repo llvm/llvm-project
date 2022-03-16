@@ -89,7 +89,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
         return success();
       };
     }
-    opt.allowReturnMemref = allowReturnMemref;
+    opt.allowReturnAllocs = allowReturnAllocs;
     opt.allowUnknownOps = allowUnknownOps;
     opt.analysisFuzzerSeed = analysisFuzzerSeed;
     opt.createDeallocs = createDeallocs;

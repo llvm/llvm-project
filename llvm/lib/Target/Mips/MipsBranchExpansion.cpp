@@ -722,7 +722,7 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
   if (I.Br->isUnconditionalBranch()) {
     // Change branch destination.
     assert(I.Br->getDesc().getNumOperands() == 1);
-    I.Br->RemoveOperand(0);
+    I.Br->removeOperand(0);
     I.Br->addOperand(MachineOperand::CreateMBB(LongBrMBB));
   } else
     // Change branch destination and reverse condition.

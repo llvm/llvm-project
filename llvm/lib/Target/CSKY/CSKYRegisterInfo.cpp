@@ -282,7 +282,7 @@ void CSKYRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI->setDesc(TII->get(TargetOpcode::COPY));
     MI->getOperand(FIOperandNum)
         .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
-    MI->RemoveOperand(FIOperandNum + 1);
+    MI->removeOperand(FIOperandNum + 1);
   } else {
     MI->getOperand(FIOperandNum)
         .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);

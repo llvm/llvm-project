@@ -132,7 +132,7 @@ void ilist_callback_traits<MachineBasicBlock>::addNodeToList(
   // Make sure the instructions have their operands in the reginfo lists.
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   for (MachineInstr &MI : N->instrs())
-    MI.AddRegOperandsToUseLists(RegInfo);
+    MI.addRegOperandsToUseLists(RegInfo);
 }
 
 void ilist_callback_traits<MachineBasicBlock>::removeNodeFromList(
@@ -150,7 +150,7 @@ void ilist_traits<MachineInstr>::addNodeToList(MachineInstr *N) {
   // Add the instruction's register operands to their corresponding
   // use/def lists.
   MachineFunction *MF = Parent->getParent();
-  N->AddRegOperandsToUseLists(MF->getRegInfo());
+  N->addRegOperandsToUseLists(MF->getRegInfo());
   MF->handleInsertion(*N);
 }
 
@@ -162,7 +162,7 @@ void ilist_traits<MachineInstr>::removeNodeFromList(MachineInstr *N) {
   // Remove from the use/def lists.
   if (MachineFunction *MF = N->getMF()) {
     MF->handleRemoval(*N);
-    N->RemoveRegOperandsFromUseLists(MF->getRegInfo());
+    N->removeRegOperandsFromUseLists(MF->getRegInfo());
   }
 
   N->setParent(nullptr);

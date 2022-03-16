@@ -2865,9 +2865,9 @@ static void removeModOperands(MachineInstr &MI) {
   int Src2ModIdx = AMDGPU::getNamedOperandIdx(Opc,
                                               AMDGPU::OpName::src2_modifiers);
 
-  MI.RemoveOperand(Src2ModIdx);
-  MI.RemoveOperand(Src1ModIdx);
-  MI.RemoveOperand(Src0ModIdx);
+  MI.removeOperand(Src2ModIdx);
+  MI.removeOperand(Src1ModIdx);
+  MI.removeOperand(Src0ModIdx);
 }
 
 bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
@@ -2981,9 +2981,9 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // instead of having to modify in place.
 
       // Remove these first since they are at the end.
-      UseMI.RemoveOperand(
+      UseMI.removeOperand(
           AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod));
-      UseMI.RemoveOperand(
+      UseMI.removeOperand(
           AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp));
 
       Register Src1Reg = Src1->getReg();
@@ -3064,9 +3064,9 @@ bool SIInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
       // instead of having to modify in place.
 
       // Remove these first since they are at the end.
-      UseMI.RemoveOperand(
+      UseMI.removeOperand(
           AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod));
-      UseMI.RemoveOperand(
+      UseMI.removeOperand(
           AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp));
 
       if (Opc == AMDGPU::V_MAC_F32_e64 ||
@@ -3320,7 +3320,7 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
       // We cannot just remove the DefMI here, calling pass will crash.
       DefMI->setDesc(get(AMDGPU::IMPLICIT_DEF));
       for (unsigned I = DefMI->getNumOperands() - 1; I != 0; --I)
-        DefMI->RemoveOperand(I);
+        DefMI->removeOperand(I);
     };
 
     int64_t Imm;
@@ -4870,7 +4870,7 @@ MachineOperand SIInstrInfo::buildExtractSubRegOrImm(
 void SIInstrInfo::swapOperands(MachineInstr &Inst) const {
   assert(Inst.getNumExplicitOperands() == 3);
   MachineOperand Op1 = Inst.getOperand(1);
-  Inst.RemoveOperand(1);
+  Inst.removeOperand(1);
   Inst.addOperand(Op1);
 }
 
@@ -5312,7 +5312,7 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
     // Clear use list from the old vaddr holding a zero register.
     MRI.removeRegOperandFromUseList(&NewVAddr);
     MRI.moveOperands(&NewVAddr, &SAddr, 1);
-    Inst.RemoveOperand(OldSAddrIdx);
+    Inst.removeOperand(OldSAddrIdx);
     // Update the use list with the pointer we have just moved from vaddr to
     // saddr position. Otherwise new vaddr will be missing from the use list.
     MRI.removeRegOperandFromUseList(&NewVAddr);
@@ -5324,14 +5324,14 @@ bool SIInstrInfo::moveFlatAddrToVGPR(MachineInstr &Inst) const {
       int NewVDstIn = AMDGPU::getNamedOperandIdx(NewOpc,
                                                  AMDGPU::OpName::vdst_in);
 
-      // RemoveOperand doesn't try to fixup tied operand indexes at it goes, so
+      // removeOperand doesn't try to fixup tied operand indexes at it goes, so
       // it asserts. Untie the operands for now and retie them afterwards.
       if (NewVDstIn != -1) {
         int OldVDstIn = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in);
         Inst.untieRegOperand(OldVDstIn);
       }
 
-      Inst.RemoveOperand(OldVAddrIdx);
+      Inst.removeOperand(OldVAddrIdx);
 
       if (NewVDstIn != -1) {
         int NewVDst = AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vdst);
@@ -6123,7 +6123,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
         BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(Opc), VCC)
             .addReg(EXEC)
             .addReg(IsSCC ? VCC : CondReg);
-        Inst.RemoveOperand(1);
+        Inst.removeOperand(1);
       }
       break;
 
@@ -6290,7 +6290,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
           addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
         if (Op.isUse())
           addSCCDefsToVALUWorklist(Op, Worklist);
-        Inst.RemoveOperand(i);
+        Inst.removeOperand(i);
       }
     }
 
@@ -6320,7 +6320,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
 
       uint32_t Offset = Imm & 0x3f; // Extract bits [5:0].
       uint32_t BitWidth = (Imm & 0x7f0000) >> 16; // Extract bits [22:16].
-      Inst.RemoveOperand(2);                     // Remove old immediate.
+      Inst.removeOperand(2);                     // Remove old immediate.
       Inst.addOperand(MachineOperand::CreateImm(Offset));
       Inst.addOperand(MachineOperand::CreateImm(BitWidth));
     }
@@ -6354,7 +6354,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
         // these are deleted later, but at -O0 it would leave a suspicious
         // looking illegal copy of an undef register.
         for (unsigned I = Inst.getNumOperands() - 1; I != 0; --I)
-          Inst.RemoveOperand(I);
+          Inst.removeOperand(I);
         Inst.setDesc(get(AMDGPU::IMPLICIT_DEF));
         continue;
       }
@@ -6396,7 +6396,7 @@ SIInstrInfo::moveScalarAddSub(SetVectorType &Worklist, MachineInstr &Inst,
       AMDGPU::V_ADD_U32_e64 : AMDGPU::V_SUB_U32_e64;
 
     assert(Inst.getOperand(3).getReg() == AMDGPU::SCC);
-    Inst.RemoveOperand(3);
+    Inst.removeOperand(3);
 
     Inst.setDesc(get(NewOpc));
     Inst.addOperand(MachineOperand::CreateImm(0)); // clamp bit

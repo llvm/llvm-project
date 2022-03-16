@@ -2163,7 +2163,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             }
 
             if (NewOpc != -1) {
-              MI->RemoveOperand(
+              MI->removeOperand(
                   AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr));
               MI->setDesc(TII->get(NewOpc));
               return;

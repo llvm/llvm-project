@@ -1911,8 +1911,8 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
       for (int i = PN->getNumOperands()-2; i > 0; i -= 2) {
         MachineBasicBlock *PredB = PN->getOperand(i+1).getMBB();
         if (PredB != Latch) {
-          PN->RemoveOperand(i+1);
-          PN->RemoveOperand(i);
+          PN->removeOperand(i+1);
+          PN->removeOperand(i);
         }
       }
       PN->addOperand(MachineOperand::CreateReg(NewPR, false));
