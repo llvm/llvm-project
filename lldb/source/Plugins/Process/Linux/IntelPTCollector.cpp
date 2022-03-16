@@ -1,4 +1,4 @@
-//===-- IntelPTManager.cpp ------------------------------------------------===//
+//===-- IntelPTCollector.cpp ------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "IntelPTManager.h"
+#include "IntelPTCollector.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/StreamString.h"
@@ -564,15 +564,15 @@ IntelPTProcessTrace::GetThreadTraces() const {
   return m_thread_traces;
 }
 
-/// IntelPTManager
+/// IntelPTCollector
 
-Error IntelPTManager::TraceStop(lldb::tid_t tid) {
+Error IntelPTCollector::TraceStop(lldb::tid_t tid) {
   if (IsProcessTracingEnabled() && m_process_trace->TracesThread(tid))
     return m_process_trace->TraceStop(tid);
   return m_thread_traces.TraceStop(tid);
 }
 
-Error IntelPTManager::TraceStop(const TraceStopRequest &request) {
+Error IntelPTCollector::TraceStop(const TraceStopRequest &request) {
   if (request.IsProcessTracing()) {
     Clear();
     return Error::success();
@@ -585,7 +585,7 @@ Error IntelPTManager::TraceStop(const TraceStopRequest &request) {
   }
 }
 
-Error IntelPTManager::TraceStart(
+Error IntelPTCollector::TraceStart(
     const TraceIntelPTStartRequest &request,
     const std::vector<lldb::tid_t> &process_threads) {
   if (request.IsProcessTracing()) {
@@ -609,13 +609,13 @@ Error IntelPTManager::TraceStart(
   }
 }
 
-Error IntelPTManager::OnThreadCreated(lldb::tid_t tid) {
+Error IntelPTCollector::OnThreadCreated(lldb::tid_t tid) {
   if (!IsProcessTracingEnabled())
     return Error::success();
   return m_process_trace->TraceStart(tid);
 }
 
-Error IntelPTManager::OnThreadDestroyed(lldb::tid_t tid) {
+Error IntelPTCollector::OnThreadDestroyed(lldb::tid_t tid) {
   if (IsProcessTracingEnabled() && m_process_trace->TracesThread(tid))
     return m_process_trace->TraceStop(tid);
   else if (m_thread_traces.TracesThread(tid))
@@ -623,7 +623,7 @@ Error IntelPTManager::OnThreadDestroyed(lldb::tid_t tid) {
   return Error::success();
 }
 
-Expected<json::Value> IntelPTManager::GetState() const {
+Expected<json::Value> IntelPTCollector::GetState() const {
   Expected<ArrayRef<uint8_t>> cpu_info = IntelPTThreadTrace::GetCPUInfo();
   if (!cpu_info)
     return cpu_info.takeError();
@@ -646,14 +646,14 @@ Expected<json::Value> IntelPTManager::GetState() const {
 }
 
 Expected<const IntelPTThreadTrace &>
-IntelPTManager::GetTracedThread(lldb::tid_t tid) const {
+IntelPTCollector::GetTracedThread(lldb::tid_t tid) const {
   if (IsProcessTracingEnabled() && m_process_trace->TracesThread(tid))
     return m_process_trace->GetThreadTraces().GetTracedThread(tid);
   return m_thread_traces.GetTracedThread(tid);
 }
 
 Expected<std::vector<uint8_t>>
-IntelPTManager::GetBinaryData(const TraceGetBinaryDataRequest &request) const {
+IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) const {
   if (request.kind == "threadTraceBuffer") {
     if (Expected<const IntelPTThreadTrace &> trace =
             GetTracedThread(*request.tid))
@@ -668,9 +668,9 @@ IntelPTManager::GetBinaryData(const TraceGetBinaryDataRequest &request) const {
                            request.kind.c_str());
 }
 
-void IntelPTManager::ClearProcessTracing() { m_process_trace = None; }
+void IntelPTCollector::ClearProcessTracing() { m_process_trace = None; }
 
-bool IntelPTManager::IsSupported() {
+bool IntelPTCollector::IsSupported() {
   Expected<uint32_t> intel_pt_type = GetOSEventType();
   if (!intel_pt_type) {
     llvm::consumeError(intel_pt_type.takeError());
@@ -679,11 +679,11 @@ bool IntelPTManager::IsSupported() {
   return true;
 }
 
-bool IntelPTManager::IsProcessTracingEnabled() const {
+bool IntelPTCollector::IsProcessTracingEnabled() const {
   return (bool)m_process_trace;
 }
 
-void IntelPTManager::Clear() {
+void IntelPTCollector::Clear() {
   ClearProcessTracing();
   m_thread_traces.Clear();
 }
