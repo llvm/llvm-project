@@ -1,0 +1,17 @@
+static_library("SymbolGraph") {
+  output_name = "clangSymbolGraph"
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/AST",
+    "//clang/lib/Basic",
+    "//clang/lib/Frontend",
+    "//clang/lib/Index",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "API.cpp",
+    "ExtractAPIConsumer.cpp",
+    "DeclarationFragments.cpp",
+    "Serialization.cpp",
+  ]
+}

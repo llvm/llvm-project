@@ -29,7 +29,6 @@ static_library("Frontend") {
     "DependencyFile.cpp",
     "DependencyGraph.cpp",
     "DiagnosticRenderer.cpp",
-    "ExtractAPIConsumer.cpp",
     "FrontendAction.cpp",
     "FrontendActions.cpp",
     "FrontendOptions.cpp",
