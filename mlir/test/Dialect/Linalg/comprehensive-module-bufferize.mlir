@@ -1218,3 +1218,108 @@ func @scf_execute_region_yield_non_equivalent(%i: index, %j: index) -> f32 {
   %f = tensor.extract %r[%j] : tensor<?xf32>
   return %f : f32
 }
+
+// -----
+
+// Note: This bufferizes to inefficient code, but bufferization should not see
+// such IR in the first place. The iter_arg would canonicalize away. This test
+// case is just to ensure that the bufferization generates correct code.
+
+// CHECK-LABEL: func @scf_for_yield_non_equivalent(
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}})
+//       CHECK:   %[[casted:.*]] = memref.cast %[[alloc]]
+//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[casted]])
+//       CHECK:     memref.dealloc %[[iter]]
+//       CHECK:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
+//       CHECK:     memref.copy %[[t]], %[[alloc2]]
+//       CHECK:     %[[casted2:.*]] = memref.cast %[[alloc2]]
+//       CHECK:     scf.yield %[[casted2]]
+//       CHECK:   return %[[for]]
+func @scf_for_yield_non_equivalent(
+    %t: tensor<?xf32>, %lb : index, %ub : index, %step : index) -> tensor<?xf32> {
+  %r = scf.for %i = %lb to %ub step %step iter_args(%a = %t) -> tensor<?xf32> {
+    scf.yield %t : tensor<?xf32>
+  }
+
+  return %r : tensor<?xf32>
+}
+
+// -----
+
+// Note: This bufferizes to inefficient code, but bufferization should not see
+// such IR in the first place. The iter_arg would canonicalize away. This test
+// case is just to ensure that the bufferization generates correct code.
+
+// CHECK-LABEL: func @scf_for_yield_allocation(
+//  CHECK-SAME:     %[[t:.*]]: memref<?xf32
+//       CHECK:   %[[cloned:.*]] = bufferization.clone %[[t]]
+//       CHECK:   %[[for:.*]] = scf.for {{.*}} iter_args(%[[iter:.*]] = %[[cloned]])
+// This alloc is for the linalg.init_tensor.
+//       CHECK:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
+//       CHECK:     memref.dealloc %[[iter]]
+// This alloc is for the scf.yield.
+//       CHECK:     %[[alloc3:.*]] = memref.alloc(%{{.*}})
+//       CHECK:     memref.copy %[[alloc2]], %[[alloc3]]
+//       CHECK:     memref.dealloc %[[alloc2]]
+//       CHECK:     %[[casted3:.*]] = memref.cast %[[alloc3]]
+//       CHECK:     scf.yield %[[casted3]]
+//       CHECK:   return %[[for]]
+func @scf_for_yield_allocation(%t: tensor<?xf32>, %lb : index, %ub : index,
+                               %step : index) -> tensor<?xf32> {
+  %r = scf.for %i = %lb to %ub step %step iter_args(%a = %t) -> tensor<?xf32> {
+    %t2 = linalg.init_tensor [%i] : tensor<?xf32>
+    scf.yield %t2 : tensor<?xf32>
+  }
+
+  return %r : tensor<?xf32>
+}
+
+// -----
+
+// TODO: The scf.yield could bufferize to 1 alloc and 2 copies (instead of
+// 2 allocs and 2 copies).
+
+// CHECK-LABEL: func @scf_for_swapping_yields(
+//  CHECK-SAME:     %[[A:.*]]: memref<?xf32, #{{.*}}>, %[[B:.*]]: memref<?xf32, #{{.*}}>
+
+func @scf_for_swapping_yields(
+    %A : tensor<?xf32>, %B : tensor<?xf32> {linalg.inplaceable = true},
+    %C : tensor<4xf32>, %lb : index, %ub : index, %step : index)
+  -> (f32, f32)
+{
+//   CHECK-DAG:   %[[clone1:.*]] = bufferization.clone %[[A]]
+//   CHECK-DAG:   %[[clone2:.*]] = bufferization.clone %[[B]]
+//       CHECK:   %[[for:.*]]:2 = scf.for {{.*}} iter_args(%[[iter1:.*]] = %[[clone1]], %[[iter2:.*]] = %[[clone2]])
+  %r0:2 = scf.for %i = %lb to %ub step %step iter_args(%tA = %A, %tB = %B)
+      -> (tensor<?xf32>, tensor<?xf32>)
+  {
+//       CHECK:     %[[sv1:.*]] = memref.subview %[[iter1]]
+//       CHECK:     memref.copy %{{.*}}, %[[sv1]]
+    %ttA = tensor.insert_slice %C into %tA[0][4][1] : tensor<4xf32> into tensor<?xf32>
+//       CHECK:     %[[sv2:.*]] = memref.subview %[[iter2]]
+//       CHECK:     memref.copy %{{.*}}, %[[sv2]]
+    %ttB = tensor.insert_slice %C into %tB[0][4][1] : tensor<4xf32> into tensor<?xf32>
+
+//       CHECK:     %[[alloc2:.*]] = memref.alloc(%{{.*}})
+//       CHECK:     memref.copy %[[iter2]], %[[alloc2]]
+//       CHECK:     memref.dealloc %[[iter2]]
+//       CHECK:     %[[alloc1:.*]] = memref.alloc(%{{.*}})
+//       CHECK:     memref.copy %[[iter1]], %[[alloc1]]
+//       CHECK:     memref.dealloc %[[iter1]]
+//       CHECK:     %[[casted1:.*]] = memref.cast %[[alloc1]]
+//       CHECK:     %[[casted2:.*]] = memref.cast %[[alloc2]]
+//       CHECK:     scf.yield %[[casted2]], %[[casted1]]
+    // Yield tensors in different order.
+    scf.yield %ttB, %ttA : tensor<?xf32>, tensor<?xf32>
+  }
+
+//       CHECK:     %[[r0:.*]] = memref.load %[[for]]#0
+//       CHECK:     memref.dealloc %[[for]]#0
+//       CHECK:     %[[r1:.*]] = memref.load %[[for]]#1
+//       CHECK:     memref.dealloc %[[for]]#1
+  %f0 = tensor.extract %r0#0[%step] : tensor<?xf32>
+  %f1 = tensor.extract %r0#1[%step] : tensor<?xf32>
+//       CHECK:     return %[[r0]], %[[r1]]
+  return %f0, %f1: f32, f32
+}
