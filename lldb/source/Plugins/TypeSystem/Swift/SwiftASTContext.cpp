@@ -875,22 +875,22 @@ SwiftASTContextSupportsLanguage(lldb::LanguageType language) {
   return language == eLanguageTypeSwift;
 }
 
-static bool IsDeviceSupport(const char *path) {
+static bool IsDeviceSupport(StringRef path) {
   // The old-style check, which we preserve for safety.
-  if (path && strstr(path, "iOS DeviceSupport"))
+  if (path.contains("iOS DeviceSupport"))
     return true;
 
   // The new-style check, which should cover more devices.
-  if (path)
-    if (const char *Developer_Xcode = strstr(path, "Developer"))
-      if (const char *DeviceSupport = strstr(Developer_Xcode, "DeviceSupport"))
-        if (strstr(DeviceSupport, "Symbols"))
-          return true;
+  StringRef Developer = path.substr(path.find("Developer"));
+  StringRef DeviceSupport =
+    Developer.substr(Developer.find("DeviceSupport"));
+  if (DeviceSupport.contains("Symbols"))
+    return true;
 
   // Don't look in the simulator runtime frameworks either.  They
   // either duplicate what the SDK has, or for older simulators
   // conflict with them.
-  if (path && strstr(path, ".simruntime/Contents/Resources/"))
+  if (path.contains(".simruntime/Contents/Resources/"))
     return true;
 
   return false;
@@ -2021,13 +2021,14 @@ ProcessModule(ModuleSP module_sp, std::string m_description,
           // framework_offset now points to the '/';
 
           std::string parent_path = module_path.substr(0, framework_offset);
+          StringRef p(parent_path);
 
-          // Never add framework paths pointing into the
-          // system. These modules must be imported from the
-          // SDK instead.
-          if (!StringRef(parent_path).startswith("/System/Library") &&
-              !IsDeviceSupport(parent_path.c_str())) {
-            LOG_PRINTF(GetLog(LLDBLog::Types), "adding framework path \"%s\".",
+          // Never add framework paths pointing into the system. These
+          // modules must be imported from the SDK instead.
+          if (!p.startswith("/System/Library") && !IsDeviceSupport(p) &&
+              !p.startswith(
+                  "/Library/Apple/System/Library/PrivateFrameworks")) {
+            LOG_PRINTF(GetLog(LLDBLog::Types), "adding framework path \"%s\"/.. .",
                        framework_path.c_str());
             framework_search_paths.push_back(
                 {std::move(parent_path), /*system*/ false});
