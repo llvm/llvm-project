@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Pseudo/Grammar.h"
+#include "clang-pseudo/Grammar.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -15,7 +15,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 
 Rule::Rule(SymbolID Target, llvm::ArrayRef<SymbolID> Sequence)
@@ -181,5 +180,4 @@ static llvm::ArrayRef<std::string> getTerminalNames() {
 GrammarTable::GrammarTable() : Terminals(getTerminalNames()) {}
 
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang

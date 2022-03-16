@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Tooling/Syntax/Pseudo/Token.h"
+#include "clang-pseudo/Token.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TokenKinds.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
-namespace syntax {
 namespace pseudo {
 namespace {
 
@@ -191,5 +190,4 @@ TEST(TokenTest, DropComments) {
 
 } // namespace
 } // namespace pseudo
-} // namespace syntax
 } // namespace clang
