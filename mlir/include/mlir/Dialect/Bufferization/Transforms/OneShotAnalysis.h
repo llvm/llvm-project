@@ -43,6 +43,10 @@ struct OneShotBufferizationOptions : public BufferizationOptions {
 
   /// Registered post analysis steps.
   PostAnalysisStepList postAnalysisSteps;
+
+  /// Specifies whether returning newly allocated memrefs should be allowed.
+  /// Otherwise, a pass failure is triggered.
+  bool allowReturnMemref = false;
 };
 
 /// The BufferizationAliasInfo class maintains a list of buffer aliases and
@@ -153,10 +157,22 @@ public:
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
 
+  /// Return true if the given tensor (or an aliasing tensor) is yielded from
+  /// the containing block. Also include all aliasing tensors in the same block.
+  bool isTensorYielded(Value tensor) const override;
+
+  /// Find all tensors that are yielded/returned from a block and store them in
+  /// `yieldedTensors`. Also include all aliasing tensors in the same block.
+  void gatherYieldedTensors(Operation *op);
+
 private:
   /// `aliasInfo` keeps track of aliasing and equivalent values. Only internal
   /// functions and `runOneShotBufferize` may access this object.
   BufferizationAliasInfo aliasInfo;
+
+  /// A set of all tensors (and maybe aliasing tensors) that yielded from a
+  /// block.
+  DenseSet<Value> yieldedTensors;
 };
 
 /// Analyze `op` and its nested ops. Bufferization decisions are stored in

@@ -215,6 +215,43 @@ bool OneShotAnalysisState::areEquivalentBufferizedValues(Value v1,
   return aliasInfo.areEquivalentBufferizedValues(v1, v2);
 }
 
+// Gather yielded tensors in `yieldedTensors` by querying all aliases. This is
+// to ensure that such information is available during bufferization time.
+// Alias information can no longer be queried through BufferizationAliasInfo
+// once we have started modifying the IR.
+void OneShotAnalysisState::gatherYieldedTensors(Operation *op) {
+  op->walk([&](Operation *returnOp) {
+    if (!isRegionReturnLike(returnOp) || !getOptions().isOpAllowed(returnOp))
+      return WalkResult::advance();
+
+    for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
+      Value returnVal = returnValOperand.get();
+      // Skip non-tensor values.
+      if (!returnVal.getType().isa<TensorType>())
+        continue;
+
+      // Add all aliases of the returned value. But only the ones that are in
+      // the same block.
+      aliasInfo.applyOnAliases(returnVal, [&](Value v) {
+        if (auto bbArg = v.dyn_cast<BlockArgument>()) {
+          if (bbArg.getOwner()->getParentOp() == returnOp->getParentOp())
+            yieldedTensors.insert(bbArg);
+          return;
+        }
+        Operation *definingOp = v.getDefiningOp();
+        if (definingOp->getParentOp() == returnOp->getParentOp())
+          yieldedTensors.insert(v);
+      });
+    }
+
+    return WalkResult::advance();
+  });
+}
+
+bool OneShotAnalysisState::isTensorYielded(Value tensor) const {
+  return yieldedTensors.contains(tensor);
+}
+
 //===----------------------------------------------------------------------===//
 // Bufferization-specific alias analysis.
 //===----------------------------------------------------------------------===//
@@ -779,6 +816,9 @@ LogicalResult bufferization::analyzeOp(Operation *op,
     failedAnalysis |=
         failed(assertDestinationPassingStyle(op, state, aliasInfo, newOps));
   }
+
+  // Gather all yielded tensors.
+  state.gatherYieldedTensors(op);
 
   // Analysis verification: After setting up alias/equivalence sets, each op
   // can check for expected invariants/limitations and fail the analysis if

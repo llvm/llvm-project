@@ -42,7 +42,11 @@ constexpr const ::llvm::StringLiteral
 constexpr const ::llvm::StringLiteral
     bufferization::BufferizableOpInterface::kInplaceableAttrName;
 
+/// Attribute name used to mark allocs that are created by the bufferization.
 static const char *kBufferAllocationAttr = "bufferization.allocation";
+
+/// Attribute name used to mark allocs that should not be deallocated.
+static const char *kSkipDeallocAttr = "bufferization.skip_dealloc";
 
 //===----------------------------------------------------------------------===//
 // BufferizationOptions
@@ -253,6 +257,8 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
   OpBuilder::InsertionGuard guard(rewriter);
   Operation *op = opOperand.getOwner();
   Location loc = op->getLoc();
+  SmallVector<OpResult> aliasingOpResults =
+      analysisState.getAliasingOpResult(opOperand);
   Value operand = opOperand.get();
   Value operandBuffer = lookupBuffer(rewriter, operand, options);
 
@@ -263,8 +269,13 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
   // Move insertion point right after `operandBuffer`. That is where the
   // allocation should be inserted (in the absence of allocation hoisting).
   setInsertionPointAfter(rewriter, operandBuffer);
-  // Allocate the result buffer.
-  FailureOr<Value> resultBuffer = createAlloc(rewriter, loc, operandBuffer);
+  // Allocate the result buffer. The buffer should be deallocated if the tensor
+  // is not yielded and deallocs are enabled in general.
+  bool dealloc = llvm::none_of(aliasingOpResults, [&](Value v) {
+    return getAnalysisState().isTensorYielded(v);
+  });
+  FailureOr<Value> resultBuffer = createAlloc(
+      rewriter, loc, operandBuffer, dealloc && getOptions().createDeallocs);
   if (failed(resultBuffer))
     return failure();
   // Do not copy if the last preceding writes of `operand` are ops that do
@@ -281,8 +292,6 @@ BufferizationState::getBuffer(RewriterBase &rewriter, OpOperand &opOperand,
       }))
     return resultBuffer;
   // Do not copy if the copied data is never read.
-  SmallVector<OpResult> aliasingOpResults =
-      analysisState.getAliasingOpResult(opOperand);
   if (!aliasingOpResults.empty() &&
       !analysisState.bufferizesToMemoryRead(opOperand) &&
       llvm::none_of(aliasingOpResults, [&](OpResult opResult) {
@@ -339,7 +348,12 @@ void bufferization::replaceOpWithBufferizedValues(RewriterBase &rewriter,
 
 AlwaysCopyAnalysisState::AlwaysCopyAnalysisState(
     const BufferizationOptions &options)
-    : AnalysisState(options) {}
+    : AnalysisState(options) {
+  // Note: Allocations must be deallocated with a subsequent run of the buffer
+  // deallocation pass.
+  assert(!options.createDeallocs &&
+         "cannot create deallocs with AlwaysCopyBufferizationState");
+}
 
 /// Return `true` if the given OpResult has been decided to bufferize inplace.
 bool AlwaysCopyAnalysisState::isInPlace(OpOperand &opOperand) const {
@@ -354,6 +368,13 @@ bool AlwaysCopyAnalysisState::areEquivalentBufferizedValues(Value v1,
   // There is no analysis, so we do not know if the values are equivalent. The
   // conservative answer is "false".
   return false;
+}
+
+/// Return true if the given tensor (or an aliasing tensor) is yielded from
+/// the containing block. Also include all aliasing tensors in the same block.
+bool AlwaysCopyAnalysisState::isTensorYielded(Value tensor) const {
+  // There is no analysis, so conservatively answer "true".
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -426,37 +447,54 @@ static MemRefType getAllocationTypeAndShape(OpBuilder &b, Location loc,
 }
 
 static Value createBufferAllocation(OpBuilder &b, Location loc, MemRefType type,
-                                    ValueRange dynShape) {
+                                    ValueRange dynShape, bool skipDealloc) {
   auto allocaOp = b.create<memref::AllocaOp>(loc, type, dynShape);
   allocaOp->setAttr(kBufferAllocationAttr, b.getUnitAttr());
+  if (skipDealloc)
+    allocaOp->setAttr(kSkipDeallocAttr, b.getUnitAttr());
   return allocaOp.getResult();
 }
 
 /// Create an allocation after `shapedValue.getDefiningOp` (or at the top of the
 /// block in case of a bbArg).
 FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
-                                                 Value shapedValue) {
+                                                 Value shapedValue,
+                                                 Optional<bool> dealloc) {
   // Take a guard before anything else.
   OpBuilder::InsertionGuard g(b);
+
+  // Compute allocation memref type.
   assert(shapedValue.getType().isa<ShapedType>());
   MemRefType memRefType = shapedValue.getType().dyn_cast<MemRefType>();
   SmallVector<Value> dynShape;
   MemRefType allocMemRefType =
       getAllocationTypeAndShape(b, loc, shapedValue, dynShape);
-  Value alloc = createBufferAllocation(b, loc, allocMemRefType, dynShape);
+
+  // Should be the buffer be deallocated again or should we let it leak?
+  bool skipDealloc;
+  if (dealloc) {
+    skipDealloc = !dealloc.getValue();
+  } else {
+    assert(shapedValue.getType().isa<TensorType>() &&
+           "must specify `dealloc` if non-tensor value is passed");
+    // Buffer should be not be deallocated if deallocs are generally deactivated
+    // or if the tensor is yielded from a block.
+    skipDealloc = !getOptions().createDeallocs ||
+                  getAnalysisState().isTensorYielded(shapedValue);
+  }
+
+  // Create the buffer allocation.
+  Value alloc =
+      createBufferAllocation(b, loc, allocMemRefType, dynShape, skipDealloc);
+
+  // Insert a cast if a different type was requested.
   if (memRefType && memRefType != allocMemRefType) {
-    assert(memref::CastOp::areCastCompatible(alloc.getType(), memRefType) &&
+    assert(memref::CastOp::areCastCompatible(allocMemRefType, memRefType) &&
            "createAlloc: cast incompatible");
     alloc = b.create<memref::CastOp>(loc, memRefType, alloc);
   }
-  return alloc;
-}
 
-/// Create a memref allocation with the given type and dynamic extents.
-FailureOr<Value> BufferizationState::createAlloc(OpBuilder &b, Location loc,
-                                                 MemRefType type,
-                                                 ValueRange dynShape) {
-  return createBufferAllocation(b, loc, type, dynShape);
+  return alloc;
 }
 
 /// Create a memory copy between two memref buffers.
@@ -480,7 +518,9 @@ createAllocDeallocOps(Operation *op, const BufferizationOptions &options) {
     // Ignore memref.alloca ops that were not created by the bufferization.
     if (!allocaOp->hasAttr(kBufferAllocationAttr))
       return WalkResult::skip();
+    bool skipDealloc = allocaOp->hasAttr(kSkipDeallocAttr);
 
+    // Create alloc.
     Block *block = allocaOp->getBlock();
     rewriter.setInsertionPoint(allocaOp);
     FailureOr<Value> alloc =
@@ -490,10 +530,11 @@ createAllocDeallocOps(Operation *op, const BufferizationOptions &options) {
       return WalkResult::interrupt();
     rewriter.replaceOp(allocaOp, *alloc);
 
-    // Stop here if deallocations are deactivated.
-    if (!options.createDeallocs)
+    // Stop here if the buffer should not be deallocated.
+    if (skipDealloc)
       return WalkResult::advance();
 
+    // Create dealloc.
     rewriter.setInsertionPoint(block->getTerminator());
     if (failed(createDealloc(rewriter, alloc->getLoc(), *alloc, options)))
       return WalkResult::interrupt();

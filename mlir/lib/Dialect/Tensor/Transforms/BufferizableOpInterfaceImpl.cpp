@@ -335,9 +335,8 @@ struct FromElementsOpInterface
     Location loc = op->getLoc();
     auto tensorType = fromElementsOp.getType().cast<RankedTensorType>();
     auto shape = tensorType.getShape();
-    MemRefType resultType = getContiguousMemRefType(tensorType);
     FailureOr<Value> maybeBuffer =
-        state.createAlloc(rewriter, loc, resultType, {});
+        state.createAlloc(rewriter, loc, fromElementsOp.result());
     if (failed(maybeBuffer))
       return failure();
     Value buffer = *maybeBuffer;
@@ -386,8 +385,8 @@ struct GenerateOpInterface
     Location loc = op->getLoc();
     MemRefType memrefType =
         getContiguousMemRefType(generateOp.getType().cast<RankedTensorType>());
-    FailureOr<Value> maybeResult = state.createAlloc(
-        rewriter, loc, memrefType, generateOp.dynamicExtents());
+    FailureOr<Value> maybeResult =
+        state.createAlloc(rewriter, loc, generateOp.result());
     if (failed(maybeResult))
       return failure();
     Value result = *maybeResult;

@@ -177,10 +177,6 @@ struct BufferizationOptions {
   Optional<DeallocationFn> deallocationFn;
   Optional<MemCpyFn> memCpyFn;
 
-  /// Specifies whether returning newly allocated memrefs should be allowed.
-  /// Otherwise, a pass failure is triggered.
-  bool allowReturnMemref = false;
-
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
   /// bufferization.to_memref and bufferization.to_tensor ops are inserted at
   /// the boundaries.
@@ -356,7 +352,14 @@ public:
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   virtual bool areEquivalentBufferizedValues(Value v1, Value v2) const = 0;
 
-  /// Return dialect-specific analysis state.
+  /// Return true if the given tensor (or an aliasing tensor) is yielded from
+  /// the containing block. Also include all aliasing tensors in the same block.
+  ///
+  /// Note: In the absence of an analysis, an implementation may return true for
+  /// any given tensor.
+  virtual bool isTensorYielded(Value tensor) const = 0;
+
+  /// Return dialect-specific bufferization state.
   template <typename StateT>
   Optional<const StateT *> getDialectState(StringRef name) const {
     auto it = dialectState.find(name);
@@ -415,6 +418,10 @@ public:
 
   /// Return true if `v1` and `v2` bufferize to equivalent buffers.
   bool areEquivalentBufferizedValues(Value v1, Value v2) const override;
+
+  /// Return true if the given tensor (or an aliasing tensor) is yielded from
+  /// the containing block. Also include all aliasing tensors in the same block.
+  bool isTensorYielded(Value tensor) const override;
 };
 
 /// BufferizationState provides helper functions for performing bufferization
@@ -423,14 +430,20 @@ struct BufferizationState {
   BufferizationState(const AnalysisState &analysisState)
       : analysisState(analysisState) {}
 
-  /// Creates a memref allocation with the given type and dynamic extents.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                               ValueRange dynShape);
-
-  /// Creates a memref allocation for the given shaped value. This function may
-  /// perform additional optimizations such as buffer allocation hoisting.
-  // TODO: Allocation hoisting should be a cleanup pass.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue);
+  /// Creates a memref allocation for the given shaped value. `dealloc`
+  /// indicates whether the buffer should be deallocated or not. When `dealloc`
+  /// is `false`, this would create a memory leak, unless the buffer is
+  /// deallocated through some other mechanism.
+  ///
+  /// `dealloc` is optional. By default, this function will figure out by itself
+  /// if it is safe to deallocate the buffer. In essence, when returning the
+  /// buffer from a block, it is not safe to deallocate the buffer. This
+  /// information is queried via `AnalysisState::isTensorYielded`.
+  ///
+  /// Note: `shapedValue` is typically a tensor value. However, if it is a
+  /// memref value, `dealloc` is no longer optional and must be specified.
+  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, Value shapedValue,
+                               Optional<bool> dealloc = None);
 
   /// Return the buffer (memref) for a given OpOperand (tensor). Allocate
   /// a new buffer and copy over data from the existing buffer if out-of-place

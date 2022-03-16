@@ -81,7 +81,6 @@ func @not_inplace(
   //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[ALLOC]] : memref<?xf32>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
-  //     CHECK:  dealloc %[[ALLOC]] : memref<?xf32>
   //     CHECK:  return %[[ALLOC]] : memref<?xf32>
   return %r: tensor<?xf32>
 }
@@ -292,7 +291,6 @@ func @insert_slice_fun_not_inplace(
   //      CHECK: memref.copy %[[A]], %[[ALLOC]] : memref<?xf32{{.*}} to memref<?xf32>
   //      CHECK: %[[SV:.*]] = memref.subview %[[ALLOC]][0] [4] [1] : memref<?xf32> to memref<4xf32>
   //      CHECK: memref.copy %[[t]], %[[SV]] : memref<4xf32, #map> to memref<4xf32>
-  //      CHECK: memref.dealloc %[[ALLOC]] : memref<?xf32>
   %r0 = tensor.insert_slice %t into %A[0][4][1] : tensor<4xf32> into tensor<?xf32>
 
   //     CHECK: return %{{.*}} : memref<?xf32>
@@ -329,7 +327,6 @@ func @scf_for_yield_only(%A : tensor<?xf32> {linalg.inplaceable = false},
     scf.yield %t : tensor<?xf32>
   }
 
-  //     CHECK:   memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
   //     CHECK:   return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
   return %r0, %r1: tensor<?xf32>, tensor<?xf32>
 }
@@ -395,7 +392,6 @@ func @scf_for_with_tensor.insert_slice(
     scf.yield %ttA, %ttB : tensor<?xf32>, tensor<?xf32>
   }
 
-  //     CHECK:  memref.dealloc %[[ALLOC_FOR_A]] : memref<?xf32>
   //     CHECK:  return %[[CASTED]] : memref<?xf32, #[[$map_1d_dyn]]>
   return %r0#0, %r0#1: tensor<?xf32>, tensor<?xf32>
 }
