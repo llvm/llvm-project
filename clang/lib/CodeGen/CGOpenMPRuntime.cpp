@@ -35,7 +35,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Format.h"
@@ -1941,12 +1940,8 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       CtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI,
                             FunctionArgList(), Loc, Loc);
       auto AL = ApplyDebugLocation::CreateArtificial(CtorCGF);
-      auto *AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
-          Addr, llvm::PointerType::getWithSamePointeeType(
-                    cast<llvm::PointerType>(Addr->getType()), 0));
       CtorCGF.EmitAnyExprToMem(
-          Init,
-          Address::deprecated(AddrInAS0, CGM.getContext().getDeclAlign(VD)),
+          Init, Address::deprecated(Addr, CGM.getContext().getDeclAlign(VD)),
           Init->getType().getQualifiers(),
           /*IsInitializer=*/true);
       CtorCGF.FinishFunction();
@@ -1985,12 +1980,9 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       // Create a scope with an artificial location for the body of this
       // function.
       auto AL = ApplyDebugLocation::CreateArtificial(DtorCGF);
-      auto *AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
-          Addr, llvm::PointerType::getWithSamePointeeType(
-                    cast<llvm::PointerType>(Addr->getType()), 0));
       DtorCGF.emitDestroy(
-          Address::deprecated(AddrInAS0, CGM.getContext().getDeclAlign(VD)),
-          ASTTy, DtorCGF.getDestroyer(ASTTy.isDestructedType()),
+          Address::deprecated(Addr, CGM.getContext().getDeclAlign(VD)), ASTTy,
+          DtorCGF.getDestroyer(ASTTy.isDestructedType()),
           DtorCGF.needsEHCleanup(ASTTy.isDestructedType()));
       DtorCGF.FinishFunction();
       Dtor = Fn;
