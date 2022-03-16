@@ -89,7 +89,9 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       *Region = {};
     }
-    unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL, &Data);
+    if (PrimaryBase)
+      unmap(reinterpret_cast<void *>(PrimaryBase), PrimarySize, UNMAP_ALL,
+            &Data);
     PrimaryBase = 0U;
   }
 
