@@ -79,11 +79,12 @@ SDValue VETargetLowering::lowerToVVP(SDValue Op, SelectionDAG &DAG) const {
   if (!Mask)
     Mask = CDAG.getConstantMask(Packing, true);
 
-  if (isVVPBinaryOp(VVPOpcode)) {
-    assert(LegalVecVT.isSimple());
+  assert(LegalVecVT.isSimple());
+  if (isVVPUnaryOp(VVPOpcode))
+    return CDAG.getNode(VVPOpcode, LegalVecVT, {Op->getOperand(0), Mask, AVL});
+  if (isVVPBinaryOp(VVPOpcode))
     return CDAG.getNode(VVPOpcode, LegalVecVT,
                         {Op->getOperand(0), Op->getOperand(1), Mask, AVL});
-  }
   if (isVVPReductionOp(VVPOpcode)) {
     auto SrcHasStart = hasReductionStartParam(Op->getOpcode());
     SDValue StartV = SrcHasStart ? Op->getOperand(0) : SDValue();

@@ -131,6 +131,53 @@ defm : VectorScatter<v256f32, v256i64, v256i1, "VSCU">;
 defm : VectorScatter<v256i32, v256i64, v256i1, "VSCL">;
 
 
+/// FNEG {
+// Directly modify the sign bit to flip the sign.
+
+// Set sign bits in a pack of <2 x f32>.
+def packed_fneg_imm     : OutPatFrag<(ins ),
+                          (i64 (SLLri (i64 (ORim 1, (i32 32))), 31))>;
+
+
+multiclass FNeg<ValueType DataVT> {
+  // Masked with select.
+  def : Pat<(vvp_select (vvp_fneg DataVT:$vx, (v256i1 srcvalue), (i32 srcvalue)),
+                        DataVT:$vfalse,
+                        v256i1:$mask,
+                        i32:$avl),
+            (VXORmvml_v (i32 1), $vx, $mask, $avl, $vfalse)>;
+
+  // Unmasked.
+  def : Pat<(vvp_fneg DataVT:$vx, (v256i1 true_mask), i32:$avl),
+            (VXORmvl (i32 1), $vx, $avl)>;
+
+  // Masked.
+  def : Pat<(vvp_fneg DataVT:$vx, v256i1:$mask, i32:$avl),
+            (VXORmvml (i32 1), $vx, $mask, $avl)>;
+}
+
+defm: FNeg<v256f32>;
+defm: FNeg<v256f64>;
+
+///// Packed FNeg /////
+
+// Masked with select.
+def : Pat<(vvp_select (vvp_fneg v512f32:$vx, (v512i1 srcvalue), (i32 srcvalue)),
+                      v512f32:$vfalse,
+                      v512i1:$mask,
+                      i32:$avl),
+          (v512f32 (PVXORrvml_v (packed_fneg_imm ), $vx, $mask, $avl, $vfalse))>;
+
+// Unmasked.
+def : Pat<(vvp_fneg v512f32:$vx, (v512i1 true_mask), i32:$avl),
+          (v512f32 (PVXORrvl (packed_fneg_imm ), $vx, $avl))>;
+
+// Masked.
+def : Pat<(vvp_fneg v512f32:$vx, v512i1:$mask, i32:$avl),
+          (v512f32 (PVXORrvml (packed_fneg_imm ), $vx, $mask, $avl))>;
+
+/// } FNEG
+
 multiclass Binary_rv<SDPatternOperator OpNode,
     ValueType ScalarVT, ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
