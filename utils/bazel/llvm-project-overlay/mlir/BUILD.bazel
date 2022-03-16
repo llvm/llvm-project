@@ -4023,6 +4023,7 @@ td_library(
     srcs = ["include/mlir/Dialect/PDLInterp/IR/PDLInterpOps.td"],
     includes = ["include"],
     deps = [
+        ":FunctionInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":PDLDialectTdFiles",
         ":SideEffectInterfacesTdFiles",
