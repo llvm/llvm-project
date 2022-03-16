@@ -526,11 +526,6 @@ public:
     return false;
   }
 
-  virtual bool isMOVSX64rm32(const MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-    return false;
-  }
-
   virtual bool isLeave(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
