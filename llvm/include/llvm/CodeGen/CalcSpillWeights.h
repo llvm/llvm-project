@@ -9,7 +9,6 @@
 #ifndef LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 #define LLVM_CODEGEN_CALCSPILLWEIGHTS_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 
 namespace llvm {

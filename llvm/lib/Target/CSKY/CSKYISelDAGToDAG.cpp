@@ -14,6 +14,7 @@
 #include "CSKYSubtarget.h"
 #include "CSKYTargetMachine.h"
 #include "MCTargetDesc/CSKYMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 
