@@ -459,6 +459,7 @@ struct IntrinsicLibrary {
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbits(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -635,6 +636,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"iand", &I::genIand},
     {"ibits", &I::genIbits},
     {"ibset", &I::genIbset},
+    {"ieor", &I::genIeor},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
     {"len",
@@ -1928,6 +1930,13 @@ mlir::Value IntrinsicLibrary::genIbset(mlir::Type resultType,
   mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
   auto mask = builder.create<mlir::arith::ShLIOp>(loc, one, pos);
   return builder.create<mlir::arith::OrIOp>(loc, args[0], mask);
+}
+
+// IEOR
+mlir::Value IntrinsicLibrary::genIeor(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return builder.create<mlir::arith::XOrIOp>(loc, args[0], args[1]);
 }
 
 // ISHFT
