@@ -154,6 +154,11 @@ private:
   using PQueue = std::priority_queue<std::pair<unsigned, unsigned>>;
   using SmallLISet = SmallPtrSet<const LiveInterval *, 4>;
 
+  // We need to track all tentative recolorings so we can roll back any
+  // successful and unsuccessful recoloring attempts.
+  using RecoloringStack =
+      SmallVector<std::pair<const LiveInterval *, MCRegister>, 8>;
+
   // context
   MachineFunction *MF;
 
@@ -351,7 +356,7 @@ public:
 private:
   MCRegister selectOrSplitImpl(const LiveInterval &,
                                SmallVectorImpl<Register> &, SmallVirtRegSet &,
-                               unsigned = 0);
+                               RecoloringStack &, unsigned = 0);
 
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_WillShrinkVirtReg(Register) override;
@@ -417,9 +422,10 @@ private:
                     SmallVectorImpl<Register> &, const SmallVirtRegSet &);
   unsigned tryLastChanceRecoloring(const LiveInterval &, AllocationOrder &,
                                    SmallVectorImpl<Register> &,
-                                   SmallVirtRegSet &, unsigned);
+                                   SmallVirtRegSet &, RecoloringStack &,
+                                   unsigned);
   bool tryRecoloringCandidates(PQueue &, SmallVectorImpl<Register> &,
-                               SmallVirtRegSet &, unsigned);
+                               SmallVirtRegSet &, RecoloringStack &, unsigned);
   void tryHintRecoloring(const LiveInterval &);
   void tryHintsRecoloring();
 
