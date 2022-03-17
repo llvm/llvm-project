@@ -145,6 +145,40 @@ public:
     return true;
   }
 
+  bool VisitEnumDecl(const EnumDecl *Decl) {
+    if (!Decl->isComplete())
+      return true;
+
+    // Skip forward declaration.
+    if (!Decl->isThisDeclarationADefinition())
+      return true;
+
+    // Collect symbol information.
+    StringRef Name = Decl->getName();
+    StringRef USR = API.recordUSR(Decl);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    AvailabilityInfo Availability = getAvailability(Decl);
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the enum.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForEnum(Decl);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+    EnumRecord *EnumRecord = API.addEnum(Name, USR, Loc, Availability, Comment,
+                                         Declaration, SubHeading);
+
+    // Now collect information about the enumerators in this enum.
+    recordEnumConstants(EnumRecord, Decl->enumerators());
+
+    return true;
+  }
+
 private:
   /// Get availability information of the declaration \p D.
   AvailabilityInfo getAvailability(const Decl *D) const {
@@ -175,6 +209,33 @@ private:
     }
 
     return Availability;
+  }
+
+  /// Collect API information for the enum constants and associate with the
+  /// parent enum.
+  void recordEnumConstants(EnumRecord *EnumRecord,
+                           const EnumDecl::enumerator_range Constants) {
+    for (const auto *Constant : Constants) {
+      // Collect symbol information.
+      StringRef Name = Constant->getName();
+      StringRef USR = API.recordUSR(Constant);
+      PresumedLoc Loc =
+          Context.getSourceManager().getPresumedLoc(Constant->getLocation());
+      AvailabilityInfo Availability = getAvailability(Constant);
+      DocComment Comment;
+      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Constant))
+        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                                Context.getDiagnostics());
+
+      // Build declaration fragments and sub-heading for the enum constant.
+      DeclarationFragments Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForEnumConstant(Constant);
+      DeclarationFragments SubHeading =
+          DeclarationFragmentsBuilder::getSubHeading(Constant);
+
+      API.addEnumConstant(EnumRecord, Name, USR, Loc, Availability, Comment,
+                          Declaration, SubHeading);
+    }
   }
 
   ASTContext &Context;

@@ -336,23 +336,36 @@ Object serializeNames(const APIRecord &Record) {
 /// the kind, and a \c displayName for rendering human-readable names.
 Object serializeSymbolKind(const APIRecord &Record,
                            const LangOptions &LangOpts) {
+  auto AddLangPrefix = [&LangOpts](StringRef S) -> std::string {
+    return (getLanguageName(LangOpts) + "." + S).str();
+  };
+
   Object Kind;
   switch (Record.getKind()) {
-  case APIRecord::RK_Global:
+  case APIRecord::RK_Global: {
     auto *GR = dyn_cast<GlobalRecord>(&Record);
     switch (GR->GlobalKind) {
     case GVKind::Function:
-      Kind["identifier"] = (getLanguageName(LangOpts) + ".func").str();
+      Kind["identifier"] = AddLangPrefix("func");
       Kind["displayName"] = "Function";
       break;
     case GVKind::Variable:
-      Kind["identifier"] = (getLanguageName(LangOpts) + ".var").str();
+      Kind["identifier"] = AddLangPrefix("var");
       Kind["displayName"] = "Global Variable";
       break;
     case GVKind::Unknown:
       // Unknown global kind
       break;
     }
+    break;
+  }
+  case APIRecord::RK_EnumConstant:
+    Kind["identifier"] = AddLangPrefix("enum.case");
+    Kind["displayName"] = "Enumeration Case";
+    break;
+  case APIRecord::RK_Enum:
+    Kind["identifier"] = AddLangPrefix("enum");
+    Kind["displayName"] = "Enumeration";
     break;
   }
 
@@ -413,6 +426,25 @@ SymbolGraphSerializer::serializeAPIRecord(const APIRecord &Record) const {
   return Obj;
 }
 
+StringRef SymbolGraphSerializer::getRelationshipString(RelationshipKind Kind) {
+  switch (Kind) {
+  case RelationshipKind::MemberOf:
+    return "memberOf";
+  }
+  llvm_unreachable("Unhandled relationship kind");
+}
+
+void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
+                                                  const APIRecord &Source,
+                                                  const APIRecord &Target) {
+  Object Relationship;
+  Relationship["source"] = Source.USR;
+  Relationship["target"] = Target.USR;
+  Relationship["kind"] = getRelationshipString(Kind);
+
+  Relationships.emplace_back(std::move(Relationship));
+}
+
 void SymbolGraphSerializer::serializeGlobalRecord(const GlobalRecord &Record) {
   auto Obj = serializeAPIRecord(Record);
   if (!Obj)
@@ -425,6 +457,23 @@ void SymbolGraphSerializer::serializeGlobalRecord(const GlobalRecord &Record) {
   Symbols.emplace_back(std::move(*Obj));
 }
 
+void SymbolGraphSerializer::serializeEnumRecord(const EnumRecord &Record) {
+  auto Enum = serializeAPIRecord(Record);
+  if (!Enum)
+    return;
+
+  Symbols.emplace_back(std::move(*Enum));
+
+  for (const auto &Constant : Record.Constants) {
+    auto EnumConstant = serializeAPIRecord(*Constant);
+    if (!EnumConstant)
+      continue;
+
+    Symbols.emplace_back(std::move(*EnumConstant));
+    serializeRelationship(RelationshipKind::MemberOf, *Constant, Record);
+  }
+}
+
 Object SymbolGraphSerializer::serialize() {
   Object Root;
   serializeObject(Root, "metadata", serializeMetadata());
@@ -433,6 +482,10 @@ Object SymbolGraphSerializer::serialize() {
   // Serialize global records in the API set.
   for (const auto &Global : API.getGlobals())
     serializeGlobalRecord(*Global.second);
+
+  // Serialize enum records in the API set.
+  for (const auto &Enum : API.getEnums())
+    serializeEnumRecord(*Enum.second);
 
   Root["symbols"] = std::move(Symbols);
   Root["relationhips"] = std::move(Relationships);

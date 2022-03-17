@@ -56,6 +56,17 @@ public:
   /// write out the serialized JSON object to \p os.
   void serialize(raw_ostream &os) override;
 
+  /// The kind of a relationship between two symbols.
+  enum RelationshipKind {
+    /// The source symbol is a member of the target symbol.
+    /// For example enum constants are members of the enum, class/instance
+    /// methods are members of the class, etc.
+    MemberOf,
+  };
+
+  /// Get the string representation of the relationship kind.
+  static StringRef getRelationshipString(RelationshipKind Kind);
+
 private:
   /// Synthesize the metadata section of the Symbol Graph format.
   ///
@@ -86,8 +97,18 @@ private:
   /// containing common symbol information of \p Record.
   Optional<Object> serializeAPIRecord(const APIRecord &Record) const;
 
+  /// Serialize the \p Kind relationship between \p Source and \p Target.
+  ///
+  /// Record the relationship between the two symbols in
+  /// SymbolGraphSerializer::Relationships.
+  void serializeRelationship(RelationshipKind Kind, const APIRecord &Source,
+                             const APIRecord &Target);
+
   /// Serialize a global record.
   void serializeGlobalRecord(const GlobalRecord &Record);
+
+  /// Serialize an enum record.
+  void serializeEnumRecord(const EnumRecord &Record);
 
 public:
   SymbolGraphSerializer(const APISet &API, StringRef ProductName,
