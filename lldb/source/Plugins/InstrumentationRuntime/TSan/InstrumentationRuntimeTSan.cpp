@@ -327,9 +327,11 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
       exe_ctx, options, thread_sanitizer_retrieve_report_data_command, "",
       main_value, eval_error);
   if (result != eExpressionCompleted) {
-    process_sp->GetTarget().GetDebugger().GetAsyncOutputStream()->Printf(
-        "Warning: Cannot evaluate ThreadSanitizer expression:\n%s\n",
-        eval_error.AsCString());
+    StreamString ss;
+    ss << "cannot evaluate ThreadSanitizer expression:\n";
+    ss << eval_error.AsCString();
+    Debugger::ReportWarning(ss.GetString().str(),
+                            process_sp->GetTarget().GetDebugger().GetID());
     return StructuredData::ObjectSP();
   }
 
