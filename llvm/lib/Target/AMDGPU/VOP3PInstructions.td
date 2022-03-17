@@ -370,7 +370,7 @@ def VOPProfileAccRead : VOP3_Profile<VOP_I32_I32, VOP3_MAI> {
 
 def VOPProfileAccWrite : VOP3_Profile<VOP_I32_I32, VOP3_MAI> {
   let DstRC = ADst_32;
-  let Src0RC64 = VISrc_b32;
+  let Src0RC64 = VCSrc_b32;
 }
 
 class VOPProfileMAI<VOPProfile P, RegisterOperand _SrcRC, RegisterOperand _DstRC,
