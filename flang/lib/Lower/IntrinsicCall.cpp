@@ -486,6 +486,7 @@ struct IntrinsicLibrary {
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -495,6 +496,7 @@ struct IntrinsicLibrary {
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
@@ -727,6 +729,13 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genRandomSeed,
      {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
      /*isElemental=*/false},
+    {"scan",
+     &I::genScan,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"back", asValue, handleDynamicOptional},
+       {"kind", asValue}}},
+     /*isElemental=*/true},
     {"set_exponent", &I::genSetExponent},
     {"size",
      &I::genSize,
@@ -756,6 +765,13 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genUnpack,
      {{{"vector", asBox}, {"mask", asBox}, {"field", asBox}}},
      /*isElemental=*/false},
+    {"verify",
+     &I::genVerify,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"back", asValue, handleDynamicOptional},
+       {"kind", asValue}}},
+     /*isElemental=*/true},
 };
 
 static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
@@ -2485,6 +2501,83 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
   Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
 }
 
+// SCAN
+fir::ExtendedValue
+IntrinsicLibrary::genScan(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 4);
+
+  if (isAbsent(args[3])) {
+    // Kind not specified, so call scan/verify runtime routine that is
+    // specialized on the kind of characters in string.
+
+    // Handle required string base arg
+    mlir::Value stringBase = fir::getBase(args[0]);
+
+    // Handle required set string base arg
+    mlir::Value setBase = fir::getBase(args[1]);
+
+    // Handle kind argument; it is the kind of character in this case
+    fir::KindTy kind =
+        fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+            stringBase.getType());
+
+    // Get string length argument
+    mlir::Value stringLen = fir::getLen(args[0]);
+
+    // Get set string length argument
+    mlir::Value setLen = fir::getLen(args[1]);
+
+    // Handle optional back argument
+    mlir::Value back =
+        isAbsent(args[2])
+            ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+            : fir::getBase(args[2]);
+
+    return builder.createConvert(loc, resultType,
+                                 fir::runtime::genScan(builder, loc, kind,
+                                                       stringBase, stringLen,
+                                                       setBase, setLen, back));
+  }
+  // else use the runtime descriptor version of scan/verify
+
+  // Handle optional argument, back
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    fir::LogicalType logTy = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    mlir::Value temp = builder.createTemporary(loc, logTy);
+    mlir::Value castb = builder.createConvert(loc, logTy, b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
+  mlir::Value back = fir::isUnboxedValue(args[2])
+                         ? makeRefThenEmbox(*args[2].getUnboxed())
+                         : builder.create<fir::AbsentOp>(
+                               loc, fir::BoxType::get(builder.getI1Type()));
+
+  // Handle required string argument
+  mlir::Value string = builder.createBox(loc, args[0]);
+
+  // Handle required set argument
+  mlir::Value set = builder.createBox(loc, args[1]);
+
+  // Handle kind argument
+  mlir::Value kind = fir::getBase(args[3]);
+
+  // Create result descriptor
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genScanDescriptor(builder, loc, resultIrBox, string, set, back,
+                                  kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
 // SET_EXPONENT
 mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
                                              llvm::ArrayRef<mlir::Value> args) {
@@ -2708,6 +2801,83 @@ IntrinsicLibrary::genUnpack(mlir::Type resultType,
 
   return readAndAddCleanUp(resultMutableBox, resultType,
                            "unexpected result for UNPACK");
+}
+
+// VERIFY
+fir::ExtendedValue
+IntrinsicLibrary::genVerify(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 4);
+
+  if (isAbsent(args[3])) {
+    // Kind not specified, so call scan/verify runtime routine that is
+    // specialized on the kind of characters in string.
+
+    // Handle required string base arg
+    mlir::Value stringBase = fir::getBase(args[0]);
+
+    // Handle required set string base arg
+    mlir::Value setBase = fir::getBase(args[1]);
+
+    // Handle kind argument; it is the kind of character in this case
+    fir::KindTy kind =
+        fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+            stringBase.getType());
+
+    // Get string length argument
+    mlir::Value stringLen = fir::getLen(args[0]);
+
+    // Get set string length argument
+    mlir::Value setLen = fir::getLen(args[1]);
+
+    // Handle optional back argument
+    mlir::Value back =
+        isAbsent(args[2])
+            ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+            : fir::getBase(args[2]);
+
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genVerify(builder, loc, kind, stringBase, stringLen,
+                                setBase, setLen, back));
+  }
+  // else use the runtime descriptor version of scan/verify
+
+  // Handle optional argument, back
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    fir::LogicalType logTy = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    mlir::Value temp = builder.createTemporary(loc, logTy);
+    mlir::Value castb = builder.createConvert(loc, logTy, b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
+  mlir::Value back = fir::isUnboxedValue(args[2])
+                         ? makeRefThenEmbox(*args[2].getUnboxed())
+                         : builder.create<fir::AbsentOp>(
+                               loc, fir::BoxType::get(builder.getI1Type()));
+
+  // Handle required string argument
+  mlir::Value string = builder.createBox(loc, args[0]);
+
+  // Handle required set argument
+  mlir::Value set = builder.createBox(loc, args[1]);
+
+  // Handle kind argument
+  mlir::Value kind = fir::getBase(args[3]);
+
+  // Create result descriptor
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genVerifyDescriptor(builder, loc, resultIrBox, string, set,
+                                    back, kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  return readAndAddCleanUp(resultMutableBox, resultType, "VERIFY");
 }
 
 //===----------------------------------------------------------------------===//
