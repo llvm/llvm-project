@@ -157,11 +157,11 @@ struct GrammarTable {
 
   struct Nonterminal {
     std::string Name;
-    // Corresponding rules that construct the non-terminal, it is a [start, end)
+    // Corresponding rules that construct the non-terminal, it is a [Start, End)
     // index range of the Rules table.
     struct {
-      RuleID start;
-      RuleID end;
+      RuleID Start;
+      RuleID End;
     } RuleRange;
   };
 

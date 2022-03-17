@@ -75,7 +75,7 @@ State closure(ItemSet Queue, const Grammar &G) {
     if (pseudo::isToken(NextSym))
       continue;
     auto RRange = G.table().Nonterminals[NextSym].RuleRange;
-    for (RuleID RID = RRange.start; RID < RRange.end; ++RID) {
+    for (RuleID RID = RRange.Start; RID < RRange.End; ++RID) {
       Item NewItem = Item::start(RID, G);
       if (InQueue.insert(NewItem).second) // new
         Queue.push_back(std::move(NewItem));
@@ -204,7 +204,7 @@ LRGraph LRGraph::buildLR0(const Grammar &G) {
   std::vector<StateID> PendingStates;
   // Initialize states with the start symbol.
   auto RRange = G.table().Nonterminals[G.startSymbol()].RuleRange;
-  for (RuleID RID = RRange.start; RID < RRange.end; ++RID) {
+  for (RuleID RID = RRange.Start; RID < RRange.End; ++RID) {
     auto StartState = std::vector<Item>{Item::start(RID, G)};
     auto Result = Builder.insert(std::move(StartState));
     assert(Result.second && "State must be new");
