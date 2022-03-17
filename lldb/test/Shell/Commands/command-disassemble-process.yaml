@@ -6,7 +6,7 @@
 
 # RUN: %lldb -c %t %T/command-disassemble-process.exe \
 # RUN:   -o "settings set interpreter.stop-command-source-on-error false" \
-# RUN:   -s %S/Inputs/command-disassemble-process.lldbinit -o exit 2>&1 \
+# RUN:   -s %S/Inputs/command-disassemble-process.lldbinit -o exit \
 # RUN:   | FileCheck %s
 
 # RUN: %lldb -c %t %T/command-disassemble-process.big.exe \
@@ -67,7 +67,6 @@
 # CHECK-NEXT:     0x400e:      addb   %cl, (%rcx)
 # CHECK-NEXT:     0x4010:      addb   %cl, (%rdx)
 
-# INVALID: (lldb) disassemble --address 0xdead
 # INVALID: error: Could not find function bounds for address 0xdead
 
 # BIG: error: Not disassembling the current function because it is very large [0x0000000000004002-0x0000000000005f42). To disassemble specify an instruction count limit, start/stop addresses or use the --force option.
