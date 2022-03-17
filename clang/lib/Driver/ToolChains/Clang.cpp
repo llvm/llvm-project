@@ -28,6 +28,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/Action.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
@@ -4391,8 +4392,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // CUDA/HIP compilation may have multiple inputs (source file + results of
   // device-side compilations). OpenMP device jobs also take the host IR as a
   // second input. Module precompilation accepts a list of header files to
-  // include as part of the module. All other jobs are expected to have exactly
-  // one input.
+  // include as part of the module. API extraction accepts a list of header
+  // files whose API information is emitted in the output. All other jobs are
+  // expected to have exactly one input.
   bool IsCuda = JA.isOffloading(Action::OFK_Cuda);
   bool IsCudaDevice = JA.isDeviceOffloading(Action::OFK_Cuda);
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
@@ -4400,6 +4402,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
   bool IsOpenMPHost = JA.isHostOffloading(Action::OFK_OpenMP);
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
+  bool IsExtractAPI = isa<ExtractAPIJobAction>(JA);
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsUsingLTO = D.isUsingLTO(IsDeviceOffloadAction);
@@ -4413,10 +4416,21 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }();
   InputInfo HeaderModuleInput(Inputs[0].getType(), ModuleName, ModuleName);
 
-  const InputInfo &Input =
-      IsHeaderModulePrecompile ? HeaderModuleInput : Inputs[0];
+  // Extract API doesn't have a main input file, so invent a fake one as a
+  // placeholder.
+  InputInfo ExtractAPIPlaceholderInput(Inputs[0].getType(), "extract-api",
+                                       "extract-api");
+
+  const InputInfo &Input = [&]() -> const InputInfo & {
+    if (IsHeaderModulePrecompile)
+      return HeaderModuleInput;
+    if (IsExtractAPI)
+      return ExtractAPIPlaceholderInput;
+    return Inputs[0];
+  }();
 
   InputInfoList ModuleHeaderInputs;
+  InputInfoList ExtractAPIInputs;
   InputInfoList OpenMPHostInputs;
   const InputInfo *CudaDeviceInput = nullptr;
   const InputInfo *OpenMPDeviceInput = nullptr;
@@ -4432,6 +4446,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << types::getTypeName(Expected);
       }
       ModuleHeaderInputs.push_back(I);
+    } else if (IsExtractAPI) {
+      auto ExpectedInputType = ExtractAPIPlaceholderInput.getType();
+      if (I.getType() != ExpectedInputType) {
+        D.Diag(diag::err_drv_extract_api_wrong_kind)
+            << I.getFilename() << types::getTypeName(I.getType())
+            << types::getTypeName(ExpectedInputType);
+      }
+      ExtractAPIInputs.push_back(I);
     } else if ((IsCuda || IsHIP) && !CudaDeviceInput) {
       CudaDeviceInput = &I;
     } else if (IsOpenMPDevice && !OpenMPDeviceInput) {
@@ -4615,6 +4637,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-pch");
   } else if (isa<VerifyPCHJobAction>(JA)) {
     CmdArgs.push_back("-verify-pch");
+  } else if (isa<ExtractAPIJobAction>(JA)) {
+    assert(JA.getType() == types::TY_API_INFO &&
+           "Extract API actions must generate a API information.");
+    CmdArgs.push_back("-extract-api");
   } else {
     assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
            "Invalid action for clang tool.");
@@ -4653,8 +4679,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
-    } else if (JA.getType() == types::TY_API_INFO) {
-      CmdArgs.push_back("-extract-api");
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }
@@ -7199,6 +7223,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   ArrayRef<InputInfo> FrontendInputs = Input;
   if (IsHeaderModulePrecompile)
     FrontendInputs = ModuleHeaderInputs;
+  else if (IsExtractAPI)
+    FrontendInputs = ExtractAPIInputs;
   else if (Input.isNothing())
     FrontendInputs = {};
 
