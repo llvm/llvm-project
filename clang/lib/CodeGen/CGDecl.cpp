@@ -2277,6 +2277,8 @@ static void emitPartialArrayDestroy(CodeGenFunction &CGF,
                                     llvm::Value *begin, llvm::Value *end,
                                     QualType type, CharUnits elementAlign,
                                     CodeGenFunction::Destroyer *destroyer) {
+  llvm::Type *elemTy = CGF.ConvertTypeForMem(type);
+
   // If the element type is itself an array, drill down.
   unsigned arrayDepth = 0;
   while (const ArrayType *arrayType = CGF.getContext().getAsArrayType(type)) {
@@ -2290,7 +2292,6 @@ static void emitPartialArrayDestroy(CodeGenFunction &CGF,
     llvm::Value *zero = llvm::ConstantInt::get(CGF.SizeTy, 0);
 
     SmallVector<llvm::Value*,4> gepIndices(arrayDepth+1, zero);
-    llvm::Type *elemTy = begin->getType()->getPointerElementType();
     begin = CGF.Builder.CreateInBoundsGEP(
         elemTy, begin, gepIndices, "pad.arraybegin");
     end = CGF.Builder.CreateInBoundsGEP(
@@ -2473,11 +2474,9 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
       assert(getContext().getTargetAddressSpace(SrcLangAS) ==
              CGM.getDataLayout().getAllocaAddrSpace());
       auto DestAS = getContext().getTargetAddressSpace(DestLangAS);
-      auto *T = V->getType()->getPointerElementType()->getPointerTo(DestAS);
-      DeclPtr =
-          Address::deprecated(getTargetHooks().performAddrSpaceCast(
-                                  *this, V, SrcLangAS, DestLangAS, T, true),
-                              DeclPtr.getAlignment());
+      auto *T = DeclPtr.getElementType()->getPointerTo(DestAS);
+      DeclPtr = DeclPtr.withPointer(getTargetHooks().performAddrSpaceCast(
+          *this, V, SrcLangAS, DestLangAS, T, true));
     }
 
     // Push a destructor cleanup for this parameter if the ABI requires it.
