@@ -2454,6 +2454,6 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   module = std::make_unique<mlir::ModuleOp>(
       mlir::ModuleOp::create(mlir::UnknownLoc::get(&context)));
   assert(module.get() && "module was not created");
-  fir::setTargetTriple(*module.get(), triple);
-  fir::setKindMapping(*module.get(), kindMap);
+  fir::setTargetTriple(getModule(), triple);
+  fir::setKindMapping(getModule(), kindMap);
 }

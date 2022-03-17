@@ -23,6 +23,10 @@ class Module;
 } // namespace llvm
 
 namespace mlir {
+namespace func {
+class FuncOp;
+} // namespace func
+
 /// Pass that moves ops which are likely an index computation into gpu.launch
 /// body.
 std::unique_ptr<Pass> createGpuLauchSinkIndexComputationsPass();
@@ -33,7 +37,7 @@ std::unique_ptr<OperationPass<ModuleOp>>
 createGpuKernelOutliningPass(StringRef dataLayoutStr = StringRef());
 
 /// Rewrites a function region so that GPU ops execute asynchronously.
-std::unique_ptr<OperationPass<FuncOp>> createGpuAsyncRegionPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createGpuAsyncRegionPass();
 
 /// Collect a set of patterns to rewrite all-reduce ops within the GPU dialect.
 void populateGpuAllReducePatterns(RewritePatternSet &patterns);

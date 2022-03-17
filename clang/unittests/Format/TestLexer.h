@@ -37,9 +37,8 @@ inline std::ostream &operator<<(std::ostream &Stream, const FormatToken &Tok) {
 }
 inline std::ostream &operator<<(std::ostream &Stream, const TokenList &Tokens) {
   Stream << "{";
-  for (size_t I = 0, E = Tokens.size(); I != E; ++I) {
+  for (size_t I = 0, E = Tokens.size(); I != E; ++I)
     Stream << (I > 0 ? ", " : "") << *Tokens[I];
-  }
   Stream << "} (" << Tokens.size() << " tokens)";
   return Stream;
 }

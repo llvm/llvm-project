@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="builtin.func(convert-elementwise-to-linalg)" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="func.func(convert-elementwise-to-linalg)" -split-input-file %s | FileCheck %s
 
 // In-depth checking of the linalg.generic op for a very trivial case.
 // CHECK: #[[$MAP:.*]] = affine_map<() -> ()>

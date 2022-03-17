@@ -85,8 +85,11 @@ lldb::addr_t TraceCursorIntelPT::GetLoadAddress() {
   return m_decoded_thread_sp->GetInstructions()[m_pos].GetLoadAddress();
 }
 
-Optional<uint64_t> TraceCursorIntelPT::GetTimestampCounter() {
-  return m_decoded_thread_sp->GetInstructions()[m_pos].GetTimestampCounter();
+Optional<uint64_t> TraceCursorIntelPT::GetCounter(lldb::TraceCounter counter_type) {
+  switch (counter_type) {
+    case lldb::eTraceCounterTSC:
+      return m_decoded_thread_sp->GetInstructions()[m_pos].GetTimestampCounter();
+  }
 }
 
 TraceInstructionControlFlowType

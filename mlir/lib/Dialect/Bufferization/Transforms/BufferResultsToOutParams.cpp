@@ -20,7 +20,7 @@ using namespace mlir;
 // Any args appended to the entry block are added to `appendedEntryArgs`.
 static void updateFuncOp(FuncOp func,
                          SmallVectorImpl<BlockArgument> &appendedEntryArgs) {
-  auto functionType = func.getType();
+  auto functionType = func.getFunctionType();
 
   // Collect information about the results will become appended arguments.
   SmallVector<Type, 6> erasedResultTypes;

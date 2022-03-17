@@ -679,9 +679,6 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::FMA:
     SelectFMAD_FMA(N);
     return;
-  case AMDGPUISD::ATOMIC_CMP_SWAP:
-    SelectATOMIC_CMP_SWAP(N);
-    return;
   case AMDGPUISD::CVT_PKRTZ_F16_F32:
   case AMDGPUISD::CVT_PKNORM_I16_F32:
   case AMDGPUISD::CVT_PKNORM_U16_F32:
@@ -2276,70 +2273,6 @@ void AMDGPUDAGToDAGISel::SelectFMAD_FMA(SDNode *N) {
   } else {
     SelectCode(N);
   }
-}
-
-// This is here because there isn't a way to use the generated sub0_sub1 as the
-// subreg index to EXTRACT_SUBREG in tablegen.
-void AMDGPUDAGToDAGISel::SelectATOMIC_CMP_SWAP(SDNode *N) {
-  MemSDNode *Mem = cast<MemSDNode>(N);
-  unsigned AS = Mem->getAddressSpace();
-  if (AS == AMDGPUAS::FLAT_ADDRESS) {
-    SelectCode(N);
-    return;
-  }
-
-  MVT VT = N->getSimpleValueType(0);
-  bool Is32 = (VT == MVT::i32);
-  SDLoc SL(N);
-
-  MachineSDNode *CmpSwap = nullptr;
-  if (Subtarget->hasAddr64()) {
-    SDValue SRsrc, VAddr, SOffset, Offset;
-
-    if (SelectMUBUFAddr64(Mem->getBasePtr(), SRsrc, VAddr, SOffset, Offset)) {
-      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_ADDR64_RTN :
-        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_ADDR64_RTN;
-      SDValue CmpVal = Mem->getOperand(2);
-      SDValue CPol = CurDAG->getTargetConstant(AMDGPU::CPol::GLC, SL, MVT::i32);
-
-      // XXX - Do we care about glue operands?
-
-      SDValue Ops[] = {CmpVal, VAddr, SRsrc, SOffset, Offset, CPol,
-                       Mem->getChain()};
-
-      CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);
-    }
-  }
-
-  if (!CmpSwap) {
-    SDValue SRsrc, SOffset, Offset;
-    if (SelectMUBUFOffset(Mem->getBasePtr(), SRsrc, SOffset, Offset)) {
-      unsigned Opcode = Is32 ? AMDGPU::BUFFER_ATOMIC_CMPSWAP_OFFSET_RTN :
-        AMDGPU::BUFFER_ATOMIC_CMPSWAP_X2_OFFSET_RTN;
-
-      SDValue CmpVal = Mem->getOperand(2);
-      SDValue CPol = CurDAG->getTargetConstant(AMDGPU::CPol::GLC, SL, MVT::i32);
-      SDValue Ops[] = {CmpVal, SRsrc, SOffset, Offset, CPol, Mem->getChain()};
-
-      CmpSwap = CurDAG->getMachineNode(Opcode, SL, Mem->getVTList(), Ops);
-    }
-  }
-
-  if (!CmpSwap) {
-    SelectCode(N);
-    return;
-  }
-
-  MachineMemOperand *MMO = Mem->getMemOperand();
-  CurDAG->setNodeMemRefs(CmpSwap, {MMO});
-
-  unsigned SubReg = Is32 ? AMDGPU::sub0 : AMDGPU::sub0_sub1;
-  SDValue Extract
-    = CurDAG->getTargetExtractSubreg(SubReg, SL, VT, SDValue(CmpSwap, 0));
-
-  ReplaceUses(SDValue(N, 0), Extract);
-  ReplaceUses(SDValue(N, 1), SDValue(CmpSwap, 1));
-  CurDAG->RemoveDeadNode(N);
 }
 
 void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {

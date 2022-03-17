@@ -110,7 +110,7 @@ class StressTest:
       # TODO: assert dense? assert element type is recognised by the TypeConverter?
       types.append(tp0)
       funcTp = ir.FunctionType.get(inputs=[tp0], results=[tp0])
-      funcOp = builtin.FuncOp(name='main', type=funcTp)
+      funcOp = func.FuncOp(name='main', type=funcTp)
       funcOp.attributes['llvm.emit_c_interface'] = ir.UnitAttr.get()
       with ir.InsertionPoint(funcOp.add_entry_block()):
         arg0 = funcOp.entry_block.arguments[0]

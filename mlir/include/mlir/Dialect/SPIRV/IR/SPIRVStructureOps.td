@@ -287,7 +287,7 @@ def SPV_FuncOp : SPV_Op<"func", [
   }];
 
   let arguments = (ins
-    TypeAttr:$type,
+    TypeAttrOf<FunctionType>:$function_type,
     StrAttr:$sym_name,
     SPV_FunctionControlAttr:$function_control
   );
@@ -309,16 +309,14 @@ def SPV_FuncOp : SPV_Op<"func", [
 
   let extraClassDeclaration = [{
     /// Returns the type of this function.
-    /// FIXME: We should drive this via the ODS `type` param.
-    FunctionType getType() { 
-      return getTypeAttr().getValue().cast<FunctionType>();
-    }
+    /// FIXME: Remove when SPIRV uses prefixed accessors.
+    FunctionType getFunctionType() { return function_type(); }
 
     /// Returns the argument types of this function.
-    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
     /// Returns the result types of this function.
-    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
 
     /// Hook for FunctionOpInterface, called after verifying that the 'type'
     /// attribute is present and checks if it holds a function type. Ensures

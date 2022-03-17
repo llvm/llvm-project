@@ -9,6 +9,7 @@
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h"
 #include "../PassDetail.h"
 #include "mlir/Conversion/LinalgToSPIRV/LinalgToSPIRV.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
@@ -37,7 +38,7 @@ void LinalgToSPIRVPass::runOnOperation() {
   // Allow builtin ops.
   target->addLegalOp<ModuleOp>();
   target->addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-    return typeConverter.isSignatureLegal(op.getType()) &&
+    return typeConverter.isSignatureLegal(op.getFunctionType()) &&
            typeConverter.isLegal(&op.getBody());
   });
 

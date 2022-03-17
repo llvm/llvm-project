@@ -112,8 +112,6 @@
 #include <functional>
 #include <type_traits>
 
-#include <utility> // TODO: Remove this
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

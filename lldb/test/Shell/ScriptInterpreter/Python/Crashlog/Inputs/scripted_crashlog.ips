@@ -1,76 +1,412 @@
-{"app_name":"scripted_crashlog_json.test.tmp.out","timestamp":"2022-02-14 16:30:31.00 -0800","app_version":"","slice_uuid":"b928ee77-9429-334f-ac88-41440bb3d4c7","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 12.3","incident_id":"E57CADE7-DC44-45CE-8D16-18EBC4406B97","name":"scripted_crashlog_json.test.tmp.out"}
+{"app_name":"@NAME@","timestamp":"2022-03-16 11:08:51.00 -0700","app_version":"","slice_uuid":"7166a382-172b-31ff-a821-66dee303ab6c","build_version":"","platform":1,"share_with_app_devs":0,"is_first_party":1,"bug_type":"309","os_version":"macOS 12.3","incident_id":"82B79418-50CC-4672-982A-46A9D8C159B6","name":"@NAME@"}
 {
-  "uptime" : 260000,
-  "procLaunch" : "2022-02-14 16:30:31.8048 -0800",
-  "procRole" : "Unspecified",
-  "version" : 2,
-  "userID" : 501,
-  "deployVersion" : 210,
-  "modelCode" : "MacBookPro18,2",
-  "procStartAbsTime" : 6478056069413,
-  "coalitionID" : 22196,
-  "osVersion" : {
-    "train" : "macOS 12.3",
-    "build" : "",
-    "releaseType" : ""
-  },
-  "captureTime" : "2022-02-14 16:30:31.8096 -0800",
-  "incident" : "E57CADE7-DC44-45CE-8D16-18EBC4406B97",
-  "bug_type" : "309",
-  "pid" : 92190,
-  "procExitAbsTime" : 6478056175721,
-  "translated" : false,
-  "cpuType" : "ARM-64",
-  "procName" : "@NAME@",
-  "procPath" : "@EXEC@",
-  "parentProc" : "zsh",
-  "parentPid" : 82132,
-  "coalitionName" : "com.apple.Terminal",
-  "crashReporterKey" : "CDC11418-EDBF-2A49-0D83-8B441A5004B0",
-  "responsiblePid" : 76395,
-  "responsibleProc" : "Terminal",
-  "wakeTime" : 14889,
-  "sleepWakeUUID" : "BCA947AE-2F0A-44C7-8445-FEDFFA236CD0",
-  "sip" : "enabled",
-  "vmRegionInfo" : "0 is not in any region.  Bytes before following region: 4372692992\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      104a20000-104a24000    [   16K] r-x\/r-x SM=COW  ....test.tmp.out",
-  "isCorpse" : 1,
-  "exception" : {"codes":"0x0000000000000001, 0x0000000000000000","rawCodes":[1,0],"type":"EXC_BAD_ACCESS","signal":"SIGSEGV","subtype":"KERN_INVALID_ADDRESS at 0x0000000000000000"},
-  "termination" : {"flags":0,"code":11,"namespace":"SIGNAL","indicator":"Segmentation fault: 11","byProc":"exc handler","byPid":92190},
-  "vmregioninfo" : "0 is not in any region.  Bytes before following region: 4372692992\n      REGION TYPE                    START - END         [ VSIZE] PRT\/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      104a20000-104a24000    [   16K] r-x\/r-x SM=COW  ....test.tmp.out",
-  "extMods" : {"caller":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"system":{"thread_create":0,"thread_set_state":156,"task_for_pid":28},"targeted":{"thread_create":0,"thread_set_state":0,"task_for_pid":0},"warnings":0},
-  "faultingThread" : 0,
-  "threads" : [{"triggered":true,"id":4567339,"threadState":{"x":[{"value":1},{"value":6094187136},{"value":6094187152},{"value":6094187720},{"value":0},{"value":0},{"value":0},{"value":0},{"value":1},{"value":0},{"value":0},{"value":2},{"value":2},{"value":0},{"value":80},{"value":0},{"value":13118353544},{"value":7701436843874442528},{"value":0},{"value":4373676128},{"sourceLine":8,"value":4372709256,"sourceFile":"test.c","symbol":"main","symbolLocation":0},{"value":4373332080,"symbolLocation":0,"symbol":"dyld4::sConfigBuffer"},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0},{"value":0}],"flavor":"ARM_THREAD_STATE64","lr":{"value":4372709248},"cpsr":{"value":1610616832},"fp":{"value":6094186736},"sp":{"value":6094186720},"esr":{"value":2449473606,"description":"(Data Abort) byte write Translation fault"},"pc":{"value":4372709224,"matchesCrashFrame":1},"far":{"value":0}},"queue":"com.apple.main-thread","frames":[{"imageOffset":16232,"sourceLine":3,"sourceFile":"test.c","symbol":"foo","imageIndex":0,"symbolLocation":16},{"imageOffset":16256,"sourceLine":6,"sourceFile":"test.c","symbol":"bar","imageIndex":0,"symbolLocation":12},{"imageOffset":16288,"sourceLine":8,"sourceFile":"test.c","symbol":"main","imageIndex":0,"symbolLocation":24},{"imageOffset":20620,"symbol":"start","symbolLocation":520,"imageIndex":1}]}],
-  "usedImages" : [
-  {
-    "source" : "P",
-    "arch" : "arm64",
-    "base" : 4372692992,
-    "size" : 16384,
-    "uuid" : "b928ee77-9429-334f-ac88-41440bb3d4c7",
-    "uuid" : "@UUID@",
-    "path" : "@EXEC@",
-    "name" : "@NAME@"
-  },
-  {
-    "source" : "P",
-    "arch" : "arm64e",
-    "base" : 4372938752,
-    "size" : 393216,
-    "uuid" : "41293cda-474b-3700-924e-6ba0f7698eac",
-    "path" : "\/usr\/lib\/dyld",
-    "name" : "dyld"
-  }
-],
-  "sharedCache" : {
-  "base" : 6924156928,
-  "size" : 3151052800,
-  "uuid" : "2ff78c31-e522-3e4a-a414-568e926f7274"
-},
-  "vmSummary" : "ReadOnly portion of Libraries: Total=589.5M resident=0K(0%) swapped_out_or_unallocated=589.5M(100%)\nWritable regions: Total=529.1M written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=529.1M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nKernel Alloc Once                   32K        1 \nMALLOC                           137.2M       11 \nMALLOC guard page                   96K        5 \nMALLOC_NANO (reserved)           384.0M        1         reserved VM address space (unallocated)\nSTACK GUARD                       56.0M        1 \nStack                             8176K        1 \n__AUTH                              46K       11 \n__AUTH_CONST                        67K       38 \n__DATA                             173K       36 \n__DATA_CONST                       242K       39 \n__DATA_DIRTY                        73K       21 \n__LINKEDIT                       584.9M        3 \n__OBJC_CONST                        10K        5 \n__OBJC_RO                         82.9M        1 \n__OBJC_RW                         3168K        1 \n__TEXT                            4696K       43 \ndyld private memory               1024K        1 \nshared memory                       48K        2 \n===========                     =======  ======= \nTOTAL                              1.2G      221 \nTOTAL, minus reserved VM space   878.5M      221 \n",
-  "legacyInfo" : {
-  "threadTriggered" : {
-    "queue" : "com.apple.main-thread"
-  }
-},
-  "trialInfo" : {  }
+    "bug_type": "309",
+    "captureTime": "2022-03-16 11:08:51.2579 -0700",
+    "coalitionID": 33758,
+    "coalitionName": "com.apple.Terminal",
+    "cpuType": "ARM-64",
+    "crashReporterKey": "CDC11418-EDBF-2A49-0D83-8B441A5004B0",
+    "deployVersion": 210,
+    "exception": {
+        "codes": "0x0000000000000001, 0x0000000000000000",
+        "rawCodes": [
+            1,
+            0
+        ],
+        "signal": "SIGSEGV",
+        "subtype": "KERN_INVALID_ADDRESS at 0x0000000000000000",
+        "type": "EXC_BAD_ACCESS"
+    },
+    "extMods": {
+        "caller": {
+            "task_for_pid": 0,
+            "thread_create": 0,
+            "thread_set_state": 0
+        },
+        "system": {
+            "task_for_pid": 32,
+            "thread_create": 11,
+            "thread_set_state": 1052
+        },
+        "targeted": {
+            "task_for_pid": 0,
+            "thread_create": 0,
+            "thread_set_state": 0
+        },
+        "warnings": 0
+    },
+    "faultingThread": 2,
+    "incident": "82B79418-50CC-4672-982A-46A9D8C159B6",
+    "isCorpse": 1,
+    "legacyInfo": {
+        "threadTriggered": {}
+    },
+    "modelCode": "MacBookPro18,2",
+    "osVersion": {
+        "build": "",
+        "releaseType": "",
+        "train": "macOS 12.3"
+    },
+    "parentPid": 2976,
+    "parentProc": "zsh",
+    "pid": 24991,
+    "procExitAbsTime": 8601841756762,
+    "procLaunch": "2022-03-16 11:08:50.9857 -0700",
+    "procName": "@NAME@",
+    "procPath": "@EXEC@",
+    "procRole": "Unspecified",
+    "procStartAbsTime": 8601835247762,
+    "responsiblePid": 20664,
+    "responsibleProc": "Terminal",
+    "sharedCache": {
+        "base": 6639747072,
+        "size": 3141189632,
+        "uuid": "48726a6e-15bc-3826-9a66-b24b559993b5"
+    },
+    "sip": "enabled",
+    "sleepWakeUUID": "65E63A0C-730A-4DBB-A67C-7532476614E7",
+    "termination": {
+        "byPid": 24991,
+        "byProc": "exc handler",
+        "code": 11,
+        "flags": 0,
+        "indicator": "Segmentation fault: 11",
+        "namespace": "SIGNAL"
+    },
+    "threads": [
+        {
+            "frames": [
+                {
+                    "imageIndex": 0,
+                    "imageOffset": 14420,
+                    "symbol": "__ulock_wait",
+                    "symbolLocation": 8
+                },
+                {
+                    "imageIndex": 1,
+                    "imageOffset": 38304,
+                    "symbol": "_pthread_join",
+                    "symbolLocation": 444
+                },
+                {
+                    "imageIndex": 2,
+                    "imageOffset": 104896,
+                    "symbol": "std::__1::thread::join()",
+                    "symbolLocation": 36
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 7096,
+                    "sourceFile": "multithread-test.cc",
+                    "sourceLine": 31,
+                    "symbol": "main",
+                    "symbolLocation": 160
+                },
+                {
+                    "imageIndex": 4,
+                    "imageOffset": 20616,
+                    "symbol": "start",
+                    "symbolLocation": 516
+                }
+            ],
+            "id": 5154880,
+            "queue": "com.apple.main-thread"
+        },
+        {
+            "frames": [
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 6632,
+                    "sourceFile": "multithread-test.cc",
+                    "sourceLine": 15,
+                    "symbol": "call_and_wait(int&)",
+                    "symbolLocation": 68
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 6612,
+                    "sourceFile": "multithread-test.cc",
+                    "sourceLine": 14,
+                    "symbol": "call_and_wait(int&)",
+                    "symbolLocation": 48
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 13968,
+                    "sourceFile": "type_traits",
+                    "sourceLine": 3584,
+                    "symbol": "decltype(static_cast<void (*>(fp)(static_cast<std::__1::reference_wrapper<int>>(fp0))) std::__1::__invoke<void (*)(int&), std::__1::reference_wrapper<int> >(void (*&&)(int&), std::__1::reference_wrapper<int>&&)",
+                    "symbolLocation": 48
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 13844,
+                    "sourceFile": "thread",
+                    "sourceLine": 276,
+                    "symbol": "void std::__1::__thread_execute<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int>, 2ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> >&, std::__1::__tuple_indices<2ul>)",
+                    "symbolLocation": 56
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 11608,
+                    "sourceFile": "thread",
+                    "sourceLine": 287,
+                    "symbol": "void* std::__1::__thread_proxy<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> > >(void*)",
+                    "symbolLocation": 84
+                },
+                {
+                    "imageIndex": 1,
+                    "imageOffset": 29292,
+                    "symbol": "_pthread_start",
+                    "symbolLocation": 148
+                },
+                {
+                    "imageIndex": 1,
+                    "imageOffset": 8332,
+                    "symbol": "thread_start",
+                    "symbolLocation": 8
+                }
+            ],
+            "id": 5154896
+        },
+        {
+            "frames": [
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 6512,
+                    "sourceFile": "multithread-test.cc",
+                    "sourceLine": 7,
+                    "symbol": "bar(int)",
+                    "symbolLocation": 20
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 6552,
+                    "sourceFile": "multithread-test.cc",
+                    "sourceLine": 11,
+                    "symbol": "foo(int)",
+                    "symbolLocation": 24
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 6916,
+                    "sourceFile": "multithread-test.cc",
+                    "sourceLine": 20,
+                    "symbol": "compute_pow(int&)",
+                    "symbolLocation": 28
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 13968,
+                    "sourceFile": "type_traits",
+                    "sourceLine": 3584,
+                    "symbol": "decltype(static_cast<void (*>(fp)(static_cast<std::__1::reference_wrapper<int>>(fp0))) std::__1::__invoke<void (*)(int&), std::__1::reference_wrapper<int> >(void (*&&)(int&), std::__1::reference_wrapper<int>&&)",
+                    "symbolLocation": 48
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 13844,
+                    "sourceFile": "thread",
+                    "sourceLine": 276,
+                    "symbol": "void std::__1::__thread_execute<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int>, 2ul>(std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> >&, std::__1::__tuple_indices<2ul>)",
+                    "symbolLocation": 56
+                },
+                {
+                    "imageIndex": 3,
+                    "imageOffset": 11608,
+                    "sourceFile": "thread",
+                    "sourceLine": 287,
+                    "symbol": "void* std::__1::__thread_proxy<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> > >(void*)",
+                    "symbolLocation": 84
+                },
+                {
+                    "imageIndex": 1,
+                    "imageOffset": 29292,
+                    "symbol": "_pthread_start",
+                    "symbolLocation": 148
+                },
+                {
+                    "imageIndex": 1,
+                    "imageOffset": 8332,
+                    "symbol": "thread_start",
+                    "symbolLocation": 8
+                }
+            ],
+            "id": 5154897,
+            "threadState": {
+                "cpsr": {
+                    "value": 2147487744
+                },
+                "esr": {
+                    "description": "(Data Abort) byte write Translation fault",
+                    "value": 2449473606
+                },
+                "far": {
+                    "value": 0
+                },
+                "flavor": "ARM_THREAD_STATE64",
+                "fp": {
+                    "value": 6097596160
+                },
+                "lr": {
+                    "value": 4370422168
+                },
+                "pc": {
+                    "matchesCrashFrame": 1,
+                    "value": 4370422128
+                },
+                "sp": {
+                    "value": 6097596128
+                },
+                "x": [
+                    {
+                        "value": 42
+                    },
+                    {
+                        "value": 105553169518896
+                    },
+                    {
+                        "value": 6097596223
+                    },
+                    {
+                        "value": 105553169518880
+                    },
+                    {
+                        "value": 6097596416
+                    },
+                    {
+                        "value": 419432703
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 1
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 18446744067067154563
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "symbol": "pthread_setspecific",
+                        "symbolLocation": 0,
+                        "value": 6643048712
+                    },
+                    {
+                        "value": 8151791216
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 6097596416
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    },
+                    {
+                        "value": 0
+                    }
+                ]
+            },
+            "triggered": true
+        }
+    ],
+    "translated": false,
+    "trialInfo": {},
+    "uptime": 350000,
+    "usedImages": [
+        {
+            "arch": "arm64e",
+            "base": 6642810880,
+            "name": "libsystem_kernel.dylib",
+            "path": "/usr/lib/system/libsystem_kernel.dylib",
+            "size": 229376,
+            "source": "P",
+            "uuid": "1d7b3b8e-75a1-34ea-aa52-9f7c23155c55"
+        },
+        {
+            "arch": "arm64e",
+            "base": 6643040256,
+            "name": "libsystem_pthread.dylib",
+            "path": "/usr/lib/system/libsystem_pthread.dylib",
+            "size": 53248,
+            "source": "P",
+            "uuid": "cee8bc77-6923-34d9-89a3-6f8f7279605e"
+        },
+        {
+            "arch": "arm64e",
+            "base": 6642290688,
+            "name": "libc++.1.dylib",
+            "path": "/usr/lib/libc++.1.dylib",
+            "size": 421888,
+            "source": "P",
+            "uuid": "06bc1ec0-9992-398e-a85b-2973eb1fdba2"
+        },
+        {
+            "arch": "arm64",
+            "base": 4370415616,
+            "name": "@NAME@",
+            "path": "@EXEC@",
+            "size": 16384,
+            "source": "P",
+            "uuid": "@UUID@"
+        },
+        {
+            "arch": "arm64e",
+            "base": 4373479424,
+            "name": "dyld",
+            "path": "/usr/lib/dyld",
+            "size": 393216,
+            "source": "P",
+            "uuid": "fbb89662-e6f2-3434-b542-f75185ac5e74"
+        }
+    ],
+    "userID": 501,
+    "version": 2,
+    "vmRegionInfo": "0 is not in any region.  Bytes before following region: 4370415616\n      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      1047f4000-1047f8000    [   16K] r-x/r-x SM=COW  ....test.tmp.out",
+    "vmSummary": "ReadOnly portion of Libraries: Total=589.5M resident=0K(0%) swapped_out_or_unallocated=589.5M(100%)\nWritable regions: Total=666.2M written=0K(0%) resident=0K(0%) swapped_out=0K(0%) unallocated=666.2M(100%)\n\n                                VIRTUAL   REGION \nREGION TYPE                        SIZE    COUNT (non-coalesced) \n===========                     =======  ======= \nKernel Alloc Once                   32K        1 \nMALLOC                           153.2M       15 \nMALLOC guard page                 64.1M        7 \nMALLOC_MEDIUM (reserved)         120.0M        1         reserved VM address space (unallocated)\nMALLOC_NANO (reserved)           384.0M        1         reserved VM address space (unallocated)\nMALLOC_PROB_GUARD                138.5M        1 \nSTACK GUARD                       56.0M        3 \nStack                             9264K        3 \n__AUTH                              46K       11 \n__AUTH_CONST                        67K       38 \n__DATA                             173K       36 \n__DATA_CONST                       258K       40 \n__DATA_DIRTY                        73K       21 \n__LINKEDIT                       584.9M        3 \n__OBJC_CONST                        10K        5 \n__OBJC_RO                         82.9M        1 \n__OBJC_RW                         3168K        1 \n__TEXT                            4696K       43 \ndyld private memory               1024K        1 \nshared memory                       48K        3 \n===========                     =======  ======= \nTOTAL                              1.6G      235 \nTOTAL, minus reserved VM space     1.1G      235 \n",
+    "vmregioninfo": "0 is not in any region.  Bytes before following region: 4370415616\n      REGION TYPE                    START - END         [ VSIZE] PRT/MAX SHRMOD  REGION DETAIL\n      UNUSED SPACE AT START\n--->  \n      __TEXT                      1047f4000-1047f8000    [   16K] r-x/r-x SM=COW  ....test.tmp.out",
+    "wakeTime": 4715
 }

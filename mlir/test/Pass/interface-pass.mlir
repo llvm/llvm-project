@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -verify-diagnostics -pass-pipeline='builtin.func(test-interface-pass)' -o /dev/null
+// RUN: mlir-opt %s -verify-diagnostics -pass-pipeline='func.func(test-interface-pass)' -o /dev/null
 
 // Test that we run the interface pass on the function.
 

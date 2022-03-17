@@ -365,7 +365,7 @@ void fir::factory::CharacterExprHelper::createCopy(
     auto totalBytes = builder.create<arith::MulIOp>(loc, kindBytes, castCount);
     auto notVolatile = builder.createBool(loc, false);
     auto memmv = getLlvmMemmove(builder);
-    auto argTys = memmv.getType().getInputs();
+    auto argTys = memmv.getFunctionType().getInputs();
     auto toPtr = builder.createConvert(loc, argTys[0], toBuff);
     auto fromPtr = builder.createConvert(loc, argTys[1], fromBuff);
     builder.create<fir::CallOp>(

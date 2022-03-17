@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "LSPServer.h"
+#include "../lsp-server-support/Logging.h"
+#include "../lsp-server-support/Protocol.h"
+#include "../lsp-server-support/Transport.h"
 #include "MLIRServer.h"
-#include "lsp/Logging.h"
-#include "lsp/Protocol.h"
-#include "lsp/Transport.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 

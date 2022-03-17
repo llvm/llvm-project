@@ -11,11 +11,9 @@
 
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_CLANG) || defined(TEST_COMPILER_GCC)
-#pragma GCC diagnostic ignored "-Wsign-compare"
-#elif defined(TEST_COMPILER_MSVC)
-#pragma warning(disable: 4018 4389) // various "signed/unsigned mismatch"
-#endif
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_GCC_DIAGNOSTIC_IGNORED("-Wsign-compare")
+TEST_MSVC_DIAGNOSTIC_IGNORED(4018 4389) // various "signed/unsigned mismatch"
 
 // constexpr auto end() const;
 // constexpr iterator end() const requires same_as<W, Bound>;

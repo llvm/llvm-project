@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(convert-linalg-to-loops,convert-scf-to-cf,convert-arith-to-llvm),convert-linalg-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" |        \
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-linalg-to-loops,convert-scf-to-cf,convert-arith-to-llvm),convert-linalg-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" |        \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 

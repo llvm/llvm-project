@@ -469,7 +469,8 @@ TEST_F(NamespaceEndCommentsFixerTest, WorksForObjCpp) {
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
                                     "int j;\n"
-                                    "}", ObjCppStyle));
+                                    "}",
+                                    ObjCppStyle));
 }
 
 TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {

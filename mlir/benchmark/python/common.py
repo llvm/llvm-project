@@ -41,7 +41,7 @@ def create_sparse_np_tensor(dimensions, number_of_elements):
     return tensor
 
 
-def get_kernel_func_from_module(module: ir.Module) -> builtin.FuncOp:
+def get_kernel_func_from_module(module: ir.Module) -> func.FuncOp:
     """Takes an mlir module object and extracts the function object out of it.
     This function only works for a module with one region, one block, and one
     operation.
@@ -55,12 +55,12 @@ def get_kernel_func_from_module(module: ir.Module) -> builtin.FuncOp:
     return module.operation.regions[0].blocks[0].operations[0]
 
 
-def emit_timer_func() -> builtin.FuncOp:
+def emit_timer_func() -> func.FuncOp:
     """Returns the declaration of nano_time function. If nano_time function is
     used, the `MLIR_RUNNER_UTILS` and `MLIR_C_RUNNER_UTILS` must be included.
     """
     i64_type = ir.IntegerType.get_signless(64)
-    nano_time = builtin.FuncOp(
+    nano_time = func.FuncOp(
         "nano_time", ([], [i64_type]), visibility="private")
     nano_time.attributes["llvm.emit_c_interface"] = ir.UnitAttr.get()
     return nano_time
@@ -76,7 +76,7 @@ def emit_benchmark_wrapped_main_func(func, timer_func):
     """
     i64_type = ir.IntegerType.get_signless(64)
     memref_of_i64_type = ir.MemRefType.get([-1], i64_type)
-    wrapped_func = builtin.FuncOp(
+    wrapped_func = func.FuncOp(
         # Same signature and an extra buffer of indices to save timings.
         "main",
         (func.arguments.types + [memref_of_i64_type], func.type.results),

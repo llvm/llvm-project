@@ -14,9 +14,9 @@ include "mlir/Pass/PassBase.td"
 def FuncBufferize : Pass<"func-bufferize", "ModuleOp"> {
   let summary = "Bufferize func/call/return ops";
   let description = [{
-    A bufferize pass that bufferizes builtin.func and func.call ops.
+    A bufferize pass that bufferizes func.func and func.call ops.
 
-    Because this pass updates builtin.func ops, it must be a module pass. It is
+    Because this pass updates func.func ops, it must be a module pass. It is
     useful to keep this pass separate from other bufferizations so that the
     other ones can be run at function-level in parallel.
 

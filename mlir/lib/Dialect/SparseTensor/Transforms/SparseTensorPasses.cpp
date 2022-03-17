@@ -83,8 +83,9 @@ struct SparseTensorConversionPass
     // All dynamic rules below accept new function, call, return, and tensor
     // dim and cast operations as legal output of the rewriting provided that
     // all sparse tensor types have been fully rewritten.
-    target.addDynamicallyLegalOp<FuncOp>(
-        [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
+    target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+      return converter.isSignatureLegal(op.getFunctionType());
+    });
     target.addDynamicallyLegalOp<func::CallOp>([&](func::CallOp op) {
       return converter.isSignatureLegal(op.getCalleeType());
     });

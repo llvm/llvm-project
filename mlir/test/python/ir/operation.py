@@ -113,9 +113,9 @@ def testTraverseOpRegionBlockIndices():
   # CHECK:       REGION 0:
   # CHECK:         BLOCK 0:
   # CHECK:           OP 0: %0 = "custom.addi"
-  # CHECK:           OP 0: parent builtin.func
+  # CHECK:           OP 0: parent func.func
   # CHECK:           OP 1: return
-  # CHECK:           OP 1: parent builtin.func
+  # CHECK:           OP 1: parent func.func
   walk_operations("", module.operation)
 
 
@@ -127,7 +127,7 @@ def testBlockAndRegionOwners():
   module = Module.parse(
       r"""
     builtin.module {
-      builtin.func @f() {
+      func.func @f() {
         func.return
       }
     }
