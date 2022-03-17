@@ -31,7 +31,7 @@ add_entrypoint_object(
     mtx_init.h
   DEPENDS
     libc.include.threads
-    libc.src.__support.threads.thread
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
@@ -42,7 +42,7 @@ add_entrypoint_object(
     mtx_destroy.h
   DEPENDS
     libc.include.threads
-    libc.src.__support.threads.thread
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
@@ -53,7 +53,7 @@ add_entrypoint_object(
     mtx_lock.h
   DEPENDS
     libc.include.threads
-    libc.src.__support.threads.thread
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
@@ -64,7 +64,7 @@ add_entrypoint_object(
     mtx_unlock.h
   DEPENDS
     libc.include.threads
-    libc.src.__support.threads.thread
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
