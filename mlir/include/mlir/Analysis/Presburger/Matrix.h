@@ -72,7 +72,8 @@ public:
   /// reallocations.
   void reserveRows(unsigned rows);
 
-  /// Get an ArrayRef corresponding to the specified row.
+  /// Get a [Mutable]ArrayRef corresponding to the specified row.
+  MutableArrayRef<int64_t> getRow(unsigned row);
   ArrayRef<int64_t> getRow(unsigned row) const;
 
   /// Insert columns having positions pos, pos + 1, ... pos + count - 1.
