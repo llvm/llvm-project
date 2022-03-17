@@ -2177,14 +2177,21 @@ private:
 
     if (PrevToken->Tok.isLiteral() ||
         PrevToken->isOneOf(tok::r_paren, tok::r_square, tok::kw_true,
-                           tok::kw_false, tok::r_brace) ||
-        NextToken->Tok.isLiteral() ||
-        NextToken->isOneOf(tok::kw_true, tok::kw_false) ||
-        NextToken->isUnaryOperator() ||
-        // If we know we're in a template argument, there are no named
-        // declarations. Thus, having an identifier on the right-hand side
-        // indicates a binary operator.
-        (InTemplateArgument && NextToken->Tok.isAnyIdentifier()))
+                           tok::kw_false, tok::r_brace))
+      return TT_BinaryOperator;
+
+    const FormatToken *NextNonParen = NextToken;
+    while (NextNonParen && NextNonParen->is(tok::l_paren))
+      NextNonParen = NextNonParen->getNextNonComment();
+    if (NextNonParen && (NextNonParen->Tok.isLiteral() ||
+                         NextNonParen->isOneOf(tok::kw_true, tok::kw_false) ||
+                         NextNonParen->isUnaryOperator()))
+      return TT_BinaryOperator;
+
+    // If we know we're in a template argument, there are no named declarations.
+    // Thus, having an identifier on the right-hand side indicates a binary
+    // operator.
+    if (InTemplateArgument && NextToken->Tok.isAnyIdentifier())
       return TT_BinaryOperator;
 
     // "&&(" is quite unlikely to be two successive unary "&".
@@ -4508,12 +4515,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
 
   // We only break before r_paren if we're in a block indented context.
   if (Right.is(tok::r_paren)) {
-    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent) {
+    if (Style.AlignAfterOpenBracket == FormatStyle::BAS_BlockIndent)
       return Right.MatchingParen &&
              !(Right.MatchingParen->Previous &&
                (Right.MatchingParen->Previous->is(tok::kw_for) ||
                 Right.MatchingParen->Previous->isIf()));
-    }
 
     return false;
   }

@@ -7217,9 +7217,8 @@ TEST_F(FormatTest, MemoizationTests) {
   OnePerLine.BinPackParameters = false;
   std::string input = "Constructor()\n"
                       "    : aaaa(a,\n";
-  for (unsigned i = 0, e = 80; i != e; ++i) {
+  for (unsigned i = 0, e = 80; i != e; ++i)
     input += "           a,\n";
-  }
   input += "           a) {}";
   verifyFormat(input, OnePerLine);
 }
@@ -10334,6 +10333,11 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<a * b> v;");
   verifyFormat("foo<b && false>();");
   verifyFormat("foo<b & 1>();");
+  verifyFormat("foo<b & (1)>();");
+  verifyFormat("foo<b & (~0)>();");
+  verifyFormat("foo<b & (true)>();");
+  verifyFormat("foo<b & ((1))>();");
+  verifyFormat("foo<b & (/*comment*/ 1)>();");
   verifyFormat("decltype(*::std::declval<const T &>()) void F();");
   verifyFormat("typeof(*::std::declval<const T &>()) void F();");
   verifyFormat("_Atomic(*::std::declval<const T &>()) void F();");
