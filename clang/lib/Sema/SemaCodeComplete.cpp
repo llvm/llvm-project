@@ -9138,8 +9138,8 @@ static void AddObjCKeyValueCompletions(ObjCPropertyDecl *Property,
   if (IsInstanceMethod &&
       (ReturnType.isNull() ||
        (ReturnType->isObjCObjectPointerType() &&
-        ReturnType->getAs<ObjCObjectPointerType>()->getInterfaceDecl() &&
-        ReturnType->getAs<ObjCObjectPointerType>()
+        ReturnType->castAs<ObjCObjectPointerType>()->getInterfaceDecl() &&
+        ReturnType->castAs<ObjCObjectPointerType>()
                 ->getInterfaceDecl()
                 ->getName() == "NSEnumerator"))) {
     std::string SelectorName = (Twine("enumeratorOf") + UpperKey).str();
