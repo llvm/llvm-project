@@ -91,6 +91,7 @@ def RecordType : TypeNode<TagType>, LeafType;
 def EnumType : TypeNode<TagType>, LeafType;
 def ElaboratedType : TypeNode<Type>, NeverCanonical;
 def AttributedType : TypeNode<Type>, NeverCanonical;
+def BTFTagAttributedType : TypeNode<Type>, NeverCanonical;
 def TemplateTypeParmType : TypeNode<Type>, AlwaysDependent, LeafType;
 def SubstTemplateTypeParmType : TypeNode<Type>, NeverCanonical;
 def SubstTemplateTypeParmPackType : TypeNode<Type>, AlwaysDependent;

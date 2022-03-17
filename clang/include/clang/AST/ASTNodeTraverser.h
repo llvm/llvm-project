@@ -386,6 +386,9 @@ public:
     // FIXME: AttrKind
     Visit(T->getModifiedType());
   }
+  void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
+    Visit(T->getWrappedType());
+  }
   void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
     Visit(T->getReplacedParameter());
   }

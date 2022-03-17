@@ -5617,55 +5617,53 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       // Check if we can replace AND+IMM64 with a shift. This is possible for
       // masks like 0xFF000000 or 0x00FFFFFF and if we care only about the zero
       // flag.
-      if (CmpVT == MVT::i64 && !isInt<32>(Mask) &&
+      if (CmpVT == MVT::i64 && !isInt<32>(Mask) && isShiftedMask_64(Mask) &&
           onlyUsesZeroFlag(SDValue(Node, 0))) {
         unsigned ShiftOpcode = ISD::DELETED_NODE;
         unsigned ShiftAmt;
         unsigned SubRegIdx;
         MVT SubRegVT;
         unsigned TestOpcode;
-        if (isShiftedMask_64(Mask)) {
-          unsigned LeadingZeros = countLeadingZeros(Mask);
-          unsigned TrailingZeros = countTrailingZeros(Mask);
+        unsigned LeadingZeros = countLeadingZeros(Mask);
+        unsigned TrailingZeros = countTrailingZeros(Mask);
+        if (LeadingZeros == 0) {
           // If the mask covers the most significant bit, then we can replace
           // TEST+AND with a SHR and check eflags.
           // This emits a redundant TEST which is subsequently eliminated.
-          if (LeadingZeros == 0) {
+          ShiftOpcode = X86::SHR64ri;
+          ShiftAmt = TrailingZeros;
+          SubRegIdx = 0;
+          TestOpcode = X86::TEST64rr;
+        } else if (TrailingZeros == 0) {
+          // If the mask covers the least significant bit, then we can replace
+          // TEST+AND with a SHL and check eflags.
+          // This emits a redundant TEST which is subsequently eliminated.
+          ShiftOpcode = X86::SHL64ri;
+          ShiftAmt = LeadingZeros;
+          SubRegIdx = 0;
+          TestOpcode = X86::TEST64rr;
+        } else if (MaskC->hasOneUse()) {
+          // If the mask is 8/16 or 32bits wide, then we can replace it with
+          // a SHR and a TEST8rr/TEST16rr/TEST32rr.
+          unsigned PopCount = 64 - LeadingZeros - TrailingZeros;
+          if (PopCount == 8) {
             ShiftOpcode = X86::SHR64ri;
             ShiftAmt = TrailingZeros;
-            SubRegIdx = 0;
-            TestOpcode = X86::TEST64rr;
-            // If the mask covers the least signifcant bit, then we can replace
-            // TEST+AND with a SHL and check eflags.
-            // This emits a redundant TEST which is subsequently eliminated.
-          } else if (TrailingZeros == 0) {
-            ShiftOpcode = X86::SHL64ri;
-            ShiftAmt = LeadingZeros;
-            SubRegIdx = 0;
-            TestOpcode = X86::TEST64rr;
-          } else if (MaskC->hasOneUse()) {
-            // If the mask is 8/16 or 32bits wide, then we can replace it with
-            // a SHR and a TEST8rr/TEST16rr/TEST32rr.
-            unsigned PopCount = 64 - LeadingZeros - TrailingZeros;
-            if (PopCount == 8) {
-              ShiftOpcode = X86::SHR64ri;
-              ShiftAmt = TrailingZeros;
-              SubRegIdx = X86::sub_8bit;
-              SubRegVT = MVT::i8;
-              TestOpcode = X86::TEST8rr;
-            } else if (PopCount == 16) {
-              ShiftOpcode = X86::SHR64ri;
-              ShiftAmt = TrailingZeros;
-              SubRegIdx = X86::sub_16bit;
-              SubRegVT = MVT::i16;
-              TestOpcode = X86::TEST16rr;
-            } else if (PopCount == 32) {
-              ShiftOpcode = X86::SHR64ri;
-              ShiftAmt = TrailingZeros;
-              SubRegIdx = X86::sub_32bit;
-              SubRegVT = MVT::i32;
-              TestOpcode = X86::TEST32rr;
-            }
+            SubRegIdx = X86::sub_8bit;
+            SubRegVT = MVT::i8;
+            TestOpcode = X86::TEST8rr;
+          } else if (PopCount == 16) {
+            ShiftOpcode = X86::SHR64ri;
+            ShiftAmt = TrailingZeros;
+            SubRegIdx = X86::sub_16bit;
+            SubRegVT = MVT::i16;
+            TestOpcode = X86::TEST16rr;
+          } else if (PopCount == 32) {
+            ShiftOpcode = X86::SHR64ri;
+            ShiftAmt = TrailingZeros;
+            SubRegIdx = X86::sub_32bit;
+            SubRegVT = MVT::i32;
+            TestOpcode = X86::TEST32rr;
           }
         }
         if (ShiftOpcode != ISD::DELETED_NODE) {

@@ -1818,13 +1818,8 @@ void StructuredDataDarwinLog::EnableNow() {
                   "enable command failed (process uid %u)",
                   __FUNCTION__, process_sp->GetUniqueID());
     }
-    // Report failures to the debugger error stream.
-    auto error_stream_sp = debugger_sp->GetAsyncErrorStream();
-    if (error_stream_sp) {
-      error_stream_sp->Printf("failed to configure DarwinLog "
-                              "support\n");
-      error_stream_sp->Flush();
-    }
+    Debugger::ReportError("failed to configure DarwinLog support",
+                          debugger_sp->GetID());
     return;
   }
 
@@ -1852,13 +1847,8 @@ void StructuredDataDarwinLog::EnableNow() {
               "ConfigureStructuredData() call failed "
               "(process uid %u): %s",
               __FUNCTION__, process_sp->GetUniqueID(), error.AsCString());
-    auto error_stream_sp = debugger_sp->GetAsyncErrorStream();
-    if (error_stream_sp) {
-      error_stream_sp->Printf("failed to configure DarwinLog "
-                              "support: %s\n",
-                              error.AsCString());
-      error_stream_sp->Flush();
-    }
+    Debugger::ReportError("failed to configure DarwinLog support",
+                          debugger_sp->GetID());
     m_is_enabled = false;
   } else {
     m_is_enabled = true;

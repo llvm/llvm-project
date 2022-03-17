@@ -8784,11 +8784,16 @@ For GFX940:
     work-group since they execute on the same CU. The exception is when in
     tgsplit execution mode as wavefronts of the same work-group can be in
     different CUs and so a ``buffer_inv sc0`` is required which will invalidate
-    the L1 cache is in tgsplit mode.
+    the L1 cache.
 
-  * A ``buffer_inv sc1`` is required to invalidate the L1 cache for coherence
+  * A ``buffer_inv sc0`` is required to invalidate the L1 cache for coherence
     between wavefronts executing in different work-groups as they may be
     executing on different CUs.
+
+  * Atomic read-modify-write instructions implicitly bypass the L1 cache.
+    Therefore, they do not use the sc0 bit for coherence and instead use it to
+    indicate if the instruction returns the original value being updated. They
+    do use sc1 to indicate system or agent scope coherence.
 
 * The scalar memory operations access a scalar L1 cache shared by all wavefronts
   on a group of CUs. The scalar and vector L1 caches are not coherent. However,
@@ -8961,8 +8966,6 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                               - generic     sc1=1
      load atomic  monotonic    - system       - global   1. buffer/global/flat_load
                                               - generic     sc0=1 sc1=1
-     store atomic monotonic    - singlethread - global   1. buffer/global/flat_store
-                               - wavefront    - generic
      store atomic monotonic    - singlethread - global   1. buffer/global/flat_store
                                - wavefront    - generic
      store atomic monotonic    - workgroup    - global   1. buffer/global/flat_store
@@ -9711,7 +9714,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                              store that is being
                                                              released.
 
-                                                         3. buffer/global/flat_store  sc1=1
+                                                         3. buffer/global/flat_store sc1=1
      store atomic release      - system       - global   1. buffer_wbl2 sc0=1 sc1=1
                                               - generic
                                                            - Must happen before
@@ -9766,7 +9769,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                              store that is being
                                                              released.
 
-                                                         2. buffer/global/flat_store
+                                                         3. buffer/global/flat_store
                                                             sc0=1 sc1=1
      atomicrmw    release      - singlethread - global   1. buffer/global/flat_atomic
                                - wavefront    - generic
@@ -10950,7 +10953,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
      ------------------------------------------------------------------------------------
      load atomic  seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    load atomic acquire,
-                                              - generic  except must generated
+                                              - generic  except must generate
                                                          all instructions even
                                                          for OpenCL.*
      load atomic  seq_cst      - workgroup    - global   1. s_waitcnt lgkm/vmcnt(0)
@@ -11035,7 +11038,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      load atomic  seq_cst      - workgroup    - local    *If TgSplit execution mode,
@@ -11044,7 +11047,7 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
 
                                                          *Same as corresponding
                                                          load atomic acquire,
-                                                         except must generated
+                                                         except must generate
                                                          all instructions even
                                                          for OpenCL.*
 
@@ -11138,22 +11141,22 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                             instructions same as
                                                             corresponding load
                                                             atomic acquire,
-                                                            except must generated
+                                                            except must generate
                                                             all instructions even
                                                             for OpenCL.*
      store atomic seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    store atomic release,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      atomicrmw    seq_cst      - singlethread - global   *Same as corresponding
                                - wavefront    - local    atomicrmw acq_rel,
-                               - workgroup    - generic  except must generated
+                               - workgroup    - generic  except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      fence        seq_cst      - singlethread *none*     *Same as corresponding
                                - wavefront               fence acq_rel,
-                               - workgroup               except must generated
+                               - workgroup               except must generate
                                - agent                   all instructions even
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================

@@ -49,6 +49,68 @@ static llvm::cl::opt<bool> dumpBeforeFir(
     "fdebug-dump-pre-fir", llvm::cl::init(false),
     llvm::cl::desc("dump the Pre-FIR tree prior to FIR generation"));
 
+namespace {
+/// Helper class to generate the runtime type info global data. This data
+/// is required to describe the derived type to the runtime so that it can
+/// operate over it. It must be ensured this data will be generated for every
+/// derived type lowered in the current translated unit. However, this data
+/// cannot be generated before FuncOp have been created for functions since the
+/// initializers may take their address (e.g for type bound procedures). This
+/// class allows registering all the required runtime type info while it is not
+/// possible to create globals, and to generate this data after function
+/// lowering.
+class RuntimeTypeInfoConverter {
+  /// Store the location and symbols of derived type info to be generated.
+  /// The location of the derived type instantiation is also stored because
+  /// runtime type descriptor symbol are compiler generated and cannot be mapped
+  /// to user code on their own.
+  struct TypeInfoSymbol {
+    Fortran::semantics::SymbolRef symbol;
+    mlir::Location loc;
+  };
+
+public:
+  void registerTypeInfoSymbol(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc,
+                              Fortran::semantics::SymbolRef typeInfoSym) {
+    if (seen.contains(typeInfoSym))
+      return;
+    seen.insert(typeInfoSym);
+    if (!skipRegistration) {
+      registeredTypeInfoSymbols.emplace_back(TypeInfoSymbol{typeInfoSym, loc});
+      return;
+    }
+    // Once the registration is closed, symbols cannot be added to the
+    // registeredTypeInfoSymbols list because it may be iterated over.
+    // However, after registration is closed, it is safe to directly generate
+    // the globals because all FuncOps whose addresses may be required by the
+    // initializers have been generated.
+    Fortran::lower::createRuntimeTypeInfoGlobal(converter, loc,
+                                                typeInfoSym.get());
+  }
+
+  void createTypeInfoGlobals(Fortran::lower::AbstractConverter &converter) {
+    skipRegistration = true;
+    for (const TypeInfoSymbol &info : registeredTypeInfoSymbols)
+      Fortran::lower::createRuntimeTypeInfoGlobal(converter, info.loc,
+                                                  info.symbol.get());
+    registeredTypeInfoSymbols.clear();
+  }
+
+private:
+  /// Store the runtime type descriptors that will be required for the
+  /// derived type that have been converted to FIR derived types.
+  llvm::SmallVector<TypeInfoSymbol> registeredTypeInfoSymbols;
+  /// Create derived type runtime info global immediately without storing the
+  /// symbol in registeredTypeInfoSymbols.
+  bool skipRegistration = false;
+  /// Track symbols symbols processed during and after the registration
+  /// to avoid infinite loops between type conversions and global variable
+  /// creation.
+  llvm::SmallSetVector<Fortran::semantics::SymbolRef, 64> seen;
+};
+} // namespace
+
 //===----------------------------------------------------------------------===//
 // FirConverter
 //===----------------------------------------------------------------------===//
@@ -101,6 +163,12 @@ public:
           },
           u);
     }
+
+    /// Once all the code has been translated, create runtime type info
+    /// global data structure for the derived types that have been
+    /// processed.
+    createGlobalOutsideOfFunctionLowering(
+        [&]() { runtimeTypeInfoConverter.createTypeInfoGlobals(*this); });
   }
 
   /// Declare a function.
@@ -687,6 +755,12 @@ public:
   void bindHostAssocTuple(mlir::Value val) override final {
     assert(!hostAssocTuple && val);
     hostAssocTuple = val;
+  }
+
+  void registerRuntimeTypeInfo(
+      mlir::Location loc,
+      Fortran::lower::SymbolRef typeInfoSym) override final {
+    runtimeTypeInfoConverter.registerTypeInfoSymbol(*this, loc, typeInfoSym);
   }
 
 private:
@@ -2319,6 +2393,7 @@ private:
   Fortran::lower::pft::Evaluation *evalPtr = nullptr;
   Fortran::lower::SymMap localSymbols;
   Fortran::parser::CharBlock currentPosition;
+  RuntimeTypeInfoConverter runtimeTypeInfoConverter;
 
   /// Tuple of host assoicated variables.
   mlir::Value hostAssocTuple;

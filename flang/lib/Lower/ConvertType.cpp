@@ -8,6 +8,8 @@
 
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/CallInterface.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Utils.h"
@@ -128,8 +130,8 @@ genFIRType(mlir::MLIRContext *context, Fortran::common::TypeCategory tc,
 /// Do not use the FirOpBuilder from the AbstractConverter to get fir/mlir types
 /// since it is not guaranteed to exist yet when we lower types.
 namespace {
-class TypeBuilder {
-public:
+struct TypeBuilder {
+
   TypeBuilder(Fortran::lower::AbstractConverter &converter)
       : converter{converter}, context{&converter.getMLIRContext()} {}
 
@@ -196,8 +198,7 @@ public:
             },
             [&](const Fortran::evaluate::ProcedureDesignator &proc)
                 -> mlir::Type {
-              TODO(converter.getCurrentLocation(),
-                   "genTypelessExprType ProcedureDesignator");
+              return Fortran::lower::translateSignature(proc, converter);
             },
             [&](const Fortran::evaluate::ProcedureRef &) -> mlir::Type {
               return mlir::NoneType::get(context);
@@ -232,7 +233,7 @@ public:
         translateLenParameters(params, tySpec->category(), ultimate);
         ty = genFIRType(context, tySpec->category(), kind, params);
       } else if (type->IsPolymorphic()) {
-        TODO(loc, "genSymbolType polymorphic types");
+        TODO(loc, "[genSymbolType] polymorphic types");
       } else if (const Fortran::semantics::DerivedTypeSpec *tySpec =
                      type->AsDerived()) {
         ty = genDerivedType(*tySpec);
@@ -321,13 +322,20 @@ public:
     rec.finalize(ps, cs);
     popDerivedTypeInConstruction();
 
+    mlir::Location loc = converter.genLocation(typeSymbol.name());
     if (!ps.empty()) {
       // This type is a PDT (parametric derived type). Create the functions to
       // use for allocation, dereferencing, and address arithmetic here.
-      TODO(converter.genLocation(typeSymbol.name()),
-           "parametrized derived types lowering");
+      TODO(loc, "parametrized derived types lowering");
     }
     LLVM_DEBUG(llvm::dbgs() << "derived type: " << rec << '\n');
+
+    // Generate the type descriptor object if any
+    if (const Fortran::semantics::Scope *derivedScope =
+            tySpec.scope() ? tySpec.scope() : tySpec.typeSymbol().scope())
+      if (const Fortran::semantics::Symbol *typeInfoSym =
+              derivedScope->runtimeDerivedTypeDescription())
+        converter.registerRuntimeTypeInfo(loc, *typeInfoSym);
     return rec;
   }
 
@@ -418,7 +426,6 @@ public:
   Fortran::lower::AbstractConverter &converter;
   mlir::MLIRContext *context;
 };
-
 } // namespace
 
 mlir::Type Fortran::lower::getFIRType(mlir::MLIRContext *context,

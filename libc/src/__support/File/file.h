@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 #define LLVM_LIBC_SRC_SUPPORT_OSUTIL_FILE_H
 
+#include "src/__support/threads/mutex.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -64,10 +66,7 @@ private:
   CloseFunc *platform_close;
   FlushFunc *platform_flush;
 
-  // Platform specific functions to lock and unlock file for mutually exclusive
-  // access from threads in a multi-threaded application.
-  LockFunc *platform_lock;
-  UnlockFunc *platform_unlock;
+  Mutex mutex;
 
   void *buf;      // Pointer to the stream buffer for buffered streams
   size_t bufsize; // Size of the buffer pointed to by |buf|.
@@ -110,28 +109,26 @@ public:
   // like stdout do not require invocation of the constructor which can
   // potentially lead to static initialization order fiasco.
   constexpr File(WriteFunc *wf, ReadFunc *rf, SeekFunc *sf, CloseFunc *cf,
-                 FlushFunc *ff, LockFunc *lf, UnlockFunc *ulf, void *buffer,
-                 size_t buffer_size, int buffer_mode, bool owned,
-                 ModeFlags modeflags)
+                 FlushFunc *ff, void *buffer, size_t buffer_size,
+                 int buffer_mode, bool owned, ModeFlags modeflags)
       : platform_write(wf), platform_read(rf), platform_seek(sf),
-        platform_close(cf), platform_flush(ff), platform_lock(lf),
-        platform_unlock(ulf), buf(buffer), bufsize(buffer_size),
-        bufmode(buffer_mode), own_buf(owned), mode(modeflags), pos(0),
-        prev_op(FileOp::NONE), read_limit(0), eof(false), err(false) {}
+        platform_close(cf), platform_flush(ff), mutex(false, false, false),
+        buf(buffer), bufsize(buffer_size), bufmode(buffer_mode), own_buf(owned),
+        mode(modeflags), pos(0), prev_op(FileOp::NONE), read_limit(0),
+        eof(false), err(false) {}
 
   // This function helps initialize the various fields of the File data
   // structure after a allocating memory for it via a call to malloc.
   static void init(File *f, WriteFunc *wf, ReadFunc *rf, SeekFunc *sf,
-                   CloseFunc *cf, FlushFunc *ff, LockFunc *lf, UnlockFunc *ulf,
-                   void *buffer, size_t buffer_size, int buffer_mode,
-                   bool owned, ModeFlags modeflags) {
+                   CloseFunc *cf, FlushFunc *ff, void *buffer,
+                   size_t buffer_size, int buffer_mode, bool owned,
+                   ModeFlags modeflags) {
+    Mutex::init(&f->mutex, false, false, false);
     f->platform_write = wf;
     f->platform_read = rf;
     f->platform_seek = sf;
     f->platform_close = cf;
     f->platform_flush = ff;
-    f->platform_lock = lf;
-    f->platform_unlock = ulf;
     f->buf = reinterpret_cast<uint8_t *>(buffer);
     f->bufsize = buffer_size;
     f->bufmode = buffer_mode;
@@ -163,8 +160,8 @@ public:
   // Closes the file stream and frees up all resources owned by it.
   int close();
 
-  void lock() { platform_lock(this); }
-  void unlock() { platform_unlock(this); }
+  void lock() { mutex.lock(); }
+  void unlock() { mutex.unlock(); }
 
   bool error() const { return err; }
   void clearerr() { err = false; }

@@ -179,4 +179,4 @@ struct GrammarTable {
 } // namespace pseudo
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLING_SYNTAX_GRAMMAR_H
+#endif // CLANG_PSEUDO_GRAMMAR_H
