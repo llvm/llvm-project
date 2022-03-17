@@ -4275,7 +4275,9 @@ void InnerLoopVectorizer::widenPHIInstruction(Instruction *PN,
     // Handle the pointer induction variable case.
     assert(P->getType()->isPointerTy() && "Unexpected type.");
 
-    if (Cost->isScalarAfterVectorization(P, State.VF)) {
+    if (all_of(PhiR->users(), [PhiR](const VPUser *U) {
+          return cast<VPRecipeBase>(U)->usesScalars(PhiR);
+        })) {
       // This is the normalized GEP that starts counting at zero.
       Value *PtrInd =
           Builder.CreateSExtOrTrunc(CanonicalIV, II.getStep()->getType());
