@@ -1461,6 +1461,13 @@ public:
   unsigned getNumStoreOperands() const {
     return getNumOperands() - (HasMask ? 2 : 1);
   }
+
+  /// The recipe only uses the first lane of the address.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return Op == getAddr();
+  }
 };
 
 /// A recipe to represent inloop reduction operations, performing a reduction on
