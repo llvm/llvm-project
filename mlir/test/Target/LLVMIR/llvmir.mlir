@@ -1057,6 +1057,11 @@ llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret}) {
   llvm.return
 }
 
+// CHECK-LABEL: define void @nestattr(i32* nest %
+llvm.func @nestattr(%arg0: !llvm.ptr<i32> {llvm.nest}) {
+  llvm.return
+}
+
 // CHECK-LABEL: define void @llvm_align(float* align 4 {{%*.}})
 llvm.func @llvm_align(%arg0: !llvm.ptr<f32> {llvm.align = 4}) {
   llvm.return
