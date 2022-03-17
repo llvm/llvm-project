@@ -86,10 +86,6 @@ void DynamicLoaderPOSIXDYLD::DidAttach() {
       log, "DynamicLoaderPOSIXDYLD::%s pid %" PRIu64 " reloaded auxv data",
       __FUNCTION__, m_process ? m_process->GetID() : LLDB_INVALID_PROCESS_ID);
 
-  // ask the process if it can load any of its own modules
-  auto error = m_process->LoadModules();
-  LLDB_LOG_ERROR(log, std::move(error), "Couldn't load modules: {0}");
-
   ModuleSP executable_sp = GetTargetExecutable();
   ResolveExecutableModule(executable_sp);
   m_rendezvous.UpdateExecutablePath();
