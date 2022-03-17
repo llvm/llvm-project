@@ -329,7 +329,7 @@ public:
   virtual llvm::Function *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
-                            llvm::Value *BlockLiteral) const;
+                            llvm::Type *BlockTy) const;
 
   /// \return true if the target supports alias from the unmangled name to the
   /// mangled name of functions declared within an extern "C" region and marked
