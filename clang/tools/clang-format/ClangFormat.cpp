@@ -100,17 +100,16 @@ static cl::opt<unsigned>
                     "clang-format from an editor integration"),
            cl::init(0), cl::cat(ClangFormatCategory));
 
-static cl::opt<bool> SortIncludes(
-    "sort-includes",
-    cl::desc("If set, overrides the include sorting behavior determined by the "
-             "SortIncludes style flag"),
-    cl::cat(ClangFormatCategory));
+static cl::opt<bool>
+    SortIncludes("sort-includes",
+                 cl::desc("If set, overrides the include sorting behavior\n"
+                          "determined by the SortIncludes style flag"),
+                 cl::cat(ClangFormatCategory));
 
 static cl::opt<std::string> QualifierAlignment(
     "qualifier-alignment",
-    cl::desc(
-        "If set, overrides the qualifier alignment style determined by the "
-        "QualifierAlignment style flag"),
+    cl::desc("If set, overrides the qualifier alignment style\n"
+             "determined by the QualifierAlignment style flag"),
     cl::init(""), cl::cat(ClangFormatCategory));
 
 static cl::opt<std::string>
@@ -148,8 +147,9 @@ static cl::opt<bool>
 
 static cl::opt<unsigned> ErrorLimit(
     "ferror-limit",
-    cl::desc("Set the maximum number of clang-format errors to emit before "
-             "stopping (0 = no limit). Used only with --dry-run or -n"),
+    cl::desc("Set the maximum number of clang-format errors to emit\n"
+             "before stopping (0 = no limit).\n"
+             "Used only with --dry-run or -n"),
     cl::init(0), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool>
