@@ -190,9 +190,11 @@ define double @test10(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-BE-LABEL: test10:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
-; CHECK-BE-NEXT:    vmrghw 3, 3, 3
-; CHECK-BE-NEXT:    lfs 0, .LCPI9_0@toc@l(3)
-; CHECK-BE-NEXT:    vmrglw 2, 3, 2
+; CHECK-BE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
+; CHECK-BE-NEXT:    lxv 36, 0(3)
+; CHECK-BE-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
+; CHECK-BE-NEXT:    lfs 0, .LCPI9_1@toc@l(3)
+; CHECK-BE-NEXT:    vperm 2, 3, 2, 4
 ; CHECK-BE-NEXT:    xsadddp 1, 34, 0
 ; CHECK-BE-NEXT:    blr
 entry:

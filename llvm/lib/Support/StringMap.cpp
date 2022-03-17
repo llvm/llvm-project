@@ -226,22 +226,15 @@ unsigned StringMapImpl::RehashTable(unsigned BucketNo) {
   for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
     StringMapEntryBase *Bucket = TheTable[I];
     if (Bucket && Bucket != getTombstoneVal()) {
-      // Fast case, bucket available.
+      // If the bucket is not available, probe for a spot.
       unsigned FullHash = HashTable[I];
       unsigned NewBucket = FullHash & (NewSize - 1);
-      if (!NewTableArray[NewBucket]) {
-        NewTableArray[FullHash & (NewSize - 1)] = Bucket;
-        NewHashArray[FullHash & (NewSize - 1)] = FullHash;
-        if (I == BucketNo)
-          NewBucketNo = NewBucket;
-        continue;
+      if (NewTableArray[NewBucket]) {
+        unsigned ProbeSize = 1;
+        do {
+          NewBucket = (NewBucket + ProbeSize++) & (NewSize - 1);
+        } while (NewTableArray[NewBucket]);
       }
-
-      // Otherwise probe for a spot.
-      unsigned ProbeSize = 1;
-      do {
-        NewBucket = (NewBucket + ProbeSize++) & (NewSize - 1);
-      } while (NewTableArray[NewBucket]);
 
       // Finally found a slot.  Fill it in.
       NewTableArray[NewBucket] = Bucket;

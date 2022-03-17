@@ -28,7 +28,8 @@
 namespace mlir {
 namespace bufferization {
 
-class BufferizationState;
+class AnalysisState;
+struct BufferizationState;
 struct BufferizationOptions;
 
 /// A helper type converter class that automatically populates the relevant
@@ -67,7 +68,7 @@ void populateEliminateBufferizeMaterializationsPatterns(
 /// layouts after transformations. Combinations of memref.cast +
 /// canonicalization are responsible for clean ups.
 // TODO: Extract `options` from `state` and pass as separate argument.
-LogicalResult bufferizeOp(Operation *op, const BufferizationState &state);
+LogicalResult bufferizeOp(Operation *op, const AnalysisState &analysisState);
 
 /// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
 /// Buffers are duplicated and copied before any tensor use that bufferizes to
@@ -77,13 +78,24 @@ LogicalResult bufferizeOp(Operation *op, const BufferizationState &state);
 /// can be used to implement partial bufferization passes.
 LogicalResult bufferizeOp(Operation *op, const BufferizationOptions &options);
 
-/// Populate the pattern set with a pattern that bufferizes ops that implement
-/// `BufferizableOpInterface`.
-void populateBufferizationPattern(const BufferizationState &state,
-                                  RewritePatternSet &patterns);
-
 BufferizationOptions getPartialBufferizationOptions();
 
+//===----------------------------------------------------------------------===//
+// Helper functions for extending Bufferization
+//===----------------------------------------------------------------------===//
+
+/// Bufferize `op` and its nested ops that implement `BufferizableOpInterface`.
+/// Reuse an existing `BufferizationState`.
+///
+/// Note: This function overload is useful for extending the bufferization.
+LogicalResult bufferizeOp(Operation *op,
+                          BufferizationState &bufferizationState);
+
+/// Finalize all buffer allocations.
+/// * Hoist buffer allocations as much as possible.
+/// * Create alloc/dealloc ops as specified by the bufferization options.
+LogicalResult finalizeBuffers(Operation *op,
+                              const BufferizationOptions &options);
 } // namespace bufferization
 } // namespace mlir
 

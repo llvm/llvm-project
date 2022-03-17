@@ -175,6 +175,15 @@ class LitConfig(object):
             # output.
             sys.stderr.flush()
 
+    def substitute(self, string):
+        """substitute - Interpolate params into a string"""
+        try:
+          return string % self.params
+        except KeyError as e:
+          key, = e.args
+          self.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (
+              key,key))
+
     def note(self, message):
         if not self.quiet:
             self._write_message('note', message)

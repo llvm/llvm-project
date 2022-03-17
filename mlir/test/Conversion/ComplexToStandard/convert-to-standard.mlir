@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(convert-complex-to-standard)" | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-complex-to-standard)" | FileCheck %s
 
 // CHECK-LABEL: func @complex_abs
 // CHECK-SAME: %[[ARG:.*]]: complex<f32>

@@ -1474,6 +1474,7 @@ def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 
 def VOP3PMods  : ComplexPattern<untyped, 2, "SelectVOP3PMods">;
 
+def VOP3PModsDOT  : ComplexPattern<untyped, 2, "SelectVOP3PModsDOT">;
 def DotIUVOP3PMods  : ComplexPattern<untyped, 1, "SelectDotIUVOP3PMods">;
 def WMMAOpSelVOP3PMods  : ComplexPattern<untyped, 1, "SelectWMMAOpSelVOP3PMods">;
 
@@ -2910,19 +2911,19 @@ def getFlatScratchInstSSfromSV : InstrMapping {
   let ValueCols = [["SS"]];
 }
 
-def getFlatScratchInstSVfromSS : InstrMapping {
-  let FilterClass = "FlatScratchInst";
-  let RowFields = ["SVOp"];
-  let ColFields = ["Mode"];
-  let KeyCol = ["SS"];
-  let ValueCols = [["SV"]];
-}
-
 def getFlatScratchInstSVfromSVS : InstrMapping {
   let FilterClass = "FlatScratchInst";
   let RowFields = ["SVOp"];
   let ColFields = ["Mode"];
   let KeyCol = ["SVS"];
+  let ValueCols = [["SV"]];
+}
+
+def getFlatScratchInstSVfromSS : InstrMapping {
+  let FilterClass = "FlatScratchInst";
+  let RowFields = ["SVOp"];
+  let ColFields = ["Mode"];
+  let KeyCol = ["SS"];
   let ValueCols = [["SV"]];
 }
 

@@ -479,6 +479,10 @@ void TypeLocWriter::VisitAttributedTypeLoc(AttributedTypeLoc TL) {
   Record.AddAttr(TL.getAttr());
 }
 
+void TypeLocWriter::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
+  // Nothing to do.
+}
+
 void TypeLocWriter::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
   Record.AddSourceLocation(TL.getNameLoc());
 }
@@ -2007,15 +2011,11 @@ static void emitBlob(llvm::BitstreamWriter &Stream, StringRef Blob,
   // consumers will not want its contents.
   SmallString<0> CompressedBuffer;
   if (llvm::zlib::isAvailable()) {
-    llvm::Error E = llvm::zlib::compress(Blob.drop_back(1), CompressedBuffer);
-    if (!E) {
-      RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB_COMPRESSED,
-                                 Blob.size() - 1};
-      Stream.EmitRecordWithBlob(SLocBufferBlobCompressedAbbrv, Record,
-                                CompressedBuffer);
-      return;
-    }
-    llvm::consumeError(std::move(E));
+    llvm::zlib::compress(Blob.drop_back(1), CompressedBuffer);
+    RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB_COMPRESSED, Blob.size() - 1};
+    Stream.EmitRecordWithBlob(SLocBufferBlobCompressedAbbrv, Record,
+                              CompressedBuffer);
+    return;
   }
 
   RecordDataType Record[] = {SM_SLOC_BUFFER_BLOB};

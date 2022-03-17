@@ -1376,10 +1376,12 @@ Editline *Editline::InstanceFor(EditLine *editline) {
 }
 
 Editline::Editline(const char *editline_name, FILE *input_file,
-                   FILE *output_file, FILE *error_file, bool color_prompts)
+                   FILE *output_file, FILE *error_file,
+                   std::recursive_mutex &output_mutex, bool color_prompts)
     : m_editor_status(EditorStatus::Complete), m_color_prompts(color_prompts),
       m_input_file(input_file), m_output_file(output_file),
-      m_error_file(error_file), m_input_connection(fileno(input_file), false) {
+      m_error_file(error_file), m_input_connection(fileno(input_file), false),
+      m_output_mutex(output_mutex) {
   // Get a shared history instance
   m_editor_name = (editline_name == nullptr) ? "lldb-tmp" : editline_name;
   m_history_sp = EditlineHistory::GetHistory(m_editor_name);
@@ -1388,12 +1390,13 @@ Editline::Editline(const char *editline_name, FILE *input_file,
   if (m_output_file) {
     const int term_fd = fileno(m_output_file);
     if (term_fd != -1) {
-      static std::mutex *g_init_terminal_fds_mutex_ptr = nullptr;
+      static std::recursive_mutex *g_init_terminal_fds_mutex_ptr = nullptr;
       static std::set<int> *g_init_terminal_fds_ptr = nullptr;
       static llvm::once_flag g_once_flag;
       llvm::call_once(g_once_flag, [&]() {
         g_init_terminal_fds_mutex_ptr =
-            new std::mutex(); // NOTE: Leak to avoid C++ destructor chain issues
+            new std::recursive_mutex(); // NOTE: Leak to avoid C++ destructor
+                                        // chain issues
         g_init_terminal_fds_ptr = new std::set<int>(); // NOTE: Leak to avoid
                                                        // C++ destructor chain
                                                        // issues
@@ -1401,7 +1404,8 @@ Editline::Editline(const char *editline_name, FILE *input_file,
 
       // We must make sure to initialize the terminal a given file descriptor
       // only once. If we do this multiple times, we start leaking memory.
-      std::lock_guard<std::mutex> guard(*g_init_terminal_fds_mutex_ptr);
+      std::lock_guard<std::recursive_mutex> guard(
+          *g_init_terminal_fds_mutex_ptr);
       if (g_init_terminal_fds_ptr->find(term_fd) ==
           g_init_terminal_fds_ptr->end()) {
         g_init_terminal_fds_ptr->insert(term_fd);
@@ -1473,7 +1477,7 @@ uint32_t Editline::GetCurrentLine() { return m_current_line_index; }
 
 bool Editline::Interrupt() {
   bool result = true;
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
     fprintf(m_output_file, "^C\n");
     result = m_input_connection.InterruptRead();
@@ -1484,7 +1488,7 @@ bool Editline::Interrupt() {
 
 bool Editline::Cancel() {
   bool result = true;
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);
@@ -1499,7 +1503,7 @@ bool Editline::GetLine(std::string &line, bool &interrupted) {
   m_input_lines = std::vector<EditLineStringType>();
   m_input_lines.insert(m_input_lines.begin(), EditLineConstString(""));
 
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
 
   lldbassert(m_editor_status != EditorStatus::Editing);
   if (m_editor_status == EditorStatus::Interrupted) {
@@ -1544,7 +1548,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
   m_input_lines = std::vector<EditLineStringType>();
   m_input_lines.insert(m_input_lines.begin(), EditLineConstString(""));
 
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   // Begin the line editing loop
   DisplayInput();
   SetCurrentLine(0);
@@ -1574,7 +1578,7 @@ bool Editline::GetLines(int first_line_number, StringList &lines,
 }
 
 void Editline::PrintAsync(Stream *stream, const char *s, size_t len) {
-  std::lock_guard<std::mutex> guard(m_output_mutex);
+  std::lock_guard<std::recursive_mutex> guard(m_output_mutex);
   if (m_editor_status == EditorStatus::Editing) {
     MoveCursor(CursorLocation::EditingCursor, CursorLocation::BlockStart);
     fprintf(m_output_file, ANSI_CLEAR_BELOW);

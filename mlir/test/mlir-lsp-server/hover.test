@@ -66,7 +66,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "Operation: \"builtin.func\"\n\nBlock #1\n\nPredecessors: <Block #0>\n\n"
+// CHECK-NEXT:      "value": "Operation: \"func.func\"\n\nBlock #1\n\nPredecessors: <Block #0>\n\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
@@ -90,7 +90,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "Operation: \"builtin.func\"\n\nBlock: <Block #0>\n\nArgument #0\n\nType: `i1`\n\n"
+// CHECK-NEXT:      "value": "Operation: \"func.func\"\n\nBlock: <Block #0>\n\nArgument #0\n\nType: `i1`\n\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
@@ -114,7 +114,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "\"builtin.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"builtin.func\"() ({\n}) {sym_name = \"foo\", type = (i1) -> ()} : () -> ()\n```\n"
+// CHECK-NEXT:      "value": "\"func.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"func.func\"() ({\n}) {function_type = (i1) -> (), sym_name = \"foo\"} : () -> ()\n```\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {
@@ -138,7 +138,7 @@
 // CHECK-NEXT:  "result": {
 // CHECK-NEXT:    "contents": {
 // CHECK-NEXT:      "kind": "markdown",
-// CHECK-NEXT:      "value": "\"builtin.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"builtin.func\"() ({\n}) {sym_name = \"foo\", type = (i1) -> ()} : () -> ()\n```\n"
+// CHECK-NEXT:      "value": "\"func.func\" : public @foo\n\nGeneric Form:\n\n```mlir\n\"func.func\"() ({\n}) {function_type = (i1) -> (), sym_name = \"foo\"} : () -> ()\n```\n"
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:      "end": {

@@ -51,6 +51,8 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsAArch64.h"
+#include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -4140,14 +4142,35 @@ Error BitcodeReader::propagateAttributeTypes(CallBase *CB,
   switch (CB->getIntrinsicID()) {
   case Intrinsic::preserve_array_access_index:
   case Intrinsic::preserve_struct_access_index:
-    if (!Attrs.getParamElementType(0)) {
-      Type *ElTy = getPtrElementTypeByID(ArgTyIDs[0]);
+  case Intrinsic::aarch64_ldaxr:
+  case Intrinsic::aarch64_ldxr:
+  case Intrinsic::aarch64_stlxr:
+  case Intrinsic::aarch64_stxr:
+  case Intrinsic::arm_ldaex:
+  case Intrinsic::arm_ldrex:
+  case Intrinsic::arm_stlex:
+  case Intrinsic::arm_strex: {
+    unsigned ArgNo;
+    switch (CB->getIntrinsicID()) {
+    case Intrinsic::aarch64_stlxr:
+    case Intrinsic::aarch64_stxr:
+    case Intrinsic::arm_stlex:
+    case Intrinsic::arm_strex:
+      ArgNo = 1;
+      break;
+    default:
+      ArgNo = 0;
+      break;
+    }
+    if (!Attrs.getParamElementType(ArgNo)) {
+      Type *ElTy = getPtrElementTypeByID(ArgTyIDs[ArgNo]);
       if (!ElTy)
         return error("Missing element type for elementtype upgrade");
       Attribute NewAttr = Attribute::get(Context, Attribute::ElementType, ElTy);
-      Attrs = Attrs.addParamAttribute(Context, 0, NewAttr);
+      Attrs = Attrs.addParamAttribute(Context, ArgNo, NewAttr);
     }
     break;
+  }
   default:
     break;
   }

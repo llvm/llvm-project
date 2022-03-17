@@ -26,16 +26,10 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/Constant.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -131,8 +125,8 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
           for (unsigned i = start->getNumOperands() - 1; i >= 2; i-=2)
             if (start->getOperand(i).isMBB() &&
                 start->getOperand(i).getMBB() == &BB) {
-              start->RemoveOperand(i);
-              start->RemoveOperand(i-1);
+              start->removeOperand(i);
+              start->removeOperand(i-1);
             }
 
           start++;
@@ -162,8 +156,8 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
     while (phi != BB.end() && phi->isPHI()) {
       for (unsigned i = phi->getNumOperands() - 1; i >= 2; i-=2)
         if (!preds.count(phi->getOperand(i).getMBB())) {
-          phi->RemoveOperand(i);
-          phi->RemoveOperand(i-1);
+          phi->removeOperand(i);
+          phi->removeOperand(i-1);
           ModifiedPHI = true;
         }
 

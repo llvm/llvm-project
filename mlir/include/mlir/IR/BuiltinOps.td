@@ -15,11 +15,9 @@
 #define BUILTIN_OPS
 
 include "mlir/IR/BuiltinDialect.td"
-include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -27,131 +25,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Base class for Builtin dialect ops.
 class Builtin_Op<string mnemonic, list<Trait> traits = []> :
     Op<Builtin_Dialect, mnemonic, traits>;
-
-//===----------------------------------------------------------------------===//
-// FuncOp
-//===----------------------------------------------------------------------===//
-
-def FuncOp : Builtin_Op<"func", [
-  AffineScope, AutomaticAllocationScope, CallableOpInterface,
-  FunctionOpInterface, IsolatedFromAbove, Symbol
-]> {
-  let summary = "An operation with a name containing a single `SSACFG` region";
-  let description = [{
-    Operations within the function cannot implicitly capture values defined
-    outside of the function, i.e. Functions are `IsolatedFromAbove`. All
-    external references must use function arguments or attributes that establish
-    a symbolic connection (e.g. symbols referenced by name via a string
-    attribute like SymbolRefAttr). An external function declaration (used when
-    referring to a function declared in some other module) has no body. While
-    the MLIR textual form provides a nice inline syntax for function arguments,
-    they are internally represented as “block arguments” to the first block in
-    the region.
-
-    Only dialect attribute names may be specified in the attribute dictionaries
-    for function arguments, results, or the function itself.
-
-    Example:
-
-    ```mlir
-    // External function definitions.
-    func @abort()
-    func @scribble(i32, i64, memref<? x 128 x f32, #layout_map0>) -> f64
-
-    // A function that returns its argument twice:
-    func @count(%x: i64) -> (i64, i64)
-      attributes {fruit: "banana"} {
-      return %x, %x: i64, i64
-    }
-
-    // A function with an argument attribute
-    func @example_fn_arg(%x: i32 {swift.self = unit})
-
-    // A function with a result attribute
-    func @example_fn_result() -> (f64 {dialectName.attrName = 0 : i64})
-
-    // A function with an attribute
-    func @example_fn_attr() attributes {dialectName.attrName = false}
-    ```
-  }];
-
-  let arguments = (ins SymbolNameAttr:$sym_name,
-                       TypeAttrOf<FunctionType>:$type,
-                       OptionalAttr<StrAttr>:$sym_visibility);
-  let regions = (region AnyRegion:$body);
-
-  let builders = [OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$type,
-    CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
-    CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs)
-  >];
-  let extraClassDeclaration = [{
-    static FuncOp create(Location location, StringRef name, FunctionType type,
-                         ArrayRef<NamedAttribute> attrs = {});
-    static FuncOp create(Location location, StringRef name, FunctionType type,
-                         Operation::dialect_attr_range attrs);
-    static FuncOp create(Location location, StringRef name, FunctionType type,
-                         ArrayRef<NamedAttribute> attrs,
-                         ArrayRef<DictionaryAttr> argAttrs);
-
-    /// Create a deep copy of this function and all of its blocks, remapping any
-    /// operands that use values outside of the function using the map that is
-    /// provided (leaving them alone if no entry is present). If the mapper
-    /// contains entries for function arguments, these arguments are not
-    /// included in the new function. Replaces references to cloned sub-values
-    /// with the corresponding value that is copied, and adds those mappings to
-    /// the mapper.
-    FuncOp clone(BlockAndValueMapping &mapper);
-    FuncOp clone();
-
-    /// Clone the internal blocks and attributes from this function into dest.
-    /// Any cloned blocks are appended to the back of dest. This function
-    /// asserts that the attributes of the current function and dest are
-    /// compatible.
-    void cloneInto(FuncOp dest, BlockAndValueMapping &mapper);
-
-    //===------------------------------------------------------------------===//
-    // CallableOpInterface
-    //===------------------------------------------------------------------===//
-
-    /// Returns the region on the current operation that is callable. This may
-    /// return null in the case of an external callable object, e.g. an external
-    /// function.
-    ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr : &getBody(); }
-
-    /// Returns the results types that the callable region produces when
-    /// executed.
-    ArrayRef<Type> getCallableResults() { return getType().getResults(); }
-
-    //===------------------------------------------------------------------===//
-    // FunctionOpInterface Methods
-    //===------------------------------------------------------------------===//
-
-    /// Returns the argument types of this function.
-    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
-
-    /// Returns the result types of this function.
-    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
-
-    /// Verify the type attribute of this function. Returns failure and emits
-    /// an error if the attribute is invalid.
-    LogicalResult verifyType() {
-      auto type = getTypeAttr().getValue();
-      if (!type.isa<FunctionType>())
-        return emitOpError("requires '" + FunctionOpInterface::getTypeAttrName() +
-                           "' attribute of function type");
-      return success();
-    }
-
-    //===------------------------------------------------------------------===//
-    // SymbolOpInterface Methods
-    //===------------------------------------------------------------------===//
-
-    bool isDeclaration() { return isExternal(); }
-  }];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // ModuleOp

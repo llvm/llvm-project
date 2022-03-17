@@ -3965,16 +3965,15 @@ bool SROAPass::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
   for (LoadInst *LI : Loads) {
     SplitLoads.clear();
 
-    IntegerType *Ty = cast<IntegerType>(LI->getType());
-    assert(Ty->getBitWidth() % 8 == 0);
-    uint64_t LoadSize = Ty->getBitWidth() / 8;
-    assert(LoadSize > 0 && "Cannot have a zero-sized integer load!");
-
     auto &Offsets = SplitOffsetsMap[LI];
-    assert(LoadSize == Offsets.S->endOffset() - Offsets.S->beginOffset() &&
-           "Slice size should always match load size exactly!");
+    unsigned SliceSize = Offsets.S->endOffset() - Offsets.S->beginOffset();
+    assert(LI->getType()->getIntegerBitWidth() % 8 == 0 &&
+           "Load must have type size equal to store size");
+    assert(LI->getType()->getIntegerBitWidth() / 8 >= SliceSize &&
+           "Load must be >= slice size");
+
     uint64_t BaseOffset = Offsets.S->beginOffset();
-    assert(BaseOffset + LoadSize > BaseOffset &&
+    assert(BaseOffset + SliceSize > BaseOffset &&
            "Cannot represent alloca access size using 64-bit integers!");
 
     Instruction *BasePtr = cast<Instruction>(LI->getPointerOperand());
@@ -3985,7 +3984,7 @@ bool SROAPass::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
     uint64_t PartOffset = 0, PartSize = Offsets.Splits.front();
     int Idx = 0, Size = Offsets.Splits.size();
     for (;;) {
-      auto *PartTy = Type::getIntNTy(Ty->getContext(), PartSize * 8);
+      auto *PartTy = Type::getIntNTy(LI->getContext(), PartSize * 8);
       auto AS = LI->getPointerAddressSpace();
       auto *PartPtrTy = PartTy->getPointerTo(AS);
       LoadInst *PLoad = IRB.CreateAlignedLoad(
@@ -4018,7 +4017,7 @@ bool SROAPass::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       // Setup the next partition.
       PartOffset = Offsets.Splits[Idx];
       ++Idx;
-      PartSize = (Idx < Size ? Offsets.Splits[Idx] : LoadSize) - PartOffset;
+      PartSize = (Idx < Size ? Offsets.Splits[Idx] : SliceSize) - PartOffset;
     }
 
     // Now that we have the split loads, do the slow walk over all uses of the

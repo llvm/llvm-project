@@ -19,7 +19,6 @@
 #include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
-class FuncOp;
 class Location;
 class Operation;
 class OpBuilder;
@@ -27,6 +26,10 @@ class Region;
 class RewriterBase;
 class ValueRange;
 class Value;
+
+namespace func {
+class FuncOp;
+} // namespace func
 
 namespace scf {
 class IfOp;
@@ -68,8 +71,9 @@ scf::ForOp cloneWithNewYields(OpBuilder &b, scf::ForOp loop,
 /// collide with another FuncOp name.
 // TODO: support more than single-block regions.
 // TODO: more flexible constant handling.
-FailureOr<FuncOp> outlineSingleBlockRegion(RewriterBase &rewriter, Location loc,
-                                           Region &region, StringRef funcName);
+FailureOr<func::FuncOp> outlineSingleBlockRegion(RewriterBase &rewriter,
+                                                 Location loc, Region &region,
+                                                 StringRef funcName);
 
 /// Outline the then and/or else regions of `ifOp` as follows:
 ///  - if `thenFn` is not null, `thenFnName` must be specified and the `then`
@@ -79,8 +83,8 @@ FailureOr<FuncOp> outlineSingleBlockRegion(RewriterBase &rewriter, Location loc,
 /// Creates new FuncOps and thus cannot be used in a FuncOp pass.
 /// The client is responsible for providing a unique `thenFnName`/`elseFnName`
 /// that will not collide with another FuncOp name.
-LogicalResult outlineIfOp(RewriterBase &b, scf::IfOp ifOp, FuncOp *thenFn,
-                          StringRef thenFnName, FuncOp *elseFn,
+LogicalResult outlineIfOp(RewriterBase &b, scf::IfOp ifOp, func::FuncOp *thenFn,
+                          StringRef thenFnName, func::FuncOp *elseFn,
                           StringRef elseFnName);
 
 /// Get a list of innermost parallel loops contained in `rootOp`. Innermost

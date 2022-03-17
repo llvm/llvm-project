@@ -26,8 +26,8 @@ ProcessInfo::ProcessInfo()
 
 ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
                          lldb::pid_t pid)
-    : m_executable(name), m_arguments(), m_environment(), m_uid(UINT32_MAX),
-      m_gid(UINT32_MAX), m_arch(arch), m_pid(pid) {}
+    : m_executable(name), m_arguments(), m_environment(), m_arch(arch),
+      m_pid(pid) {}
 
 void ProcessInfo::Clear() {
   m_executable.Clear();

@@ -95,13 +95,14 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
       mlirAttributeParseGet(ctx, mlirStringRefCreateFromCString("\"add\""));
   MlirNamedAttribute funcAttrs[] = {
       mlirNamedAttributeGet(
-          mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("type")),
+          mlirIdentifierGet(ctx,
+                            mlirStringRefCreateFromCString("function_type")),
           funcTypeAttr),
       mlirNamedAttributeGet(
           mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("sym_name")),
           funcNameAttr)};
   MlirOperationState funcState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("builtin.func"), location);
+      mlirStringRefCreateFromCString("func.func"), location);
   mlirOperationStateAddAttributes(&funcState, 2, funcAttrs);
   mlirOperationStateAddOwnedRegions(&funcState, 1, &funcBodyRegion);
   MlirOperation func = mlirOperationCreate(&funcState);

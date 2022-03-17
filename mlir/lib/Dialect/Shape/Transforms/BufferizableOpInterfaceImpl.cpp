@@ -29,7 +29,7 @@ struct AssumingOpInterface
                                                     shape::AssumingOp> {
   SmallVector<OpOperand *>
   getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const BufferizationState &state) const {
+                       const AnalysisState &state) const {
     // AssumingOps do not have tensor OpOperands. The yielded value can be any
     // SSA value that is in scope. To allow for use-def chain traversal through
     // AssumingOps in the analysis, the corresponding yield value is considered
@@ -49,7 +49,7 @@ struct AssumingOpInterface
   // TODO: For better bufferization results, this could return `true` only if
   // there is a memory write in the region.
   bool isMemoryWrite(Operation *op, OpResult opResult,
-                     const BufferizationState &state) const {
+                     const AnalysisState &state) const {
     // Similar to scf.if, results of this op are always considered memory writes
     // in the analysis. This is a useful pattern for all ops that have tensor
     // OpResults but no tensor OpOperands. By default, `isMemoryWrite` is
@@ -59,7 +59,7 @@ struct AssumingOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto assumingOp = cast<shape::AssumingOp>(op);
 
     // Compute new result types.
@@ -115,8 +115,13 @@ struct AssumingOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
+  }
+
+  bool isAllocationHoistingBarrier(Operation *op) const {
+    // Allocations should not be hoisted out of AssumingOps.
+    return true;
   }
 };
 
@@ -126,25 +131,24 @@ struct AssumingYieldOpInterface
     : public BufferizableOpInterface::ExternalModel<AssumingYieldOpInterface,
                                                     shape::AssumingOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     assert(isa<shape::AssumingOp>(op->getParentOp()) &&
            "expected that parent is an AssumingOp");
     return {op->getParentOp()->getResult(opOperand.getOperandNumber())};
   }
 
   bool mustBufferizeInPlace(Operation *op, OpOperand &opOperand,
-                            const BufferizationState &state) const {
+                            const AnalysisState &state) const {
     // Yield operands always bufferize inplace. Otherwise, an alloc + copy
     // may be generated inside the block. We should not return/yield allocations
     // when possible.
@@ -152,7 +156,7 @@ struct AssumingYieldOpInterface
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     // Op is bufferized as part of AssumingOp.
     return failure();
   }
@@ -164,6 +168,8 @@ struct AssumingYieldOpInterface
 
 void mlir::shape::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<shape::AssumingOp, AssumingOpInterface>();
-  registry.addOpInterface<shape::AssumingYieldOp, AssumingYieldOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, shape::ShapeDialect *dialect) {
+    shape::AssumingOp::attachInterface<AssumingOpInterface>(*ctx);
+    shape::AssumingYieldOp::attachInterface<AssumingYieldOpInterface>(*ctx);
+  });
 }

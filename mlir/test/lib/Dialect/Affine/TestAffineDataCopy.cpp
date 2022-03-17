@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -22,8 +23,6 @@
 #define PASS_NAME "test-affine-data-copy"
 
 using namespace mlir;
-
-static llvm::cl::OptionCategory clOptionsCategory(PASS_NAME " options");
 
 namespace {
 

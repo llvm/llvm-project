@@ -27,7 +27,9 @@ namespace internal {
 
 void call_exit_callbacks() {
   handler_list_mtx.lock();
-  for (auto callback : exit_callbacks) {
+  while (!exit_callbacks.empty()) {
+    auto *callback = exit_callbacks.back();
+    exit_callbacks.pop_back();
     handler_list_mtx.unlock();
     callback();
     handler_list_mtx.lock();

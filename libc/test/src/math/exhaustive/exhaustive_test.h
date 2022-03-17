@@ -22,5 +22,5 @@ struct LlvmLibcExhaustiveTest : public __llvm_libc::testing::Test {
   void test_full_range(T start, T stop, int nthreads,
                        mpfr::RoundingMode rounding);
 
-  virtual void check(T start, T stop, mpfr::RoundingMode rounding) = 0;
+  virtual bool check(T start, T stop, mpfr::RoundingMode rounding) = 0;
 };

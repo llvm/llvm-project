@@ -2,8 +2,8 @@
 
 config.llvm_src_root = "@LLVM_SOURCE_DIR@"
 config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
-config.llvm_libs_dir = "@LLVM_LIBS_DIR@"
+config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
+config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
 config.polly_obj_root = "@POLLY_BINARY_DIR@"
 config.polly_lib_dir = "@POLLY_LIB_DIR@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
@@ -20,16 +20,6 @@ if (re.match(r'^x86_64*', '@LLVM_TARGET_TRIPLE@') == None) :
 
 for arch in config.targets_to_build.split():
     config.available_features.add(arch.lower() + '-registered-target')
-
-# Support substitution of the tools and libs dirs with user parameters. This is
-# used when we can't determine the tool dir at configuration time.
-try:
-    config.llvm_tools_dir = config.llvm_tools_dir % lit_config.params
-    config.llvm_libs_dir = config.llvm_libs_dir % lit_config.params
-except KeyError:
-    e = sys.exc_info()[1]
-    key, = e.args
-    lit_config.fatal("unable to find %r parameter, use '--param=%s=VALUE'" % (key,key))
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent

@@ -181,7 +181,7 @@ INTERFACE_WEAK_FUNCTION(__asan_default_options)
 INTERFACE_WEAK_FUNCTION(__asan_default_suppressions)
 INTERFACE_WEAK_FUNCTION(__asan_on_error)
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(__APPLE__) && !defined(_WIN32)
 
 #  define ASAN_MEMORY_ACCESS_CALLBACK_ADD(s, reg, op) \
     INTERFACE_FUNCTION(__asan_check_##op##_add_##s##_##reg)
@@ -212,5 +212,5 @@ ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R13)
 ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R14)
 ASAN_MEMORY_ACCESS_CALLBACKS_ADD(R15)
 
-#endif  // defined(__x86_64__)
+#endif  // defined(__x86_64__) && !defined(__APPLE__) && !defined(_WIN32)
 

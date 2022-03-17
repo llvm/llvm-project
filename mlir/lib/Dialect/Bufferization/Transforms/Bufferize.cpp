@@ -153,19 +153,21 @@ struct OneShotBufferizePass
     : public OneShotBufferizeBase<OneShotBufferizePass> {
   OneShotBufferizePass() : OneShotBufferizeBase<OneShotBufferizePass>() {}
 
-  explicit OneShotBufferizePass(const AnalysisBufferizationOptions &options)
+  explicit OneShotBufferizePass(const OneShotBufferizationOptions &options)
       : options(options) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<bufferization::BufferizationDialect>();
+    registry
+        .insert<bufferization::BufferizationDialect, memref::MemRefDialect>();
+    registerAllocationOpInterfaceExternalModels(registry);
   }
 
   void runOnOperation() override {
-    AnalysisBufferizationOptions opt;
+    OneShotBufferizationOptions opt;
     if (!options) {
       // Make new bufferization options if none were provided when creating the
       // pass.
-      opt.allowReturnMemref = allowReturnMemref;
+      opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
       opt.createDeallocs = createDeallocs;
@@ -209,7 +211,7 @@ struct OneShotBufferizePass
   }
 
 private:
-  llvm::Optional<AnalysisBufferizationOptions> options;
+  llvm::Optional<OneShotBufferizationOptions> options;
 };
 } // namespace
 
@@ -218,7 +220,7 @@ std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
 }
 
 std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass(
-    const AnalysisBufferizationOptions &options) {
+    const OneShotBufferizationOptions &options) {
   return std::make_unique<OneShotBufferizePass>(options);
 }
 
@@ -243,23 +245,25 @@ static bool hasTensorSemantics(Operation *op) {
 /// Rewrite pattern that bufferizes bufferizable ops.
 struct BufferizationPattern
     : public OpInterfaceRewritePattern<BufferizableOpInterface> {
-  BufferizationPattern(MLIRContext *context, const BufferizationState &state,
+  BufferizationPattern(MLIRContext *context, BufferizationState &state,
                        PatternBenefit benefit = 1)
       : OpInterfaceRewritePattern<BufferizableOpInterface>(context, benefit),
-        state(state) {}
+        state(&state) {}
 
   LogicalResult matchAndRewrite(BufferizableOpInterface bufferizableOp,
                                 PatternRewriter &rewriter) const override {
+    const BufferizationOptions &options = state->getOptions();
+
     // No tensors => no buffers.
     if (!hasTensorSemantics(bufferizableOp.getOperation()))
       return failure();
-    if (!state.getOptions().isOpAllowed(bufferizableOp.getOperation()))
+    if (!options.isOpAllowed(bufferizableOp.getOperation()))
       return failure();
-    return bufferizableOp.bufferize(rewriter, state);
+    return bufferizableOp.bufferize(rewriter, *state);
   }
 
 private:
-  const BufferizationState &state;
+  BufferizationState *const state;
 };
 
 /// Check the result of bufferization. Return an error if an op was not
@@ -297,40 +301,76 @@ checkBufferizationResult(Operation *op, const BufferizationOptions &options) {
   return success();
 }
 
+LogicalResult
+bufferization::finalizeBuffers(Operation *op,
+                               const BufferizationOptions &options) {
+  if (failed(hoistBufferAllocations(op, options)))
+    return failure();
+  if (failed(createAllocDeallocOps(op, options, /*onlyLeakingAllocs=*/true)))
+    return failure();
+  if (options.createDeallocs && failed(deallocateBuffers(op)))
+    return failure();
+  if (failed(createAllocDeallocOps(op, options)))
+    return failure();
+
+  return success();
+}
+
 LogicalResult bufferization::bufferizeOp(Operation *op,
-                                         const BufferizationState &state) {
+                                         const AnalysisState &analysisState) {
+  BufferizationState bufferizationState(analysisState);
+  if (failed(bufferizeOp(op, bufferizationState)))
+    return failure();
+  if (failed(finalizeBuffers(op, analysisState.getOptions())))
+    return failure();
+  return success();
+}
+
+LogicalResult
+bufferization::bufferizeOp(Operation *op,
+                           BufferizationState &bufferizationState) {
   // Bufferize the op and its nested ops.
   RewritePatternSet patterns(op->getContext());
-  populateBufferizationPattern(state, patterns);
+  patterns.add<BufferizationPattern>(patterns.getContext(), bufferizationState);
 
   // Bufferize ops top-to-bottom. When creating a new op, we should ideally
   // know the exact memref type of all operands. Otherwise, we have to use a
   // memref type with a fully dynamic layout map, which has to canonicalize
-  // away.
-  // Moreover, if "fullyDynamicLayoutMaps = false", we may otherwise have to
-  // insert buffer copies to fold ("finalize") to_memref(to_tensor(x)) ops with
-  // non-cast-compatible layout maps.
+  // away. This is less efficient.
+  //
+  // Note: If "fullyDynamicLayoutMaps = false", we may have to insert buffer
+  // copies to fold ("finalize") to_memref(to_tensor(x)) ops with non-cast-
+  // compatible layout maps when doing a traversal other than top-to-bottom.
+  // There are currently no canonicalization patterns to fold these away.
   GreedyRewriteConfig config;
   config.useTopDownTraversal = true;
 
-  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+  // TODO: Perform a preorder walk instead of the greedy pattern rewriter. This
+  // would be more efficient because every bufferization pattern is guaranteed
+  // to apply only a single time (otherwise, an assertion would be triggered).
+  // However, there are restrictions wrt. erasing ops during a preorder walk,
+  // which would likely require a larger refactoring.
+  if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns), config)))
     return failure();
 
-  return checkBufferizationResult(op, state.getOptions());
+  if (failed(checkBufferizationResult(op, bufferizationState.getOptions())))
+    return failure();
+
+  return success();
 }
 
 namespace {
-/// This a "no analysis, always copy" BufferizationState. In the absence of an
+/// This a "no analysis, always copy" AnalysisState. In the absence of an
 /// analysis, a buffer must be copied each time it is written to. Therefore, all
 /// OpOperands that bufferize to a memory write must bufferize out-of-place.
-class AlwaysCopyBufferizationState : public BufferizationState {
+class AlwaysCopyAnalysisState : public AnalysisState {
 public:
-  AlwaysCopyBufferizationState(const BufferizationOptions &options)
-      : BufferizationState(options) {}
+  AlwaysCopyAnalysisState(const BufferizationOptions &options)
+      : AnalysisState(options) {}
 
-  AlwaysCopyBufferizationState(const AlwaysCopyBufferizationState &) = delete;
+  AlwaysCopyAnalysisState(const AlwaysCopyAnalysisState &) = delete;
 
-  virtual ~AlwaysCopyBufferizationState() = default;
+  virtual ~AlwaysCopyAnalysisState() = default;
 
   /// Return `true` if the given OpResult has been decided to bufferize inplace.
   bool isInPlace(OpOperand &opOperand) const override {
@@ -350,18 +390,12 @@ public:
 
 LogicalResult bufferization::bufferizeOp(Operation *op,
                                          const BufferizationOptions &options) {
-  AlwaysCopyBufferizationState state(options);
+  AlwaysCopyAnalysisState state(options);
   return bufferizeOp(op, state);
-}
-
-void bufferization::populateBufferizationPattern(
-    const BufferizationState &state, RewritePatternSet &patterns) {
-  patterns.add<BufferizationPattern>(patterns.getContext(), state);
 }
 
 BufferizationOptions bufferization::getPartialBufferizationOptions() {
   BufferizationOptions options;
-  options.allowReturnMemref = true;
   options.allowUnknownOps = true;
   options.createDeallocs = false;
   options.fullyDynamicLayoutMaps = false;

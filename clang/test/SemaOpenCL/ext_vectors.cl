@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++2021
 
 typedef float float4 __attribute__((ext_vector_type(4)));
+typedef __attribute__((ext_vector_type(8))) bool BoolVector; // expected-error {{invalid vector element type 'bool'}}
 
 void test_ext_vector_accessors(float4 V) {
   V = V.wzyx;

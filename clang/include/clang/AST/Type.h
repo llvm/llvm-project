@@ -57,6 +57,7 @@
 
 namespace clang {
 
+class BTFTypeTagAttr;
 class ExtQuals;
 class QualType;
 class ConceptDecl;
@@ -2048,6 +2049,7 @@ public:
   bool isComplexIntegerType() const;            // GCC _Complex integer type.
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
+  bool isExtVectorBoolType() const;             // Extended vector type with bool element.
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
@@ -4788,6 +4790,40 @@ public:
   }
 };
 
+class BTFTagAttributedType : public Type, public llvm::FoldingSetNode {
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType WrappedType;
+  const BTFTypeTagAttr *BTFAttr;
+
+  BTFTagAttributedType(QualType Canon, QualType Wrapped,
+                       const BTFTypeTagAttr *BTFAttr)
+      : Type(BTFTagAttributed, Canon, Wrapped->getDependence()),
+        WrappedType(Wrapped), BTFAttr(BTFAttr) {}
+
+public:
+  QualType getWrappedType() const { return WrappedType; }
+  const BTFTypeTagAttr *getAttr() const { return BTFAttr; }
+
+  bool isSugared() const { return true; }
+  QualType desugar() const { return getWrappedType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, WrappedType, BTFAttr);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Wrapped,
+                      const BTFTypeTagAttr *BTFAttr) {
+    ID.AddPointer(Wrapped.getAsOpaquePtr());
+    ID.AddPointer(BTFAttr);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == BTFTagAttributed;
+  }
+};
+
 class TemplateTypeParmType : public Type, public llvm::FoldingSetNode {
   friend class ASTContext; // ASTContext creates these
 
@@ -6809,6 +6845,12 @@ inline bool Type::isExtVectorType() const {
   return isa<ExtVectorType>(CanonicalType);
 }
 
+inline bool Type::isExtVectorBoolType() const {
+  if (!isExtVectorType())
+    return false;
+  return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
+}
+
 inline bool Type::isMatrixType() const {
   return isa<MatrixType>(CanonicalType);
 }
@@ -7222,6 +7264,8 @@ template <typename T> const T *Type::getAsAdjusted() const {
   while (Ty) {
     if (const auto *A = dyn_cast<AttributedType>(Ty))
       Ty = A->getModifiedType().getTypePtr();
+    else if (const auto *A = dyn_cast<BTFTagAttributedType>(Ty))
+      Ty = A->getWrappedType().getTypePtr();
     else if (const auto *E = dyn_cast<ElaboratedType>(Ty))
       Ty = E->desugar().getTypePtr();
     else if (const auto *P = dyn_cast<ParenType>(Ty))

@@ -45,7 +45,7 @@ void foo(int i) {
   }
 
   __attribute__((fastcall)) goto there; // expected-error {{'fastcall' attribute cannot be applied to a statement}}
-  __attribute__((noinline)) there :     // expected-error {{'noinline' attribute only applies to functions and statements}}
+  __attribute__((noinline)) there :     // expected-warning {{'noinline' attribute only applies to functions and statements}}
 
                                     __attribute__((weakref)) return; // expected-error {{'weakref' attribute only applies to variables and functions}}
 

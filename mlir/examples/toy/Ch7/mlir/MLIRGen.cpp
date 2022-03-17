@@ -60,11 +60,9 @@ public:
 
     for (auto &record : moduleAST) {
       if (FunctionAST *funcAST = llvm::dyn_cast<FunctionAST>(record.get())) {
-        auto func = mlirGen(*funcAST);
+        mlir::toy::FuncOp func = mlirGen(*funcAST);
         if (!func)
           return nullptr;
-
-        theModule.push_back(func);
         functionMap.insert({func.getName(), func});
       } else if (StructAST *str = llvm::dyn_cast<StructAST>(record.get())) {
         if (failed(mlirGen(*str)))
@@ -105,7 +103,7 @@ private:
                                  std::pair<mlir::Value, VarDeclExprAST *>>;
 
   /// A mapping for the functions that have been code generated to MLIR.
-  llvm::StringMap<mlir::FuncOp> functionMap;
+  llvm::StringMap<mlir::toy::FuncOp> functionMap;
 
   /// A mapping for named struct types to the underlying MLIR type and the
   /// original AST node.
@@ -157,7 +155,7 @@ private:
 
   /// Create the prototype for an MLIR function with as many arguments as the
   /// provided Toy AST prototype.
-  mlir::FuncOp mlirGen(PrototypeAST &proto) {
+  mlir::toy::FuncOp mlirGen(PrototypeAST &proto) {
     auto location = loc(proto.loc());
 
     // This is a generic function, the return type will be inferred later.
@@ -170,23 +168,23 @@ private:
       argTypes.push_back(type);
     }
     auto funcType = builder.getFunctionType(argTypes, llvm::None);
-    return mlir::FuncOp::create(location, proto.getName(), funcType);
+    return builder.create<mlir::toy::FuncOp>(location, proto.getName(),
+                                             funcType);
   }
 
   /// Emit a new function and add it to the MLIR module.
-  mlir::FuncOp mlirGen(FunctionAST &funcAST) {
+  mlir::toy::FuncOp mlirGen(FunctionAST &funcAST) {
     // Create a scope in the symbol table to hold variable declarations.
     SymbolTableScopeT varScope(symbolTable);
 
     // Create an MLIR function for the given prototype.
-    mlir::FuncOp function(mlirGen(*funcAST.getProto()));
+    builder.setInsertionPointToEnd(theModule.getBody());
+    mlir::toy::FuncOp function = mlirGen(*funcAST.getProto());
     if (!function)
       return nullptr;
 
     // Let's start the body of the function now!
-    // In MLIR the entry block of the function is special: it must have the same
-    // argument list as the function itself.
-    auto &entryBlock = *function.addEntryBlock();
+    mlir::Block &entryBlock = function.front();
     auto protoArgs = funcAST.getProto()->getArgs();
 
     // Declare all the function arguments in the symbol table.
@@ -218,8 +216,9 @@ private:
     } else if (returnOp.hasOperand()) {
       // Otherwise, if this return operation has an operand then add a result to
       // the function.
-      function.setType(builder.getFunctionType(function.getType().getInputs(),
-                                               *returnOp.operand_type_begin()));
+      function.setType(
+          builder.getFunctionType(function.getFunctionType().getInputs(),
+                                  *returnOp.operand_type_begin()));
     }
 
     // If this function isn't main, then set the visibility to private.
@@ -519,9 +518,9 @@ private:
       emitError(location) << "no defined function found for '" << callee << "'";
       return nullptr;
     }
-    mlir::FuncOp calledFunc = calledFuncIt->second;
+    mlir::toy::FuncOp calledFunc = calledFuncIt->second;
     return builder.create<GenericCallOp>(
-        location, calledFunc.getType().getResult(0),
+        location, calledFunc.getFunctionType().getResult(0),
         mlir::SymbolRefAttr::get(builder.getContext(), callee), operands);
   }
 

@@ -54,6 +54,12 @@ public:
 
 } // namespace
 
+bool DylinkSection::isNeeded() const {
+  return config->isPic ||
+         config->unresolvedSymbols == UnresolvedPolicy::ImportDynamic ||
+         !symtab->sharedFiles.empty();
+}
+
 void DylinkSection::writeBody() {
   raw_ostream &os = bodyOutputStream;
 
@@ -408,6 +414,7 @@ void GlobalSection::addInternalGOTEntry(Symbol *sym) {
 }
 
 void GlobalSection::generateRelocationCode(raw_ostream &os, bool TLS) const {
+  assert(!config->extendedConst);
   bool is64 = config->is64.getValueOr(false);
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
@@ -463,10 +470,10 @@ void GlobalSection::writeBody() {
   for (const Symbol *sym : internalGotSymbols) {
     bool mutable_ = false;
     if (!sym->isStub) {
-      // In the case of dynamic linking, these global must to be mutable since
-      // they get updated to the correct runtime value during
-      // `__wasm_apply_global_relocs`.
-      if (config->isPic && !sym->isTLS())
+      // In the case of dynamic linking, unless we have 'extended-const'
+      // available, these global must to be mutable since they get updated to
+      // the correct runtime value during `__wasm_apply_global_relocs`.
+      if (!config->extendedConst && config->isPic && !sym->isTLS())
         mutable_ = true;
       // With multi-theadeding any TLS globals must be mutable since they get
       // set during `__wasm_apply_global_tls_relocs`
@@ -474,17 +481,33 @@ void GlobalSection::writeBody() {
         mutable_ = true;
     }
     WasmGlobalType type{itype, mutable_};
-    WasmInitExpr initExpr;
-    if (auto *d = dyn_cast<DefinedData>(sym))
-      initExpr = intConst(d->getVA(), is64);
-    else if (auto *f = dyn_cast<FunctionSymbol>(sym))
-      initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
-    else {
-      assert(isa<UndefinedData>(sym));
-      initExpr = intConst(0, is64);
-    }
     writeGlobalType(os, type);
-    writeInitExpr(os, initExpr);
+
+    if (config->extendedConst && config->isPic && !sym->isTLS() &&
+        isa<DefinedData>(sym)) {
+      // We can use an extended init expression to add a constant
+      // offset of __memory_base.
+      auto *d = cast<DefinedData>(sym);
+      writeU8(os, WASM_OPCODE_GLOBAL_GET, "global get");
+      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(),
+                   "literal (global index)");
+      if (d->getVA()) {
+        writePtrConst(os, d->getVA(), is64, "offset");
+        writeU8(os, is64 ? WASM_OPCODE_I64_ADD : WASM_OPCODE_I32_ADD, "add");
+      }
+      writeU8(os, WASM_OPCODE_END, "opcode:end");
+    } else {
+      WasmInitExpr initExpr;
+      if (auto *d = dyn_cast<DefinedData>(sym))
+        initExpr = intConst(d->getVA(), is64);
+      else if (auto *f = dyn_cast<FunctionSymbol>(sym))
+        initExpr = intConst(f->isStub ? 0 : f->getTableIndex(), is64);
+      else {
+        assert(isa<UndefinedData>(sym));
+        initExpr = intConst(0, is64);
+      }
+      writeInitExpr(os, initExpr);
+    }
   }
   for (const DefinedData *sym : dataAddressGlobals) {
     WasmGlobalType type{itype, false};
@@ -542,15 +565,16 @@ void ElemSection::writeBody() {
     writeUleb128(os, tableNumber, "table number");
 
   WasmInitExpr initExpr;
+  initExpr.Extended = false;
   if (config->isPic) {
-    initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
-    initExpr.Value.Global =
+    initExpr.Inst.Opcode = WASM_OPCODE_GLOBAL_GET;
+    initExpr.Inst.Value.Global =
         (config->is64.getValueOr(false) ? WasmSym::tableBase32
                                         : WasmSym::tableBase)
             ->getGlobalIndex();
   } else {
-    initExpr.Opcode = WASM_OPCODE_I32_CONST;
-    initExpr.Value.Int32 = config->tableBase;
+    initExpr.Inst.Opcode = WASM_OPCODE_I32_CONST;
+    initExpr.Inst.Value.Int32 = config->tableBase;
   }
   writeInitExpr(os, initExpr);
 

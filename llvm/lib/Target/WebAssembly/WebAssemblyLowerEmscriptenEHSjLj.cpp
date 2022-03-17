@@ -1314,9 +1314,14 @@ bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
     BasicBlock *BB = CB->getParent();
     if (BB->getParent() != &F) // in other function
       continue;
-    if (CB->getOperandBundle(LLVMContext::OB_funclet))
-      report_fatal_error(
-          "setjmp within a catch clause is not supported in Wasm EH");
+    if (CB->getOperandBundle(LLVMContext::OB_funclet)) {
+      std::string S;
+      raw_string_ostream SS(S);
+      SS << "In function " + F.getName() +
+                ": setjmp within a catch clause is not supported in Wasm EH:\n";
+      SS << *CB;
+      report_fatal_error(StringRef(SS.str()));
+    }
 
     CallInst *CI = nullptr;
     // setjmp cannot throw. So if it is an invoke, lower it to a call
@@ -1492,10 +1497,16 @@ void WebAssemblyLowerEmscriptenEHSjLj::handleLongjmpableCallsForEmscriptenSjLj(
   for (unsigned I = 0; I < BBs.size(); I++) {
     BasicBlock *BB = BBs[I];
     for (Instruction &I : *BB) {
-      if (isa<InvokeInst>(&I))
-        report_fatal_error("When using Wasm EH with Emscripten SjLj, there is "
-                           "a restriction that `setjmp` function call and "
-                           "exception cannot be used within the same function");
+      if (isa<InvokeInst>(&I)) {
+        std::string S;
+        raw_string_ostream SS(S);
+        SS << "In function " << F.getName()
+           << ": When using Wasm EH with Emscripten SjLj, there is a "
+              "restriction that `setjmp` function call and exception cannot be "
+              "used within the same function:\n";
+        SS << I;
+        report_fatal_error(StringRef(SS.str()));
+      }
       auto *CI = dyn_cast<CallInst>(&I);
       if (!CI)
         continue;

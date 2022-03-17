@@ -141,8 +141,8 @@ void test_dbg(void) {
 // AArch32-NEXT:    [[TMP0:%.*]] = bitcast i8* [[P:%.*]] to i32*
 // AArch32-NEXT:    br label [[DO_BODY_I:%.*]]
 // AArch32:       do.body.i:
-// AArch32-NEXT:    [[LDREX_I:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* [[TMP0]]) [[ATTR1]]
-// AArch32-NEXT:    [[STREX_I:%.*]] = call i32 @llvm.arm.strex.p0i32(i32 [[X:%.*]], i32* [[TMP0]]) [[ATTR1]]
+// AArch32-NEXT:    [[LDREX_I:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* elementtype(i32) [[TMP0]]) [[ATTR1]]
+// AArch32-NEXT:    [[STREX_I:%.*]] = call i32 @llvm.arm.strex.p0i32(i32 [[X:%.*]], i32* elementtype(i32) [[TMP0]]) [[ATTR1]]
 // AArch32-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[STREX_I]], 0
 // AArch32-NEXT:    br i1 [[TOBOOL_I]], label [[DO_BODY_I]], label [[__SWP_EXIT:%.*]], [[LOOP3:!llvm.loop !.*]]
 // AArch32:       __swp.exit:
@@ -153,10 +153,10 @@ void test_dbg(void) {
 // AArch64-NEXT:    [[TMP0:%.*]] = bitcast i8* [[P:%.*]] to i32*
 // AArch64-NEXT:    br label [[DO_BODY_I:%.*]]
 // AArch64:       do.body.i:
-// AArch64-NEXT:    [[LDXR_I:%.*]] = call i64 @llvm.aarch64.ldxr.p0i32(i32* [[TMP0]]) [[ATTR3]]
+// AArch64-NEXT:    [[LDXR_I:%.*]] = call i64 @llvm.aarch64.ldxr.p0i32(i32* elementtype(i32) [[TMP0]]) [[ATTR3]]
 // AArch64-NEXT:    [[TMP1:%.*]] = trunc i64 [[LDXR_I]] to i32
 // AArch64-NEXT:    [[TMP2:%.*]] = zext i32 [[X:%.*]] to i64
-// AArch64-NEXT:    [[STXR_I:%.*]] = call i32 @llvm.aarch64.stxr.p0i32(i64 [[TMP2]], i32* [[TMP0]]) [[ATTR3]]
+// AArch64-NEXT:    [[STXR_I:%.*]] = call i32 @llvm.aarch64.stxr.p0i32(i64 [[TMP2]], i32* elementtype(i32) [[TMP0]]) [[ATTR3]]
 // AArch64-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[STXR_I]], 0
 // AArch64-NEXT:    br i1 [[TOBOOL_I]], label [[DO_BODY_I]], label [[__SWP_EXIT:%.*]], [[LOOP6:!llvm.loop !.*]]
 // AArch64:       __swp.exit:

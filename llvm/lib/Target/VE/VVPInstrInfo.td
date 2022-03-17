@@ -62,6 +62,15 @@ def SDTIntBinOpVVP : SDTypeProfile<1, 4, [     // vp_add, vp_and, etc.
   IsVLVT<4>
 ]>;
 
+// UnaryFPOp(x,mask,vl)
+def SDTFPUnaryOpVVP : SDTypeProfile<1, 3, [
+  SDTCisSameAs<0, 1>,
+  SDTCisFP<0>,
+  SDTCisInt<2>,
+  SDTCisSameNumEltsAs<0, 2>,
+  IsVLVT<3>
+]>;
+
 // BinaryFPOp(x,y,mask,vl)
 def SDTFPBinOpVVP : SDTypeProfile<1, 4, [      // vvp_fadd, etc.
   SDTCisSameAs<0, 1>,
@@ -70,6 +79,17 @@ def SDTFPBinOpVVP : SDTypeProfile<1, 4, [      // vvp_fadd, etc.
   SDTCisInt<3>,
   SDTCisSameNumEltsAs<0, 3>,
   IsVLVT<4>
+]>;
+
+// TernaryFPOp(x,y,z,mask,vl)
+def SDTFPTernaryOpVVP : SDTypeProfile<1, 5, [
+  SDTCisSameAs<0, 1>,
+  SDTCisSameAs<0, 2>,
+  SDTCisSameAs<0, 3>,
+  SDTCisFP<0>,
+  SDTCisInt<4>,
+  SDTCisSameNumEltsAs<0, 4>,
+  IsVLVT<5>
 ]>;
 
 // Select(OnTrue, OnFalse, SelMask, vl)
@@ -110,6 +130,12 @@ class vvp_commutative<SDNode RootOp> :
   [(RootOp node:$lhs, node:$rhs, node:$mask, node:$vlen),
    (RootOp node:$rhs, node:$lhs, node:$mask, node:$vlen)]>;
 
+class vvp_fma_commutative<SDNode RootOp> :
+  PatFrags<
+  (ops node:$X, node:$Y, node:$Z, node:$mask, node:$vlen),
+  [(RootOp node:$X, node:$Y, node:$Z, node:$mask, node:$vlen),
+   (RootOp node:$X, node:$Z, node:$Y, node:$mask, node:$vlen)]>;
+
 // VVP node definitions.
 def vvp_add    : SDNode<"VEISD::VVP_ADD",  SDTIntBinOpVVP>;
 def c_vvp_add  : vvp_commutative<vvp_add>;
@@ -135,12 +161,17 @@ def vvp_srl    : SDNode<"VEISD::VVP_SRL",  SDTIntBinOpVVP>;
 def vvp_sra    : SDNode<"VEISD::VVP_SRA",  SDTIntBinOpVVP>;
 def vvp_shl    : SDNode<"VEISD::VVP_SHL",  SDTIntBinOpVVP>;
 
+def vvp_fneg    : SDNode<"VEISD::VVP_FNEG",  SDTFPUnaryOpVVP>;
+
 def vvp_fadd    : SDNode<"VEISD::VVP_FADD",  SDTFPBinOpVVP>;
 def c_vvp_fadd  : vvp_commutative<vvp_fadd>;
 def vvp_fsub    : SDNode<"VEISD::VVP_FSUB",  SDTFPBinOpVVP>;
 def vvp_fmul    : SDNode<"VEISD::VVP_FMUL",  SDTFPBinOpVVP>;
 def c_vvp_fmul  : vvp_commutative<vvp_fmul>;
 def vvp_fdiv    : SDNode<"VEISD::VVP_FDIV",  SDTFPBinOpVVP>;
+
+def vvp_ffma    : SDNode<"VEISD::VVP_FFMA",  SDTFPTernaryOpVVP>;
+def c_vvp_ffma  : vvp_fma_commutative<vvp_ffma>;
 
 def vvp_scatter : SDNode<"VEISD::VVP_SCATTER",  SDTScatterVVP,
                          [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;

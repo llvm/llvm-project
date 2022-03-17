@@ -34,7 +34,7 @@ struct ARM : TargetInfo {
 
   void writeStub(uint8_t *buf, const Symbol &) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
-  void writeStubHelperEntry(uint8_t *buf, const DylibSymbol &,
+  void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
@@ -148,7 +148,7 @@ void ARM::writeStubHelperHeader(uint8_t *buf) const {
   fatal("TODO: implement this");
 }
 
-void ARM::writeStubHelperEntry(uint8_t *buf, const DylibSymbol &sym,
+void ARM::writeStubHelperEntry(uint8_t *buf, const Symbol &sym,
                                uint64_t entryAddr) const {
   fatal("TODO: implement this");
 }

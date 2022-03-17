@@ -135,10 +135,11 @@ Suppression *LeakSuppressionContext::GetSuppressionForAddr(uptr addr) {
   Suppression *s = nullptr;
 
   // Suppress by module name.
-  if (const char *module_name =
-          Symbolizer::GetOrInit()->GetModuleNameForPc(addr))
-    if (context.Match(module_name, kSuppressionLeak, &s))
-      return s;
+  const char *module_name = Symbolizer::GetOrInit()->GetModuleNameForPc(addr);
+  if (!module_name)
+    module_name = "<unknown module>";
+  if (context.Match(module_name, kSuppressionLeak, &s))
+    return s;
 
   // Suppress by file or function name.
   SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(addr);

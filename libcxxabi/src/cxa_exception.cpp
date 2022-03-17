@@ -341,10 +341,11 @@ unwinding with _Unwind_Resume.
 According to ARM EHABI 8.4.1, __cxa_end_cleanup() should not clobber any
 register, thus we have to write this function in assembly so that we can save
 {r1, r2, r3}.  We don't have to save r0 because it is the return value and the
-first argument to _Unwind_Resume().  In addition, we are saving lr in order to
-align the stack to 16 bytes and lr will be used to identify the caller and its
-frame information. _Unwind_Resume never return and we need to keep the original
-lr so just branch to it.
+first argument to _Unwind_Resume().  The function also saves/restores r4 to
+keep the stack aligned and to provide a temp register.  _Unwind_Resume never
+returns and we need to keep the original lr so just branch to it.  When
+targeting bare metal, the function also clobbers ip/r12 to hold the address of
+_Unwind_Resume, which may be too far away for an ordinary branch.
 */
 __attribute__((used)) static _Unwind_Exception *
 __cxa_end_cleanup_impl()
@@ -381,15 +382,19 @@ asm("	.pushsection	.text.__cxa_end_cleanup,\"ax\",%progbits\n"
 #if defined(__ARM_FEATURE_BTI_DEFAULT)
     "	bti\n"
 #endif
-    "	push	{r1, r2, r3, lr}\n"
+    "	push	{r1, r2, r3, r4}\n"
+    "	mov	r4, lr\n"
     "	bl	__cxa_end_cleanup_impl\n"
-    "	pop	{r1, r2, r3, r4}\n"
     "	mov	lr, r4\n"
 #if defined(LIBCXXABI_BAREMETAL)
     "	ldr	r4,	=_Unwind_Resume\n"
-    "	bx	r4\n"
+    "	mov	ip,	r4\n"
+#endif
+    "	pop	{r1, r2, r3, r4}\n"
+#if defined(LIBCXXABI_BAREMETAL)
+    "	bx	ip\n"
 #else
-    "   b _Unwind_Resume\n"
+    "	b	_Unwind_Resume\n"
 #endif
     "	.popsection");
 #endif // defined(_LIBCXXABI_ARM_EHABI)

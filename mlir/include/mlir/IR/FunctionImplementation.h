@@ -86,10 +86,8 @@ ParseResult parseFunctionOp(OpAsmParser &parser, OperationState &result,
                             bool allowVariadic,
                             FuncTypeBuilder funcTypeBuilder);
 
-/// Printer implementation for function-like operations.  Accepts lists of
-/// argument and result types to use while printing.
-void printFunctionOp(OpAsmPrinter &p, Operation *op, ArrayRef<Type> argTypes,
-                     bool isVariadic, ArrayRef<Type> resultTypes);
+/// Printer implementation for function-like operations.
+void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic);
 
 /// Prints the signature of the function-like operation `op`. Assumes `op` has
 /// is a FunctionOpInterface and has passed verification.

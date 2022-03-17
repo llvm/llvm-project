@@ -315,7 +315,7 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI, MachineRegisterInfo &MRI
   MI.getOperand(VAddr0Idx).setIsKill(IsKill);
 
   for (int i = 1; i < Info->VAddrOperands; ++i)
-    MI.RemoveOperand(VAddr0Idx + 1);
+    MI.removeOperand(VAddr0Idx + 1);
 
   if (ToUntie >= 0) {
     MI.tieOperands(
@@ -582,7 +582,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
         .addReg(X1.Reg, 0, X1.SubReg).getInstr();
       if (MovX->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
         // Drop implicit EXEC.
-        MIB->RemoveOperand(MIB->getNumExplicitOperands());
+        MIB->removeOperand(MIB->getNumExplicitOperands());
         MIB->copyImplicitOps(*MBB.getParent(), *MovX);
       }
     }
@@ -598,7 +598,7 @@ static MachineInstr* matchSwap(MachineInstr &MovT, MachineRegisterInfo &MRI,
         unsigned OpNo = MovT.getNumExplicitOperands() + I;
         const MachineOperand &Op = MovT.getOperand(OpNo);
         if (Op.isKill() && TRI.regsOverlap(X, Op.getReg()))
-          MovT.RemoveOperand(OpNo);
+          MovT.removeOperand(OpNo);
       }
     }
 

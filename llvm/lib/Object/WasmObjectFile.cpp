@@ -164,23 +164,25 @@ static uint8_t readOpcode(WasmObjectFile::ReadContext &Ctx) {
 
 static Error readInitExpr(wasm::WasmInitExpr &Expr,
                           WasmObjectFile::ReadContext &Ctx) {
-  Expr.Opcode = readOpcode(Ctx);
+  auto Start = Ctx.Ptr;
 
-  switch (Expr.Opcode) {
+  Expr.Extended = false;
+  Expr.Inst.Opcode = readOpcode(Ctx);
+  switch (Expr.Inst.Opcode) {
   case wasm::WASM_OPCODE_I32_CONST:
-    Expr.Value.Int32 = readVarint32(Ctx);
+    Expr.Inst.Value.Int32 = readVarint32(Ctx);
     break;
   case wasm::WASM_OPCODE_I64_CONST:
-    Expr.Value.Int64 = readVarint64(Ctx);
+    Expr.Inst.Value.Int64 = readVarint64(Ctx);
     break;
   case wasm::WASM_OPCODE_F32_CONST:
-    Expr.Value.Float32 = readFloat32(Ctx);
+    Expr.Inst.Value.Float32 = readFloat32(Ctx);
     break;
   case wasm::WASM_OPCODE_F64_CONST:
-    Expr.Value.Float64 = readFloat64(Ctx);
+    Expr.Inst.Value.Float64 = readFloat64(Ctx);
     break;
   case wasm::WASM_OPCODE_GLOBAL_GET:
-    Expr.Value.Global = readULEB128(Ctx);
+    Expr.Inst.Value.Global = readULEB128(Ctx);
     break;
   case wasm::WASM_OPCODE_REF_NULL: {
     wasm::ValType Ty = static_cast<wasm::ValType>(readULEB128(Ctx));
@@ -191,15 +193,46 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
     break;
   }
   default:
-    return make_error<GenericBinaryError>("invalid opcode in init_expr",
-                                          object_error::parse_failed);
+    Expr.Extended = true;
   }
 
-  uint8_t EndOpcode = readOpcode(Ctx);
-  if (EndOpcode != wasm::WASM_OPCODE_END) {
-    return make_error<GenericBinaryError>("invalid init_expr",
-                                          object_error::parse_failed);
+  if (!Expr.Extended) {
+    uint8_t EndOpcode = readOpcode(Ctx);
+    if (EndOpcode != wasm::WASM_OPCODE_END)
+      Expr.Extended = true;
   }
+
+  if (Expr.Extended) {
+    Ctx.Ptr = Start;
+    while (1) {
+      uint8_t Opcode = readOpcode(Ctx);
+      switch (Opcode) {
+      case wasm::WASM_OPCODE_I32_CONST:
+      case wasm::WASM_OPCODE_GLOBAL_GET:
+      case wasm::WASM_OPCODE_REF_NULL:
+      case wasm::WASM_OPCODE_I64_CONST:
+      case wasm::WASM_OPCODE_F32_CONST:
+      case wasm::WASM_OPCODE_F64_CONST:
+        readULEB128(Ctx);
+        break;
+      case wasm::WASM_OPCODE_I32_ADD:
+      case wasm::WASM_OPCODE_I32_SUB:
+      case wasm::WASM_OPCODE_I32_MUL:
+      case wasm::WASM_OPCODE_I64_ADD:
+      case wasm::WASM_OPCODE_I64_SUB:
+      case wasm::WASM_OPCODE_I64_MUL:
+        break;
+      case wasm::WASM_OPCODE_END:
+        Expr.Body = ArrayRef<uint8_t>(Start, Ctx.Ptr - Start);
+        return Error::success();
+      default:
+        return make_error<GenericBinaryError>(
+            Twine("invalid opcode in init_expr: ") + Twine(unsigned(Opcode)),
+            object_error::parse_failed);
+      }
+    }
+  }
+
   return Error::success();
 }
 
@@ -1441,8 +1474,9 @@ Error WasmObjectFile::parseElemSection(ReadContext &Ctx) {
                                             object_error::parse_failed);
 
     if (Segment.Flags & wasm::WASM_ELEM_SEGMENT_IS_PASSIVE) {
-      Segment.Offset.Opcode = wasm::WASM_OPCODE_I32_CONST;
-      Segment.Offset.Value.Int32 = 0;
+      Segment.Offset.Extended = false;
+      Segment.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
+      Segment.Offset.Inst.Value.Int32 = 0;
     } else {
       if (Error Err = readInitExpr(Segment.Offset, Ctx))
         return Err;
@@ -1501,8 +1535,9 @@ Error WasmObjectFile::parseDataSection(ReadContext &Ctx) {
       if (Error Err = readInitExpr(Segment.Data.Offset, Ctx))
         return Err;
     } else {
-      Segment.Data.Offset.Opcode = wasm::WASM_OPCODE_I32_CONST;
-      Segment.Data.Offset.Value.Int32 = 0;
+      Segment.Data.Offset.Extended = false;
+      Segment.Data.Offset.Inst.Opcode = wasm::WASM_OPCODE_I32_CONST;
+      Segment.Data.Offset.Inst.Value.Int32 = 0;
     }
     uint32_t Size = readVaruint32(Ctx);
     if (Size > (size_t)(Ctx.End - Ctx.Ptr))
@@ -1600,10 +1635,12 @@ uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol &Sym) const {
     // offset within the segment.
     uint32_t SegmentIndex = Sym.Info.DataRef.Segment;
     const wasm::WasmDataSegment &Segment = DataSegments[SegmentIndex].Data;
-    if (Segment.Offset.Opcode == wasm::WASM_OPCODE_I32_CONST) {
-      return Segment.Offset.Value.Int32 + Sym.Info.DataRef.Offset;
-    } else if (Segment.Offset.Opcode == wasm::WASM_OPCODE_I64_CONST) {
-      return Segment.Offset.Value.Int64 + Sym.Info.DataRef.Offset;
+    if (Segment.Offset.Extended) {
+      llvm_unreachable("extended init exprs not supported");
+    } else if (Segment.Offset.Inst.Opcode == wasm::WASM_OPCODE_I32_CONST) {
+      return Segment.Offset.Inst.Value.Int32 + Sym.Info.DataRef.Offset;
+    } else if (Segment.Offset.Inst.Opcode == wasm::WASM_OPCODE_I64_CONST) {
+      return Segment.Offset.Inst.Value.Int64 + Sym.Info.DataRef.Offset;
     } else {
       llvm_unreachable("unknown init expr opcode");
     }

@@ -249,7 +249,9 @@ cc_library(
     name = "TestPass",
     srcs = glob(["lib/Pass/*.cpp"]),
     deps = [
+        ":TestDialect",
         "//llvm:Support",
+        "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",
         "//mlir:Support",
@@ -390,7 +392,6 @@ cc_library(
     deps = [
         "//llvm:Support",
         "//mlir:Affine",
-        "//mlir:AffineBufferizableOpInterfaceImpl",
         "//mlir:ArithmeticDialect",
         "//mlir:ArithmeticTransforms",
         "//mlir:BufferizationDialect",
@@ -485,6 +486,7 @@ cc_library(
         "lib/Dialect/SPIRV/*.cpp",
     ]),
     deps = [
+        "//mlir:FuncDialect",
         "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:Pass",

@@ -14,6 +14,7 @@ include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "mlir/IR/OpAsmInterface.td"
+include "mlir/IR/PatternBase.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -373,6 +374,14 @@ def VariadicNoTerminatorOp : TEST_Op<"variadic_no_terminator_op",
 //===----------------------------------------------------------------------===//
 // Test Call Interfaces
 //===----------------------------------------------------------------------===//
+
+def TestCallOp : TEST_Op<"call", [DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>);
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
+}
 
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {

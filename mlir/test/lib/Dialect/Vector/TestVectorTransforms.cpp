@@ -239,7 +239,7 @@ struct TestVectorTransposeLowering
                   .lower8x8xf32()));
     }
 
-    OpPassManager dynamicPM("builtin.func");
+    OpPassManager dynamicPM("func.func");
     dynamicPM.addPass(createLinalgStrategyLowerVectorsPass(options));
     if (failed(runPipeline(dynamicPM, getOperation())))
       return signalPassFailure();
@@ -265,7 +265,14 @@ struct TestVectorUnrollingPatterns
         patterns, UnrollVectorOptions()
                       .setNativeShape(ArrayRef<int64_t>{2, 2})
                       .setFilterConstraint([](Operation *op) {
-                        return success(isa<arith::AddFOp, vector::FMAOp>(op));
+                        return success(isa<arith::AddFOp, vector::FMAOp,
+                                           vector::MultiDimReductionOp>(op));
+                      }));
+    populateVectorUnrollPatterns(
+        patterns, UnrollVectorOptions()
+                      .setNativeShape(ArrayRef<int64_t>{2})
+                      .setFilterConstraint([](Operation *op) {
+                        return success(isa<vector::ReductionOp>(op));
                       }));
 
     if (unrollBasedOnType) {

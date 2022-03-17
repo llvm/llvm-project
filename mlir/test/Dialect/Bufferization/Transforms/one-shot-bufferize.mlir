@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref allow-unknown-ops" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="allow-unknown-ops" -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="allow-return-memref test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // CHECK-LABEL: func @use_tensor_func_arg(
 //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
@@ -35,6 +35,7 @@ func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf32>) {
   // CHECK: %[[res_tensor:.*]] = bufferization.to_tensor %[[casted]]
   %0 = vector.transfer_write %v, %A[%c0] : vector<4xf32>, tensor<?xf32>
 
+  // CHECK: memref.dealloc %[[alloc]]
   // CHECK: return %[[res_tensor]]
   return %0 : tensor<?xf32>
 }
@@ -66,6 +67,42 @@ func private @private_func(tensor<?xf32>) -> ()
 // CHECK-LABEL: func @empty_func()
 func @empty_func() -> () {
   return
+}
+
+// -----
+
+// CHECK-LABEL: func @read_after_write_conflict(
+func @read_after_write_conflict(%cst : f32, %idx : index, %idx2 : index)
+    -> (f32, f32) {
+  // CHECK-DAG: %[[alloc:.*]] = memref.alloc
+  // CHECK-DAG: %[[dummy:.*]] = "test.dummy_op"
+  // CHECK-DAG: %[[dummy_m:.*]] = bufferization.to_memref %[[dummy]]
+  %t = "test.dummy_op"() : () -> (tensor<10xf32>)
+
+  // CHECK: memref.copy %[[dummy_m]], %[[alloc]]
+  // CHECK: memref.store %{{.*}}, %[[alloc]]
+  %write = tensor.insert %cst into %t[%idx2] : tensor<10xf32>
+
+  // CHECK: %[[read:.*]] = "test.some_use"(%[[dummy]])
+  %read = "test.some_use"(%t) : (tensor<10xf32>) -> (f32)
+  // CHECK: %[[read2:.*]] = memref.load %[[alloc]]
+  %read2 = tensor.extract %write[%idx] : tensor<10xf32>
+
+  // CHECK: memref.dealloc %[[alloc]]
+  // CHECK: return %[[read]], %[[read2]]
+  return %read, %read2 : f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @copy_deallocated(
+func @copy_deallocated() -> tensor<10xf32> {
+  // CHECK: %[[alloc:.*]] = memref.alloc()
+  %0 = linalg.init_tensor[10] : tensor<10xf32>
+  // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
+  // CHECK: memref.dealloc %[[alloc]]
+  // CHECK: return %[[alloc_tensor]]
+  return %0 : tensor<10xf32>
 }
 
 

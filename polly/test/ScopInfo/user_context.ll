@@ -1,7 +1,7 @@
-; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -polly-context='[N] -> {: N = 1024}' -analyze < %s | FileCheck %s --check-prefix=CTX
-; RUN: opt %loadPolly -polly-scops -polly-context='[N,M] -> {: 1 = 0}' -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-scops -polly-context='[] -> {: 1 = 0}' -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly                                      -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-context='[N] -> {: N = 1024}' -polly-print-scops -disable-output < %s | FileCheck %s --check-prefix=CTX
+; RUN: opt %loadPolly -polly-context='[N,M] -> {: 1 = 0}'  -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-context='[] -> {: 1 = 0}'     -polly-print-scops -disable-output < %s | FileCheck %s
 
 ; void f(int a[], int N) {
 ;   int i;

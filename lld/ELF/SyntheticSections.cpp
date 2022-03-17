@@ -409,7 +409,8 @@ void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
       return;
 
     size_t offset = piece.inputOff;
-    uint32_t id = read32(piece.data().data() + 4);
+    const uint32_t id =
+        endian::read32<ELFT::TargetEndianness>(piece.data().data() + 4);
     if (id == 0) {
       offsetToCie[offset] = addCie<ELFT>(piece, rels);
       continue;
@@ -3569,10 +3570,6 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
 bool ARMExidxSyntheticSection::isNeeded() const {
   return llvm::any_of(exidxSections,
                       [](InputSection *isec) { return isec->isLive(); });
-}
-
-bool ARMExidxSyntheticSection::classof(const SectionBase *d) {
-  return d->kind() == InputSectionBase::Synthetic && d->type == SHT_ARM_EXIDX;
 }
 
 ThunkSection::ThunkSection(OutputSection *os, uint64_t off)

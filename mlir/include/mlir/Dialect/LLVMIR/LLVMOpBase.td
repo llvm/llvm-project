@@ -26,6 +26,7 @@ def LLVM_Dialect : Dialect {
   let cppNamespace = "::mlir::LLVM";
 
   let hasRegionArgAttrVerify = 1;
+  let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
     /// Name of the data layout attributes.
@@ -38,6 +39,11 @@ def LLVM_Dialect : Dialect {
     static StringRef getParallelAccessAttrName() { return "parallel_access"; }
     static StringRef getLoopOptionsAttrName() { return "options"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
+    static StringRef getStructAttrsAttrName() { return "llvm.struct_attrs"; }
+
+    /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
+    static LogicalResult verifyStructAttr(
+        Operation *op, Attribute attr, Type annotatedType);
 
     /// Verifies if the given string is a well-formed data layout descriptor.
     /// Uses `reportError` to report errors.
@@ -73,6 +79,10 @@ def LLVM_PrimitiveType : Type<
        CPred<"!$_self.isa<::mlir::LLVM::LLVMVoidType, "
                          "::mlir::LLVM::LLVMFunctionType>()">]>,
   "primitive LLVM type">;
+
+// Type constraint accepting any LLVM function type.
+def LLVM_FunctionType : Type<CPred<"$_self.isa<::mlir::LLVM::LLVMFunctionType>()">,
+                         "LLVM function type", "::mlir::LLVM::LLVMFunctionType">;
 
 // Type constraint accepting any LLVM floating point type.
 def LLVM_AnyFloat : Type<

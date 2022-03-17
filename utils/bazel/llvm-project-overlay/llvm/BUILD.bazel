@@ -3609,6 +3609,24 @@ cc_binary(
 )
 
 cc_binary(
+    name = "llvm-remark-size-diff",
+    srcs = glob([
+        "tools/llvm-remark-size-diff/**/*.cpp",
+        "tools/llvm-remark-size-diff/**/*.h",
+    ]),
+    copts = llvm_copts,
+    includes = ["tools/llvm-reark-size-diff"],
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":Demangle",
+        ":Object",
+        ":Remarks",
+        ":Support",
+    ],
+)
+
+cc_binary(
     name = "llvm-rtdyld",
     srcs = glob([
         "tools/llvm-rtdyld/*.cpp",

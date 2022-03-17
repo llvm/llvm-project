@@ -33,7 +33,7 @@ using namespace mlir;
 /// `region` or is an argument of `region`. A value of index type defined at the
 /// top level of a `AffineScope` region is always a valid symbol for all
 /// uses in that region.
-static bool isTopLevelValue(Value value, Region *region) {
+bool mlir::isTopLevelValue(Value value, Region *region) {
   if (auto arg = value.dyn_cast<BlockArgument>())
     return arg.getParentRegion() == region;
   return value.getDefiningOp()->getParentRegion() == region;
@@ -244,8 +244,7 @@ bool mlir::isTopLevelValue(Value value) {
 
 /// Returns the closest region enclosing `op` that is held by an operation with
 /// trait `AffineScope`; `nullptr` if there is no such region.
-//  TODO: getAffineScope should be publicly exposed for affine passes/utilities.
-static Region *getAffineScope(Operation *op) {
+Region *mlir::getAffineScope(Operation *op) {
   auto *curOp = op;
   while (auto *parentOp = curOp->getParentOp()) {
     if (parentOp->hasTrait<OpTrait::AffineScope>())

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze -S < %s | FileCheck %s -check-prefix=SCALAR
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s -check-prefix=SCALAR --allow-empty
 
 ;#define N 20
 ;

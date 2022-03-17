@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -3318,7 +3317,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     Observer.changingInstr(MI);
     const auto &TII = MIRBuilder.getTII();
     MI.setDesc(TII.get(TargetOpcode::G_MUL));
-    MI.RemoveOperand(1);
+    MI.removeOperand(1);
     Observer.changedInstr(MI);
 
     auto HiPart = MIRBuilder.buildInstr(Opcode, {Ty}, {LHS, RHS});

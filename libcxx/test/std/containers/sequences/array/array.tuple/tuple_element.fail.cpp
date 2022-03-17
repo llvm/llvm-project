@@ -10,11 +10,6 @@
 
 // tuple_element<I, array<T, N> >::type
 
-// Prevent -Warray-bounds from issuing a diagnostic when testing with clang verify.
-#if defined(__clang__)
-#pragma clang diagnostic ignored "-Warray-bounds"
-#endif
-
 #include <array>
 #include <cassert>
 

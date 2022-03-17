@@ -10,27 +10,27 @@ int test_ldrex(char *addr, long long *addr64, float *addrfloat) {
 // CHECK-ARM64-LABEL: @test_ldrex
   int sum = 0;
   sum += __builtin_arm_ldrex(addr);
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i8(i8* %addr)
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i8(i8* elementtype(i8) %addr)
 // CHECK: trunc i32 [[INTRES]] to i8
 
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i8(i8* %addr)
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i8(i8* elementtype(i8) %addr)
 // CHECK-ARM64: trunc i64 [[INTRES]] to i8
 
   sum += __builtin_arm_ldrex((short *)addr);
 // CHECK: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i16(i16* [[ADDR16]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i16(i16* elementtype(i16) [[ADDR16]])
 // CHECK: trunc i32 [[INTRES]] to i16
 
 // CHECK-ARM64: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i16(i16* [[ADDR16]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i16(i16* elementtype(i16) [[ADDR16]])
 // CHECK-ARM64: trunc i64 [[INTRES]] to i16
 
   sum += __builtin_arm_ldrex((int *)addr);
 // CHECK: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK: call i32 @llvm.arm.ldrex.p0i32(i32* [[ADDR32]])
+// CHECK: call i32 @llvm.arm.ldrex.p0i32(i32* elementtype(i32) [[ADDR32]])
 
 // CHECK-ARM64: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i32(i32* [[ADDR32]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i32(i32* elementtype(i32) [[ADDR32]])
 // CHECK-ARM64: trunc i64 [[INTRES]] to i32
 
   sum += __builtin_arm_ldrex((long long *)addr);
@@ -39,21 +39,21 @@ int test_ldrex(char *addr, long long *addr64, float *addrfloat) {
 // CHECK: call { i32, i32 } @llvm.arm.ldrexd(i8* [[TMP5]])
 
 // CHECK-ARM64: [[ADDR64:%.*]] = bitcast i8* %addr to i64*
-// CHECK-ARM64: call i64 @llvm.aarch64.ldxr.p0i64(i64* [[ADDR64]])
+// CHECK-ARM64: call i64 @llvm.aarch64.ldxr.p0i64(i64* elementtype(i64) [[ADDR64]])
 
   sum += __builtin_arm_ldrex(addr64);
 // CHECK: [[ADDR64_AS8:%.*]] = bitcast i64* %addr64 to i8*
 // CHECK: call { i32, i32 } @llvm.arm.ldrexd(i8* [[ADDR64_AS8]])
 
-// CHECK-ARM64: call i64 @llvm.aarch64.ldxr.p0i64(i64* %addr64)
+// CHECK-ARM64: call i64 @llvm.aarch64.ldxr.p0i64(i64* elementtype(i64) %addr64)
 
   sum += __builtin_arm_ldrex(addrfloat);
 // CHECK: [[INTADDR:%.*]] = bitcast float* %addrfloat to i32*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* [[INTADDR]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* elementtype(i32) [[INTADDR]])
 // CHECK: bitcast i32 [[INTRES]] to float
 
 // CHECK-ARM64: [[INTADDR:%.*]] = bitcast float* %addrfloat to i32*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i32(i32* [[INTADDR]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i32(i32* elementtype(i32) [[INTADDR]])
 // CHECK-ARM64: [[TRUNCRES:%.*]] = trunc i64 [[INTRES]] to i32
 // CHECK-ARM64: bitcast i32 [[TRUNCRES]] to float
 
@@ -71,29 +71,29 @@ int test_ldrex(char *addr, long long *addr64, float *addrfloat) {
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to double*
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast double* [[TMP4]] to i64*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i64(i64* [[TMP5]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i64(i64* elementtype(i64) [[TMP5]])
 // CHECK-ARM64: bitcast i64 [[INTRES]] to double
 
   sum += *__builtin_arm_ldrex((int **)addr);
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to i32**
 // CHECK: [[TMP5:%.*]] = bitcast i32** [[TMP4]] to i32*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* [[TMP5]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* elementtype(i32) [[TMP5]])
 // CHECK: inttoptr i32 [[INTRES]] to i32*
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to i32**
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast i32** [[TMP4]] to i64*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i64(i64* [[TMP5]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i64(i64* elementtype(i64) [[TMP5]])
 // CHECK-ARM64: inttoptr i64 [[INTRES]] to i32*
 
   sum += __builtin_arm_ldrex((struct Simple **)addr)->a;
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i32*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* [[TMP5]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldrex.p0i32(i32* elementtype(i32) [[TMP5]])
 // CHECK: inttoptr i32 [[INTRES]] to %struct.Simple*
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i64*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i64(i64* [[TMP5]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldxr.p0i64(i64* elementtype(i64) [[TMP5]])
 // CHECK-ARM64: inttoptr i64 [[INTRES]] to %struct.Simple*
   return sum;
 }
@@ -103,27 +103,27 @@ int test_ldaex(char *addr, long long *addr64, float *addrfloat) {
 // CHECK-ARM64-LABEL: @test_ldaex
   int sum = 0;
   sum += __builtin_arm_ldaex(addr);
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i8(i8* %addr)
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i8(i8* elementtype(i8) %addr)
 // CHECK: trunc i32 [[INTRES]] to i8
 
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i8(i8* %addr)
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i8(i8* elementtype(i8) %addr)
 // CHECK-ARM64: trunc i64 [[INTRES]] to i8
 
   sum += __builtin_arm_ldaex((short *)addr);
 // CHECK: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i16(i16* [[ADDR16]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i16(i16* elementtype(i16) [[ADDR16]])
 // CHECK: trunc i32 [[INTRES]] to i16
 
 // CHECK-ARM64: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i16(i16* [[ADDR16]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i16(i16* elementtype(i16) [[ADDR16]])
 // CHECK-ARM64: [[TRUNCRES:%.*]] = trunc i64 [[INTRES]] to i16
 
   sum += __builtin_arm_ldaex((int *)addr);
 // CHECK: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK:  call i32 @llvm.arm.ldaex.p0i32(i32* [[ADDR32]])
+// CHECK:  call i32 @llvm.arm.ldaex.p0i32(i32* elementtype(i32) [[ADDR32]])
 
 // CHECK-ARM64: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i32(i32* [[ADDR32]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i32(i32* elementtype(i32) [[ADDR32]])
 // CHECK-ARM64: trunc i64 [[INTRES]] to i32
 
   sum += __builtin_arm_ldaex((long long *)addr);
@@ -132,21 +132,21 @@ int test_ldaex(char *addr, long long *addr64, float *addrfloat) {
 // CHECK: call { i32, i32 } @llvm.arm.ldaexd(i8* [[TMP5]])
 
 // CHECK-ARM64: [[ADDR64:%.*]] = bitcast i8* %addr to i64*
-// CHECK-ARM64: call i64 @llvm.aarch64.ldaxr.p0i64(i64* [[ADDR64]])
+// CHECK-ARM64: call i64 @llvm.aarch64.ldaxr.p0i64(i64* elementtype(i64) [[ADDR64]])
 
   sum += __builtin_arm_ldaex(addr64);
 // CHECK: [[ADDR64_AS8:%.*]] = bitcast i64* %addr64 to i8*
 // CHECK: call { i32, i32 } @llvm.arm.ldaexd(i8* [[ADDR64_AS8]])
 
-// CHECK-ARM64: call i64 @llvm.aarch64.ldaxr.p0i64(i64* %addr64)
+// CHECK-ARM64: call i64 @llvm.aarch64.ldaxr.p0i64(i64* elementtype(i64) %addr64)
 
   sum += __builtin_arm_ldaex(addrfloat);
 // CHECK: [[INTADDR:%.*]] = bitcast float* %addrfloat to i32*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* [[INTADDR]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* elementtype(i32) [[INTADDR]])
 // CHECK: bitcast i32 [[INTRES]] to float
 
 // CHECK-ARM64: [[INTADDR:%.*]] = bitcast float* %addrfloat to i32*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i32(i32* [[INTADDR]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i32(i32* elementtype(i32) [[INTADDR]])
 // CHECK-ARM64: [[TRUNCRES:%.*]] = trunc i64 [[INTRES]] to i32
 // CHECK-ARM64: bitcast i32 [[TRUNCRES]] to float
 
@@ -164,29 +164,29 @@ int test_ldaex(char *addr, long long *addr64, float *addrfloat) {
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to double*
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast double* [[TMP4]] to i64*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i64(i64* [[TMP5]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i64(i64* elementtype(i64) [[TMP5]])
 // CHECK-ARM64: bitcast i64 [[INTRES]] to double
 
   sum += *__builtin_arm_ldaex((int **)addr);
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to i32**
 // CHECK: [[TMP5:%.*]] = bitcast i32** [[TMP4]] to i32*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* [[TMP5]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* elementtype(i32) [[TMP5]])
 // CHECK: inttoptr i32 [[INTRES]] to i32*
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to i32**
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast i32** [[TMP4]] to i64*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i64(i64* [[TMP5]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i64(i64* elementtype(i64) [[TMP5]])
 // CHECK-ARM64: inttoptr i64 [[INTRES]] to i32*
 
   sum += __builtin_arm_ldaex((struct Simple **)addr)->a;
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i32*
-// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* [[TMP5]])
+// CHECK: [[INTRES:%.*]] = call i32 @llvm.arm.ldaex.p0i32(i32* elementtype(i32) [[TMP5]])
 // CHECK: inttoptr i32 [[INTRES]] to %struct.Simple*
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i64*
-// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i64(i64* [[TMP5]])
+// CHECK-ARM64: [[INTRES:%.*]] = call i64 @llvm.aarch64.ldaxr.p0i64(i64* elementtype(i64) [[TMP5]])
 // CHECK-ARM64: inttoptr i64 [[INTRES]] to %struct.Simple*
   return sum;
 }
@@ -197,23 +197,23 @@ int test_strex(char *addr) {
   int res = 0;
   struct Simple var = {0};
   res |= __builtin_arm_strex(4, addr);
-// CHECK: call i32 @llvm.arm.strex.p0i8(i32 4, i8* %addr)
+// CHECK: call i32 @llvm.arm.strex.p0i8(i32 4, i8* elementtype(i8) %addr)
 
-// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i8(i64 4, i8* %addr)
+// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i8(i64 4, i8* elementtype(i8) %addr)
 
   res |= __builtin_arm_strex(42, (short *)addr);
 // CHECK: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK:  call i32 @llvm.arm.strex.p0i16(i32 42, i16* [[ADDR16]])
+// CHECK:  call i32 @llvm.arm.strex.p0i16(i32 42, i16* elementtype(i16) [[ADDR16]])
 
 // CHECK-ARM64: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK-ARM64:  call i32 @llvm.aarch64.stxr.p0i16(i64 42, i16* [[ADDR16]])
+// CHECK-ARM64:  call i32 @llvm.aarch64.stxr.p0i16(i64 42, i16* elementtype(i16) [[ADDR16]])
 
   res |= __builtin_arm_strex(42, (int *)addr);
 // CHECK: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK: call i32 @llvm.arm.strex.p0i32(i32 42, i32* [[ADDR32]])
+// CHECK: call i32 @llvm.arm.strex.p0i32(i32 42, i32* elementtype(i32) [[ADDR32]])
 
 // CHECK-ARM64: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i32(i64 42, i32* [[ADDR32]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i32(i64 42, i32* elementtype(i32) [[ADDR32]])
 
   res |= __builtin_arm_strex(42, (long long *)addr);
 // CHECK: store i64 42, i64* [[TMP:%.*]], align 8
@@ -226,16 +226,16 @@ int test_strex(char *addr) {
 // CHECK: call i32 @llvm.arm.strexd(i32 [[LO]], i32 [[HI]], i8* [[TMP5]])
 
 // CHECK-ARM64: [[ADDR64:%.*]] = bitcast i8* %addr to i64*
-// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i64(i64 42, i64* [[ADDR64]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i64(i64 42, i64* elementtype(i64) [[ADDR64]])
 
   res |= __builtin_arm_strex(2.71828f, (float *)addr);
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to float*
 // CHECK: [[TMP5:%.*]] = bitcast float* [[TMP4]] to i32*
-// CHECK: call i32 @llvm.arm.strex.p0i32(i32 1076754509, i32* [[TMP5]])
+// CHECK: call i32 @llvm.arm.strex.p0i32(i32 1076754509, i32* elementtype(i32) [[TMP5]])
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to float*
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast float* [[TMP4]] to i32*
-// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i32(i64 1076754509, i32* [[TMP5]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i32(i64 1076754509, i32* elementtype(i32) [[TMP5]])
 
   res |= __builtin_arm_strex(3.14159, (double *)addr);
 // CHECK: store double 3.141590e+00, double* [[TMP:%.*]], align 8
@@ -249,18 +249,18 @@ int test_strex(char *addr) {
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to double*
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast double* [[TMP4]] to i64*
-// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i64(i64 4614256650576692846, i64* [[TMP5]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i64(i64 4614256650576692846, i64* elementtype(i64) [[TMP5]])
 
   res |= __builtin_arm_strex(&var, (struct Simple **)addr);
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i32*
 // CHECK: [[INTVAL:%.*]] = ptrtoint %struct.Simple* %var to i32
-// CHECK: call i32 @llvm.arm.strex.p0i32(i32 [[INTVAL]], i32* [[TMP5]])
+// CHECK: call i32 @llvm.arm.strex.p0i32(i32 [[INTVAL]], i32* elementtype(i32) [[TMP5]])
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i64*
 // CHECK-ARM64: [[INTVAL:%.*]] = ptrtoint %struct.Simple* %var to i64
-// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i64(i64 [[INTVAL]], i64* [[TMP5]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stxr.p0i64(i64 [[INTVAL]], i64* elementtype(i64) [[TMP5]])
 
   return res;
 }
@@ -271,23 +271,23 @@ int test_stlex(char *addr) {
   int res = 0;
   struct Simple var = {0};
   res |= __builtin_arm_stlex(4, addr);
-// CHECK: call i32 @llvm.arm.stlex.p0i8(i32 4, i8* %addr)
+// CHECK: call i32 @llvm.arm.stlex.p0i8(i32 4, i8* elementtype(i8) %addr)
 
-// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i8(i64 4, i8* %addr)
+// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i8(i64 4, i8* elementtype(i8) %addr)
 
   res |= __builtin_arm_stlex(42, (short *)addr);
 // CHECK: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK:  call i32 @llvm.arm.stlex.p0i16(i32 42, i16* [[ADDR16]])
+// CHECK:  call i32 @llvm.arm.stlex.p0i16(i32 42, i16* elementtype(i16) [[ADDR16]])
 
 // CHECK-ARM64: [[ADDR16:%.*]] = bitcast i8* %addr to i16*
-// CHECK-ARM64:  call i32 @llvm.aarch64.stlxr.p0i16(i64 42, i16* [[ADDR16]])
+// CHECK-ARM64:  call i32 @llvm.aarch64.stlxr.p0i16(i64 42, i16* elementtype(i16) [[ADDR16]])
 
   res |= __builtin_arm_stlex(42, (int *)addr);
 // CHECK: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK: call i32 @llvm.arm.stlex.p0i32(i32 42, i32* [[ADDR32]])
+// CHECK: call i32 @llvm.arm.stlex.p0i32(i32 42, i32* elementtype(i32) [[ADDR32]])
 
 // CHECK-ARM64: [[ADDR32:%.*]] = bitcast i8* %addr to i32*
-// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i32(i64 42, i32* [[ADDR32]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i32(i64 42, i32* elementtype(i32) [[ADDR32]])
 
   res |= __builtin_arm_stlex(42, (long long *)addr);
 // CHECK: store i64 42, i64* [[TMP:%.*]], align 8
@@ -300,16 +300,16 @@ int test_stlex(char *addr) {
 // CHECK: call i32 @llvm.arm.stlexd(i32 [[LO]], i32 [[HI]], i8* [[TMP5]])
 
 // CHECK-ARM64: [[ADDR64:%.*]] = bitcast i8* %addr to i64*
-// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i64(i64 42, i64* [[ADDR64]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i64(i64 42, i64* elementtype(i64) [[ADDR64]])
 
   res |= __builtin_arm_stlex(2.71828f, (float *)addr);
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to float*
 // CHECK: [[TMP5:%.*]] = bitcast float* [[TMP4]] to i32*
-// CHECK: call i32 @llvm.arm.stlex.p0i32(i32 1076754509, i32* [[TMP5]])
+// CHECK: call i32 @llvm.arm.stlex.p0i32(i32 1076754509, i32* elementtype(i32) [[TMP5]])
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to float*
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast float* [[TMP4]] to i32*
-// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i32(i64 1076754509, i32* [[TMP5]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i32(i64 1076754509, i32* elementtype(i32) [[TMP5]])
 
   res |= __builtin_arm_stlex(3.14159, (double *)addr);
 // CHECK: store double 3.141590e+00, double* [[TMP:%.*]], align 8
@@ -323,18 +323,18 @@ int test_stlex(char *addr) {
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to double*
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast double* [[TMP4]] to i64*
-// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i64(i64 4614256650576692846, i64* [[TMP5]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i64(i64 4614256650576692846, i64* elementtype(i64) [[TMP5]])
 
   res |= __builtin_arm_stlex(&var, (struct Simple **)addr);
 // CHECK: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i32*
 // CHECK: [[INTVAL:%.*]] = ptrtoint %struct.Simple* %var to i32
-// CHECK: call i32 @llvm.arm.stlex.p0i32(i32 [[INTVAL]], i32* [[TMP5]])
+// CHECK: call i32 @llvm.arm.stlex.p0i32(i32 [[INTVAL]], i32* elementtype(i32) [[TMP5]])
 
 // CHECK-ARM64: [[TMP4:%.*]] = bitcast i8* %addr to %struct.Simple**
 // CHECK-ARM64: [[TMP5:%.*]] = bitcast %struct.Simple** [[TMP4]] to i64*
 // CHECK-ARM64: [[INTVAL:%.*]] = ptrtoint %struct.Simple* %var to i64
-// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i64(i64 [[INTVAL]], i64* [[TMP5]])
+// CHECK-ARM64: call i32 @llvm.aarch64.stlxr.p0i64(i64 [[INTVAL]], i64* elementtype(i64) [[TMP5]])
 
   return res;
 }

@@ -534,3 +534,81 @@ define <8 x i16> @PR47448_ugt(i16 signext %0) {
   %6 = sext <8 x i1> %5 to <8 x i16>
   ret <8 x i16> %6
 }
+
+; Recognise the knownbits from X86ISD::AND in previous block.
+define void @PR54171(<4 x i64>* %mask0, <4 x i64>* %mask1, i64 %i) {
+; SSE-LABEL: PR54171:
+; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    andq $7, %rdx
+; SSE-NEXT:    je .LBB18_2
+; SSE-NEXT:  # %bb.1: # %if.then
+; SSE-NEXT:    movd %edx, %xmm0
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rdi)
+; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    movdqa %xmm0, (%rsi)
+; SSE-NEXT:    movdqa %xmm1, 16(%rsi)
+; SSE-NEXT:  .LBB18_2: # %if.end
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR54171:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    andq $7, %rdx
+; AVX1-NEXT:    je .LBB18_2
+; AVX1-NEXT:  # %bb.1: # %if.then
+; AVX1-NEXT:    vmovd %edx, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
+; AVX1-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX1-NEXT:    vmovdqa %xmm1, 16(%rdi)
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX1-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovdqa %xmm0, (%rsi)
+; AVX1-NEXT:    vmovdqa %xmm1, 16(%rsi)
+; AVX1-NEXT:  .LBB18_2: # %if.end
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR54171:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    andq $7, %rdx
+; AVX2-NEXT:    je .LBB18_2
+; AVX2-NEXT:  # %bb.1: # %if.then
+; AVX2-NEXT:    vmovd %edx, %xmm0
+; AVX2-NEXT:    vpbroadcastd %xmm0, %ymm0
+; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
+; AVX2-NEXT:    vmovdqa %ymm1, (%rdi)
+; AVX2-NEXT:    vpcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa %ymm0, (%rsi)
+; AVX2-NEXT:  .LBB18_2: # %if.end
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+entry:
+  %sub = and i64 %i, 7
+  %cmp.not = icmp eq i64 %sub, 0
+  br i1 %cmp.not, label %if.end, label %if.then
+
+if.then:
+  %conv = trunc i64 %sub to i32
+  %vecinit.i.i = insertelement <8 x i32> undef, i32 %conv, i64 0
+  %vecinit7.i.i = shufflevector <8 x i32> %vecinit.i.i, <8 x i32> poison, <8 x i32> zeroinitializer
+  %cmp.i = icmp ugt <8 x i32> %vecinit7.i.i, <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
+  %sext.i = sext <8 x i1> %cmp.i to <8 x i32>
+  %0 = bitcast <4 x i64>* %mask0 to <8 x i32>*
+  store <8 x i32> %sext.i, <8 x i32>* %0, align 32
+  %cmp.i18 = icmp ugt <8 x i32> %vecinit7.i.i, <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
+  %sext.i19 = sext <8 x i1> %cmp.i18 to <8 x i32>
+  %1 = bitcast <4 x i64>* %mask1 to <8 x i32>*
+  store <8 x i32> %sext.i19, <8 x i32>* %1, align 32
+  br label %if.end
+
+if.end:
+  ret void
+}

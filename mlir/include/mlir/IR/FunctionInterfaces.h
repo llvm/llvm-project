@@ -14,6 +14,7 @@
 #ifndef MLIR_IR_FUNCTIONINTERFACES_H
 #define MLIR_IR_FUNCTIONINTERFACES_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/SymbolTable.h"
@@ -25,7 +26,7 @@ namespace mlir {
 namespace function_interface_impl {
 
 /// Return the name of the attribute used for function types.
-inline StringRef getTypeAttrName() { return "type"; }
+inline StringRef getTypeAttrName() { return "function_type"; }
 
 /// Return the name of the attribute used for function argument attributes.
 inline StringRef getArgDictAttrName() { return "arg_attrs"; }
@@ -206,7 +207,7 @@ Attribute removeResultAttr(ConcreteType op, unsigned index, StringAttr name) {
 /// method on FunctionOpInterface::Trait.
 template <typename ConcreteOp>
 LogicalResult verifyTrait(ConcreteOp op) {
-  if (!op.getTypeAttr())
+  if (!op.getFunctionTypeAttr())
     return op.emitOpError("requires a type attribute '")
            << function_interface_impl::getTypeAttrName() << '\'';
 

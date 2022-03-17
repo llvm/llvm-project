@@ -208,3 +208,17 @@ namespace PR53911 {
     return (int*)nullptr; // FIXME: should error
   }
 }
+
+namespace PR54379 {
+template <int N>
+struct A {
+  static void f() requires (N == 0) { return; } // expected-note {{candidate template ignored: constraints not satisfied}} expected-note {{evaluated to false}}
+  static void f() requires (N == 1) { return; } // expected-note {{candidate template ignored: constraints not satisfied}} expected-note {{evaluated to false}}
+};
+void (*f1)() = A<2>::f; // expected-error {{address of overloaded function 'f' does not match required type}}
+
+struct B {
+  template <int N2 = 1> static void f() requires (N2 == 0) { return; }  // expected-note {{candidate template ignored: constraints not satisfied [with N2 = 1]}} expected-note {{evaluated to false}}
+};
+void (*f2)() = B::f; // expected-error {{address of overloaded function 'f' does not match required type}}
+}

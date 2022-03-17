@@ -1079,13 +1079,15 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
       // So in here we want to see if there is a brace that falls
       // on a line that was split. If so on that line we make sure that
       // the spaces in front of the brace are enough.
-      Changes[CellIter->Index].NewlinesBefore = 0;
-      Changes[CellIter->Index].Spaces = 0;
-      for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
-           Next = Next->NextColumnElement) {
-        Changes[Next->Index].Spaces = 0;
-        Changes[Next->Index].NewlinesBefore = 0;
-      }
+      const auto *Next = CellIter;
+      do {
+        const FormatToken *Previous = Changes[Next->Index].Tok->Previous;
+        if (Previous && Previous->isNot(TT_LineComment)) {
+          Changes[Next->Index].Spaces = 0;
+          Changes[Next->Index].NewlinesBefore = 0;
+        }
+        Next = Next->NextColumnElement;
+      } while (Next);
       // Unless the array is empty, we need the position of all the
       // immediately adjacent cells
       if (CellIter != Cells.begin()) {
@@ -1161,9 +1163,8 @@ void WhitespaceManager::alignArrayInitializersLeftJustified(
     auto Offset = std::distance(Cells.begin(), CellIter);
     for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
          Next = Next->NextColumnElement) {
-      if (RowCount > CellDescs.CellCounts.size()) {
+      if (RowCount > CellDescs.CellCounts.size())
         break;
-      }
       auto *Start = (Cells.begin() + RowCount * CellDescs.CellCounts[0]);
       auto *End = Start + Offset;
       auto ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);

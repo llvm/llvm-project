@@ -17,16 +17,18 @@ using FPBits = __llvm_libc::fputil::FPBits<float>;
 namespace mpfr = __llvm_libc::testing::mpfr;
 
 struct LlvmLibclog1pfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
-  void check(uint32_t start, uint32_t stop,
+  bool check(uint32_t start, uint32_t stop,
              mpfr::RoundingMode rounding) override {
     mpfr::ForceRoundingMode r(rounding);
     uint32_t bits = start;
+    bool result = true;
     do {
       FPBits xbits(bits);
       float x = float(xbits);
-      EXPECT_MPFR_MATCH(mpfr::Operation::Log1p, x, __llvm_libc::log1pf(x), 0.5,
-                        rounding);
+      result &= EXPECT_MPFR_MATCH(mpfr::Operation::Log1p, x,
+                                  __llvm_libc::log1pf(x), 0.5, rounding);
     } while (bits++ < stop);
+    return result;
   }
 };
 

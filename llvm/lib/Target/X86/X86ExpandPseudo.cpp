@@ -19,6 +19,7 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
@@ -552,7 +553,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::PTILELOADDV:
   case X86::PTILELOADDT1V: {
     for (unsigned i = 2; i > 0; --i)
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     unsigned Opc =
         Opcode == X86::PTILELOADDV ? X86::TILELOADD : X86::TILELOADDT1;
     MI.setDesc(TII->get(Opc));
@@ -565,7 +566,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   case X86::PTDPBF16PSV: {
     MI.untieRegOperand(4);
     for (unsigned i = 3; i > 0; --i)
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     unsigned Opc;
     switch (Opcode) {
     case X86::PTDPBSSDV:   Opc = X86::TDPBSSD; break;
@@ -581,13 +582,13 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
   }
   case X86::PTILESTOREDV: {
     for (int i = 1; i >= 0; --i)
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     MI.setDesc(TII->get(X86::TILESTORED));
     return true;
   }
   case X86::PTILEZEROV: {
     for (int i = 2; i > 0; --i) // Remove row, col
-      MI.RemoveOperand(i);
+      MI.removeOperand(i);
     MI.setDesc(TII->get(X86::TILEZERO));
     return true;
   }

@@ -206,7 +206,7 @@ Pattern {
 Pattern {
   // CHECK: expected `)` after operation operand list
   let value: Value;
-  let foo = op<builtin.func>(value<;
+  let foo = op<func.func>(value<;
 }
 
 // -----
@@ -214,7 +214,7 @@ Pattern {
 Pattern {
   // CHECK: unable to convert expression of type `Attr` to the expected type of `ValueRange`
   let attr: Attr;
-  let foo = op<builtin.func>(attr);
+  let foo = op<func.func>(attr);
 }
 
 // -----

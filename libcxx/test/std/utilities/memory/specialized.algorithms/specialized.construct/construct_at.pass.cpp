@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// Investigation needed
-// XFAIL: gcc
-
 // <memory>
 
 // template <class T, class ...Args>
@@ -23,15 +20,17 @@
 #include "test_iterators.h"
 
 struct Foo {
-    int a;
-    char b;
-    double c;
     constexpr Foo() { }
-    constexpr Foo(int a, char b, double c) : a(a), b(b), c(c) { }
+    constexpr Foo(int a, char b, double c) : a_(a), b_(b), c_(c) { }
     constexpr Foo(int a, char b, double c, int* count) : Foo(a, b, c) { *count += 1; }
     constexpr bool operator==(Foo const& other) const {
-        return a == other.a && b == other.b && c == other.c;
+        return a_ == other.a_ && b_ == other.b_ && c_ == other.c_;
     }
+
+private:
+    int a_;
+    char b_;
+    double c_;
 };
 
 struct Counted {

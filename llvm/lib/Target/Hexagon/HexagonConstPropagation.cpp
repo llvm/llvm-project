@@ -868,8 +868,8 @@ void MachineConstPropagator::removeCFGEdge(MachineBasicBlock *From,
     int N = PN.getNumOperands() - 2;
     while (N > 0) {
       if (PN.getOperand(N + 1).getMBB() == From) {
-        PN.RemoveOperand(N + 1);
-        PN.RemoveOperand(N);
+        PN.removeOperand(N + 1);
+        PN.removeOperand(N);
       }
       N -= 2;
     }
@@ -2510,7 +2510,7 @@ APInt HexagonConstEvaluator::getCmpImm(unsigned Opc, unsigned OpX,
 void HexagonConstEvaluator::replaceWithNop(MachineInstr &MI) {
   MI.setDesc(HII.get(Hexagon::A2_nop));
   while (MI.getNumOperands() > 0)
-    MI.RemoveOperand(0);
+    MI.removeOperand(0);
 }
 
 bool HexagonConstEvaluator::evaluateHexRSEQ32(RegisterSubReg RL, RegisterSubReg RH,
@@ -3165,7 +3165,7 @@ bool HexagonConstEvaluator::rewriteHexBranch(MachineInstr &BrI,
                   .addMBB(TargetB);
       BrI.setDesc(JD);
       while (BrI.getNumOperands() > 0)
-        BrI.RemoveOperand(0);
+        BrI.removeOperand(0);
       // This ensures that all implicit operands (e.g. implicit-def %r31, etc)
       // are present in the rewritten branch.
       for (auto &Op : NI->operands())

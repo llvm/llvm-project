@@ -33,7 +33,7 @@ using namespace mlir::detail;
 ///                    | `[` (attribute-value (`,` attribute-value)*)? `]`
 ///                    | `{` (attribute-entry (`,` attribute-entry)*)? `}`
 ///                    | symbol-ref-id (`::` symbol-ref-id)*
-///                    | `dense` `<` attribute-value `>` `:`
+///                    | `dense` `<` tensor-literal `>` `:`
 ///                      (tensor-type | vector-type)
 ///                    | `sparse` `<` attribute-value `,` attribute-value `>`
 ///                      `:` (tensor-type | vector-type)

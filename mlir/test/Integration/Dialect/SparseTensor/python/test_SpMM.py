@@ -12,6 +12,7 @@ from mlir import execution_engine
 
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects.linalg.opdsl import lang as dsl
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +42,7 @@ def build_SpMM(attr: st.EncodingAttr):
   arguments = [a, b, c]
   with ir.InsertionPoint(module.body):
 
-    @builtin.FuncOp.from_py_func(*arguments)
+    @func.FuncOp.from_py_func(*arguments)
     def spMxM(*args):
       return matmul_dsl(args[0], args[1], outs=[args[2]])
 

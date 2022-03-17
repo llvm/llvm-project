@@ -2736,11 +2736,10 @@ void RecordKeeper::stopBackendTimer() {
   }
 }
 
-// We cache the record vectors for single classes. Many backends request
-// the same vectors multiple times.
-std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
-    StringRef ClassName) const {
-
+std::vector<Record *>
+RecordKeeper::getAllDerivedDefinitions(StringRef ClassName) const {
+  // We cache the record vectors for single classes. Many backends request
+  // the same vectors multiple times.
   auto Pair = ClassRecordsMap.try_emplace(ClassName);
   if (Pair.second)
     Pair.first->second = getAllDerivedDefinitions(makeArrayRef(ClassName));
@@ -2769,6 +2768,12 @@ std::vector<Record *> RecordKeeper::getAllDerivedDefinitions(
   }
 
   return Defs;
+}
+
+std::vector<Record *>
+RecordKeeper::getAllDerivedDefinitionsIfDefined(StringRef ClassName) const {
+  return getClass(ClassName) ? getAllDerivedDefinitions(ClassName)
+                             : std::vector<Record *>();
 }
 
 Init *MapResolver::resolve(Init *VarName) {

@@ -10,7 +10,7 @@
 #define LLVM_LIBC_STDIO_H
 
 #include <__llvm-libc-common.h>
-#include <llvm-libc-macros/stdio-macros.h>
+#include <llvm-libc-macros/file-seek-macros.h>
 
 %%public_api()
 

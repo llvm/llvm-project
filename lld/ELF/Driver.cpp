@@ -74,6 +74,7 @@ using namespace lld;
 using namespace lld::elf;
 
 std::unique_ptr<Configuration> elf::config;
+std::unique_ptr<Ctx> elf::ctx;
 std::unique_ptr<LinkerDriver> elf::driver;
 
 static void setConfigs(opt::InputArgList &args);
@@ -117,6 +118,7 @@ bool elf::link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
                                  "--error-limit=0 to see all errors)";
 
   config = std::make_unique<Configuration>();
+  elf::ctx = std::make_unique<Ctx>();
   driver = std::make_unique<LinkerDriver>();
   script = std::make_unique<LinkerScript>();
   symtab = std::make_unique<SymbolTable>();
@@ -1101,6 +1103,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->oFormatBinary = isOutputFormatBinary(args);
   config->omagic = args.hasFlag(OPT_omagic, OPT_no_omagic, false);
   config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
+  config->optStatsFilename = args.getLastArgValue(OPT_opt_stats_filename);
 
   // Parse remarks hotness threshold. Valid value is either integer or 'auto'.
   if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
@@ -2486,6 +2489,16 @@ void LinkerDriver::link(opt::InputArgList &args) {
   parallelForEach(objectFiles, initializeLocalSymbols);
   parallelForEach(objectFiles, postParseObjectFile);
   parallelForEach(bitcodeFiles, [](BitcodeFile *file) { file->postParse(); });
+  for (auto &it : ctx->nonPrevailingSyms) {
+    Symbol &sym = *it.first;
+    sym.replace(Undefined{sym.file, sym.getName(), sym.binding, sym.stOther,
+                          sym.type, it.second});
+    cast<Undefined>(sym).nonPrevailing = true;
+  }
+  ctx->nonPrevailingSyms.clear();
+  for (const DuplicateSymbol &d : ctx->duplicates)
+    reportDuplicate(*d.sym, d.file, d.section, d.value);
+  ctx->duplicates.clear();
 
   // Return if there were name resolution errors.
   if (errorCount())
@@ -2558,6 +2571,8 @@ void LinkerDriver::link(opt::InputArgList &args) {
   auto newObjectFiles = makeArrayRef(objectFiles).slice(numObjsBeforeLTO);
   parallelForEach(newObjectFiles, initializeLocalSymbols);
   parallelForEach(newObjectFiles, postParseObjectFile);
+  for (const DuplicateSymbol &d : ctx->duplicates)
+    reportDuplicate(*d.sym, d.file, d.section, d.value);
 
   // Handle --exclude-libs again because lto.tmp may reference additional
   // libcalls symbols defined in an excluded archive. This may override
@@ -2587,26 +2602,28 @@ void LinkerDriver::link(opt::InputArgList &args) {
 
   {
     llvm::TimeTraceScope timeScope("Strip sections");
-    llvm::erase_if(inputSections, [](InputSectionBase *s) {
-      if (s->type == SHT_LLVM_SYMPART) {
+    if (ctx->hasSympart.load(std::memory_order_relaxed)) {
+      llvm::erase_if(inputSections, [](InputSectionBase *s) {
+        if (s->type != SHT_LLVM_SYMPART)
+          return false;
         invokeELFT(readSymbolPartitionSection, s);
         return true;
-      }
+      });
+    }
+    // We do not want to emit debug sections if --strip-all
+    // or --strip-debug are given.
+    if (config->strip != StripPolicy::None) {
+      llvm::erase_if(inputSections, [](InputSectionBase *s) {
+        if (isDebugSection(*s))
+          return true;
+        if (auto *isec = dyn_cast<InputSection>(s))
+          if (InputSectionBase *rel = isec->getRelocatedSection())
+            if (isDebugSection(*rel))
+              return true;
 
-      // We do not want to emit debug sections if --strip-all
-      // or --strip-debug are given.
-      if (config->strip == StripPolicy::None)
         return false;
-
-      if (isDebugSection(*s))
-        return true;
-      if (auto *isec = dyn_cast<InputSection>(s))
-        if (InputSectionBase *rel = isec->getRelocatedSection())
-          if (isDebugSection(*rel))
-            return true;
-
-      return false;
-    });
+      });
+    }
   }
 
   // Since we now have a complete set of input files, we can create

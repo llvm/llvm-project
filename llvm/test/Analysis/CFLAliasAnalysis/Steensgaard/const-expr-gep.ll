@@ -21,6 +21,9 @@ define void @test() {
   %D = getelementptr %T, %T* @G, i64 0, i32 0
   %F = getelementptr i32, i32* getelementptr (%T, %T* @G, i64 0, i32 0), i64 0
   %X = getelementptr [10 x i8], [10 x i8]* getelementptr (%T, %T* @G, i64 0, i32 1), i64 0, i64 5
+  load i32, i32* %D
+  load i32, i32* %F
+  load i8, i8* %X
 
   ret void
 }
@@ -32,6 +35,9 @@ define void @test() {
 define void @simplecheck(i32* %arg0) {
   %F = getelementptr i32, i32* getelementptr (%T, %T* @G, i64 0, i32 0), i64 0
   %H = getelementptr %T, %T* @G2, i64 0, i32 0
+  load i32, i32* %arg0
+  load i32, i32* %F
+  load i32, i32* %H
 
   ret void
 }
@@ -53,5 +59,7 @@ define void @checkNesting(i32* %arg0) {
            i32 0),
          i64 0,
          i32 0
+  load i32, i32* %arg0
+  load i32, i32* %A
   ret void
 }

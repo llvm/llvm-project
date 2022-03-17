@@ -1476,7 +1476,7 @@ void SIWholeQuadMode::lowerCopyInstrs() {
       }
       int Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
       while (Index >= 0) {
-        MI->RemoveOperand(Index);
+        MI->removeOperand(Index);
         Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
       }
       MI->setDesc(TII->get(AMDGPU::COPY));
@@ -1491,7 +1491,7 @@ void SIWholeQuadMode::lowerCopyInstrs() {
       // an undef input so it is being replaced by a simple copy.
       // There should be a second undef source that we should remove.
       assert(MI->getOperand(2).isUndef());
-      MI->RemoveOperand(2);
+      MI->removeOperand(2);
       MI->untieRegOperand(1);
     } else {
       assert(MI->getNumExplicitOperands() == 2);
@@ -1611,11 +1611,11 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   // Physical registers like SCC aren't tracked by default anyway, so just
   // removing the ranges we computed is the simplest option for maintaining
   // the analysis results.
-  LIS->removeRegUnit(*MCRegUnitIterator(MCRegister::from(AMDGPU::SCC), TRI));
+  LIS->removeAllRegUnitsForPhysReg(AMDGPU::SCC);
 
   // If we performed any kills then recompute EXEC
   if (!KillInstrs.empty())
-    LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
+    LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
 
   return true;
 }

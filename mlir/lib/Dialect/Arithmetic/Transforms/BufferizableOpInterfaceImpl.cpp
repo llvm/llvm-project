@@ -23,7 +23,7 @@ struct ConstantOpInterface
     : public BufferizableOpInterface::ExternalModel<ConstantOpInterface,
                                                     arith::ConstantOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto constantOp = cast<arith::ConstantOp>(op);
 
     // Only ranked tensors are supported.
@@ -49,7 +49,7 @@ struct ConstantOpInterface
   }
 
   bool isWritable(Operation *op, Value value,
-                  const BufferizationState &state) const {
+                  const AnalysisState &state) const {
     // Memory locations returned by memref::GetGlobalOp may not be written to.
     assert(value.isa<OpResult>());
     return false;
@@ -60,28 +60,27 @@ struct IndexCastOpInterface
     : public BufferizableOpInterface::ExternalModel<IndexCastOpInterface,
                                                     arith::IndexCastOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return false;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     return {op->getResult(0)};
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::Equivalent;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto castOp = cast<arith::IndexCastOp>(op);
 
     Value source = *state.getBuffer(rewriter, op->getOpOperand(0) /*in*/);
@@ -106,30 +105,29 @@ struct SelectOpInterface
     : public BufferizableOpInterface::ExternalModel<SelectOpInterface,
                                                     arith::SelectOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const BufferizationState &state) const {
+                              const AnalysisState &state) const {
     return false;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const BufferizationState &state) const {
+                               const AnalysisState &state) const {
     return false;
   }
 
-  SmallVector<OpResult>
-  getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                      const BufferizationState &state) const {
+  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
+                                            const AnalysisState &state) const {
     return {op->getOpResult(0) /*result*/};
   }
 
   SmallVector<OpOperand *>
   getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const BufferizationState &state) const {
+                       const AnalysisState &state) const {
     return {&op->getOpOperand(1) /*true_value*/,
             &op->getOpOperand(2) /*false_value*/};
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
-                          const BufferizationState &state) const {
+                          BufferizationState &state) const {
     auto selectOp = cast<arith::SelectOp>(op);
 
     // `getBuffer` introduces copies if an OpOperand bufferizes out-of-place.
@@ -147,7 +145,7 @@ struct SelectOpInterface
   }
 
   BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const BufferizationState &state) const {
+                                const AnalysisState &state) const {
     return BufferRelation::None;
   }
 };
@@ -156,7 +154,9 @@ struct SelectOpInterface
 
 void mlir::arith::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<ConstantOp, ConstantOpInterface>();
-  registry.addOpInterface<IndexCastOp, IndexCastOpInterface>();
-  registry.addOpInterface<SelectOp, SelectOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, ArithmeticDialect *dialect) {
+    ConstantOp::attachInterface<ConstantOpInterface>(*ctx);
+    IndexCastOp::attachInterface<IndexCastOpInterface>(*ctx);
+    SelectOp::attachInterface<SelectOpInterface>(*ctx);
+  });
 }

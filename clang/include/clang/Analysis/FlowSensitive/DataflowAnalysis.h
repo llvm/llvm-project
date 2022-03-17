@@ -136,6 +136,15 @@ runDataflowAnalysis(const ControlFlowContext &CFCtx, AnalysisT &Analysis,
   return BlockStates;
 }
 
+/// Abstract base class for dataflow "models": reusable analysis components that
+/// model a particular aspect of program semantics in the `Environment`. For
+/// example, a model may capture a type and its related functions.
+class DataflowModel : public Environment::ValueModel {
+public:
+  /// Return value indicates whether the model processed the `Stmt`.
+  virtual bool transfer(const Stmt *Stmt, Environment &Env) = 0;
+};
+
 } // namespace dataflow
 } // namespace clang
 

@@ -8,7 +8,7 @@ libFuzzer – a library for coverage-guided fuzz testing.
 Introduction
 ============
 
-LibFuzzer is in-process, coverage-guided, evolutionary fuzzing engine.
+LibFuzzer is an in-process, coverage-guided, evolutionary fuzzing engine.
 
 LibFuzzer is linked with the library under test, and feeds fuzzed inputs to the
 library via a specific fuzzing entrypoint (aka "target function"); the fuzzer

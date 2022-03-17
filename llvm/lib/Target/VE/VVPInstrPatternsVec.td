@@ -131,6 +131,53 @@ defm : VectorScatter<v256f32, v256i64, v256i1, "VSCU">;
 defm : VectorScatter<v256i32, v256i64, v256i1, "VSCL">;
 
 
+/// FNEG {
+// Directly modify the sign bit to flip the sign.
+
+// Set sign bits in a pack of <2 x f32>.
+def packed_fneg_imm     : OutPatFrag<(ins ),
+                          (i64 (SLLri (i64 (ORim 1, (i32 32))), 31))>;
+
+
+multiclass FNeg<ValueType DataVT> {
+  // Masked with select.
+  def : Pat<(vvp_select (vvp_fneg DataVT:$vx, (v256i1 srcvalue), (i32 srcvalue)),
+                        DataVT:$vfalse,
+                        v256i1:$mask,
+                        i32:$avl),
+            (VXORmvml_v (i32 1), $vx, $mask, $avl, $vfalse)>;
+
+  // Unmasked.
+  def : Pat<(vvp_fneg DataVT:$vx, (v256i1 true_mask), i32:$avl),
+            (VXORmvl (i32 1), $vx, $avl)>;
+
+  // Masked.
+  def : Pat<(vvp_fneg DataVT:$vx, v256i1:$mask, i32:$avl),
+            (VXORmvml (i32 1), $vx, $mask, $avl)>;
+}
+
+defm: FNeg<v256f32>;
+defm: FNeg<v256f64>;
+
+///// Packed FNeg /////
+
+// Masked with select.
+def : Pat<(vvp_select (vvp_fneg v512f32:$vx, (v512i1 srcvalue), (i32 srcvalue)),
+                      v512f32:$vfalse,
+                      v512i1:$mask,
+                      i32:$avl),
+          (v512f32 (PVXORrvml_v (packed_fneg_imm ), $vx, $mask, $avl, $vfalse))>;
+
+// Unmasked.
+def : Pat<(vvp_fneg v512f32:$vx, (v512i1 true_mask), i32:$avl),
+          (v512f32 (PVXORrvl (packed_fneg_imm ), $vx, $avl))>;
+
+// Masked.
+def : Pat<(vvp_fneg v512f32:$vx, v512i1:$mask, i32:$avl),
+          (v512f32 (PVXORrvml (packed_fneg_imm ), $vx, $mask, $avl))>;
+
+/// } FNEG
+
 multiclass Binary_rv<SDPatternOperator OpNode,
     ValueType ScalarVT, ValueType DataVT,
     ValueType MaskVT, string OpBaseName> {
@@ -375,6 +422,118 @@ defm : Binary_rv_vv<c_vvp_fmul,
                     i64, v512f32, v512i1, "PVFMUL">;
 defm : Binary_rv_vv<vvp_fsub,
                     i64, v512f32, v512i1, "PVFSUB">;
+
+multiclass Ternary_vvv<
+    SDPatternOperator OpNode, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru.
+  def : Pat<(vvp_select
+              (OpNode DataVT:$vx, DataVT:$vy, DataVT:$vz,
+                (MaskVT srcvalue), (i32 srcvalue)),
+              DataVT:$vfalse,
+              MaskVT:$mask,
+              i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vvvml_v")
+              $vx, $vy, $vz, $mask, $avl, $vfalse)>;
+
+  // Unmasked.
+  def : Pat<(OpNode DataVT:$vx, DataVT:$vy, DataVT:$vz,
+              (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vvvl")
+              $vx, $vy, $vz, $avl)>;
+
+  // Masked.
+  def : Pat<(OpNode DataVT:$vx, DataVT:$vy, DataVT:$vz,
+              MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vvvml")
+              $vx, $vy, $vz, $mask, $avl)>;
+}
+
+multiclass Ternary_rvv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru, broadcast first.
+  def : Pat<(vvp_select
+              (OpNode
+                (any_broadcast ScalarVT:$sx), DataVT:$vy, DataVT:$vz,
+                (MaskVT srcvalue), (i32 srcvalue)),
+              DataVT:$vfalse,
+              MaskVT:$mask,
+              i32:$avl),
+            (!cast<Instruction>(OpBaseName#"rvvml_v")
+              $sx, $vy, $vz, $mask, $avl, $vfalse)>;
+
+  // Unmasked, broadcast first.
+  def : Pat<(OpNode
+              (any_broadcast ScalarVT:$sx), DataVT:$vy, DataVT:$vz,
+              (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(OpBaseName#"rvvl")
+              $sx, $vy, $vz, $avl)>;
+
+  // Masked, broadcast first.
+  def : Pat<(OpNode 
+              (any_broadcast ScalarVT:$sx), DataVT:$vy, DataVT:$vz,
+              MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(OpBaseName#"rvvml")
+              $sx, $vy, $vz, $mask, $avl)>;
+}
+
+multiclass Ternary_vrv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  // Masked with passthru, broadcast second.
+  def : Pat<(vvp_select
+              (OpNode
+                DataVT:$vx, (any_broadcast ScalarVT:$sy), DataVT:$vz,
+                (MaskVT srcvalue), (i32 srcvalue)),
+              DataVT:$vfalse,
+              MaskVT:$mask,
+              i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrvml_v")
+              $vx, $sy, $vz,
+              $mask, $avl, $vfalse)>;
+
+  // Unmasked, broadcast second.
+  def : Pat<(OpNode
+              DataVT:$vx, (any_broadcast ScalarVT:$sy), DataVT:$vz,
+              (MaskVT true_mask), i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrvl")
+              $vx, $sy, $vz, $avl)>;
+
+  // Masked, broadcast second.
+  def : Pat<(OpNode
+              DataVT:$vx, (any_broadcast ScalarVT:$sy), DataVT:$vz,
+              MaskVT:$mask, i32:$avl),
+            (!cast<Instruction>(OpBaseName#"vrvml")
+              $vx, $sy, $vz, $mask, $avl)>;
+}
+
+multiclass Ternary_rvv_vrv_vvv<
+    SDPatternOperator OpNode,
+    ValueType ScalarVT, ValueType DataVT,
+    ValueType MaskVT, string OpBaseName> {
+  defm : Ternary_rvv<OpNode, ScalarVT, DataVT, MaskVT, OpBaseName>;
+  defm : Ternary_vrv<OpNode, ScalarVT, DataVT, MaskVT, OpBaseName>;
+  defm : Ternary_vvv<OpNode, DataVT, MaskVT, OpBaseName>;
+}
+
+// Expand both 64bit and 32 bit variant (256 elements)
+multiclass Ternary_ShortLong<
+    SDPatternOperator OpNode,
+    ValueType LongScalarVT, ValueType LongDataVT, string LongOpBaseName,
+    ValueType ShortScalarVT, ValueType ShortDataVT, string ShortOpBaseName> {
+  defm : Ternary_rvv_vrv_vvv<OpNode, LongScalarVT, LongDataVT,
+                             v256i1, LongOpBaseName>;
+  defm : Ternary_rvv_vrv_vvv<OpNode, ShortScalarVT, ShortDataVT,
+                             v256i1, ShortOpBaseName>;
+}
+
+defm : Ternary_ShortLong<c_vvp_ffma,
+                         f64, v256f64, "VFMADD", f32, v256f32, "VFMADS">;
+defm : Ternary_rvv_vrv_vvv<c_vvp_ffma,
+                           i64, v512f32, v512i1, "PVFMAD">;
 
 multiclass Merge_mvv<
     SDPatternOperator OpNode,

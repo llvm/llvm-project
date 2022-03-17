@@ -224,7 +224,9 @@ private:
   bool SelectVOP3OMods(SDValue In, SDValue &Src, SDValue &Clamp,
                        SDValue &Omod) const;
 
-  bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods,
+                       bool IsDOT = false) const;
+  bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectDotIUVOP3PMods(SDValue In, SDValue &Src) const;
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
@@ -255,7 +257,6 @@ private:
   bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
   void SelectFMAD_FMA(SDNode *N);
-  void SelectATOMIC_CMP_SWAP(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N);
   void SelectDS_GWS(SDNode *N, unsigned IntrID);

@@ -40,6 +40,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <algorithm>
 #include <functional>
 
 using namespace mlir;
@@ -50,17 +51,69 @@ using namespace mlir;
 /// `LLVMFuncOp::build`. If `filterArgAttrs` is set, also filter out argument
 /// attributes.
 static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
-                                 bool filterArgAttrs,
+                                 bool filterArgAndResAttrs,
                                  SmallVectorImpl<NamedAttribute> &result) {
   for (const auto &attr : attrs) {
     if (attr.getName() == SymbolTable::getSymbolAttrName() ||
         attr.getName() == FunctionOpInterface::getTypeAttrName() ||
         attr.getName() == "func.varargs" ||
-        (filterArgAttrs &&
-         attr.getName() == FunctionOpInterface::getArgDictAttrName()))
+        (filterArgAndResAttrs &&
+         (attr.getName() == FunctionOpInterface::getArgDictAttrName() ||
+          attr.getName() == FunctionOpInterface::getResultDictAttrName())))
       continue;
     result.push_back(attr);
   }
+}
+
+/// Helper function for wrapping all attributes into a single DictionaryAttr
+static auto wrapAsStructAttrs(OpBuilder &b, ArrayAttr attrs) {
+  return DictionaryAttr::get(
+      b.getContext(),
+      b.getNamedAttr(LLVM::LLVMDialect::getStructAttrsAttrName(), attrs));
+}
+
+/// Combines all result attributes into a single DictionaryAttr
+/// and prepends to argument attrs.
+/// This is intended to be used to format the attributes for a C wrapper
+/// function when the result(s) is converted to the first function argument
+/// (in the multiple return case, all returns get wrapped into a single
+/// argument). The total number of argument attributes should be equal to
+/// (number of function arguments) + 1.
+static void
+prependResAttrsToArgAttrs(OpBuilder &builder,
+                          SmallVectorImpl<NamedAttribute> &attributes,
+                          size_t numArguments) {
+  auto allAttrs = SmallVector<Attribute>(
+      numArguments + 1, DictionaryAttr::get(builder.getContext()));
+  NamedAttribute *argAttrs = nullptr;
+  for (auto it = attributes.begin(); it != attributes.end();) {
+    if (it->getName() == FunctionOpInterface::getArgDictAttrName()) {
+      auto arrayAttrs = it->getValue().cast<ArrayAttr>();
+      assert(arrayAttrs.size() == numArguments &&
+             "Number of arg attrs and args should match");
+      std::copy(arrayAttrs.begin(), arrayAttrs.end(), allAttrs.begin() + 1);
+      argAttrs = it;
+    } else if (it->getName() == FunctionOpInterface::getResultDictAttrName()) {
+      auto arrayAttrs = it->getValue().cast<ArrayAttr>();
+      assert(!arrayAttrs.empty() && "expected array to be non-empty");
+      allAttrs[0] = (arrayAttrs.size() == 1)
+                        ? arrayAttrs[0]
+                        : wrapAsStructAttrs(builder, arrayAttrs);
+      it = attributes.erase(it);
+      continue;
+    }
+    it++;
+  }
+
+  auto newArgAttrs =
+      builder.getNamedAttr(FunctionOpInterface::getArgDictAttrName(),
+                           builder.getArrayAttr(allAttrs));
+  if (!argAttrs) {
+    attributes.emplace_back(newArgAttrs);
+    return;
+  }
+  *argAttrs = newArgAttrs;
+  return;
 }
 
 /// Creates an auxiliary function with pointer-to-memref-descriptor-struct
@@ -74,14 +127,16 @@ static void filterFuncAttributes(ArrayRef<NamedAttribute> attrs,
 static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
                                    LLVMTypeConverter &typeConverter,
                                    FuncOp funcOp, LLVM::LLVMFuncOp newFuncOp) {
-  auto type = funcOp.getType();
+  auto type = funcOp.getFunctionType();
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/false,
+  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/false,
                        attributes);
   Type wrapperFuncType;
   bool resultIsNowArg;
   std::tie(wrapperFuncType, resultIsNowArg) =
       typeConverter.convertFunctionTypeCWrapper(type);
+  if (resultIsNowArg)
+    prependResAttrsToArgAttrs(rewriter, attributes, funcOp.getNumArguments());
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
       wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false, attributes);
@@ -135,16 +190,18 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   Type wrapperType;
   bool resultIsNowArg;
   std::tie(wrapperType, resultIsNowArg) =
-      typeConverter.convertFunctionTypeCWrapper(funcOp.getType());
+      typeConverter.convertFunctionTypeCWrapper(funcOp.getFunctionType());
   // This conversion can only fail if it could not convert one of the argument
   // types. But since it has been applied to a non-wrapper function before, it
   // should have failed earlier and not reach this point at all.
   assert(wrapperType && "unexpected type conversion failure");
 
   SmallVector<NamedAttribute, 4> attributes;
-  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/false,
+  filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/false,
                        attributes);
 
+  if (resultIsNowArg)
+    prependResAttrsToArgAttrs(builder, attributes, funcOp.getNumArguments());
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
@@ -153,7 +210,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   builder.setInsertionPointToStart(newFuncOp.addEntryBlock());
 
   // Get a ValueRange containing arguments.
-  FunctionType type = funcOp.getType();
+  FunctionType type = funcOp.getFunctionType();
   SmallVector<Value, 8> args;
   args.reserve(type.getNumInputs());
   ValueRange wrapperArgsRange(newFuncOp.getArguments());
@@ -231,15 +288,26 @@ protected:
     auto varargsAttr = funcOp->getAttrOfType<BoolAttr>("func.varargs");
     TypeConverter::SignatureConversion result(funcOp.getNumArguments());
     auto llvmType = getTypeConverter()->convertFunctionSignature(
-        funcOp.getType(), varargsAttr && varargsAttr.getValue(), result);
+        funcOp.getFunctionType(), varargsAttr && varargsAttr.getValue(),
+        result);
     if (!llvmType)
       return nullptr;
 
-    // Propagate argument attributes to all converted arguments obtained after
-    // converting a given original argument.
+    // Propagate argument/result attributes to all converted arguments/result
+    // obtained after converting a given original argument/result.
     SmallVector<NamedAttribute, 4> attributes;
-    filterFuncAttributes(funcOp->getAttrs(), /*filterArgAttrs=*/true,
+    filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/true,
                          attributes);
+    if (ArrayAttr resAttrDicts = funcOp.getAllResultAttrs()) {
+      assert(!resAttrDicts.empty() && "expected array to be non-empty");
+      auto newResAttrDicts =
+          (funcOp.getNumResults() == 1)
+              ? resAttrDicts
+              : rewriter.getArrayAttr(
+                    {wrapAsStructAttrs(rewriter, resAttrDicts)});
+      attributes.push_back(rewriter.getNamedAttr(
+          FunctionOpInterface::getResultDictAttrName(), newResAttrDicts));
+    }
     if (ArrayAttr argAttrDicts = funcOp.getAllArgAttrs()) {
       SmallVector<Attribute, 4> newArgAttrs(
           llvmType.cast<LLVM::LLVMFunctionType>().getNumParams());
@@ -334,7 +402,7 @@ struct BarePtrFuncOpConversion : public FuncOpConversionBase {
     // Store the type of memref-typed arguments before the conversion so that we
     // can promote them to MemRef descriptor at the beginning of the function.
     SmallVector<Type, 8> oldArgTypes =
-        llvm::to_vector<8>(funcOp.getType().getInputs());
+        llvm::to_vector<8>(funcOp.getFunctionType().getInputs());
 
     auto newFuncOp = convertFuncOpToLLVMFuncOp(funcOp, rewriter);
     if (!newFuncOp)

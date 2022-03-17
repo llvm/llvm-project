@@ -14,6 +14,7 @@
 #include "CSKY.h"
 #include "CSKYSubtarget.h"
 #include "TargetInfo/CSKYTargetInfo.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"

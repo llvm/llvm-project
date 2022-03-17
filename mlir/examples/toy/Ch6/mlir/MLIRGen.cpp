@@ -58,12 +58,8 @@ public:
     // add them to the module.
     theModule = mlir::ModuleOp::create(builder.getUnknownLoc());
 
-    for (FunctionAST &f : moduleAST) {
-      auto func = mlirGen(f);
-      if (!func)
-        return nullptr;
-      theModule.push_back(func);
-    }
+    for (FunctionAST &f : moduleAST)
+      mlirGen(f);
 
     // Verify the module after we have finished constructing it, this will check
     // the structural properties of the IR and invoke any specific verifiers we
@@ -108,7 +104,7 @@ private:
 
   /// Create the prototype for an MLIR function with as many arguments as the
   /// provided Toy AST prototype.
-  mlir::FuncOp mlirGen(PrototypeAST &proto) {
+  mlir::toy::FuncOp mlirGen(PrototypeAST &proto) {
     auto location = loc(proto.loc());
 
     // This is a generic function, the return type will be inferred later.
@@ -116,23 +112,23 @@ private:
     llvm::SmallVector<mlir::Type, 4> argTypes(proto.getArgs().size(),
                                               getType(VarType{}));
     auto funcType = builder.getFunctionType(argTypes, llvm::None);
-    return mlir::FuncOp::create(location, proto.getName(), funcType);
+    return builder.create<mlir::toy::FuncOp>(location, proto.getName(),
+                                             funcType);
   }
 
   /// Emit a new function and add it to the MLIR module.
-  mlir::FuncOp mlirGen(FunctionAST &funcAST) {
+  mlir::toy::FuncOp mlirGen(FunctionAST &funcAST) {
     // Create a scope in the symbol table to hold variable declarations.
     ScopedHashTableScope<llvm::StringRef, mlir::Value> varScope(symbolTable);
 
     // Create an MLIR function for the given prototype.
-    mlir::FuncOp function(mlirGen(*funcAST.getProto()));
+    builder.setInsertionPointToEnd(theModule.getBody());
+    mlir::toy::FuncOp function = mlirGen(*funcAST.getProto());
     if (!function)
       return nullptr;
 
     // Let's start the body of the function now!
-    // In MLIR the entry block of the function is special: it must have the same
-    // argument list as the function itself.
-    auto &entryBlock = *function.addEntryBlock();
+    mlir::Block &entryBlock = function.front();
     auto protoArgs = funcAST.getProto()->getArgs();
 
     // Declare all the function arguments in the symbol table.
@@ -165,8 +161,8 @@ private:
     } else if (returnOp.hasOperand()) {
       // Otherwise, if this return operation has an operand then add a result to
       // the function.
-      function.setType(builder.getFunctionType(function.getType().getInputs(),
-                                               getType(VarType{})));
+      function.setType(builder.getFunctionType(
+          function.getFunctionType().getInputs(), getType(VarType{})));
     }
 
     // If this function isn't main, then set the visibility to private.

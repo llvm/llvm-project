@@ -15,9 +15,9 @@ define i32** @return_ref_arg_callee(i32* %arg1) {
 ; CHECK: NoAlias: i32** %b, i32** %p
 ; CHECK: MayAlias: i32* %a, i32* %lb
 ; CHECK: NoAlias: i32* %lb, i32** %p
-; CHECK: NoAlias: i32* %lb, i32** %b
+; CHECK: NoAlias: i32** %b, i32* %lb
 ; CHECK: NoAlias: i32* %lp, i32** %p
-; CHECK: NoAlias: i32* %lp, i32** %b
+; CHECK: NoAlias: i32** %b, i32* %lp
 ; CHECK: MayAlias: i32* %lb, i32* %lp
 
 ; Temporarily disable modref checks
@@ -26,11 +26,14 @@ define void @test_return_ref_arg() {
   %a = alloca i32, align 4
   %p = alloca i32*, align 8
 
+  load i32, i32* %a
   store i32* %a, i32** %p
   %b = call i32** @return_ref_arg_callee(i32* %a)
 
   %lb = load i32*, i32** %b
   %lp = load i32*, i32** %p
+  load i32, i32* %lb
+  load i32, i32* %lp
 
   ret void
 }

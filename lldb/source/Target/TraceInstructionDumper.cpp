@@ -183,7 +183,7 @@ void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
     if (m_show_tsc) {
       s.Printf("[tsc=");
 
-      if (Optional<uint64_t> timestamp = m_cursor_up->GetTimestampCounter())
+      if (Optional<uint64_t> timestamp = m_cursor_up->GetCounter(lldb::eTraceCounterTSC))
         s.Printf("0x%016" PRIx64, *timestamp);
       else
         s.Printf("unavailable");

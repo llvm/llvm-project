@@ -217,7 +217,7 @@
 ; CHECK-DEFAULT-NEXT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-LTO-NOT: Running pass: EliminateAvailableExternallyPass
 ; CHECK-O-NEXT: Running pass: ReversePostOrderFunctionAttrsPass
-; CHECK-O-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
+; CHECK-O-NEXT: Running pass: RecomputeGlobalsAAPass
 ; CHECK-O-NEXT: Running pass: Float2IntPass
 ; CHECK-O-NEXT: Running pass: LowerConstantIntrinsicsPass on foo
 ; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass on f
@@ -266,8 +266,6 @@
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-DEFAULT-NEXT: Running pass: RelLookupTableConverterPass
 ; CHECK-LTO-NOT: Running pass: RelLookupTableConverterPass
-; CHECK-DEFAULT-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-LTO-NOT: Running analysis: TargetIRAnalysis
 ; CHECK-O-NEXT: Running pass: AnnotationRemarksPass on foo
 ; CHECK-LTO-NEXT: Running pass: CanonicalizeAliasesPass
 ; CHECK-LTO-NEXT: Running pass: NameAnonGlobalPass

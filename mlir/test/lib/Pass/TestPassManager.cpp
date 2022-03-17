@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "TestDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -98,6 +100,27 @@ class TestFailurePass : public PassWrapper<TestFailurePass, OperationPass<>> {
   }
 };
 
+/// A test pass that always fails to enable testing the failure recovery
+/// mechanisms of the pass manager.
+class TestInvalidParentPass
+    : public PassWrapper<TestInvalidParentPass,
+                         InterfacePass<FunctionOpInterface>> {
+  StringRef getArgument() const final { return "test-pass-invalid-parent"; }
+  StringRef getDescription() const final {
+    return "Test a pass in the pass manager that makes the parent operation "
+           "invalid";
+  }
+  void getDependentDialects(DialectRegistry &registry) const final {
+    registry.insert<test::TestDialect>();
+  }
+  void runOnOperation() final {
+    FunctionOpInterface op = getOperation();
+    OpBuilder b(getOperation().getBody());
+    b.create<test::TestCallOp>(op.getLoc(), TypeRange(), "some_unknown_func",
+                               ValueRange());
+  }
+};
+
 /// A test pass that contains a statistic.
 struct TestStatisticPass
     : public PassWrapper<TestStatisticPass, OperationPass<>> {
@@ -144,6 +167,7 @@ void registerPassManagerTestPass() {
 
   PassRegistration<TestCrashRecoveryPass>();
   PassRegistration<TestFailurePass>();
+  PassRegistration<TestInvalidParentPass>();
 
   PassRegistration<TestStatisticPass>();
 

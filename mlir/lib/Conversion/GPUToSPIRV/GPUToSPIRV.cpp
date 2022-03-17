@@ -184,7 +184,7 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
                      ConversionPatternRewriter &rewriter,
                      spirv::EntryPointABIAttr entryPointInfo,
                      ArrayRef<spirv::InterfaceVarABIAttr> argABIInfo) {
-  auto fnType = funcOp.getType();
+  auto fnType = funcOp.getFunctionType();
   if (fnType.getNumResults()) {
     funcOp.emitError("SPIR-V lowering only supports entry functions"
                      "with no return values right now");
@@ -201,7 +201,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
   // LowerABIAttributesPass.
   TypeConverter::SignatureConversion signatureConverter(fnType.getNumInputs());
   {
-    for (const auto &argType : enumerate(funcOp.getType().getInputs())) {
+    for (const auto &argType :
+         enumerate(funcOp.getFunctionType().getInputs())) {
       auto convertedType = typeConverter.convertType(argType.value());
       signatureConverter.addInputs(argType.index(), convertedType);
     }
@@ -373,6 +374,8 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,
       LaunchConfigConversion<gpu::ThreadIdOp,
                              spirv::BuiltIn::LocalInvocationId>,
+      LaunchConfigConversion<gpu::GlobalIdOp,
+                             spirv::BuiltIn::GlobalInvocationId>,
       SingleDimLaunchConfigConversion<gpu::SubgroupIdOp,
                                       spirv::BuiltIn::SubgroupId>,
       SingleDimLaunchConfigConversion<gpu::NumSubgroupsOp,

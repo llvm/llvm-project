@@ -1885,6 +1885,11 @@ void LazyValueInfo::eraseBlock(BasicBlock *BB) {
   }
 }
 
+void LazyValueInfo::clear(const Module *M) {
+  if (PImpl) {
+    getImpl(PImpl, AC, M).clear();
+  }
+}
 
 void LazyValueInfo::printLVI(Function &F, DominatorTree &DTree, raw_ostream &OS) {
   if (PImpl) {

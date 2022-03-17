@@ -1,6 +1,6 @@
-; RUN: opt %loadPolly -analyze -polly-invariant-load-hoisting \
+; RUN: opt %loadPolly -disable-output -polly-invariant-load-hoisting \
 ; RUN: -polly-allow-dereference-of-all-function-parameters \
-; RUN: -polly-scops < %s | FileCheck %s --check-prefix=SCOP
+; RUN: -polly-print-scops < %s | FileCheck %s --check-prefix=SCOP
 
 ; RUN: opt %loadPolly -S -polly-invariant-load-hoisting \
 ; RUN: -polly-codegen < %s | FileCheck %s --check-prefix=CODE-RTC

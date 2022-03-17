@@ -172,7 +172,7 @@ module attributes {shape.lib = [@shape_lib, "shape_lib"]} {
 
 shape.function_library @shape_lib {
   // Test shape function that returns the shape of input arg as result shape.
-  builtin.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+  func.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
     %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
     return %0 : !shape.shape
   }
@@ -192,7 +192,7 @@ module attributes {shape.lib = [@shape_lib, @shape_lib]} {
 
 shape.function_library @shape_lib {
   // Test shape function that returns the shape of input arg as result shape.
-  builtin.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+  func.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
     %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
     return %0 : !shape.shape
   }
@@ -212,7 +212,7 @@ module attributes {shape.lib = [@shape_lib]} {
 
 shape.function_library @shape_lib {
   // Test shape function that returns the shape of input arg as result shape.
-  builtin.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
+  func.func @same_result_shape(%arg: !shape.value_shape) -> !shape.shape {
     %0 = shape.shape_of %arg : !shape.value_shape -> !shape.shape
     return %0 : !shape.shape
   }

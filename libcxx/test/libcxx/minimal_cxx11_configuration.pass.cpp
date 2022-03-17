@@ -20,10 +20,6 @@
 // 1. noexcept and constexpr
 // 2. Two closing '>' without a space.
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wc++11-extensions"
-#endif
-
 #include <type_traits>
 #include <cassert>
 

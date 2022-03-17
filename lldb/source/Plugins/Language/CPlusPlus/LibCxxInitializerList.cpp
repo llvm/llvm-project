@@ -36,18 +36,17 @@ public:
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
-  ValueObject *m_start;
+  ValueObject *m_start = nullptr;
   CompilerType m_element_type;
-  uint32_t m_element_size;
-  size_t m_num_elements;
+  uint32_t m_element_size = 0;
+  size_t m_num_elements = 0;
 };
 } // namespace formatters
 } // namespace lldb_private
 
 lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::
     LibcxxInitializerListSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_start(nullptr), m_element_type(),
-      m_element_size(0), m_num_elements(0) {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_element_type() {
   if (valobj_sp)
     Update();
 }

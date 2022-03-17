@@ -2,7 +2,7 @@
 
 from mlir.ir import *
 import mlir.dialects.arith as arith
-import mlir.dialects.builtin as builtin
+import mlir.dialects.func as func
 import mlir.dialects.tensor as tensor
 
 
@@ -21,7 +21,7 @@ def testDimOp():
     indexType = IndexType.get()
     with InsertionPoint(module.body):
 
-      @builtin.FuncOp.from_py_func(RankedTensorType.get((-1, -1), f32Type))
+      @func.FuncOp.from_py_func(RankedTensorType.get((-1, -1), f32Type))
       #      CHECK: func @tensor_static_dim
       # CHECK-SAME:     %[[ARG0:.+]]: tensor<?x?xf32>
       #  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index

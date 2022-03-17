@@ -14,6 +14,7 @@
 #ifndef BUILTIN_ATTRIBUTES
 #define BUILTIN_ATTRIBUTES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"
@@ -152,7 +153,8 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
     Syntax:
 
     ```
-    dense-intorfloat-elements-attribute ::= `dense` `<` attribute-value `>` `:`
+    tensor-literal ::= integer-literal | float-literal | [] | [tensor-literal (, tensor-literal)* ]
+    dense-intorfloat-elements-attribute ::= `dense` `<` tensor-literal `>` `:`
                                             ( tensor-type | vector-type )
     ```
 

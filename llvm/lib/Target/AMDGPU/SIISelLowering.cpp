@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -4087,6 +4088,21 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     bool IsAdd = (MI.getOpcode() == AMDGPU::V_ADD_U64_PSEUDO);
 
+    MachineOperand &Dest = MI.getOperand(0);
+    MachineOperand &Src0 = MI.getOperand(1);
+    MachineOperand &Src1 = MI.getOperand(2);
+
+    if (IsAdd && ST.hasLshlAddB64()) {
+      auto Add = BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_LSHL_ADD_U64_e64),
+                         Dest.getReg())
+                     .add(Src0)
+                     .addImm(0)
+                     .add(Src1);
+      TII->legalizeOperands(*Add);
+      MI.eraseFromParent();
+      return BB;
+    }
+
     const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
 
     Register DestSub0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -4094,10 +4110,6 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     Register CarryReg = MRI.createVirtualRegister(CarryRC);
     Register DeadCarryReg = MRI.createVirtualRegister(CarryRC);
-
-    MachineOperand &Dest = MI.getOperand(0);
-    MachineOperand &Src0 = MI.getOperand(1);
-    MachineOperand &Src1 = MI.getOperand(2);
 
     const TargetRegisterClass *Src0RC = Src0.isReg()
                                             ? MRI.getRegClass(Src0.getReg())
@@ -11726,7 +11738,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         MachineOperand &CPol = MI.getOperand(CPolIdx);
         CPol.setImm(CPol.getImm() & ~AMDGPU::CPol::GLC);
       }
-      MI.RemoveOperand(0);
+      MI.removeOperand(0);
       MI.setDesc(TII->get(NoRetAtomicOp));
       return;
     }
@@ -11745,7 +11757,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 
       // Change this into a noret atomic.
       MI.setDesc(TII->get(NoRetAtomicOp));
-      MI.RemoveOperand(0);
+      MI.removeOperand(0);
 
       // If we only remove the def operand from the atomic instruction, the
       // extract_subreg will be left with a use of a vreg without a def.

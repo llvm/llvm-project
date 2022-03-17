@@ -112,6 +112,21 @@ def GPU_SubgroupIdOp : GPU_Op<"subgroup_id", [NoSideEffect]>,
   let assemblyFormat = "attr-dict `:` type($result)";
 }
 
+def GPU_GlobalIdOp : GPU_IndexOp<"global_id"> {
+  let description = [{
+    Returns the unique global workitem/thread id, i.e., the unique index of the
+    current workitem/thread within all workgroups / grid along the x, y, or z
+    `dimension`.
+
+    Example:
+
+    ```mlir
+    %gidX = gpu.global_id x
+    ```
+  }];
+}
+
+
 def GPU_NumSubgroupsOp : GPU_Op<"num_subgroups", [NoSideEffect]>,
     Arguments<(ins)>, Results<(outs Index:$result)> {
   let description = [{
@@ -206,6 +221,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     attribution.
   }];
 
+  let arguments = (ins TypeAttrOf<FunctionType>:$function_type);
   let regions = (region AnyRegion:$body);
 
   let skipDefaultBuilders = 1;
@@ -235,7 +251,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     /// the workgroup memory
     ArrayRef<BlockArgument> getWorkgroupAttributions() {
       auto begin =
-          std::next(getBody().args_begin(), getType().getNumInputs());
+          std::next(getBody().args_begin(), getFunctionType().getNumInputs());
       auto end = std::next(begin, getNumWorkgroupAttributions());
       return {begin, end};
     }
@@ -246,7 +262,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Returns the number of buffers located in the private memory.
     unsigned getNumPrivateAttributions() {
-      return getBody().getNumArguments() - getType().getNumInputs() -
+      return getBody().getNumArguments() - getFunctionType().getNumInputs() -
           getNumWorkgroupAttributions();
     }
 
@@ -257,7 +273,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
       // memory.
       auto begin =
           std::next(getBody().args_begin(),
-                    getType().getNumInputs() + getNumWorkgroupAttributions());
+                    getFunctionType().getNumInputs() + getNumWorkgroupAttributions());
       return {begin, getBody().args_end()};
     }
 
@@ -272,16 +288,14 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     }
 
     /// Returns the type of this function.
-    /// FIXME: We should drive this via the ODS `type` param.
-    FunctionType getType() {
-      return getTypeAttr().getValue().cast<FunctionType>();
-    }
+    /// FIXME: Remove when GPU uses prefixed accessors.
+    FunctionType getFunctionType() { return function_type(); }
 
     /// Returns the argument types of this function.
-    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
     /// Returns the result types of this function.
-    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
 
     /// Returns the keywords used in the custom syntax for this Op.
     static StringRef getWorkgroupKeyword() { return "workgroup"; }
@@ -901,7 +915,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
     `(` $dynamicSizes `)` (`` `[` $symbolOperands^ `]`)? attr-dict `:` type($memref)
   }];
 
-  let verifier = [{ return ::verify(*this); }];
+  let hasVerifier = 1;
   let hasCanonicalizer = 1;
 }
 

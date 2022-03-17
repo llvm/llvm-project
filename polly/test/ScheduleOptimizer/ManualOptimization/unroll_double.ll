@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-opt-isl -analyze < %s | FileCheck %s --match-full-lines
+; RUN: opt %loadPolly -polly-print-opt-isl -disable-output < %s | FileCheck %s --match-full-lines
 ;
 ; Apply two loop transformations. First partial, then full unrolling.
 ;

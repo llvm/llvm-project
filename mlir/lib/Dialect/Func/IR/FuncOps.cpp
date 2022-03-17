@@ -13,6 +13,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/FunctionImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -21,6 +22,7 @@
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -52,6 +54,12 @@ struct FuncInlinerInterface : public DialectInlinerInterface {
 
   /// All operations can be inlined.
   bool isLegalToInline(Operation *, Region *, bool,
+                       BlockAndValueMapping &) const final {
+    return true;
+  }
+
+  /// All functions can be inlined.
+  bool isLegalToInline(Region *, Region *, bool,
                        BlockAndValueMapping &) const final {
     return true;
   }
@@ -126,7 +134,7 @@ LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                          << "' does not reference a valid function";
 
   // Verify that the operand and result types match the callee.
-  auto fnType = fn.getType();
+  auto fnType = fn.getFunctionType();
   if (fnType.getNumInputs() != getNumOperands())
     return emitOpError("incorrect number of operands for callee");
 
@@ -188,7 +196,7 @@ LogicalResult ConstantOp::verify() {
                          << "'";
 
   // Check that the referenced function has the correct type.
-  if (fn.getType() != type)
+  if (fn.getFunctionType() != type)
     return emitOpError("reference to function with mismatched type");
 
   return success();
@@ -209,6 +217,129 @@ bool ConstantOp::isBuildableWith(Attribute value, Type type) {
 }
 
 //===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
+
+FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
+                      ArrayRef<NamedAttribute> attrs) {
+  OpBuilder builder(location->getContext());
+  OperationState state(location, getOperationName());
+  FuncOp::build(builder, state, name, type, attrs);
+  return cast<FuncOp>(Operation::create(state));
+}
+FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
+                      Operation::dialect_attr_range attrs) {
+  SmallVector<NamedAttribute, 8> attrRef(attrs);
+  return create(location, name, type, llvm::makeArrayRef(attrRef));
+}
+FuncOp FuncOp::create(Location location, StringRef name, FunctionType type,
+                      ArrayRef<NamedAttribute> attrs,
+                      ArrayRef<DictionaryAttr> argAttrs) {
+  FuncOp func = create(location, name, type, attrs);
+  func.setAllArgAttrs(argAttrs);
+  return func;
+}
+
+void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
+                   FunctionType type, ArrayRef<NamedAttribute> attrs,
+                   ArrayRef<DictionaryAttr> argAttrs) {
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder.getStringAttr(name));
+  state.addAttribute(FunctionOpInterface::getTypeAttrName(),
+                     TypeAttr::get(type));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
+
+  if (argAttrs.empty())
+    return;
+  assert(type.getNumInputs() == argAttrs.size());
+  function_interface_impl::addArgAndResultAttrs(builder, state, argAttrs,
+                                                /*resultAttrs=*/llvm::None);
+}
+
+ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
+  auto buildFuncType =
+      [](Builder &builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
+         function_interface_impl::VariadicFlag,
+         std::string &) { return builder.getFunctionType(argTypes, results); };
+
+  return function_interface_impl::parseFunctionOp(
+      parser, result, /*allowVariadic=*/false, buildFuncType);
+}
+
+void FuncOp::print(OpAsmPrinter &p) {
+  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
+}
+
+/// Clone the internal blocks from this function into dest and all attributes
+/// from this function to dest.
+void FuncOp::cloneInto(FuncOp dest, BlockAndValueMapping &mapper) {
+  // Add the attributes of this function to dest.
+  llvm::MapVector<StringAttr, Attribute> newAttrMap;
+  for (const auto &attr : dest->getAttrs())
+    newAttrMap.insert({attr.getName(), attr.getValue()});
+  for (const auto &attr : (*this)->getAttrs())
+    newAttrMap.insert({attr.getName(), attr.getValue()});
+
+  auto newAttrs = llvm::to_vector(llvm::map_range(
+      newAttrMap, [](std::pair<StringAttr, Attribute> attrPair) {
+        return NamedAttribute(attrPair.first, attrPair.second);
+      }));
+  dest->setAttrs(DictionaryAttr::get(getContext(), newAttrs));
+
+  // Clone the body.
+  getBody().cloneInto(&dest.getBody(), mapper);
+}
+
+/// Create a deep copy of this function and all of its blocks, remapping
+/// any operands that use values outside of the function using the map that is
+/// provided (leaving them alone if no entry is present). Replaces references
+/// to cloned sub-values with the corresponding value that is copied, and adds
+/// those mappings to the mapper.
+FuncOp FuncOp::clone(BlockAndValueMapping &mapper) {
+  // Create the new function.
+  FuncOp newFunc = cast<FuncOp>(getOperation()->cloneWithoutRegions());
+
+  // If the function has a body, then the user might be deleting arguments to
+  // the function by specifying them in the mapper. If so, we don't add the
+  // argument to the input type vector.
+  if (!isExternal()) {
+    FunctionType oldType = getFunctionType();
+
+    unsigned oldNumArgs = oldType.getNumInputs();
+    SmallVector<Type, 4> newInputs;
+    newInputs.reserve(oldNumArgs);
+    for (unsigned i = 0; i != oldNumArgs; ++i)
+      if (!mapper.contains(getArgument(i)))
+        newInputs.push_back(oldType.getInput(i));
+
+    /// If any of the arguments were dropped, update the type and drop any
+    /// necessary argument attributes.
+    if (newInputs.size() != oldNumArgs) {
+      newFunc.setType(FunctionType::get(oldType.getContext(), newInputs,
+                                        oldType.getResults()));
+
+      if (ArrayAttr argAttrs = getAllArgAttrs()) {
+        SmallVector<Attribute> newArgAttrs;
+        newArgAttrs.reserve(newInputs.size());
+        for (unsigned i = 0; i != oldNumArgs; ++i)
+          if (!mapper.contains(getArgument(i)))
+            newArgAttrs.push_back(argAttrs[i]);
+        newFunc.setAllArgAttrs(newArgAttrs);
+      }
+    }
+  }
+
+  /// Clone the current function into the new one and return it.
+  cloneInto(newFunc, mapper);
+  return newFunc;
+}
+FuncOp FuncOp::clone() {
+  BlockAndValueMapping mapper;
+  return clone(mapper);
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
@@ -216,7 +347,7 @@ LogicalResult ReturnOp::verify() {
   auto function = cast<FuncOp>((*this)->getParentOp());
 
   // The operand number and types must match the function signature.
-  const auto &results = function.getType().getResults();
+  const auto &results = function.getFunctionType().getResults();
   if (getNumOperands() != results.size())
     return emitOpError("has ")
            << getNumOperands() << " operands, but enclosing function (@"

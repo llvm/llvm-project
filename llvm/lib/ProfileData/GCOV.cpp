@@ -13,6 +13,7 @@
 
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Debug.h"
@@ -662,6 +663,8 @@ void Context::collectFunction(GCOVFunction &f, Summary &summary) {
   if (f.startLine >= si.startLineToFunctions.size())
     si.startLineToFunctions.resize(f.startLine + 1);
   si.startLineToFunctions[f.startLine].push_back(&f);
+  SmallSet<uint32_t, 16> lines;
+  SmallSet<uint32_t, 16> linesExec;
   for (const GCOVBlock &b : f.blocksRange()) {
     if (b.lines.empty())
       continue;
@@ -670,9 +673,9 @@ void Context::collectFunction(GCOVFunction &f, Summary &summary) {
       si.lines.resize(maxLineNum + 1);
     for (uint32_t lineNum : b.lines) {
       LineInfo &line = si.lines[lineNum];
-      if (!line.exists)
+      if (lines.insert(lineNum).second)
         ++summary.lines;
-      if (line.count == 0 && b.count)
+      if (b.count && linesExec.insert(lineNum).second)
         ++summary.linesExec;
       line.exists = true;
       line.count += b.count;

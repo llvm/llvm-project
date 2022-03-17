@@ -666,6 +666,19 @@ INTERCEPTOR(int, fstat, int fd, void *buf) {
 #define MSAN_MAYBE_INTERCEPT_FSTAT
 #endif
 
+#if SANITIZER_STAT_LINUX
+INTERCEPTOR(int, fstat64, int fd, void *buf) {
+  ENSURE_MSAN_INITED();
+  int res = REAL(fstat64)(fd, buf);
+  if (!res)
+    __msan_unpoison(buf, __sanitizer::struct_stat64_sz);
+  return res;
+}
+#  define MSAN_MAYBE_INTERCEPT_FSTAT64 MSAN_INTERCEPT_FUNC(fstat64)
+#else
+#  define MSAN_MAYBE_INTERCEPT_FSTAT64
+#endif
+
 #if SANITIZER_GLIBC
 INTERCEPTOR(int, __fxstat, int magic, int fd, void *buf) {
   ENSURE_MSAN_INITED();
@@ -702,6 +715,19 @@ INTERCEPTOR(int, fstatat, int fd, char *pathname, void *buf, int flags) {
 #  define MSAN_MAYBE_INTERCEPT_FSTATAT MSAN_INTERCEPT_FUNC(fstatat)
 #else
 #  define MSAN_MAYBE_INTERCEPT_FSTATAT
+#endif
+
+#if SANITIZER_STAT_LINUX
+INTERCEPTOR(int, fstatat64, int fd, char *pathname, void *buf, int flags) {
+  ENSURE_MSAN_INITED();
+  int res = REAL(fstatat64)(fd, pathname, buf, flags);
+  if (!res)
+    __msan_unpoison(buf, __sanitizer::struct_stat64_sz);
+  return res;
+}
+#  define MSAN_MAYBE_INTERCEPT_FSTATAT64 MSAN_INTERCEPT_FUNC(fstatat64)
+#else
+#  define MSAN_MAYBE_INTERCEPT_FSTATAT64
 #endif
 
 #if SANITIZER_GLIBC
@@ -1691,8 +1717,10 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(gettimeofday);
   MSAN_MAYBE_INTERCEPT_FCVT;
   MSAN_MAYBE_INTERCEPT_FSTAT;
+  MSAN_MAYBE_INTERCEPT_FSTAT64;
   MSAN_MAYBE_INTERCEPT___FXSTAT;
   MSAN_MAYBE_INTERCEPT_FSTATAT;
+  MSAN_MAYBE_INTERCEPT_FSTATAT64;
   MSAN_MAYBE_INTERCEPT___FXSTATAT;
   MSAN_MAYBE_INTERCEPT___FXSTAT64;
   MSAN_MAYBE_INTERCEPT___FXSTATAT64;

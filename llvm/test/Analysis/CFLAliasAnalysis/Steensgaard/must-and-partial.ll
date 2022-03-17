@@ -41,7 +41,7 @@ entry:
   ret i8 %loaded
 }
 
-; Incoming pointer arguments should not be PartialAlias because we do not know their initial state
+; Incoming pointer arguments should not be MayAlias because we do not know their initial state
 ; even if they are nocapture
 ; CHECK: MayAlias:  double* %A, double* %Index
 define void @testr2(double* nocapture readonly %A, double* nocapture readonly %Index) {
@@ -51,5 +51,7 @@ define void @testr2(double* nocapture readonly %A, double* nocapture readonly %I
   %2 = load double, double* %arrayidx25
   %3 = fneg double %1
   %mul26 = fmul double %3, %2
+  load double, double* %A
+  load double, double* %Index
   ret void
 }

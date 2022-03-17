@@ -1662,7 +1662,7 @@ bool HexagonInstrInfo::PredicateInstruction(
 
   MI.setDesc(get(PredOpc));
   while (unsigned n = MI.getNumOperands())
-    MI.RemoveOperand(n-1);
+    MI.removeOperand(n-1);
   for (unsigned i = 0, n = T->getNumOperands(); i < n; ++i)
     MI.addOperand(T->getOperand(i));
 

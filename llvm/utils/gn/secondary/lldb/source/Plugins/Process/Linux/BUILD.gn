@@ -15,7 +15,7 @@ static_library("Linux") {
   # Uses source-relative includes for own headers.
   include_dirs = [ "//lldb/source" ]
   sources = [
-    "IntelPTManager.cpp",
+    "IntelPTCollector.cpp",
     "NativeProcessLinux.cpp",
     "NativeRegisterContextLinux.cpp",
     "NativeRegisterContextLinux_arm.cpp",

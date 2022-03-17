@@ -90,8 +90,7 @@ public:
                    AddressClass addr_class)
       : Instruction(address, addr_class),
         m_disasm_wp(std::static_pointer_cast<DisassemblerLLVMC>(
-            disasm.shared_from_this())),
-        m_using_file_addr(false) {}
+            disasm.shared_from_this())) {}
 
   ~InstructionLLVMC() override = default;
 
@@ -822,7 +821,7 @@ protected:
   std::weak_ptr<DisassemblerLLVMC> m_disasm_wp;
 
   bool m_is_valid = false;
-  bool m_using_file_addr;
+  bool m_using_file_addr = false;
   bool m_has_visited_instruction = false;
 
   // Be conservative. If we didn't understand the instruction, say it:

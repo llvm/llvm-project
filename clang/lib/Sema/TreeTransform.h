@@ -6865,6 +6865,13 @@ QualType TreeTransform<Derived>::TransformAttributedType(
   return result;
 }
 
+template <typename Derived>
+QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
+    TypeLocBuilder &TLB, BTFTagAttributedTypeLoc TL) {
+  // The BTFTagAttributedType is available for C only.
+  llvm_unreachable("Unexpected TreeTransform for BTFTagAttributedType");
+}
+
 template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformParenType(TypeLocBuilder &TLB,
@@ -9236,6 +9243,17 @@ StmtResult TreeTransform<Derived>::TransformOMPGenericLoopDirective(
     OMPGenericLoopDirective *D) {
   DeclarationNameInfo DirName;
   getDerived().getSema().StartOpenMPDSABlock(OMPD_loop, DirName, nullptr,
+                                             D->getBeginLoc());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTeamsGenericLoopDirective(
+    OMPTeamsGenericLoopDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_teams_loop, DirName, nullptr,
                                              D->getBeginLoc());
   StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
   getDerived().getSema().EndOpenMPDSABlock(Res.get());

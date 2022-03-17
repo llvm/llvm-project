@@ -23,6 +23,7 @@ namespace llvm {
 
 Optional<unsigned> getVVPOpcode(unsigned Opcode);
 
+bool isVVPUnaryOp(unsigned Opcode);
 bool isVVPBinaryOp(unsigned Opcode);
 bool isVVPReductionOp(unsigned Opcode);
 

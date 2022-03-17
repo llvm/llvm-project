@@ -134,7 +134,6 @@ private:
 
   void initM0(MachineInstr &I) const;
   bool selectG_LOAD_STORE_ATOMICRMW(MachineInstr &I) const;
-  bool selectG_AMDGPU_ATOMIC_CMPXCHG(MachineInstr &I) const;
   bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_BRCOND(MachineInstr &I) const;
   bool selectG_GLOBAL_VALUE(MachineInstr &I) const;
@@ -176,10 +175,14 @@ private:
   selectVOP3Mods_nnan(MachineOperand &Root) const;
 
   std::pair<Register, unsigned>
-  selectVOP3PModsImpl(Register Src, const MachineRegisterInfo &MRI) const;
+  selectVOP3PModsImpl(Register Src, const MachineRegisterInfo &MRI,
+                      bool IsDOT = false) const;
 
   InstructionSelector::ComplexRendererFns
   selectVOP3PMods(MachineOperand &Root) const;
+
+  InstructionSelector::ComplexRendererFns
+  selectVOP3PModsDOT(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectDotIUVOP3PMods(MachineOperand &Root) const;

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-allow-nonaffine-loops -polly-print-scops -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      Domain :=
 ; CHECK-NEXT:   { Stmt_while_cond_i__TO__while_end_i[] };

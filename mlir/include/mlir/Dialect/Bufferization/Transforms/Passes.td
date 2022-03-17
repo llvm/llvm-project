@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
+def BufferDeallocation : Pass<"buffer-deallocation", "func::FuncOp"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
   let description = [{
@@ -88,7 +88,7 @@ def BufferDeallocation : Pass<"buffer-deallocation", "FuncOp"> {
   let constructor = "mlir::bufferization::createBufferDeallocationPass()";
 }
 
-def BufferHoisting : Pass<"buffer-hoisting", "FuncOp"> {
+def BufferHoisting : Pass<"buffer-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";
   let description = [{
@@ -98,7 +98,7 @@ def BufferHoisting : Pass<"buffer-hoisting", "FuncOp"> {
   let constructor = "mlir::bufferization::createBufferHoistingPass()";
 }
 
-def BufferLoopHoisting : Pass<"buffer-loop-hoisting", "FuncOp"> {
+def BufferLoopHoisting : Pass<"buffer-loop-hoisting", "func::FuncOp"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "out of loop nests";
   let description = [{
@@ -133,7 +133,7 @@ def BufferResultsToOutParams : Pass<"buffer-results-to-out-params", "ModuleOp"> 
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
-def FinalizingBufferize : Pass<"finalizing-bufferize", "FuncOp"> {
+def FinalizingBufferize : Pass<"finalizing-bufferize", "func::FuncOp"> {
   let summary = "Finalize a partial bufferization";
   let description = [{
     A bufferize pass that finalizes a partial bufferization by removing
@@ -170,11 +170,11 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     example, `tensor.generate` is not in destination-passing style and always
     results in a new buffer allocation.
 
-    One-Shot Bufferize deallocates all buffers that it allocates. Yielding newly
-    allocated buffers from a block is not supported yet and such IR will be
-    rejected. For testing purposes and compatibility with partial bufferization,
-    One-Shot Bufferize can be run with `allow-return-memref=1 create-dealloc=0`
-    to allow such IR.
+    One-Shot Bufferize deallocates all buffers that it allocates. Returning or
+    yielding newly allocated buffers from a block can lead to bad performance
+    because additional buffer copies would be inserted. By default, such IR is
+    rejected by One-Shot Bufferize. If performance is not important, such IR can
+    be allowed with `allow-return-allocs=1`.
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
@@ -202,9 +202,9 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Bufferize chose to insert a certain buffer copy.
   }];
   let options = [
-    Option<"allowReturnMemref", "allow-return-memref", "bool",
+    Option<"allowReturnAllocs", "allow-return-allocs", "bool",
             /*default=*/"false",
-           "Allows the return of memrefs (for testing purposes only)">,
+           "Allows returning/yielding new allocations from a block.">,
     Option<"allowUnknownOps", "allow-unknown-ops", "bool",
            /*default=*/"false",
            "Allows unknown (not bufferizable) ops in the input IR.">,
@@ -231,7 +231,7 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let constructor = "mlir::bufferization::createOneShotBufferizePass()";
 }
 
-def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "FuncOp"> {
+def PromoteBuffersToStack : Pass<"promote-buffers-to-stack", "func::FuncOp"> {
   let summary = "Promotes heap-based allocations to automatically managed "
                 "stack-based allocations";
   let description = [{

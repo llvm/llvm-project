@@ -33,6 +33,69 @@ bb2:
   ret i1 %c.3
 }
 
+define i1 @test_chain_1(i8 %x) {
+; CHECK-LABEL: @test_chain_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[X]], 10
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %c.1 = icmp ule i8 %x, 10
+  br i1 %c.1, label %then, label %else
+
+then:
+  %c.2 = icmp ule i8 %x, 10
+  call void @use(i1 %c.2)
+  br label %exit
+
+else:
+  br label %exit
+
+exit:
+  %c.3 = icmp ugt i8 %x, 10
+  ret i1 %c.3
+}
+
+define i1 @test_chain_2(i8 %x) {
+; CHECK-LABEL: @test_chain_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[X:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[EXIT:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i8 [[X]], 10
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ugt i8 [[X]], 10
+; CHECK-NEXT:    ret i1 [[C_3]]
+;
+entry:
+  %c.1 = icmp ule i8 %x, 10
+  br i1 %c.1, label %then, label %else
+
+then:
+  br label %exit
+
+else:
+  %c.2 = icmp ule i8 %x, 10
+  call void @use(i1 %c.2)
+  br label %exit
+
+exit:
+  %c.3 = icmp ugt i8 %x, 10
+  ret i1 %c.3
+}
 
 define i1 @test2(i8 %x) {
 ; CHECK-LABEL: @test2(
@@ -60,7 +123,6 @@ bb2:
   call void @use(i1 %c.3)
   br label %bb1
 }
-
 
 ; Test cases where the true/false successors are not domianted by the conditional branching block.
 define i1 @test3(i8 %x, i1 %c) {

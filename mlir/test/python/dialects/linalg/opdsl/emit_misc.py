@@ -54,7 +54,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-DAG:    %[[CST1_CAST:.+]] = arith.truncf %[[CST1]] : f64 to f32
     # CHECK-DAG:    %[[SUM:.+]] = arith.addf %[[CST0_CAST]], %[[CST1_CAST]] : f32
     # CHECK-NEXT:   linalg.yield %[[SUM]] : f32
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32))
+    @func.FuncOp.from_py_func(RankedTensorType.get((4, 16), f32))
     def test_f32_const(init_result):
       return test_const(outs=[init_result])
 
@@ -65,7 +65,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-DAG:    %[[IDX1_CAST:.+]] = arith.index_cast %[[IDX1]] : index to i32
     # CHECK-DAG:    %[[SUM:.+]] = arith.addi %[[IDX0_CAST]], %[[IDX1_CAST]] : i32
     # CHECK-NEXT:   linalg.yield %[[SUM]] : i32
-    @builtin.FuncOp.from_py_func(RankedTensorType.get((4, 16), i32))
+    @func.FuncOp.from_py_func(RankedTensorType.get((4, 16), i32))
     def test_i32_index(init_result):
       return test_index(outs=[init_result])
 
@@ -74,7 +74,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[EXP:.+]] = math.exp %[[IN]] : f32
     # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
     # CHECK-NEXT: -> tensor<4x16xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_exp(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.exp)
@@ -84,7 +84,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[LOG:.+]] = math.log %[[IN]] : f32
     # CHECK-NEXT:   linalg.yield %[[LOG]] : f32
     # CHECK-NEXT: -> tensor<4x16xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_log(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.log)
@@ -94,7 +94,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[EXP:.+]] = math.abs %[[IN]] : f32
     # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
     # CHECK-NEXT: -> tensor<4x16xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_abs(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.abs)
@@ -104,7 +104,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[EXP:.+]] = math.ceil %[[IN]] : f32
     # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
     # CHECK-NEXT: -> tensor<4x16xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_ceil(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.ceil)
@@ -114,7 +114,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[EXP:.+]] = math.floor %[[IN]] : f32
     # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
     # CHECK-NEXT: -> tensor<4x16xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_floor(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.floor)
@@ -124,14 +124,14 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[EXP:.+]] = arith.negf %[[IN]] : f32
     # CHECK-NEXT:   linalg.yield %[[EXP]] : f32
     # CHECK-NEXT: -> tensor<4x16xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((4, 16), f32))
     def test_f32_elemwise_neg(input, init_result):
       return elemwise_unary_poly(input, outs=[init_result], fun=UnaryFn.negf)
 
     # Just check that we don't assert out on name mismatch.
     # CHECK-LABEL: @test_non_default_op_name
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((42,), f32), RankedTensorType.get((42,), f32))
     def test_non_default_op_name(input, init_result):
       return non_default_op_name(input, outs=[init_result])

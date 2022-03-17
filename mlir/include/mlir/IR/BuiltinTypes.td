@@ -14,6 +14,7 @@
 #ifndef BUILTIN_TYPES
 #define BUILTIN_TYPES
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinTypeInterfaces.td"
 include "mlir/IR/SubElementInterfaces.td"

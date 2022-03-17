@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -183,6 +184,8 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (!TM.isPPC64() && Subtarget.isAIXABI())
       report_fatal_error("AnyReg unimplemented on 32-bit AIX.");
     if (Subtarget.hasVSX()) {
+      if (Subtarget.pairedVectorMemops())
+        return CSR_64_AllRegs_VSRP_SaveList;
       if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_VSX_SaveList;
       return CSR_64_AllRegs_VSX_SaveList;
@@ -210,6 +213,9 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.isAIXABI())
       report_fatal_error("Cold calling unimplemented on AIX.");
     if (TM.isPPC64()) {
+      if (Subtarget.pairedVectorMemops())
+        return SaveR2 ? CSR_SVR64_ColdCC_R2_VSRP_SaveList
+                      : CSR_SVR64_ColdCC_VSRP_SaveList;
       if (Subtarget.hasAltivec())
         return SaveR2 ? CSR_SVR64_ColdCC_R2_Altivec_SaveList
                       : CSR_SVR64_ColdCC_Altivec_SaveList;
@@ -217,7 +223,9 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                     : CSR_SVR64_ColdCC_SaveList;
     }
     // 32-bit targets.
-    if (Subtarget.hasAltivec())
+    if (Subtarget.pairedVectorMemops())
+      return CSR_SVR32_ColdCC_VSRP_SaveList;
+    else if (Subtarget.hasAltivec())
       return CSR_SVR32_ColdCC_Altivec_SaveList;
     else if (Subtarget.hasSPE())
       return CSR_SVR32_ColdCC_SPE_SaveList;
@@ -225,6 +233,8 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   // Standard calling convention CSRs.
   if (TM.isPPC64()) {
+    if (Subtarget.pairedVectorMemops())
+      return SaveR2 ? CSR_SVR464_R2_VSRP_SaveList : CSR_SVR464_VSRP_SaveList;
     if (Subtarget.hasAltivec() &&
         (!Subtarget.isAIXABI() || TM.getAIXExtendedAltivecABI())) {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
@@ -239,6 +249,8 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                            : CSR_AIX32_SaveList;
     return CSR_AIX32_SaveList;
   }
+  if (Subtarget.pairedVectorMemops())
+    return CSR_SVR432_VSRP_SaveList;
   if (Subtarget.hasAltivec())
     return CSR_SVR432_Altivec_SaveList;
   else if (Subtarget.hasSPE())
@@ -252,6 +264,8 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   if (CC == CallingConv::AnyReg) {
     if (Subtarget.hasVSX()) {
+      if (Subtarget.pairedVectorMemops())
+        return CSR_64_AllRegs_VSRP_RegMask;
       if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_VSX_RegMask;
       return CSR_64_AllRegs_VSX_RegMask;
@@ -275,20 +289,32 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   if (CC == CallingConv::Cold) {
-    return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_SVR64_ColdCC_Altivec_RegMask
-                                                  : CSR_SVR64_ColdCC_RegMask)
-                        : (Subtarget.hasAltivec() ? CSR_SVR32_ColdCC_Altivec_RegMask
-                                                  : (Subtarget.hasSPE()
-                                                  ? CSR_SVR32_ColdCC_SPE_RegMask
-                                                  : CSR_SVR32_ColdCC_RegMask));
+    if (TM.isPPC64())
+      return Subtarget.pairedVectorMemops()
+                 ? CSR_SVR64_ColdCC_VSRP_RegMask
+                 : (Subtarget.hasAltivec() ? CSR_SVR64_ColdCC_Altivec_RegMask
+                                           : CSR_SVR64_ColdCC_RegMask);
+    else
+      return Subtarget.pairedVectorMemops()
+                 ? CSR_SVR32_ColdCC_VSRP_RegMask
+                 : (Subtarget.hasAltivec()
+                        ? CSR_SVR32_ColdCC_Altivec_RegMask
+                        : (Subtarget.hasSPE() ? CSR_SVR32_ColdCC_SPE_RegMask
+                                              : CSR_SVR32_ColdCC_RegMask));
   }
 
-  return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_PPC64_Altivec_RegMask
-                                                : CSR_PPC64_RegMask)
-                      : (Subtarget.hasAltivec()
-                             ? CSR_SVR432_Altivec_RegMask
-                             : (Subtarget.hasSPE() ? CSR_SVR432_SPE_RegMask
-                                                   : CSR_SVR432_RegMask));
+  if (TM.isPPC64())
+    return Subtarget.pairedVectorMemops()
+               ? CSR_SVR464_VSRP_RegMask
+               : (Subtarget.hasAltivec() ? CSR_PPC64_Altivec_RegMask
+                                         : CSR_PPC64_RegMask);
+  else
+    return Subtarget.pairedVectorMemops()
+               ? CSR_SVR432_VSRP_RegMask
+               : (Subtarget.hasAltivec()
+                      ? CSR_SVR432_Altivec_RegMask
+                      : (Subtarget.hasSPE() ? CSR_SVR432_SPE_RegMask
+                                            : CSR_SVR432_RegMask));
 }
 
 const uint32_t*
@@ -1082,7 +1108,7 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
   MBB.erase(II);
   if (SpillsKnownBit && KillsCRBit && !SeenUse) {
     Ins->setDesc(TII.get(PPC::UNENCODED_NOP));
-    Ins->RemoveOperand(0);
+    Ins->removeOperand(0);
   }
 }
 

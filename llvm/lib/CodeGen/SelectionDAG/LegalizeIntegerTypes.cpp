@@ -1432,6 +1432,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_SADDSUBO_CARRY(SDNode *N,
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_ABS(SDNode *N) {
+  EVT OVT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
+
+  // If a larger ABS or SMAX isn't supported by the target, try to expand now.
+  // If we expand later we'll end up sign extending more than just the sra input
+  // in sra+xor+sub expansion.
+  if (!OVT.isVector() &&
+      !TLI.isOperationLegalOrCustomOrPromote(ISD::ABS, NVT) &&
+      !TLI.isOperationLegal(ISD::SMAX, NVT)) {
+    if (SDValue Res = TLI.expandABS(N, DAG))
+      return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Res);
+  }
+
   SDValue Op0 = SExtPromotedInteger(N->getOperand(0));
   return DAG.getNode(ISD::ABS, SDLoc(N), Op0.getValueType(), Op0);
 }
@@ -3901,6 +3914,70 @@ void DAGTypeLegalizer::ExpandIntRes_SADDSUBO(SDNode *Node,
   ReplaceValueWith(SDValue(Node, 1), Ovf);
 }
 
+// Emit a call to __udivei4 and friends which require
+// the arguments be based on the stack
+// and extra argument that contains the number of bits of the operands.
+// Returns the result of the call operation.
+static SDValue ExpandExtIntRes_DIVREM(const TargetLowering &TLI,
+                                      const RTLIB::Libcall &LC,
+                                      SelectionDAG &DAG, SDNode *N,
+                                      const SDLoc &DL, const EVT &VT) {
+
+  SDValue InChain = DAG.getEntryNode();
+
+  TargetLowering::ArgListTy Args;
+  TargetLowering::ArgListEntry Entry;
+
+  // The signature of __udivei4 is
+  // void __udivei4(unsigned int *quo, unsigned int *a, unsigned int *b,
+  // unsigned int bits)
+  EVT ArgVT = N->op_begin()->getValueType();
+  assert(ArgVT.isInteger() && ArgVT.getSizeInBits() > 128 &&
+         "Unexpected argument type for lowering");
+  Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
+
+  SDValue Output = DAG.CreateStackTemporary(ArgVT);
+  Entry.Node = Output;
+  Entry.Ty = ArgTy->getPointerTo();
+  Entry.IsSExt = false;
+  Entry.IsZExt = false;
+  Args.push_back(Entry);
+
+  for (const llvm::SDUse &Op : N->ops()) {
+    SDValue StackPtr = DAG.CreateStackTemporary(ArgVT);
+    InChain = DAG.getStore(InChain, DL, Op, StackPtr, MachinePointerInfo());
+    Entry.Node = StackPtr;
+    Entry.Ty = ArgTy->getPointerTo();
+    Entry.IsSExt = false;
+    Entry.IsZExt = false;
+    Args.push_back(Entry);
+  }
+
+  int Bits = N->getOperand(0)
+                 .getValueType()
+                 .getTypeForEVT(*DAG.getContext())
+                 ->getIntegerBitWidth();
+  Entry.Node = DAG.getConstant(Bits, DL, TLI.getPointerTy(DAG.getDataLayout()));
+  Entry.Ty = Type::getInt32Ty(*DAG.getContext());
+  Entry.IsSExt = false;
+  Entry.IsZExt = true;
+  Args.push_back(Entry);
+
+  SDValue Callee = DAG.getExternalSymbol(TLI.getLibcallName(LC),
+                                         TLI.getPointerTy(DAG.getDataLayout()));
+
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL)
+      .setChain(InChain)
+      .setLibCallee(TLI.getLibcallCallingConv(LC),
+                    Type::getVoidTy(*DAG.getContext()), Callee, std::move(Args))
+      .setDiscardResult();
+
+  SDValue Chain = TLI.LowerCallTo(CLI).second;
+
+  return DAG.getLoad(ArgVT, DL, Chain, Output, MachinePointerInfo());
+}
+
 void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,
                                          SDValue &Lo, SDValue &Hi) {
   EVT VT = N->getValueType(0);
@@ -3922,6 +3999,14 @@ void DAGTypeLegalizer::ExpandIntRes_SDIV(SDNode *N,
     LC = RTLIB::SDIV_I64;
   else if (VT == MVT::i128)
     LC = RTLIB::SDIV_I128;
+
+  else {
+    SDValue Result =
+        ExpandExtIntRes_DIVREM(TLI, RTLIB::SDIV_IEXT, DAG, N, dl, VT);
+    SplitInteger(Result, Lo, Hi);
+    return;
+  }
+
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported SDIV!");
 
   TargetLowering::MakeLibCallOptions CallOptions;
@@ -4113,6 +4198,14 @@ void DAGTypeLegalizer::ExpandIntRes_SREM(SDNode *N,
     LC = RTLIB::SREM_I64;
   else if (VT == MVT::i128)
     LC = RTLIB::SREM_I128;
+
+  else {
+    SDValue Result =
+        ExpandExtIntRes_DIVREM(TLI, RTLIB::SREM_IEXT, DAG, N, dl, VT);
+    SplitInteger(Result, Lo, Hi);
+    return;
+  }
+
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported SREM!");
 
   TargetLowering::MakeLibCallOptions CallOptions;
@@ -4288,6 +4381,14 @@ void DAGTypeLegalizer::ExpandIntRes_UDIV(SDNode *N,
     LC = RTLIB::UDIV_I64;
   else if (VT == MVT::i128)
     LC = RTLIB::UDIV_I128;
+
+  else {
+    SDValue Result =
+        ExpandExtIntRes_DIVREM(TLI, RTLIB::UDIV_IEXT, DAG, N, dl, VT);
+    SplitInteger(Result, Lo, Hi);
+    return;
+  }
+
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported UDIV!");
 
   TargetLowering::MakeLibCallOptions CallOptions;
@@ -4315,6 +4416,14 @@ void DAGTypeLegalizer::ExpandIntRes_UREM(SDNode *N,
     LC = RTLIB::UREM_I64;
   else if (VT == MVT::i128)
     LC = RTLIB::UREM_I128;
+
+  else {
+    SDValue Result =
+        ExpandExtIntRes_DIVREM(TLI, RTLIB::UREM_IEXT, DAG, N, dl, VT);
+    SplitInteger(Result, Lo, Hi);
+    return;
+  }
+
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported UREM!");
 
   TargetLowering::MakeLibCallOptions CallOptions;

@@ -37,9 +37,8 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     The function, aside from implementing the various interface methods,
     should have the following ODS arguments:
 
-      - `type` (required)
+      - `function_type` (required)
         * A TypeAttr that holds the signature type of the function.
-        * TODO: this field will soon be renamed to something less generic.
 
       - `arg_attrs` (optional)
         * An ArrayAttr of DictionaryAttr that contains attribute dictionaries
@@ -73,31 +72,47 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     "::mlir::Type", "cloneTypeWith", (ins
       "::mlir::TypeRange":$inputs, "::mlir::TypeRange":$results
     ), /*methodBody=*/[{}], /*defaultImplementation=*/[{
-      return $_op.getType().clone(inputs, results);
+      return $_op.getFunctionType().clone(inputs, results);
     }]>,
 
     InterfaceMethod<[{
       Verify the contents of the body of this function.
 
-      Note: The default implementation merely checks that of the entry block
-      exists, it has the same number arguments as the function type.
+      Note: The default implementation merely checks that if the entry block
+      exists, it has the same number and type of arguments as the function type.
     }],
     "::mlir::LogicalResult", "verifyBody", (ins),
     /*methodBody=*/[{}], /*defaultImplementation=*/[{
       if ($_op.isExternal())
         return success();
-
-      unsigned numArguments = $_op.getNumArguments();
-      if ($_op.front().getNumArguments() != numArguments)
+      ArrayRef<Type> fnInputTypes = $_op.getArgumentTypes();
+      Block &entryBlock = $_op.front();
+    
+      unsigned numArguments = fnInputTypes.size();
+      if (entryBlock.getNumArguments() != numArguments)
         return $_op.emitOpError("entry block must have ")
               << numArguments << " arguments to match function signature";
+
+      for (unsigned i = 0, e = fnInputTypes.size(); i != e; ++i) {
+        Type argType = entryBlock.getArgument(i).getType();
+        if (fnInputTypes[i] != argType) {
+          return $_op.emitOpError("type of entry block argument #")
+                << i << '(' << argType
+                << ") must match the type of the corresponding argument in "
+                << "function signature(" << fnInputTypes[i] << ')';
+        }
+      }
+
       return success();
     }]>,
     InterfaceMethod<[{
       Verify the type attribute of the function for derived op-specific
       invariants.
     }],
-    "::mlir::LogicalResult", "verifyType">,
+    "::mlir::LogicalResult", "verifyType", (ins),
+    /*methodBody=*/[{}], /*defaultImplementation=*/[{
+      return success();
+    }]>,
   ];
 
   let extraClassDeclaration = [{
@@ -108,6 +123,31 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// Return the name of the function.
     StringRef getName() { return SymbolTable::getSymbolName(*this); }
   }];
+  let extraTraitClassDeclaration = [{
+    //===------------------------------------------------------------------===//
+    // Builders
+    //===------------------------------------------------------------------===//
+
+    /// Build the function with the given name, attributes, and type. This
+    /// builder also inserts an entry block into the function body with the
+    /// given argument types.
+    static void buildWithEntryBlock(
+        OpBuilder &builder, OperationState &state, StringRef name, Type type,
+        ArrayRef<NamedAttribute> attrs, ArrayRef<Type> inputTypes) {
+      state.addAttribute(SymbolTable::getSymbolAttrName(),
+                        builder.getStringAttr(name));
+      state.addAttribute(function_interface_impl::getTypeAttrName(),
+                        TypeAttr::get(type));
+      state.attributes.append(attrs.begin(), attrs.end());
+
+      // Add the function body.
+      Region *bodyRegion = state.addRegion();
+      Block *body = new Block();
+      bodyRegion->push_back(body);
+      for (Type input : inputTypes)
+        body->addArgument(input, state.location);
+    } 
+  }];
   let extraSharedClassDeclaration = [{
     /// Block list iterator types.
     using BlockListType = Region::BlockListType;
@@ -117,7 +157,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// Block argument iterator types.
     using BlockArgListType = Region::BlockArgListType;
     using args_iterator = BlockArgListType::iterator;
-
+    
     //===------------------------------------------------------------------===//
     // Body Handling
     //===------------------------------------------------------------------===//
@@ -217,13 +257,13 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     }
 
     /// Return the attribute containing the type of this function.
-    TypeAttr getTypeAttr() {
+    TypeAttr getFunctionTypeAttr() {
       return this->getOperation()->template getAttrOfType<TypeAttr>(
           getTypeAttrName());
     }
 
     /// Return the type of this function.
-    Type getType() { return getTypeAttr().getValue(); }
+    Type getFunctionType() { return getFunctionTypeAttr().getValue(); }
 
     //===------------------------------------------------------------------===//
     // Argument and Result Handling

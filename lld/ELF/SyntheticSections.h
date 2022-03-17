@@ -1082,7 +1082,10 @@ public:
   void finalizeContents() override;
   InputSection *getLinkOrderDep() const;
 
-  static bool classof(const SectionBase *d);
+  static bool classof(const SectionBase *sec) {
+    return sec->kind() == InputSectionBase::Synthetic &&
+           sec->type == llvm::ELF::SHT_ARM_EXIDX;
+  }
 
   // Links to the ARMExidxSections so we can transfer the relocations once the
   // layout is known.

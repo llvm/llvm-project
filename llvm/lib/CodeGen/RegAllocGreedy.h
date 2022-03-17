@@ -12,9 +12,7 @@
 #ifndef LLVM_CODEGEN_REGALLOCGREEDY_H_
 #define LLVM_CODEGEN_REGALLOCGREEDY_H_
 
-#include "AllocationOrder.h"
 #include "InterferenceCache.h"
-#include "LiveDebugVariables.h"
 #include "RegAllocBase.h"
 #include "RegAllocEvictionAdvisor.h"
 #include "SpillPlacement.h"
@@ -23,52 +21,44 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
-#include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/LiveInterval.h"
-#include "llvm/CodeGen/LiveIntervalUnion.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
-#include "llvm/CodeGen/LiveRegMatrix.h"
-#include "llvm/CodeGen/LiveStacks.h"
-#include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
-#include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/Spiller.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Pass.h"
-#include "llvm/Support/BranchProbability.h"
-#include "llvm/Target/TargetMachine.h"
 #include <algorithm>
-#include <cassert>
 #include <cstdint>
 #include <memory>
 #include <queue>
-#include <tuple>
 #include <utility>
 
 namespace llvm {
+class AllocationOrder;
+class AnalysisUsage;
+class EdgeBundles;
+class LiveDebugVariables;
+class LiveIntervals;
+class LiveRegMatrix;
+class MachineBasicBlock;
+class MachineBlockFrequencyInfo;
+class MachineDominatorTree;
+class MachineLoop;
+class MachineLoopInfo;
+class MachineOptimizationRemarkEmitter;
+class MachineOptimizationRemarkMissed;
+class SlotIndex;
+class SlotIndexes;
+class TargetInstrInfo;
+class VirtRegMap;
+
 class LLVM_LIBRARY_VISIBILITY RAGreedy : public MachineFunctionPass,
                                          public RegAllocBase,
                                          private LiveRangeEdit::Delegate {
@@ -320,10 +310,6 @@ private:
   /// Callee-save register cost, calculated once per machine function.
   BlockFrequency CSRCost;
 
-  /// Enable or not the consideration of the cost of local intervals created
-  /// by a split candidate when choosing the best split candidate.
-  bool EnableAdvancedRASplitCost;
-
   /// Set of broken hints that may be reconciled later because of eviction.
   SmallSetVector<const LiveInterval *, 8> SetOfBrokenHints;
 
@@ -380,12 +366,8 @@ private:
   bool splitCanCauseEvictionChain(Register Evictee, GlobalSplitCandidate &Cand,
                                   unsigned BBNumber,
                                   const AllocationOrder &Order);
-  bool splitCanCauseLocalSpill(unsigned VirtRegToSplit,
-                               GlobalSplitCandidate &Cand, unsigned BBNumber,
-                               const AllocationOrder &Order);
   BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
-                                     const AllocationOrder &Order,
-                                     bool *CanCauseEvictionChain);
+                                     const AllocationOrder &Order);
   bool calcCompactRegion(GlobalSplitCandidate &);
   void splitAroundRegion(LiveRangeEdit &, ArrayRef<unsigned>);
   void calcGapWeights(MCRegister, SmallVectorImpl<float> &);
@@ -414,8 +396,7 @@ private:
   unsigned calculateRegionSplitCost(const LiveInterval &VirtReg,
                                     AllocationOrder &Order,
                                     BlockFrequency &BestCost,
-                                    unsigned &NumCands, bool IgnoreCSR,
-                                    bool *CanCauseEvictionChain = nullptr);
+                                    unsigned &NumCands, bool IgnoreCSR);
   /// Perform region splitting.
   unsigned doRegionSplit(const LiveInterval &VirtReg, unsigned BestCand,
                          bool HasCompact, SmallVectorImpl<Register> &NewVRegs);

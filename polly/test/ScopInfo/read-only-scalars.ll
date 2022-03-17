@@ -1,8 +1,5 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=false -polly-scops \
-; RUN:                -analyze < %s | FileCheck %s
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=true -polly-scops \
-; RUN:                -analyze < %s | FileCheck %s \
-; RUN:                -check-prefix=SCALARS
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=false -polly-print-scops -disable-output < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-analyze-read-only-scalars=true  -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCALARS
 
 ; CHECK-NOT: Memref_scalar
 

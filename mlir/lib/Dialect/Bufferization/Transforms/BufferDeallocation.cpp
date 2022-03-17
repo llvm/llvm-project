@@ -77,13 +77,15 @@ walkReturnOperations(Region *region,
   return success();
 }
 
-/// Checks if all operations in a given region that have at least one attached
-/// region implement the RegionBranchOpInterface. This is not required in edge
-/// cases, where we have a single attached region and the parent operation has
-/// no results.
-static bool validateSupportedControlFlow(Region &region) {
-  bool success = true;
-  region.walk([&success](Operation *operation) {
+/// Checks if all operations that have at least one attached region implement
+/// the RegionBranchOpInterface. This is not required in edge cases, where we
+/// have a single attached region and the parent operation has no results.
+static bool validateSupportedControlFlow(Operation *op) {
+  WalkResult result = op->walk([&](Operation *operation) {
+    // Only check ops that are inside a function.
+    if (!operation->getParentOfType<FuncOp>())
+      return WalkResult::advance();
+
     auto regions = operation->getRegions();
     // Walk over all operations in a region and check if the operation has at
     // least one region and implements the RegionBranchOpInterface. If there
@@ -96,10 +98,11 @@ static bool validateSupportedControlFlow(Region &region) {
         !dyn_cast<RegionBranchOpInterface>(operation)) {
       operation->emitError("All operations with attached regions need to "
                            "implement the RegionBranchOpInterface.");
-      success = false;
     }
+
+    return WalkResult::advance();
   });
-  return success;
+  return !result.wasSkipped();
 }
 
 namespace {
@@ -639,7 +642,7 @@ struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();
     registry.insert<memref::MemRefDialect>();
-    registry.addOpInterface<memref::AllocOp, DefaultAllocationInterface>();
+    registerAllocationOpInterfaceExternalModels(registry);
   }
 
   void runOnOperation() override {
@@ -647,32 +650,55 @@ struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
     if (func.isExternal())
       return;
 
-    // Ensure that there are supported loops only.
-    Backedges backedges(func);
-    if (backedges.size()) {
-      func.emitError("Only structured control-flow loops are supported.");
-      return signalPassFailure();
-    }
-
-    // Check that the control flow structures are supported.
-    if (!validateSupportedControlFlow(func.getRegion()))
-      return signalPassFailure();
-
-    // Gather all required allocation nodes and prepare the deallocation phase.
-    BufferDeallocation deallocation(func);
-
-    // Check for supported AllocationOpInterface implementations and prepare the
-    // internal deallocation pass.
-    if (failed(deallocation.prepare()))
-      return signalPassFailure();
-
-    // Place all required temporary clone and dealloc nodes.
-    if (failed(deallocation.deallocate()))
-      return signalPassFailure();
+    if (failed(deallocateBuffers(func)))
+      signalPassFailure();
   }
 };
 
 } // namespace
+
+LogicalResult bufferization::deallocateBuffers(Operation *op) {
+  if (isa<ModuleOp>(op)) {
+    WalkResult result = op->walk([&](FuncOp funcOp) {
+      if (failed(deallocateBuffers(funcOp)))
+        return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+    return success(!result.wasInterrupted());
+  }
+
+  // Ensure that there are supported loops only.
+  Backedges backedges(op);
+  if (backedges.size()) {
+    op->emitError("Only structured control-flow loops are supported.");
+    return failure();
+  }
+
+  // Check that the control flow structures are supported.
+  if (!validateSupportedControlFlow(op))
+    return failure();
+
+  // Gather all required allocation nodes and prepare the deallocation phase.
+  BufferDeallocation deallocation(op);
+
+  // Check for supported AllocationOpInterface implementations and prepare the
+  // internal deallocation pass.
+  if (failed(deallocation.prepare()))
+    return failure();
+
+  // Place all required temporary clone and dealloc nodes.
+  if (failed(deallocation.deallocate()))
+    return failure();
+
+  return success();
+}
+
+void bufferization::registerAllocationOpInterfaceExternalModels(
+    DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // BufferDeallocationPass construction

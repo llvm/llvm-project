@@ -695,7 +695,7 @@ MipsInstrInfo::genInstrWithNewOpc(unsigned NewOpc,
       NewOpc == Mips::JIALC64) {
 
     if (NewOpc == Mips::JIALC || NewOpc == Mips::JIALC64)
-      MIB->RemoveOperand(0);
+      MIB->removeOperand(0);
 
     for (unsigned J = 0, E = I->getDesc().getNumOperands(); J < E; ++J) {
       MIB.add(I->getOperand(J));

@@ -1,11 +1,9 @@
-; RUN: opt %loadPolly -polly-scops -analyze \
-; RUN: -polly-invariant-load-hoisting < %s | FileCheck %s -check-prefix=SCOP
+; RUN: opt %loadPolly -polly-invariant-load-hoisting -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=SCOP
 ;
 ; RUN: opt %loadPolly -polly-scops -S  -polly-invariant-load-hoisting \
 ; RUN: -polly-codegen-ppcg < %s | FileCheck %s -check-prefix=HOST-IR
 ;
-; RUN: opt %loadPolly -polly-scops -analyze  -polly-invariant-load-hoisting \
-; RUN: -polly-codegen-ppcg -polly-acc-dump-kernel-ir < %s | FileCheck %s -check-prefix=KERNEL-IR
+; RUN: opt %loadPolly -polly-invariant-load-hoisting -polly-codegen-ppcg -polly-acc-dump-kernel-ir -polly-print-scops -disable-output < %s | FileCheck %s -check-prefix=KERNEL-IR
 ;
 ; REQUIRES: pollyacc
 ;

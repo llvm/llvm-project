@@ -13,6 +13,7 @@
 #include "CSKYRegisterInfo.h"
 #include "CSKY.h"
 #include "CSKYSubtarget.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/MCContext.h"
@@ -281,7 +282,7 @@ void CSKYRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     MI->setDesc(TII->get(TargetOpcode::COPY));
     MI->getOperand(FIOperandNum)
         .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
-    MI->RemoveOperand(FIOperandNum + 1);
+    MI->removeOperand(FIOperandNum + 1);
   } else {
     MI->getOperand(FIOperandNum)
         .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);

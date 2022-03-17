@@ -12,8 +12,8 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/Linalg/ComprehensiveBufferize/AffineInterfaceImpl.h"
 #include "mlir/Dialect/Linalg/ComprehensiveBufferize/ModuleBufferization.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/BufferizableOpInterfaceImpl.h"
@@ -40,7 +40,7 @@ struct LinalgComprehensiveModuleBufferize
       const LinalgComprehensiveModuleBufferize &p) = default;
 
   explicit LinalgComprehensiveModuleBufferize(
-      const AnalysisBufferizationOptions &options)
+      const OneShotBufferizationOptions &options)
       : options(options) {}
 
   void runOnOperation() override;
@@ -51,8 +51,8 @@ struct LinalgComprehensiveModuleBufferize
                 memref::MemRefDialect, tensor::TensorDialect,
                 vector::VectorDialect, scf::SCFDialect,
                 arith::ArithmeticDialect, func::FuncDialect, AffineDialect>();
-    affine_ext::registerBufferizableOpInterfaceExternalModels(registry);
     arith::registerBufferizableOpInterfaceExternalModels(registry);
+    bufferization::registerAllocationOpInterfaceExternalModels(registry);
     linalg::registerBufferizableOpInterfaceExternalModels(registry);
     scf::registerBufferizableOpInterfaceExternalModels(registry);
     std_ext::registerModuleBufferizationExternalModels(registry);
@@ -61,7 +61,7 @@ struct LinalgComprehensiveModuleBufferize
   }
 
 private:
-  llvm::Optional<AnalysisBufferizationOptions> options;
+  llvm::Optional<OneShotBufferizationOptions> options;
 };
 } // namespace
 
@@ -81,7 +81,7 @@ static FailureOr<Value> allocationFnUsingAlloca(OpBuilder &b, Location loc,
 }
 
 void LinalgComprehensiveModuleBufferize::runOnOperation() {
-  AnalysisBufferizationOptions opt;
+  OneShotBufferizationOptions opt;
   if (!options) {
     // Make new bufferization options if none were provided when creating the
     // pass.
@@ -91,7 +91,7 @@ void LinalgComprehensiveModuleBufferize::runOnOperation() {
         return success();
       };
     }
-    opt.allowReturnMemref = allowReturnMemref;
+    opt.allowReturnAllocs = allowReturnAllocs;
     opt.allowUnknownOps = allowUnknownOps;
     opt.analysisFuzzerSeed = analysisFuzzerSeed;
     opt.createDeallocs = createDeallocs;
@@ -129,6 +129,6 @@ std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass() {
 }
 
 std::unique_ptr<Pass> mlir::createLinalgComprehensiveModuleBufferizePass(
-    const AnalysisBufferizationOptions &options) {
+    const OneShotBufferizationOptions &options) {
   return std::make_unique<LinalgComprehensiveModuleBufferize>(options);
 }

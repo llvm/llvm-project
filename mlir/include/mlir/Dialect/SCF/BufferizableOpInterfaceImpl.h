@@ -9,15 +9,8 @@
 #ifndef MLIR_DIALECT_SCF_BUFFERIZABLEOPINTERFACEIMPL_H
 #define MLIR_DIALECT_SCF_BUFFERIZABLEOPINTERFACEIMPL_H
 
-#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
-
 namespace mlir {
 class DialectRegistry;
-
-namespace bufferization {
-class BufferizationState;
-class BufferizationAliasInfo;
-} // namespace bufferization
 
 namespace scf {
 void registerBufferizableOpInterfaceExternalModels(DialectRegistry &registry);

@@ -302,10 +302,11 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
         Sym.getShndx() != SHN_UNDEF)
       Sym.Binding = STB_GLOBAL;
 
-    if (Config.SymbolsToWeaken.matches(Sym.Name) && Sym.Binding == STB_GLOBAL)
+    // SymbolsToWeaken applies to both STB_GLOBAL and STB_GNU_UNIQUE.
+    if (Config.SymbolsToWeaken.matches(Sym.Name) && Sym.Binding != STB_LOCAL)
       Sym.Binding = STB_WEAK;
 
-    if (Config.Weaken && Sym.Binding == STB_GLOBAL &&
+    if (Config.Weaken && Sym.Binding != STB_LOCAL &&
         Sym.getShndx() != SHN_UNDEF)
       Sym.Binding = STB_WEAK;
 
@@ -509,12 +510,8 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
     if (Error Err = replaceDebugSections(
             Obj, isCompressable,
             [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
-              Expected<CompressedSection> NewSection =
-                  CompressedSection::create(*S, Config.CompressionType);
-              if (!NewSection)
-                return NewSection.takeError();
-
-              return &Obj.addSection<CompressedSection>(std::move(*NewSection));
+              return &Obj.addSection<CompressedSection>(
+                  CompressedSection(*S, Config.CompressionType));
             }))
       return Err;
   } else if (Config.DecompressDebugSections) {

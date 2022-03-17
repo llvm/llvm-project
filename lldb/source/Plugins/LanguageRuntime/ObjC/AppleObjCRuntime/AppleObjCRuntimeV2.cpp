@@ -21,6 +21,7 @@
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/DebuggerEvents.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
@@ -665,8 +666,8 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
       m_loaded_objc_opt(false), m_non_pointer_isa_cache_up(),
       m_tagged_pointer_vendor_up(
           TaggedPointerVendorV2::CreateInstance(*this, objc_module_sp)),
-      m_encoding_to_type_sp(), m_noclasses_warning_emitted(false),
-      m_CFBoolean_values(), m_realized_class_generation_count(0) {
+      m_encoding_to_type_sp(), m_CFBoolean_values(),
+      m_realized_class_generation_count(0) {
   static const ConstString g_gdb_object_getClass("gdb_object_getClass");
   m_has_object_getClass = HasSymbol(g_gdb_object_getClass);
   static const ConstString g_objc_copyRealizedClassList(
@@ -1467,7 +1468,7 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
 
   objc_class_sp = GetClassDescriptorFromISA(isa);
   if (isa && !objc_class_sp) {
-    Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
+    Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
     LLDB_LOGF(log,
               "0x%" PRIx64 ": AppleObjCRuntimeV2::GetClassDescriptor() ISA was "
               "not in class descriptor cache 0x%" PRIx64,
@@ -1539,7 +1540,7 @@ lldb::addr_t AppleObjCRuntimeV2::GetISAHashTablePointer() {
 std::unique_ptr<UtilityFunction>
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
     ExecutionContext &exe_ctx, std::string code, std::string name) {
-  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
 
   LLDB_LOG(log, "Creating utility function {0}", name);
 
@@ -1644,7 +1645,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::ComputeHelper() const {
 std::unique_ptr<UtilityFunction>
 AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
     GetClassInfoUtilityFunctionImpl(ExecutionContext &exe_ctx) {
-  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
 
   LLDB_LOG(log, "Creating utility function {0}",
            g_get_shared_cache_class_info_name);
@@ -1747,7 +1748,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
 
   uint32_t num_class_infos = 0;
 
-  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
 
   ExecutionContext exe_ctx;
 
@@ -1823,7 +1824,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
 
   // Only dump the runtime classes from the expression evaluation if the log is
   // verbose:
-  Log *type_log = GetLog(LLDBLog::Commands);
+  Log *type_log = GetLog(LLDBLog::Types);
   bool dump_log = type_log && type_log->GetVerbose();
 
   arguments.GetValueAtIndex(3)->GetScalar() = dump_log ? 1 : 0;
@@ -1903,7 +1904,7 @@ uint32_t AppleObjCRuntimeV2::ParseClassInfoArray(const DataExtractor &data,
   //        uint32_t hash;
   //    } __attribute__((__packed__));
 
-  Log *log = GetLog(LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Types);
   bool should_log = log && log->GetVerbose();
 
   uint32_t num_parsed = 0;
@@ -1976,7 +1977,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   if (process == nullptr)
     return DescriptorMapUpdateResult::Fail();
 
-  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
 
   ExecutionContext exe_ctx;
 
@@ -2057,7 +2058,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   arguments.GetValueAtIndex(4)->GetScalar() = class_infos_byte_size;
   // Only dump the runtime classes from the expression evaluation if the log is
   // verbose:
-  Log *type_log = GetLog(LLDBLog::Commands);
+  Log *type_log = GetLog(LLDBLog::Types);
   bool dump_log = type_log && type_log->GetVerbose();
 
   arguments.GetValueAtIndex(5)->GetScalar() = dump_log ? 1 : 0;
@@ -2217,7 +2218,7 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheBaseAddress() {
 void AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded() {
   LLDB_SCOPED_TIMER();
 
-  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
 
   // Else we need to check with our process to see when the map was updated.
   Process *process = GetProcess();
@@ -2304,7 +2305,7 @@ bool AppleObjCRuntimeV2::RealizedClassGenerationCountChanged() {
       objc_debug_realized_class_generation_count)
     return false;
 
-  Log *log = GetLog(LLDBLog::Process | LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Process | LLDBLog::Types);
   LLDB_LOG(log,
            "objc_debug_realized_class_generation_count changed from {0} to {1}",
            m_realized_class_generation_count,
@@ -2330,32 +2331,27 @@ static bool DoesProcessHaveSharedCache(Process &process) {
 
 void AppleObjCRuntimeV2::WarnIfNoClassesCached(
     SharedCacheWarningReason reason) {
-  if (m_noclasses_warning_emitted)
-    return;
-
   if (GetProcess() && !DoesProcessHaveSharedCache(*GetProcess())) {
     // Simulators do not have the objc_opt_ro class table so don't actually
     // complain to the user
-    m_noclasses_warning_emitted = true;
     return;
   }
 
   Debugger &debugger(GetProcess()->GetTarget().GetDebugger());
-  if (auto stream = debugger.GetAsyncOutputStream()) {
-    switch (reason) {
-    case SharedCacheWarningReason::eNotEnoughClassesRead:
-      stream->PutCString("warning: could not find Objective-C class data in "
-                         "the process. This may reduce the quality of type "
-                         "information available.\n");
-      m_noclasses_warning_emitted = true;
-      break;
-    case SharedCacheWarningReason::eExpressionExecutionFailure:
-      stream->PutCString("warning: could not execute support code to read "
-                         "Objective-C class data in the process. This may "
-                         "reduce the quality of type information available.\n");
-      m_noclasses_warning_emitted = true;
-      break;
-    }
+  switch (reason) {
+  case SharedCacheWarningReason::eNotEnoughClassesRead:
+    Debugger::ReportWarning("warning: could not find Objective-C class data in "
+                            "the process. This may reduce the quality of type "
+                            "information available.\n",
+                            debugger.GetID(), &m_no_classes_cached_warning);
+    break;
+  case SharedCacheWarningReason::eExpressionExecutionFailure:
+    Debugger::ReportWarning(
+        "warning: could not execute support code to read "
+        "Objective-C class data in the process. This may "
+        "reduce the quality of type information available.\n",
+        debugger.GetID(), &m_no_classes_cached_warning);
+    break;
   }
 }
 
@@ -2372,17 +2368,25 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
 
   Target &target = GetProcess()->GetTarget();
   Debugger &debugger = target.GetDebugger();
-  if (auto stream = debugger.GetAsyncOutputStream()) {
-    const char *msg = "read from the shared cache";
-    if (PlatformSP platform_sp = target.GetPlatform())
-      msg = platform_sp->IsHost()
-                ? "read from the host's in-memory shared cache"
-                : "find the on-disk shared cache for this device";
-    stream->Printf("warning: libobjc.A.dylib is being read from process "
-                   "memory. This indicates that LLDB could not %s. This will "
-                   "likely reduce debugging performance.\n",
-                   msg);
+
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+
+  os << "warning: libobjc.A.dylib is being read from process memory. This "
+        "indicates that LLDB could not ";
+  if (PlatformSP platform_sp = target.GetPlatform()) {
+    if (platform_sp->IsHost()) {
+      os << "read from the host's in-memory shared cache";
+    } else {
+      os << "find the on-disk shared cache for this device";
+    }
+  } else {
+    os << "read from the shared cache";
   }
+  os << ". This will likely reduce debugging performance.\n";
+
+  Debugger::ReportWarning(os.str(), debugger.GetID(),
+                          &m_no_expanded_cache_warning);
 }
 
 DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
@@ -2458,7 +2462,7 @@ AppleObjCRuntimeV2::NonPointerISACache::CreateInstance(
 
   Status error;
 
-  Log *log = GetLog(LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Types);
 
   auto objc_debug_isa_magic_mask = ExtractRuntimeGlobalSymbol(
       process, ConstString("objc_debug_isa_magic_mask"), objc_module_sp, error);
@@ -2888,7 +2892,7 @@ AppleObjCRuntimeV2::NonPointerISACache::GetClassDescriptor(ObjCISA isa) {
 
 bool AppleObjCRuntimeV2::NonPointerISACache::EvaluateNonPointerISA(
     ObjCISA isa, ObjCISA &ret_isa) {
-  Log *log = GetLog(LLDBLog::Commands);
+  Log *log = GetLog(LLDBLog::Types);
 
   LLDB_LOGF(log, "AOCRT::NPI Evaluate(isa = 0x%" PRIx64 ")", (uint64_t)isa);
 

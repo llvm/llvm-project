@@ -135,7 +135,7 @@ inline void writeStubHelperHeader(uint8_t *buf8,
 
 inline void writeStubHelperEntry(uint8_t *buf8,
                                  const uint32_t stubHelperEntryCode[3],
-                                 const DylibSymbol &sym, uint64_t entryVA) {
+                                 const Symbol &sym, uint64_t entryVA) {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
   auto pcVA = [entryVA](int i) { return entryVA + i * sizeof(uint32_t); };
   uint64_t stubHelperHeaderVA = in.stubHelper->addr;

@@ -349,7 +349,7 @@ void ToMemrefOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 LogicalResult ToMemrefOp::bufferize(RewriterBase &rewriter,
-                                    const BufferizationState &state) {
+                                    BufferizationState &state) {
   // Fold to_memref(to_tensor(x)) to x. Insert a cast if necessary.
   return foldToMemrefToTensorPair(rewriter, *this);
 }

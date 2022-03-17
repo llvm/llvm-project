@@ -56,7 +56,8 @@ def ConditionOp : SCF_Op<"condition", [
 // ExecuteRegionOp
 //===----------------------------------------------------------------------===//
 
-def ExecuteRegionOp : SCF_Op<"execute_region"> {
+def ExecuteRegionOp : SCF_Op<"execute_region", [
+    DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
   let summary = "operation that executes its region exactly once";
   let description = [{
     The `execute_region` operation is used to allow multiple blocks within SCF

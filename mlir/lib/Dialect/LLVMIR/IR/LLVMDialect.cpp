@@ -1003,7 +1003,7 @@ LogicalResult CallOp::verify() {
       return emitOpError() << "'" << calleeName.getValue()
                            << "' does not reference a valid LLVM function";
 
-    fnType = fn.getType();
+    fnType = fn.getFunctionType();
   }
 
   LLVMFunctionType funcType = fnType.dyn_cast<LLVMFunctionType>();
@@ -1499,7 +1499,7 @@ LogicalResult ReturnOp::verify() {
     return emitOpError("expected at most 1 operand");
 
   if (auto parent = (*this)->getParentOfType<LLVMFuncOp>()) {
-    Type expectedType = parent.getType().getReturnType();
+    Type expectedType = parent.getFunctionType().getReturnType();
     if (expectedType.isa<LLVMVoidType>()) {
       if (getNumOperands() == 0)
         return success();
@@ -1571,8 +1571,8 @@ LogicalResult AddressOfOp::verify() {
     return emitOpError(
         "the type must be a pointer to the type of the referenced global");
 
-  if (function &&
-      LLVM::LLVMPointerType::get(function.getType()) != getResult().getType())
+  if (function && LLVM::LLVMPointerType::get(function.getFunctionType()) !=
+                      getResult().getType())
     return emitOpError(
         "the type must be a pointer to the type of the referenced function");
 
@@ -1965,7 +1965,7 @@ Block *LLVMFuncOp::addEntryBlock() {
   push_back(entry);
 
   // FIXME: Allow passing in proper locations for the entry arguments.
-  LLVMFunctionType type = getType();
+  LLVMFunctionType type = getFunctionType();
   for (unsigned i = 0, e = type.getNumParams(); i < e; ++i)
     entry->addArgument(type.getParamType(i), getLoc());
   return entry;
@@ -1978,7 +1978,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
   result.addRegion();
   result.addAttribute(SymbolTable::getSymbolAttrName(),
                       builder.getStringAttr(name));
-  result.addAttribute("type", TypeAttr::get(type));
+  result.addAttribute(getFunctionTypeAttrName(result.name),
+                      TypeAttr::get(type));
   result.addAttribute(::getLinkageAttrName(),
                       LinkageAttr::get(builder.getContext(), linkage));
   result.attributes.append(attrs.begin(), attrs.end());
@@ -1997,8 +1998,8 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
 // Returns a null type if any of the types provided are non-LLVM types, or if
 // there is more than one output type.
 static Type
-buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc,
-                      ArrayRef<Type> inputs, ArrayRef<Type> outputs,
+buildLLVMFunctionType(OpAsmParser &parser, SMLoc loc, ArrayRef<Type> inputs,
+                      ArrayRef<Type> outputs,
                       function_interface_impl::VariadicFlag variadicFlag) {
   Builder &b = parser.getBuilder();
   if (outputs.size() > 1) {
@@ -2089,7 +2090,7 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
     p << stringifyLinkage(getLinkage()) << ' ';
   p.printSymbolName(getName());
 
-  LLVMFunctionType fnType = getType();
+  LLVMFunctionType fnType = getFunctionType();
   SmallVector<Type, 8> argTypes;
   SmallVector<Type, 1> resTypes;
   argTypes.reserve(fnType.getNumParams());
@@ -2114,15 +2115,6 @@ void LLVMFuncOp::print(OpAsmPrinter &p) {
   }
 }
 
-LogicalResult LLVMFuncOp::verifyType() {
-  auto llvmType = getTypeAttr().getValue().dyn_cast_or_null<LLVMFunctionType>();
-  if (!llvmType)
-    return emitOpError("requires '" + getTypeAttrName() +
-                       "' attribute of wrapped LLVM function type");
-
-  return success();
-}
-
 // Verifies LLVM- and implementation-specific properties of the LLVM func Op:
 // - functions don't have 'common' linkage
 // - external functions have 'external' or 'extern_weak' linkage;
@@ -2135,7 +2127,7 @@ LogicalResult LLVMFuncOp::verify() {
 
   // Check to see if this function has a void return with a result attribute to
   // it. It isn't clear what semantics we would assign to that.
-  if (getType().getReturnType().isa<LLVMVoidType>() &&
+  if (getFunctionType().getReturnType().isa<LLVMVoidType>() &&
       !getResultAttrs(0).empty()) {
     return emitOpError()
            << "cannot attach result attributes to functions with a void return";
@@ -2159,21 +2151,18 @@ LogicalResult LLVMFuncOp::verify() {
 }
 
 /// Verifies LLVM- and implementation-specific properties of the LLVM func Op:
-/// - entry block arguments are of LLVM types and match the function signature.
+/// - entry block arguments are of LLVM types.
 LogicalResult LLVMFuncOp::verifyRegions() {
   if (isExternal())
     return success();
 
-  unsigned numArguments = getType().getNumParams();
+  unsigned numArguments = getFunctionType().getNumParams();
   Block &entryBlock = front();
   for (unsigned i = 0; i < numArguments; ++i) {
     Type argType = entryBlock.getArgument(i).getType();
     if (!isCompatibleType(argType))
       return emitOpError("entry block argument #")
              << i << " is not of LLVM type";
-    if (getType().getParamType(i) != argType)
-      return emitOpError("the type of entry block argument #")
-             << i << " does not match the function signature";
   }
 
   return success();
@@ -2605,6 +2594,12 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
              << "' to be a `loopopts` attribute";
   }
 
+  if (attr.getName() == LLVMDialect::getStructAttrsAttrName()) {
+    return op->emitOpError()
+           << "'" << LLVM::LLVMDialect::getStructAttrsAttrName()
+           << "' is permitted only in argument or result attributes";
+  }
+
   // If the data layout attribute is present, it must use the LLVM data layout
   // syntax. Try parsing it and report errors in case of failure. Users of this
   // attribute may assume it is well-formed and can pass it to the (asserting)
@@ -2619,6 +2614,46 @@ LogicalResult LLVMDialect::verifyOperationAttribute(Operation *op,
   return op->emitOpError() << "expected '"
                            << LLVM::LLVMDialect::getDataLayoutAttrName()
                            << "' to be a string attribute";
+}
+
+LogicalResult LLVMDialect::verifyStructAttr(Operation *op, Attribute attr,
+                                            Type annotatedType) {
+  auto structType = annotatedType.dyn_cast<LLVMStructType>();
+  if (!structType) {
+    const auto emitIncorrectAnnotatedType = [&op]() {
+      return op->emitError()
+             << "expected '" << LLVMDialect::getStructAttrsAttrName()
+             << "' to annotate '!llvm.struct' or '!llvm.ptr<struct<...>>'";
+    };
+    const auto ptrType = annotatedType.dyn_cast<LLVMPointerType>();
+    if (!ptrType)
+      return emitIncorrectAnnotatedType();
+    structType = ptrType.getElementType().dyn_cast<LLVMStructType>();
+    if (!structType)
+      return emitIncorrectAnnotatedType();
+  }
+
+  const auto arrAttrs = attr.dyn_cast<ArrayAttr>();
+  if (!arrAttrs)
+    return op->emitError() << "expected '"
+                           << LLVMDialect::getStructAttrsAttrName()
+                           << "' to be an array attribute";
+
+  if (structType.getBody().size() != arrAttrs.size())
+    return op->emitError()
+           << "size of '" << LLVMDialect::getStructAttrsAttrName()
+           << "' must match the size of the annotated '!llvm.struct'";
+  return success();
+}
+
+static LogicalResult verifyFuncOpInterfaceStructAttr(
+    Operation *op, Attribute attr,
+    std::function<Type(FunctionOpInterface)> getAnnotatedType) {
+  if (auto funcOp = dyn_cast<FunctionOpInterface>(op))
+    return LLVMDialect::verifyStructAttr(op, attr, getAnnotatedType(funcOp));
+  return op->emitError() << "expected '"
+                         << LLVMDialect::getStructAttrsAttrName()
+                         << "' to be used on function-like operations";
 }
 
 /// Verify LLVMIR function argument attributes.
@@ -2636,6 +2671,25 @@ LogicalResult LLVMDialect::verifyRegionArgAttribute(Operation *op,
       !argAttr.getValue().isa<IntegerAttr>())
     return op->emitError()
            << "llvm.align argument attribute of non integer type";
+  if (argAttr.getName() == LLVMDialect::getStructAttrsAttrName()) {
+    return verifyFuncOpInterfaceStructAttr(
+        op, argAttr.getValue(), [argIdx](FunctionOpInterface funcOp) {
+          return funcOp.getArgumentTypes()[argIdx];
+        });
+  }
+  return success();
+}
+
+LogicalResult LLVMDialect::verifyRegionResultAttribute(Operation *op,
+                                                       unsigned regionIdx,
+                                                       unsigned resIdx,
+                                                       NamedAttribute resAttr) {
+  if (resAttr.getName() == LLVMDialect::getStructAttrsAttrName()) {
+    return verifyFuncOpInterfaceStructAttr(
+        op, resAttr.getValue(), [resIdx](FunctionOpInterface funcOp) {
+          return funcOp.getResultTypes()[resIdx];
+        });
+  }
   return success();
 }
 

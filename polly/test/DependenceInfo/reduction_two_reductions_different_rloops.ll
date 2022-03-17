@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-dependences -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -basic-aa -polly-stmt-granularity=bb -polly-print-dependences -disable-output < %s | FileCheck %s
 ;
 ; CHECK:      RAW dependences:
 ; CHECK-NEXT:     {  }

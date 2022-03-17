@@ -1057,6 +1057,30 @@ void SubprogramSymbolCollector::Collect() {
       if (needed) {
         need_.push_back(symbol);
       }
+    } else if (symbol.has<SubprogramDetails>()) {
+      // An internal subprogram is needed if it is used as interface
+      // for a dummy or return value procedure.
+      bool needed{false};
+      const auto hasInterface{[&symbol](const Symbol *s) -> bool {
+        // Is 's' a procedure with interface 'symbol'?
+        if (s) {
+          if (const auto *sDetails{s->detailsIf<ProcEntityDetails>()}) {
+            const ProcInterface &sInterface{sDetails->interface()};
+            if (sInterface.symbol() == &symbol) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }};
+      for (const Symbol *dummyArg : details.dummyArgs()) {
+        needed = needed || hasInterface(dummyArg);
+      }
+      needed =
+          needed || (details.isFunction() && hasInterface(&details.result()));
+      if (needed && needSet_.insert(symbol).second) {
+        need_.push_back(symbol);
+      }
     }
   }
 }

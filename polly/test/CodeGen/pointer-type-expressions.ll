@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-ast -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-print-ast -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s -check-prefix=CODEGEN
 
 ; void f(int a[], int N, float *P) {

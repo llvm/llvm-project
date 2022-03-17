@@ -79,6 +79,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
@@ -95,6 +96,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Evaluator.h"
 #include <algorithm>
 #include <cstddef>
@@ -163,13 +165,19 @@ static cl::list<std::string>
                       cl::desc("Prevent function(s) from being devirtualized"),
                       cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated);
 
-/// Mechanism to add runtime checking of devirtualization decisions, trapping on
-/// any that are not correct. Useful for debugging undefined behavior leading to
-/// failures with WPD.
-static cl::opt<bool>
-    CheckDevirt("wholeprogramdevirt-check", cl::init(false), cl::Hidden,
-                cl::ZeroOrMore,
-                cl::desc("Add code to trap on incorrect devirtualizations"));
+/// Mechanism to add runtime checking of devirtualization decisions, optionally
+/// trapping or falling back to indirect call on any that are not correct.
+/// Trapping mode is useful for debugging undefined behavior leading to failures
+/// with WPD. Fallback mode is useful for ensuring safety when whole program
+/// visibility may be compromised.
+enum WPDCheckMode { None, Trap, Fallback };
+static cl::opt<WPDCheckMode> DevirtCheckMode(
+    "wholeprogramdevirt-check", cl::Hidden, cl::ZeroOrMore,
+    cl::desc("Type of checking for incorrect devirtualizations"),
+    cl::values(clEnumValN(WPDCheckMode::None, "none", "No checking"),
+               clEnumValN(WPDCheckMode::Trap, "trap", "Trap when incorrect"),
+               clEnumValN(WPDCheckMode::Fallback, "fallback",
+                          "Fallback to indirect when incorrect")));
 
 namespace {
 struct PatternList {
@@ -1140,10 +1148,10 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       Value *Callee =
           Builder.CreateBitCast(TheFn, CB.getCalledOperand()->getType());
 
-      // If checking is enabled, add support to compare the virtual function
-      // pointer to the devirtualized target. In case of a mismatch, perform a
-      // debug trap.
-      if (CheckDevirt) {
+      // If trap checking is enabled, add support to compare the virtual
+      // function pointer to the devirtualized target. In case of a mismatch,
+      // perform a debug trap.
+      if (DevirtCheckMode == WPDCheckMode::Trap) {
         auto *Cond = Builder.CreateICmpNE(CB.getCalledOperand(), Callee);
         Instruction *ThenTerm =
             SplitBlockAndInsertIfThen(Cond, &CB, /*Unreachable=*/false);
@@ -1153,8 +1161,38 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         CallTrap->setDebugLoc(CB.getDebugLoc());
       }
 
-      // Devirtualize.
-      CB.setCalledOperand(Callee);
+      // If fallback checking is enabled, add support to compare the virtual
+      // function pointer to the devirtualized target. In case of a mismatch,
+      // fall back to indirect call.
+      if (DevirtCheckMode == WPDCheckMode::Fallback) {
+        MDNode *Weights =
+            MDBuilder(M.getContext()).createBranchWeights((1U << 20) - 1, 1);
+        // Version the indirect call site. If the called value is equal to the
+        // given callee, 'NewInst' will be executed, otherwise the original call
+        // site will be executed.
+        CallBase &NewInst = versionCallSite(CB, Callee, Weights);
+        NewInst.setCalledOperand(Callee);
+        // Since the new call site is direct, we must clear metadata that
+        // is only appropriate for indirect calls. This includes !prof and
+        // !callees metadata.
+        NewInst.setMetadata(LLVMContext::MD_prof, nullptr);
+        NewInst.setMetadata(LLVMContext::MD_callees, nullptr);
+        // Additionally, we should remove them from the fallback indirect call,
+        // so that we don't attempt to perform indirect call promotion later.
+        CB.setMetadata(LLVMContext::MD_prof, nullptr);
+        CB.setMetadata(LLVMContext::MD_callees, nullptr);
+      }
+
+      // In either trapping or non-checking mode, devirtualize original call.
+      else {
+        // Devirtualize unconditionally.
+        CB.setCalledOperand(Callee);
+        // Since the call site is now direct, we must clear metadata that
+        // is only appropriate for indirect calls. This includes !prof and
+        // !callees metadata.
+        CB.setMetadata(LLVMContext::MD_prof, nullptr);
+        CB.setMetadata(LLVMContext::MD_callees, nullptr);
+      }
 
       // This use is no longer unsafe.
       if (VCallSite.NumUnsafeUses)
@@ -1702,7 +1740,7 @@ bool DevirtModule::tryVirtualConstProp(
   for (VirtualCallTarget &Target : TargetsForSlot) {
     if (Target.Fn->isDeclaration() ||
         computeFunctionBodyMemoryAccess(*Target.Fn, AARGetter(*Target.Fn)) !=
-            MAK_ReadNone ||
+            FMRB_DoesNotAccessMemory ||
         Target.Fn->arg_empty() || !Target.Fn->arg_begin()->use_empty() ||
         Target.Fn->getReturnType() != RetType)
       return false;

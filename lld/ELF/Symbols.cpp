@@ -528,14 +528,28 @@ bool Symbol::shouldReplace(const Defined &other) const {
       return false;
   }
 
-  return isWeak() && !other.isWeak();
+  // Incoming STB_GLOBAL overrides STB_WEAK/STB_GNU_UNIQUE. -fgnu-unique changes
+  // some vague linkage data in COMDAT from STB_WEAK to STB_GNU_UNIQUE. Treat
+  // STB_GNU_UNIQUE like STB_WEAK so that we prefer the first among all
+  // STB_WEAK/STB_GNU_UNIQUE copies. If we prefer an incoming STB_GNU_UNIQUE to
+  // an existing STB_WEAK, there may be discarded section errors because the
+  // selected copy may be in a non-prevailing COMDAT.
+  return !isGlobal() && other.isGlobal();
 }
 
-void elf::reportDuplicate(const Symbol &sym, InputFile *newFile,
+void elf::reportDuplicate(const Symbol &sym, const InputFile *newFile,
                           InputSectionBase *errSec, uint64_t errOffset) {
   if (config->allowMultipleDefinition)
     return;
-  const Defined *d = cast<Defined>(&sym);
+  // In glibc<2.32, crti.o has .gnu.linkonce.t.__x86.get_pc_thunk.bx, which
+  // is sort of proto-comdat. There is actually no duplicate if we have
+  // full support for .gnu.linkonce.
+  const Defined *d = dyn_cast<Defined>(&sym);
+  if (!d || d->getName() == "__x86.get_pc_thunk.bx")
+    return;
+  // Allow absolute symbols with the same value for GNU ld compatibility.
+  if (!d->section && !errSec && errOffset && d->value == errOffset)
+    return;
   if (!d->section || !errSec) {
     error("duplicate symbol: " + toString(sym) + "\n>>> defined in " +
           toString(sym.file) + "\n>>> defined in " + toString(newFile));
