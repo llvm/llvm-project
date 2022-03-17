@@ -560,8 +560,8 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
     const char *error_str;
   };
   
-  extern void *memcpy(void *, const void *, size_t size);
-  extern size_t strlen(const char *);
+  extern "C" void *memcpy(void *, const void *, size_t size);
+  extern "C" size_t strlen(const char *);
   
 
   void * __lldb_dlopen_wrapper (const char *name, 
@@ -608,7 +608,7 @@ PlatformPOSIX::MakeLoadImageUtilityFunction(ExecutionContext &exe_ctx,
   DiagnosticManager diagnostics;
 
   auto utility_fn_or_error = process->GetTarget().CreateUtilityFunction(
-      std::move(expr), dlopen_wrapper_name, eLanguageTypeObjC, exe_ctx);
+      std::move(expr), dlopen_wrapper_name, eLanguageTypeC_plus_plus, exe_ctx);
   if (!utility_fn_or_error) {
     std::string error_str = llvm::toString(utility_fn_or_error.takeError());
     error.SetErrorStringWithFormat("dlopen error: could not create utility"

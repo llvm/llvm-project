@@ -713,8 +713,9 @@ struct ForOpIterArgsFolder : public OpRewritePattern<scf::ForOp> {
   }
 };
 
-/// Rewriting pattern that erases loops that are known not to iterate and
-/// replaces single-iteration loops with their bodies.
+/// Rewriting pattern that erases loops that are known not to iterate, replaces
+/// single-iteration loops with their bodies, and removes empty loops that
+/// iterate at least once and only return values defined outside of the loop.
 struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
   using OpRewritePattern<ForOp>::OpRewritePattern;
 
@@ -756,7 +757,19 @@ struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
       return success();
     }
 
-    return failure();
+    // Now we are left with loops that have more than 1 iterations.
+    Block &block = op.getRegion().front();
+    if (!llvm::hasSingleElement(block))
+      return failure();
+    // If the loop is empty, iterates at least once, and only returns values
+    // defined outside of the loop, remove it and replace it with yield values.
+    auto yieldOp = cast<scf::YieldOp>(block.getTerminator());
+    auto yieldOperands = yieldOp.getOperands();
+    if (llvm::any_of(yieldOperands,
+                     [&](Value v) { return !op.isDefinedOutsideOfLoop(v); }))
+      return failure();
+    rewriter.replaceOp(op, yieldOperands);
+    return success();
   }
 };
 

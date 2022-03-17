@@ -1104,7 +1104,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm::Function::arg_iterator EI = CurFn->arg_end();
     --EI;
     llvm::Value *Addr = Builder.CreateStructGEP(
-        EI->getType()->getPointerElementType(), &*EI, Idx);
+        CurFnInfo->getArgStruct(), &*EI, Idx);
     llvm::Type *Ty =
         cast<llvm::GetElementPtrInst>(Addr)->getResultElementType();
     ReturnValuePointer = Address(Addr, Ty, getPointerAlign());

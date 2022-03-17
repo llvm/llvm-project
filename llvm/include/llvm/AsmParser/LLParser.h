@@ -95,6 +95,8 @@ namespace llvm {
     typedef LLLexer::LocTy LocTy;
   private:
     LLVMContext &Context;
+    // Lexer to determine whether to use opaque pointers or not.
+    LLLexer OPLex;
     LLLexer Lex;
     // Module being parsed, null if we are only parsing summary index.
     Module *M;
@@ -157,8 +159,9 @@ namespace llvm {
     LLParser(StringRef F, SourceMgr &SM, SMDiagnostic &Err, Module *M,
              ModuleSummaryIndex *Index, LLVMContext &Context,
              SlotMapping *Slots = nullptr)
-        : Context(Context), Lex(F, SM, Err, Context), M(M), Index(Index),
-          Slots(Slots), BlockAddressPFS(nullptr) {}
+        : Context(Context), OPLex(F, SM, Err, Context),
+          Lex(F, SM, Err, Context), M(M), Index(Index), Slots(Slots),
+          BlockAddressPFS(nullptr) {}
     bool Run(
         bool UpgradeDebugInfo, DataLayoutCallbackTy DataLayoutCallback =
                                    [](StringRef) { return None; });

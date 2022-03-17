@@ -1,3 +1,4 @@
+# UNSUPPORTED: system-windows
 # RUN: %clang_host %p/Inputs/dummy-target.c -o %t.out
 # RUN: %lldb -b -o "br s -n main -c 'bogus'" -o "run" %t.out 2>&1 | FileCheck %s
 
