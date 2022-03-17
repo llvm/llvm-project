@@ -126,8 +126,7 @@ do.end:                                           ; preds = %4
 define i64 @test_and1(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_and1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and x8, x0, #0x3
-; CHECK-NEXT:    tst x0, #0x3
+; CHECK-NEXT:    ands x8, x0, #0x3
 ; CHECK-NEXT:    csel x0, x8, x1, eq
 ; CHECK-NEXT:    ret
   %a = and i64 %x, 3
@@ -151,22 +150,20 @@ define i64 @test_and2(i64 %x, i64 %y) {
 define i64 @test_and3(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_and3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    mov x20, x0
-; CHECK-NEXT:    and x21, x0, #0x3
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    mov x19, x1
 ; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    tst x20, #0x3
-; CHECK-NEXT:    csel x0, x21, x19, eq
+; CHECK-NEXT:    ands x8, x20, #0x3
+; CHECK-NEXT:    csel x0, x8, x19, eq
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %a = and i64 %x, 3
   %b = call i64 @callee(i64 0)
@@ -185,8 +182,7 @@ define i64 @test_and_4(i64 %x, i64 %y) {
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    ands x0, x0, #0x3
 ; CHECK-NEXT:    bl callee
-; CHECK-NEXT:    tst x19, #0x3
-; CHECK-NEXT:    and x8, x19, #0x3
+; CHECK-NEXT:    ands x8, x19, #0x3
 ; CHECK-NEXT:    csel x0, x8, x0, eq
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret

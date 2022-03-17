@@ -17351,6 +17351,31 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Combines for S forms of generic opcodes (AArch64ISD::ANDS into ISD::AND for
+// example). NOTE: This could be used for ADDS and SUBS too, if we can find test
+// cases.
+static SDValue performANDSCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI) {
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+
+  // If the flag result isn't used, convert back to a generic opcode.
+  if (!N->hasAnyUseOfValue(1)) {
+    SDValue Res = DCI.DAG.getNode(ISD::AND, DL, VT, LHS, RHS);
+    return DCI.DAG.getMergeValues({Res, DCI.DAG.getConstant(0, DL, MVT::i32)},
+                                  DL);
+  }
+
+  // Combine identical generic nodes into this node, re-using the result.
+  if (SDNode *GenericAddSub =
+          DCI.DAG.getNodeIfExists(ISD::AND, DCI.DAG.getVTList(VT), {LHS, RHS}))
+    DCI.CombineTo(GenericAddSub, SDValue(N, 0));
+
+  return SDValue();
+}
+
 static SDValue performSetCCPunpkCombine(SDNode *N, SelectionDAG &DAG) {
   // setcc_merge_zero pred
   //   (sign_extend (extract_subvector (setcc_merge_zero ... pred ...))), 0, ne
@@ -18415,6 +18440,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performTBZCombine(N, DCI, DAG);
   case AArch64ISD::CSEL:
     return performCSELCombine(N, DCI, DAG);
+  case AArch64ISD::ANDS:
+    return performANDSCombine(N, DCI);
   case AArch64ISD::DUP:
     return performPostLD1Combine(N, DCI, false);
   case AArch64ISD::NVCAST:
