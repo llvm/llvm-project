@@ -19,6 +19,9 @@
 namespace mlir {
 class ConversionTarget;
 class TypeConverter;
+namespace func {
+class FuncOp;
+} // namespace func
 } // namespace mlir
 
 namespace mlir {
@@ -38,14 +41,14 @@ void populateShapeRewritePatterns(RewritePatternSet &patterns);
 //
 // After this pass, no cstr_ operations exist.
 void populateRemoveShapeConstraintsPatterns(RewritePatternSet &patterns);
-std::unique_ptr<OperationPass<FuncOp>> createRemoveShapeConstraintsPass();
+std::unique_ptr<OperationPass<func::FuncOp>> createRemoveShapeConstraintsPass();
 
 // Bufferizes shape dialect ops.
 //
 // Note that most shape dialect ops must be converted to std before
 // bufferization happens, as they are intended to be bufferized at the std
 // level.
-std::unique_ptr<OperationPass<FuncOp>> createShapeBufferizePass();
+std::unique_ptr<OperationPass<func::FuncOp>> createShapeBufferizePass();
 
 //===----------------------------------------------------------------------===//
 // Registration
