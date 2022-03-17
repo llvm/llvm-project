@@ -192,6 +192,11 @@ class Preprocessor {
   LangOptions::FPEvalMethodKind CurrentFPEvalMethod =
       LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
 
+  // Keeps the value of the last evaluation method before a
+  // `pragma float_control (precise,off) is applied.
+  LangOptions::FPEvalMethodKind LastFPEvalMethod =
+      LangOptions::FPEvalMethodKind::FEM_UnsetOnCommandLine;
+
   // The most recent pragma location where the floating point evaluation
   // method was modified. This is used to determine whether the
   // 'pragma clang fp eval_method' was used whithin the current scope.
@@ -2076,6 +2081,14 @@ public:
 
   SourceLocation getLastFPEvalPragmaLocation() const {
     return LastFPEvalPragmaLocation;
+  }
+
+  LangOptions::FPEvalMethodKind getLastFPEvalMethod() const {
+    return LastFPEvalMethod;
+  }
+
+  void setLastFPEvalMethod(LangOptions::FPEvalMethodKind Val) {
+    LastFPEvalMethod = Val;
   }
 
   void setCurrentFPEvalMethod(SourceLocation PragmaLoc,
