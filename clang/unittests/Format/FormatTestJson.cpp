@@ -30,14 +30,12 @@ protected:
     if (Style.isJson() && !Style.DisableFormat) {
       auto Err = Replaces.add(
           tooling::Replacement(tooling::Replacement("", 0, 0, "x = ")));
-      if (Err) {
+      if (Err)
         llvm::errs() << "Bad Json variable insertion\n";
-      }
     }
     auto ChangedCode = applyAllReplacements(Code, Replaces);
-    if (!ChangedCode) {
+    if (!ChangedCode)
       llvm::errs() << "Bad Json varibale replacement\n";
-    }
     StringRef NewCode = *ChangedCode;
 
     std::vector<tooling::Range> Ranges(1, tooling::Range(0, NewCode.size()));

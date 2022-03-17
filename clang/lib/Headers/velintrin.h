@@ -12,9 +12,7 @@
 // Vector registers
 typedef double __vr __attribute__((__vector_size__(2048)));
 
-// TODO: Vector mask registers
-// Depend on https://reviews.llvm.org/D88905
-#if 0
+// Vector mask registers
 #if __STDC_VERSION__ >= 199901L
 // For C99
 typedef _Bool __vm    __attribute__((ext_vector_type(256)));
@@ -28,7 +26,6 @@ typedef bool __vm256 __attribute__((ext_vector_type(256)));
 typedef bool __vm512 __attribute__((ext_vector_type(512)));
 #else
 #error need C++ or C99 to use vector intrinsics for VE
-#endif
 #endif
 #endif
 

@@ -9,6 +9,8 @@ long v1, v2, v3;
 double vd1;
 float vf1;
 __vr vr1, vr2, vr3, vr4;
+__vm256 vm1, vm2, vm3;
+__vm512 vm1_512, vm2_512, vm3_512;
 
 void __attribute__((noinline))
 test_vld_vssl(char* p, long idx) {
@@ -242,10 +244,24 @@ test_vst_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vst_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vst_vssml
+  // CHECK: call void @llvm.ve.vl.vst.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vst_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstnc_vssl
   // CHECK: call void @llvm.ve.vl.vstnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstnc_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstnc_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstnc_vssml
+  // CHECK: call void @llvm.ve.vl.vstnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -256,10 +272,24 @@ test_vstot_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstot_vssml
+  // CHECK: call void @llvm.ve.vl.vstot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstot_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstncot_vssl
   // CHECK: call void @llvm.ve.vl.vstncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstncot_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstncot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstncot_vssml
+  // CHECK: call void @llvm.ve.vl.vstncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -270,10 +300,24 @@ test_vstu_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstu_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstu_vssml
+  // CHECK: call void @llvm.ve.vl.vstu.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstu_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstunc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstunc_vssl
   // CHECK: call void @llvm.ve.vl.vstunc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstunc_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstunc_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstunc_vssml
+  // CHECK: call void @llvm.ve.vl.vstunc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstunc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -284,10 +328,24 @@ test_vstuot_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstuot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstuot_vssml
+  // CHECK: call void @llvm.ve.vl.vstuot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstuot_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstuncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstuncot_vssl
   // CHECK: call void @llvm.ve.vl.vstuncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstuncot_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstuncot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstuncot_vssml
+  // CHECK: call void @llvm.ve.vl.vstuncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstuncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -298,10 +356,24 @@ test_vstl_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstl_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstl_vssml
+  // CHECK: call void @llvm.ve.vl.vstl.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstl_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstlnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstlnc_vssl
   // CHECK: call void @llvm.ve.vl.vstlnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstlnc_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstlnc_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstlnc_vssml
+  // CHECK: call void @llvm.ve.vl.vstlnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstlnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -312,10 +384,24 @@ test_vstlot_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstlot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstlot_vssml
+  // CHECK: call void @llvm.ve.vl.vstlot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstlot_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstlncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstlncot_vssl
   // CHECK: call void @llvm.ve.vl.vstlncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstlncot_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstlncot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstlncot_vssml
+  // CHECK: call void @llvm.ve.vl.vstlncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstlncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -326,10 +412,24 @@ test_vst2d_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vst2d_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vst2d_vssml
+  // CHECK: call void @llvm.ve.vl.vst2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vst2d_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vst2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dnc_vssl
   // CHECK: call void @llvm.ve.vl.vst2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vst2dnc_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vst2dnc_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vst2dnc_vssml
+  // CHECK: call void @llvm.ve.vl.vst2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vst2dnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -340,10 +440,24 @@ test_vst2dot_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vst2dot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vst2dot_vssml
+  // CHECK: call void @llvm.ve.vl.vst2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vst2dot_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vst2dncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vst2dncot_vssl
   // CHECK: call void @llvm.ve.vl.vst2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vst2dncot_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vst2dncot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vst2dncot_vssml
+  // CHECK: call void @llvm.ve.vl.vst2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vst2dncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -354,10 +468,24 @@ test_vstu2d_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstu2d_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstu2d_vssml
+  // CHECK: call void @llvm.ve.vl.vstu2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstu2d_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstu2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dnc_vssl
   // CHECK: call void @llvm.ve.vl.vstu2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstu2dnc_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstu2dnc_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstu2dnc_vssml
+  // CHECK: call void @llvm.ve.vl.vstu2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstu2dnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -368,10 +496,24 @@ test_vstu2dot_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstu2dot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstu2dot_vssml
+  // CHECK: call void @llvm.ve.vl.vstu2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstu2dot_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstu2dncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstu2dncot_vssl
   // CHECK: call void @llvm.ve.vl.vstu2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstu2dncot_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstu2dncot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstu2dncot_vssml
+  // CHECK: call void @llvm.ve.vl.vstu2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstu2dncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -382,10 +524,24 @@ test_vstl2d_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstl2d_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstl2d_vssml
+  // CHECK: call void @llvm.ve.vl.vstl2d.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstl2d_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstl2dnc_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dnc_vssl
   // CHECK: call void @llvm.ve.vl.vstl2dnc.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstl2dnc_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstl2dnc_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstl2dnc_vssml
+  // CHECK: call void @llvm.ve.vl.vstl2dnc.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstl2dnc_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -396,10 +552,24 @@ test_vstl2dot_vssl(char* p, long idx) {
 }
 
 void __attribute__((noinline))
+test_vstl2dot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstl2dot_vssml
+  // CHECK: call void @llvm.ve.vl.vstl2dot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstl2dot_vssml(vr1, idx, p, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vstl2dncot_vssl(char* p, long idx) {
   // CHECK-LABEL: @test_vstl2dncot_vssl
   // CHECK: call void @llvm.ve.vl.vstl2dncot.vssl(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, i32 256)
   _vel_vstl2dncot_vssl(vr1, idx, p, 256);
+}
+
+void __attribute__((noinline))
+test_vstl2dncot_vssml(char* p, long idx) {
+  // CHECK-LABEL: @test_vstl2dncot_vssml
+  // CHECK: call void @llvm.ve.vl.vstl2dncot.vssml(<256 x double> %{{.*}}, i64 %{{.*}}, i8* %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vstl2dncot_vssml(vr1, idx, p, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -445,6 +615,34 @@ test_lvss_svs(int idx) {
 }
 
 void __attribute__((noinline))
+test_lvm_mmss(unsigned long sy, unsigned long sz) {
+  // CHECK-LABEL: @test_lvm_mmss
+  // CHECK: call <256 x i1> @llvm.ve.vl.lvm.mmss(<256 x i1> %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+  vm1 = _vel_lvm_mmss(vm2, sy, sz);
+}
+
+void __attribute__((noinline))
+test_lvm_MMss(unsigned long sy, unsigned long sz) {
+  // CHECK-LABEL: @test_lvm_MMss
+  // CHECK: call <512 x i1> @llvm.ve.vl.lvm.MMss(<512 x i1> %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
+  vm1_512 = _vel_lvm_MMss(vm2_512, sy, sz);
+}
+
+void __attribute__((noinline))
+test_svm_sms(unsigned long sy) {
+  // CHECK-LABEL: @test_svm_sms
+  // CHECK: call i64 @llvm.ve.vl.svm.sms(<256 x i1> %{{.*}}, i64 %{{.*}})
+  v1 = _vel_svm_sms(vm2, sy);
+}
+
+void __attribute__((noinline))
+test_svm_sMs(unsigned long sy) {
+  // CHECK-LABEL: @test_svm_sMs
+  // CHECK: call i64 @llvm.ve.vl.svm.sMs(<512 x i1> %{{.*}}, i64 %{{.*}})
+  v1 = _vel_svm_sMs(vm2_512, sy);
+}
+
+void __attribute__((noinline))
 test_vbrdd_vsl() {
   // CHECK-LABEL: @test_vbrdd_vsl
   // CHECK: call <256 x double> @llvm.ve.vl.vbrdd.vsl(double %{{.*}}, i32 256)
@@ -456,6 +654,13 @@ test_vbrdd_vsvl() {
   // CHECK-LABEL: @test_vbrdd_vsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vbrdd.vsvl(double %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vbrdd_vsvl(vd1, vr1, 256);
+}
+
+void __attribute__((noinline))
+test_vbrdd_vsmvl() {
+  // CHECK-LABEL: @test_vbrdd_vsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vbrdd.vsmvl(double %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr1 = _vel_vbrdd_vsmvl(vd1, vm1, vr1, 256);
 }
 
 void __attribute__((noinline))
@@ -473,6 +678,13 @@ test_vbrdl_vsvl() {
 }
 
 void __attribute__((noinline))
+test_vbrdl_vsmvl() {
+  // CHECK-LABEL: @test_vbrdl_vsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vbrdl.vsmvl(i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr1 = _vel_vbrdl_vsmvl(v1, vm1, vr1, 256);
+}
+
+void __attribute__((noinline))
 test_vbrds_vsl() {
   // CHECK-LABEL: @test_vbrds_vsl
   // CHECK: call <256 x double> @llvm.ve.vl.vbrds.vsl(float %{{.*}}, i32 256)
@@ -484,6 +696,13 @@ test_vbrds_vsvl() {
   // CHECK-LABEL: @test_vbrds_vsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vbrds.vsvl(float %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vbrds_vsvl(vf1, vr1, 256);
+}
+
+void __attribute__((noinline))
+test_vbrds_vsmvl() {
+  // CHECK-LABEL: @test_vbrds_vsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vbrds.vsmvl(float %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr1 = _vel_vbrds_vsmvl(vf1, vm1, vr1, 256);
 }
 
 void __attribute__((noinline))
@@ -501,6 +720,13 @@ test_vbrdw_vsvl() {
 }
 
 void __attribute__((noinline))
+test_vbrdw_vsmvl() {
+  // CHECK-LABEL: @test_vbrdw_vsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vbrdw.vsmvl(i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr1 = _vel_vbrdw_vsmvl(v1, vm1, vr1, 256);
+}
+
+void __attribute__((noinline))
 test_pvbrd_vsl() {
   // CHECK-LABEL: @test_pvbrd_vsl
   // CHECK: call <256 x double> @llvm.ve.vl.pvbrd.vsl(i64 %{{.*}}, i32 256)
@@ -515,6 +741,13 @@ test_pvbrd_vsvl() {
 }
 
 void __attribute__((noinline))
+test_pvbrd_vsmvl() {
+  // CHECK-LABEL: @test_pvbrd_vsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvbrd.vsMvl(i64 %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr1 = _vel_pvbrd_vsMvl(v1, vm1_512, vr1, 256);
+}
+
+void __attribute__((noinline))
 test_vmv_vsvl() {
   // CHECK-LABEL: @test_vmv_vsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmv.vsvl(i32 %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -526,6 +759,13 @@ test_vmv_vsvvl() {
   // CHECK-LABEL: @test_vmv_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmv.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr1 = _vel_vmv_vsvvl(v1, vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vmv_vsvmvl() {
+  // CHECK-LABEL: @test_vmv_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmv.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr1 = _vel_vmv_vsvmvl(v1, vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -557,6 +797,20 @@ test_vaddul_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vaddul_vvvmvl() {
+  // CHECK-LABEL: @test_vaddul_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddul.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddul_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vaddul_vsvmvl() {
+  // CHECK-LABEL: @test_vaddul_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddul.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddul_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vadduw_vvvl() {
   // CHECK-LABEL: @test_vadduw_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vadduw.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -582,6 +836,20 @@ test_vadduw_vsvvl() {
   // CHECK-LABEL: @test_vadduw_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vadduw.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vadduw_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vadduw_vvvmvl() {
+  // CHECK-LABEL: @test_vadduw_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vadduw.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vadduw_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vadduw_vsvmvl() {
+  // CHECK-LABEL: @test_vadduw_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vadduw.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vadduw_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -613,6 +881,20 @@ test_pvaddu_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvaddu_vvvMvl() {
+  // CHECK-LABEL: @test_pvaddu_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvaddu.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvaddu_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvaddu_vsvMvl() {
+  // CHECK-LABEL: @test_pvaddu_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvaddu.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvaddu_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vaddswsx_vvvl() {
   // CHECK-LABEL: @test_vaddswsx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vaddswsx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -638,6 +920,20 @@ test_vaddswsx_vsvvl() {
   // CHECK-LABEL: @test_vaddswsx_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vaddswsx.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vaddswsx_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vaddswsx_vvvmvl() {
+  // CHECK-LABEL: @test_vaddswsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddswsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddswsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vaddswsx_vsvmvl() {
+  // CHECK-LABEL: @test_vaddswsx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddswsx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddswsx_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -669,6 +965,20 @@ test_vaddswzx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vaddswzx_vvvmvl() {
+  // CHECK-LABEL: @test_vaddswzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddswzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddswzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vaddswzx_vsvmvl() {
+  // CHECK-LABEL: @test_vaddswzx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddswzx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddswzx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvadds_vvvl() {
   // CHECK-LABEL: @test_pvadds_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvadds.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -694,6 +1004,20 @@ test_pvadds_vsvvl() {
   // CHECK-LABEL: @test_pvadds_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvadds.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvadds_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvadds_vvvMvl() {
+  // CHECK-LABEL: @test_pvadds_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvadds.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvadds_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvadds_vsvMvl() {
+  // CHECK-LABEL: @test_pvadds_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvadds.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvadds_vsvMvl(v1, vr2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -725,6 +1049,20 @@ test_vaddsl_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vaddsl_vvvmvl() {
+  // CHECK-LABEL: @test_vaddsl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddsl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddsl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vaddsl_vsvmvl() {
+  // CHECK-LABEL: @test_vaddsl_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vaddsl.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vaddsl_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vsubul_vvvl() {
   // CHECK-LABEL: @test_vsubul_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsubul.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -750,6 +1088,20 @@ test_vsubul_vsvvl() {
   // CHECK-LABEL: @test_vsubul_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsubul.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vsubul_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubul_vvvmvl() {
+  // CHECK-LABEL: @test_vsubul_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubul.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubul_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubul_vsvmvl() {
+  // CHECK-LABEL: @test_vsubul_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubul.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubul_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -781,6 +1133,20 @@ test_vsubuw_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vsubuw_vvvmvl() {
+  // CHECK-LABEL: @test_vsubuw_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubuw.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubuw_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubuw_vsvmvl() {
+  // CHECK-LABEL: @test_vsubuw_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubuw.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubuw_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvsubu_vvvl() {
   // CHECK-LABEL: @test_pvsubu_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvsubu.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -806,6 +1172,20 @@ test_pvsubu_vsvvl() {
   // CHECK-LABEL: @test_pvsubu_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvsubu.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvsubu_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsubu_vvvMvl() {
+  // CHECK-LABEL: @test_pvsubu_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsubu.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsubu_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsubu_vsvMvl() {
+  // CHECK-LABEL: @test_pvsubu_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsubu.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsubu_vsvMvl(v1, vr2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -837,6 +1217,20 @@ test_vsubswsx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vsubswsx_vvvmvl() {
+  // CHECK-LABEL: @test_vsubswsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubswsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubswsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubswsx_vsvmvl() {
+  // CHECK-LABEL: @test_vsubswsx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubswsx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubswsx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vsubswzx_vvvl() {
   // CHECK-LABEL: @test_vsubswzx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsubswzx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -862,6 +1256,20 @@ test_vsubswzx_vsvvl() {
   // CHECK-LABEL: @test_vsubswzx_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsubswzx.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vsubswzx_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubswzx_vvvmvl() {
+  // CHECK-LABEL: @test_vsubswzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubswzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubswzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubswzx_vsvmvl() {
+  // CHECK-LABEL: @test_vsubswzx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubswzx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubswzx_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -893,6 +1301,20 @@ test_pvsubs_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvsubs_vvvMvl() {
+  // CHECK-LABEL: @test_pvsubs_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsubs.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsubs_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsubs_vsvMvl() {
+  // CHECK-LABEL: @test_pvsubs_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsubs.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsubs_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vsubsl_vvvl() {
   // CHECK-LABEL: @test_vsubsl_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsubsl.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -918,6 +1340,20 @@ test_vsubsl_vsvvl() {
   // CHECK-LABEL: @test_vsubsl_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsubsl.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vsubsl_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubsl_vvvmvl() {
+  // CHECK-LABEL: @test_vsubsl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubsl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubsl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsubsl_vsvmvl() {
+  // CHECK-LABEL: @test_vsubsl_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsubsl.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsubsl_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -949,6 +1385,20 @@ test_vmulul_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vmulul_vvvmvl() {
+  // CHECK-LABEL: @test_vmulul_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulul.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulul_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmulul_vsvmvl() {
+  // CHECK-LABEL: @test_vmulul_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulul.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulul_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vmuluw_vvvl() {
   // CHECK-LABEL: @test_vmuluw_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmuluw.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -974,6 +1424,20 @@ test_vmuluw_vsvvl() {
   // CHECK-LABEL: @test_vmuluw_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmuluw.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vmuluw_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmuluw_vvvmvl() {
+  // CHECK-LABEL: @test_vmuluw_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmuluw.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmuluw_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmuluw_vsvmvl() {
+  // CHECK-LABEL: @test_vmuluw_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmuluw.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmuluw_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1005,6 +1469,20 @@ test_vmulswsx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vmulswsx_vvvmvl() {
+  // CHECK-LABEL: @test_vmulswsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulswsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulswsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmulswsx_vsvmvl() {
+  // CHECK-LABEL: @test_vmulswsx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulswsx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulswsx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vmulswzx_vvvl() {
   // CHECK-LABEL: @test_vmulswzx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmulswzx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1033,6 +1511,20 @@ test_vmulswzx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vmulswzx_vvvmvl() {
+  // CHECK-LABEL: @test_vmulswzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulswzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulswzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmulswzx_vsvmvl() {
+  // CHECK-LABEL: @test_vmulswzx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulswzx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulswzx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vmulsl_vvvl() {
   // CHECK-LABEL: @test_vmulsl_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmulsl.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1058,6 +1550,20 @@ test_vmulsl_vsvvl() {
   // CHECK-LABEL: @test_vmulsl_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmulsl.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vmulsl_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmulsl_vvvmvl() {
+  // CHECK-LABEL: @test_vmulsl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulsl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulsl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmulsl_vsvmvl() {
+  // CHECK-LABEL: @test_vmulsl_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmulsl.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmulsl_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1117,6 +1623,20 @@ test_vdivul_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vdivul_vvvmvl() {
+  // CHECK-LABEL: @test_vdivul_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivul.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivul_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivul_vsvmvl() {
+  // CHECK-LABEL: @test_vdivul_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivul.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivul_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vdivuw_vvvl() {
   // CHECK-LABEL: @test_vdivuw_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivuw.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1145,6 +1665,20 @@ test_vdivuw_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vdivuw_vvvmvl() {
+  // CHECK-LABEL: @test_vdivuw_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivuw.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivuw_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivuw_vsvmvl() {
+  // CHECK-LABEL: @test_vdivuw_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivuw.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivuw_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vdivul_vvsl() {
   // CHECK-LABEL: @test_vdivul_vvsl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivul.vvsl(<256 x double> %{{.*}}, i64 %{{.*}}, i32 256)
@@ -1159,6 +1693,13 @@ test_vdivul_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_vdivul_vvsmvl() {
+  // CHECK-LABEL: @test_vdivul_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivul.vvsmvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivul_vvsmvl(vr1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vdivuw_vvsl() {
   // CHECK-LABEL: @test_vdivuw_vvsl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivuw.vvsl(<256 x double> %{{.*}}, i32 %{{.*}}, i32 256)
@@ -1170,6 +1711,13 @@ test_vdivuw_vvsvl() {
   // CHECK-LABEL: @test_vdivuw_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivuw.vvsvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vdivuw_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivuw_vvsmvl() {
+  // CHECK-LABEL: @test_vdivuw_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivuw.vvsmvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivuw_vvsmvl(vr1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1201,6 +1749,20 @@ test_vdivswsx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vdivswsx_vvvmvl() {
+  // CHECK-LABEL: @test_vdivswsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivswsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivswsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivswsx_vsvmvl() {
+  // CHECK-LABEL: @test_vdivswsx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivswsx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivswsx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vdivswzx_vvvl() {
   // CHECK-LABEL: @test_vdivswzx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivswzx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1229,6 +1791,20 @@ test_vdivswzx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vdivswzx_vvvmvl() {
+  // CHECK-LABEL: @test_vdivswzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivswzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivswzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivswzx_vsvmvl() {
+  // CHECK-LABEL: @test_vdivswzx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivswzx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivswzx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vdivswsx_vvsl() {
   // CHECK-LABEL: @test_vdivswsx_vvsl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivswsx.vvsl(<256 x double> %{{.*}}, i32 %{{.*}}, i32 256)
@@ -1243,6 +1819,13 @@ test_vdivswsx_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_vdivswsx_vvsmvl() {
+  // CHECK-LABEL: @test_vdivswsx_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivswsx.vvsmvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivswsx_vvsmvl(vr1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vdivswzx_vvsl() {
   // CHECK-LABEL: @test_vdivswzx_vvsl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivswzx.vvsl(<256 x double> %{{.*}}, i32 %{{.*}}, i32 256)
@@ -1254,6 +1837,13 @@ test_vdivswzx_vvsvl() {
   // CHECK-LABEL: @test_vdivswzx_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivswzx.vvsvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vdivswzx_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivswzx_vvsmvl() {
+  // CHECK-LABEL: @test_vdivswzx_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivswzx.vvsmvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivswzx_vvsmvl(vr1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1285,6 +1875,20 @@ test_vdivsl_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vdivsl_vvvmvl() {
+  // CHECK-LABEL: @test_vdivsl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivsl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivsl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivsl_vsvmvl() {
+  // CHECK-LABEL: @test_vdivsl_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivsl.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivsl_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vdivsl_vvsl() {
   // CHECK-LABEL: @test_vdivsl_vvsl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivsl.vvsl(<256 x double> %{{.*}}, i64 %{{.*}}, i32 256)
@@ -1296,6 +1900,13 @@ test_vdivsl_vvsvl() {
   // CHECK-LABEL: @test_vdivsl_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vdivsl.vvsvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vdivsl_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vdivsl_vvsmvl() {
+  // CHECK-LABEL: @test_vdivsl_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vdivsl.vvsmvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vdivsl_vvsmvl(vr1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1327,6 +1938,20 @@ test_vcmpul_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vcmpul_vvvmvl() {
+  // CHECK-LABEL: @test_vcmpul_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpul.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpul_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vcmpul_vsvmvl() {
+  // CHECK-LABEL: @test_vcmpul_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpul.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpul_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vcmpuw_vvvl() {
   // CHECK-LABEL: @test_vcmpuw_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcmpuw.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1352,6 +1977,20 @@ test_vcmpuw_vsvvl() {
   // CHECK-LABEL: @test_vcmpuw_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcmpuw.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vcmpuw_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vcmpuw_vvvmvl() {
+  // CHECK-LABEL: @test_vcmpuw_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpuw.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpuw_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vcmpuw_vsvmvl() {
+  // CHECK-LABEL: @test_vcmpuw_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpuw.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpuw_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1383,6 +2022,20 @@ test_pvcmpu_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvcmpu_vvvMvl() {
+  // CHECK-LABEL: @test_pvcmpu_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvcmpu.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvcmpu_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvcmpu_vsvMvl() {
+  // CHECK-LABEL: @test_pvcmpu_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvcmpu.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvcmpu_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vcmpswsx_vvvl() {
   // CHECK-LABEL: @test_vcmpswsx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcmpswsx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1408,6 +2061,20 @@ test_vcmpswsx_vsvvl() {
   // CHECK-LABEL: @test_vcmpswsx_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcmpswsx.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vcmpswsx_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vcmpswsx_vvvmvl() {
+  // CHECK-LABEL: @test_vcmpswsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpswsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpswsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vcmpswsx_vsvmvl() {
+  // CHECK-LABEL: @test_vcmpswsx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpswsx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpswsx_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1439,6 +2106,20 @@ test_vcmpswzx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vcmpswzx_vvvmvl() {
+  // CHECK-LABEL: @test_vcmpswzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpswzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpswzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vcmpswzx_vsvmvl() {
+  // CHECK-LABEL: @test_vcmpswzx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpswzx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpswzx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvcmps_vvvl() {
   // CHECK-LABEL: @test_pvcmps_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvcmps.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1464,6 +2145,20 @@ test_pvcmps_vsvvl() {
   // CHECK-LABEL: @test_pvcmps_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvcmps.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvcmps_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvcmps_vvvMvl() {
+  // CHECK-LABEL: @test_pvcmps_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvcmps.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvcmps_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvcmps_vsvMvl() {
+  // CHECK-LABEL: @test_pvcmps_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvcmps.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvcmps_vsvMvl(v1, vr2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1495,6 +2190,20 @@ test_vcmpsl_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vcmpsl_vvvmvl() {
+  // CHECK-LABEL: @test_vcmpsl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpsl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpsl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vcmpsl_vsvmvl() {
+  // CHECK-LABEL: @test_vcmpsl_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcmpsl.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcmpsl_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vmaxswsx_vvvl() {
   // CHECK-LABEL: @test_vmaxswsx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmaxswsx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1520,6 +2229,20 @@ test_vmaxswsx_vsvvl() {
   // CHECK-LABEL: @test_vmaxswsx_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmaxswsx.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vmaxswsx_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmaxswsx_vvvmvl() {
+  // CHECK-LABEL: @test_vmaxswsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmaxswsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmaxswsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmaxswsx_vsvmvl() {
+  // CHECK-LABEL: @test_vmaxswsx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmaxswsx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmaxswsx_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1551,6 +2274,20 @@ test_vmaxswzx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vmaxswzx_vvvmvl() {
+  // CHECK-LABEL: @test_vmaxswzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmaxswzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmaxswzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmaxswzx_vsvmvl() {
+  // CHECK-LABEL: @test_vmaxswzx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmaxswzx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmaxswzx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvmaxs_vvvl() {
   // CHECK-LABEL: @test_pvmaxs_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvmaxs.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1576,6 +2313,20 @@ test_pvmaxs_vsvvl() {
   // CHECK-LABEL: @test_pvmaxs_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvmaxs.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvmaxs_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvmaxs_vvvMvl() {
+  // CHECK-LABEL: @test_pvmaxs_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvmaxs.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvmaxs_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvmaxs_vsvMvl() {
+  // CHECK-LABEL: @test_pvmaxs_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvmaxs.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvmaxs_vsvMvl(v1, vr2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1607,6 +2358,20 @@ test_vminswsx_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vminswsx_vvvmvl() {
+  // CHECK-LABEL: @test_vminswsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vminswsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vminswsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vminswsx_vsvmvl() {
+  // CHECK-LABEL: @test_vminswsx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vminswsx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vminswsx_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vminswzx_vvvl() {
   // CHECK-LABEL: @test_vminswzx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vminswzx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1632,6 +2397,20 @@ test_vminswzx_vsvvl() {
   // CHECK-LABEL: @test_vminswzx_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vminswzx.vsvvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vminswzx_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vminswzx_vvvmvl() {
+  // CHECK-LABEL: @test_vminswzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vminswzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vminswzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vminswzx_vsvmvl() {
+  // CHECK-LABEL: @test_vminswzx_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vminswzx.vsvmvl(i32 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vminswzx_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1663,6 +2442,20 @@ test_pvmins_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvmins_vvvMvl() {
+  // CHECK-LABEL: @test_pvmins_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvmins.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvmins_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvmins_vsvMvl() {
+  // CHECK-LABEL: @test_pvmins_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvmins.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvmins_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vmaxsl_vvvl() {
   // CHECK-LABEL: @test_vmaxsl_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmaxsl.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1688,6 +2481,20 @@ test_vmaxsl_vsvvl() {
   // CHECK-LABEL: @test_vmaxsl_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vmaxsl.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vmaxsl_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmaxsl_vvvmvl() {
+  // CHECK-LABEL: @test_vmaxsl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmaxsl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmaxsl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmaxsl_vsvmvl() {
+  // CHECK-LABEL: @test_vmaxsl_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmaxsl.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmaxsl_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1719,6 +2526,20 @@ test_vminsl_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vminsl_vvvmvl() {
+  // CHECK-LABEL: @test_vminsl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vminsl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vminsl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vminsl_vsvmvl() {
+  // CHECK-LABEL: @test_vminsl_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vminsl.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vminsl_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vand_vvvl() {
   // CHECK-LABEL: @test_vand_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vand.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1744,6 +2565,20 @@ test_vand_vsvvl() {
   // CHECK-LABEL: @test_vand_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vand.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vand_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vand_vvvmvl() {
+  // CHECK-LABEL: @test_vand_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vand.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vand_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vand_vsvmvl() {
+  // CHECK-LABEL: @test_vand_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vand.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vand_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1775,6 +2610,20 @@ test_pvand_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvand_vvvMvl() {
+  // CHECK-LABEL: @test_pvand_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvand.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvand_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvand_vsvMvl() {
+  // CHECK-LABEL: @test_pvand_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvand.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvand_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vor_vvvl() {
   // CHECK-LABEL: @test_vor_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vor.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1800,6 +2649,20 @@ test_vor_vsvvl() {
   // CHECK-LABEL: @test_vor_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vor.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vor_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vor_vvvmvl() {
+  // CHECK-LABEL: @test_vor_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vor.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vor_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vor_vsvmvl() {
+  // CHECK-LABEL: @test_vor_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vor.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vor_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1831,6 +2694,20 @@ test_pvor_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvor_vvvMvl() {
+  // CHECK-LABEL: @test_pvor_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvor.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvor_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvor_vsvMvl() {
+  // CHECK-LABEL: @test_pvor_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvor.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvor_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vxor_vvvl() {
   // CHECK-LABEL: @test_vxor_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vxor.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1856,6 +2733,20 @@ test_vxor_vsvvl() {
   // CHECK-LABEL: @test_vxor_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vxor.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vxor_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vxor_vvvmvl() {
+  // CHECK-LABEL: @test_vxor_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vxor.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vxor_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vxor_vsvmvl() {
+  // CHECK-LABEL: @test_vxor_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vxor.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vxor_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1887,6 +2778,20 @@ test_pvxor_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvxor_vvvMvl() {
+  // CHECK-LABEL: @test_pvxor_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvxor.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvxor_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvxor_vsvMvl() {
+  // CHECK-LABEL: @test_pvxor_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvxor.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvxor_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_veqv_vvvl() {
   // CHECK-LABEL: @test_veqv_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.veqv.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -1912,6 +2817,20 @@ test_veqv_vsvvl() {
   // CHECK-LABEL: @test_veqv_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.veqv.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_veqv_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_veqv_vvvmvl() {
+  // CHECK-LABEL: @test_veqv_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.veqv.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_veqv_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_veqv_vsvmvl() {
+  // CHECK-LABEL: @test_veqv_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.veqv.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_veqv_vsvmvl(v1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -1943,6 +2862,20 @@ test_pveqv_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pveqv_vvvMvl() {
+  // CHECK-LABEL: @test_pveqv_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pveqv.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pveqv_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pveqv_vsvMvl() {
+  // CHECK-LABEL: @test_pveqv_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pveqv.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pveqv_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vldz_vvl() {
   // CHECK-LABEL: @test_vldz_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vldz.vvl(<256 x double> %{{.*}}, i32 256)
@@ -1954,6 +2887,13 @@ test_vldz_vvvl() {
   // CHECK-LABEL: @test_vldz_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vldz.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vldz_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vldz_vvmvl() {
+  // CHECK-LABEL: @test_vldz_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vldz.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vldz_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -1971,6 +2911,13 @@ test_pvldzlo_vvvl() {
 }
 
 void __attribute__((noinline))
+test_pvldzlo_vvmvl() {
+  // CHECK-LABEL: @test_pvldzlo_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvldzlo.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvldzlo_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_pvldzup_vvl() {
   // CHECK-LABEL: @test_pvldzup_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvldzup.vvl(<256 x double> %{{.*}}, i32 256)
@@ -1982,6 +2929,13 @@ test_pvldzup_vvvl() {
   // CHECK-LABEL: @test_pvldzup_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvldzup.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvldzup_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_pvldzup_vvmvl() {
+  // CHECK-LABEL: @test_pvldzup_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvldzup.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvldzup_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -1999,6 +2953,13 @@ test_pvldz_vvvl() {
 }
 
 void __attribute__((noinline))
+test_pvldz_vvMvl() {
+  // CHECK-LABEL: @test_pvldz_vvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvldz.vvMvl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvldz_vvMvl(vr1, vm1_512, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_vpcnt_vvl() {
   // CHECK-LABEL: @test_vpcnt_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vpcnt.vvl(<256 x double> %{{.*}}, i32 256)
@@ -2010,6 +2971,13 @@ test_vpcnt_vvvl() {
   // CHECK-LABEL: @test_vpcnt_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vpcnt.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vpcnt_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vpcnt_vvmvl() {
+  // CHECK-LABEL: @test_vpcnt_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vpcnt.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vpcnt_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -2027,6 +2995,13 @@ test_pvpcntlo_vvvl() {
 }
 
 void __attribute__((noinline))
+test_pvpcntlo_vvmvl() {
+  // CHECK-LABEL: @test_pvpcntlo_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvpcntlo.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvpcntlo_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_pvpcntup_vvl() {
   // CHECK-LABEL: @test_pvpcntup_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvpcntup.vvl(<256 x double> %{{.*}}, i32 256)
@@ -2038,6 +3013,13 @@ test_pvpcntup_vvvl() {
   // CHECK-LABEL: @test_pvpcntup_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvpcntup.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvpcntup_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_pvpcntup_vvmvl() {
+  // CHECK-LABEL: @test_pvpcntup_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvpcntup.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvpcntup_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -2055,6 +3037,13 @@ test_pvpcnt_vvvl() {
 }
 
 void __attribute__((noinline))
+test_pvpcnt_vvMvl() {
+  // CHECK-LABEL: @test_pvpcnt_vvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvpcnt.vvMvl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvpcnt_vvMvl(vr1, vm1_512, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_vbrv_vvl() {
   // CHECK-LABEL: @test_vbrv_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vbrv.vvl(<256 x double> %{{.*}}, i32 256)
@@ -2066,6 +3055,13 @@ test_vbrv_vvvl() {
   // CHECK-LABEL: @test_vbrv_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vbrv.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vbrv_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vbrv_vvmvl() {
+  // CHECK-LABEL: @test_vbrv_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vbrv.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vbrv_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -2083,6 +3079,13 @@ test_pvbrvlo_vvvl() {
 }
 
 void __attribute__((noinline))
+test_pvbrvlo_vvmvl() {
+  // CHECK-LABEL: @test_pvbrvlo_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvbrvlo.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvbrvlo_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_pvbrvup_vvl() {
   // CHECK-LABEL: @test_pvbrvup_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvbrvup.vvl(<256 x double> %{{.*}}, i32 256)
@@ -2097,6 +3100,13 @@ test_pvbrvup_vvvl() {
 }
 
 void __attribute__((noinline))
+test_pvbrvup_vvmvl() {
+  // CHECK-LABEL: @test_pvbrvup_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvbrvup.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvbrvup_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_pvbrv_vvl() {
   // CHECK-LABEL: @test_pvbrv_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvbrv.vvl(<256 x double> %{{.*}}, i32 256)
@@ -2108,6 +3118,13 @@ test_pvbrv_vvvl() {
   // CHECK-LABEL: @test_pvbrv_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvbrv.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvbrv_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_pvbrv_vvMvl() {
+  // CHECK-LABEL: @test_pvbrv_vvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvbrv.vvMvl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvbrv_vvMvl(vr1, vm1_512, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -2195,6 +3212,20 @@ test_vsll_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_vsll_vvvmvl() {
+  // CHECK-LABEL: @test_vsll_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsll.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsll_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsll_vvsmvl() {
+  // CHECK-LABEL: @test_vsll_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsll.vvsmvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsll_vvsmvl(vr1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvsll_vvvl() {
   // CHECK-LABEL: @test_pvsll_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvsll.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2220,6 +3251,20 @@ test_pvsll_vvsvl() {
   // CHECK-LABEL: @test_pvsll_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvsll.vvsvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvsll_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsll_vvvMvl() {
+  // CHECK-LABEL: @test_pvsll_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsll.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsll_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsll_vvsMvl() {
+  // CHECK-LABEL: @test_pvsll_vvsMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsll.vvsMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsll_vvsMvl(vr1, v2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2251,6 +3296,20 @@ test_vsrl_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_vsrl_vvvmvl() {
+  // CHECK-LABEL: @test_vsrl_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsrl.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsrl_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsrl_vvsmvl() {
+  // CHECK-LABEL: @test_vsrl_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsrl.vvsmvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsrl_vvsmvl(vr1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvsrl_vvvl() {
   // CHECK-LABEL: @test_pvsrl_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvsrl.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2276,6 +3335,20 @@ test_pvsrl_vvsvl() {
   // CHECK-LABEL: @test_pvsrl_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvsrl.vvsvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvsrl_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsrl_vvvMvl() {
+  // CHECK-LABEL: @test_pvsrl_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsrl.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsrl_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsrl_vvsMvl() {
+  // CHECK-LABEL: @test_pvsrl_vvsMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsrl.vvsMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsrl_vvsMvl(vr1, v2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2307,6 +3380,20 @@ test_vslawsx_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_vslawsx_vvvmvl() {
+  // CHECK-LABEL: @test_vslawsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vslawsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vslawsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vslawsx_vvsmvl() {
+  // CHECK-LABEL: @test_vslawsx_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vslawsx.vvsmvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vslawsx_vvsmvl(vr1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vslawzx_vvvl() {
   // CHECK-LABEL: @test_vslawzx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vslawzx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2332,6 +3419,20 @@ test_vslawzx_vvsvl() {
   // CHECK-LABEL: @test_vslawzx_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vslawzx.vvsvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vslawzx_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vslawzx_vvvmvl() {
+  // CHECK-LABEL: @test_vslawzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vslawzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vslawzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vslawzx_vvsmvl() {
+  // CHECK-LABEL: @test_vslawzx_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vslawzx.vvsmvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vslawzx_vvsmvl(vr1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2363,6 +3464,20 @@ test_pvsla_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_pvsla_vvvMvl() {
+  // CHECK-LABEL: @test_pvsla_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsla.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsla_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsla_vvsMvl() {
+  // CHECK-LABEL: @test_pvsla_vvsMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsla.vvsMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsla_vvsMvl(vr1, v2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vslal_vvvl() {
   // CHECK-LABEL: @test_vslal_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vslal.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2388,6 +3503,20 @@ test_vslal_vvsvl() {
   // CHECK-LABEL: @test_vslal_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vslal.vvsvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vslal_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vslal_vvvmvl() {
+  // CHECK-LABEL: @test_vslal_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vslal.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vslal_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vslal_vvsmvl() {
+  // CHECK-LABEL: @test_vslal_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vslal.vvsmvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vslal_vvsmvl(vr1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2419,6 +3548,20 @@ test_vsrawsx_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_vsrawsx_vvvmvl() {
+  // CHECK-LABEL: @test_vsrawsx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsrawsx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsrawsx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsrawsx_vvsmvl() {
+  // CHECK-LABEL: @test_vsrawsx_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsrawsx.vvsmvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsrawsx_vvsmvl(vr1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vsrawzx_vvvl() {
   // CHECK-LABEL: @test_vsrawzx_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsrawzx.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2444,6 +3587,20 @@ test_vsrawzx_vvsvl() {
   // CHECK-LABEL: @test_vsrawzx_vvsvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsrawzx.vvsvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vsrawzx_vvsvl(vr1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsrawzx_vvvmvl() {
+  // CHECK-LABEL: @test_vsrawzx_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsrawzx.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsrawzx_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsrawzx_vvsmvl() {
+  // CHECK-LABEL: @test_vsrawzx_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsrawzx.vvsmvl(<256 x double> %{{.*}}, i32 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsrawzx_vvsmvl(vr1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2475,6 +3632,20 @@ test_pvsra_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_pvsra_vvvMvl() {
+  // CHECK-LABEL: @test_pvsra_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsra.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsra_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvsra_vvsMvl() {
+  // CHECK-LABEL: @test_pvsra_vvsMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvsra.vvsMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvsra_vvsMvl(vr1, v2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vsral_vvvl() {
   // CHECK-LABEL: @test_vsral_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsral.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2503,6 +3674,20 @@ test_vsral_vvsvl() {
 }
 
 void __attribute__((noinline))
+test_vsral_vvvmvl() {
+  // CHECK-LABEL: @test_vsral_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsral.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsral_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsral_vvsmvl() {
+  // CHECK-LABEL: @test_vsral_vvsmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsral.vvsmvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsral_vvsmvl(vr1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vsfa_vvssl() {
   // CHECK-LABEL: @test_vsfa_vvssl
   // CHECK: call <256 x double> @llvm.ve.vl.vsfa.vvssl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
@@ -2514,6 +3699,13 @@ test_vsfa_vvssvl() {
   // CHECK-LABEL: @test_vsfa_vvssvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsfa.vvssvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vsfa_vvssvl(vr1, v1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vsfa_vvssmvl() {
+  // CHECK-LABEL: @test_vsfa_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vsfa.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vsfa_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2545,6 +3737,20 @@ test_vfaddd_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfaddd_vvvmvl() {
+  // CHECK-LABEL: @test_vfaddd_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfaddd.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfaddd_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfaddd_vsvmvl() {
+  // CHECK-LABEL: @test_vfaddd_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfaddd.vsvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfaddd_vsvmvl(vd1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfadds_vvvl() {
   // CHECK-LABEL: @test_vfadds_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfadds.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2570,6 +3776,20 @@ test_vfadds_vsvvl() {
   // CHECK-LABEL: @test_vfadds_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfadds.vsvvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vfadds_vsvvl(vf1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfadds_vvvmvl() {
+  // CHECK-LABEL: @test_vfadds_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfadds.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfadds_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfadds_vsvmvl() {
+  // CHECK-LABEL: @test_vfadds_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfadds.vsvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfadds_vsvmvl(vf1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2601,6 +3821,20 @@ test_pvfadd_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvfadd_vvvMvl() {
+  // CHECK-LABEL: @test_pvfadd_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfadd.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfadd_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfadd_vsvMvl() {
+  // CHECK-LABEL: @test_pvfadd_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfadd.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfadd_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfsubd_vvvl() {
   // CHECK-LABEL: @test_vfsubd_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfsubd.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2626,6 +3860,20 @@ test_vfsubd_vsvvl() {
   // CHECK-LABEL: @test_vfsubd_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfsubd.vsvvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vfsubd_vsvvl(vd1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfsubd_vvvmvl() {
+  // CHECK-LABEL: @test_vfsubd_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfsubd.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfsubd_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfsubd_vsvmvl() {
+  // CHECK-LABEL: @test_vfsubd_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfsubd.vsvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfsubd_vsvmvl(vd1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2657,6 +3905,20 @@ test_vfsubs_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfsubs_vvvmvl() {
+  // CHECK-LABEL: @test_vfsubs_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfsubs.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfsubs_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfsubs_vsvmvl() {
+  // CHECK-LABEL: @test_vfsubs_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfsubs.vsvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfsubs_vsvmvl(vf1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvfsub_vvvl() {
   // CHECK-LABEL: @test_pvfsub_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfsub.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2682,6 +3944,20 @@ test_pvfsub_vsvvl() {
   // CHECK-LABEL: @test_pvfsub_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfsub.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvfsub_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfsub_vvvMvl() {
+  // CHECK-LABEL: @test_pvfsub_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfsub.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfsub_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfsub_vsvMvl() {
+  // CHECK-LABEL: @test_pvfsub_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfsub.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfsub_vsvMvl(v1, vr2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2713,6 +3989,20 @@ test_vfmuld_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfmuld_vvvmvl() {
+  // CHECK-LABEL: @test_vfmuld_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmuld.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmuld_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmuld_vsvmvl() {
+  // CHECK-LABEL: @test_vfmuld_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmuld.vsvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmuld_vsvmvl(vd1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfmuls_vvvl() {
   // CHECK-LABEL: @test_vfmuls_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmuls.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2738,6 +4028,20 @@ test_vfmuls_vsvvl() {
   // CHECK-LABEL: @test_vfmuls_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmuls.vsvvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vfmuls_vsvvl(vf1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmuls_vvvmvl() {
+  // CHECK-LABEL: @test_vfmuls_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmuls.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmuls_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmuls_vsvmvl() {
+  // CHECK-LABEL: @test_vfmuls_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmuls.vsvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmuls_vsvmvl(vf1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2769,6 +4073,20 @@ test_pvfmul_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvfmul_vvvMvl() {
+  // CHECK-LABEL: @test_pvfmul_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmul.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfmul_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmul_vsvMvl() {
+  // CHECK-LABEL: @test_pvfmul_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmul.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfmul_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfdivd_vvvl() {
   // CHECK-LABEL: @test_vfdivd_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfdivd.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2794,6 +4112,20 @@ test_vfdivd_vsvvl() {
   // CHECK-LABEL: @test_vfdivd_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfdivd.vsvvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vfdivd_vsvvl(vd1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfdivd_vvvmvl() {
+  // CHECK-LABEL: @test_vfdivd_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfdivd.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfdivd_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfdivd_vsvmvl() {
+  // CHECK-LABEL: @test_vfdivd_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfdivd.vsvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfdivd_vsvmvl(vd1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2825,6 +4157,20 @@ test_vfdivs_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfdivs_vvvmvl() {
+  // CHECK-LABEL: @test_vfdivs_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfdivs.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfdivs_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfdivs_vsvmvl() {
+  // CHECK-LABEL: @test_vfdivs_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfdivs.vsvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfdivs_vsvmvl(vf1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfsqrtd_vvl() {
   // CHECK-LABEL: @test_vfsqrtd_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfsqrtd.vvl(<256 x double> %{{.*}}, i32 256)
@@ -2837,6 +4183,7 @@ test_vfsqrtd_vvvl() {
   // CHECK: call <256 x double> @llvm.ve.vl.vfsqrtd.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vfsqrtd_vvvl(vr1, vr2, 256);
 }
+
 
 void __attribute__((noinline))
 test_vfsqrts_vvl() {
@@ -2881,6 +4228,20 @@ test_vfcmpd_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfcmpd_vvvmvl() {
+  // CHECK-LABEL: @test_vfcmpd_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfcmpd.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfcmpd_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfcmpd_vsvmvl() {
+  // CHECK-LABEL: @test_vfcmpd_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfcmpd.vsvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfcmpd_vsvmvl(vd1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfcmps_vvvl() {
   // CHECK-LABEL: @test_vfcmps_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfcmps.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2906,6 +4267,20 @@ test_vfcmps_vsvvl() {
   // CHECK-LABEL: @test_vfcmps_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfcmps.vsvvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vfcmps_vsvvl(vf1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfcmps_vvvmvl() {
+  // CHECK-LABEL: @test_vfcmps_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfcmps.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfcmps_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfcmps_vsvmvl() {
+  // CHECK-LABEL: @test_vfcmps_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfcmps.vsvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfcmps_vsvmvl(vf1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2937,6 +4312,20 @@ test_pvfcmp_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvfcmp_vvvMvl() {
+  // CHECK-LABEL: @test_pvfcmp_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfcmp.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfcmp_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfcmp_vsvMvl() {
+  // CHECK-LABEL: @test_pvfcmp_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfcmp.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfcmp_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfmaxd_vvvl() {
   // CHECK-LABEL: @test_vfmaxd_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmaxd.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -2962,6 +4351,20 @@ test_vfmaxd_vsvvl() {
   // CHECK-LABEL: @test_vfmaxd_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmaxd.vsvvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vfmaxd_vsvvl(vd1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmaxd_vvvmvl() {
+  // CHECK-LABEL: @test_vfmaxd_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmaxd.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmaxd_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmaxd_vsvmvl() {
+  // CHECK-LABEL: @test_vfmaxd_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmaxd.vsvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmaxd_vsvmvl(vd1, vr2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -2993,6 +4396,20 @@ test_vfmaxs_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfmaxs_vvvmvl() {
+  // CHECK-LABEL: @test_vfmaxs_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmaxs.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmaxs_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmaxs_vsvmvl() {
+  // CHECK-LABEL: @test_vfmaxs_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmaxs.vsvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmaxs_vsvmvl(vf1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvfmax_vvvl() {
   // CHECK-LABEL: @test_pvfmax_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfmax.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3018,6 +4435,20 @@ test_pvfmax_vsvvl() {
   // CHECK-LABEL: @test_pvfmax_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfmax.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvfmax_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmax_vvvMvl() {
+  // CHECK-LABEL: @test_pvfmax_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmax.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfmax_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmax_vsvMvl() {
+  // CHECK-LABEL: @test_pvfmax_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmax.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfmax_vsvMvl(v1, vr2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -3049,6 +4480,20 @@ test_vfmind_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfmind_vvvmvl() {
+  // CHECK-LABEL: @test_vfmind_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmind.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmind_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmind_vsvmvl() {
+  // CHECK-LABEL: @test_vfmind_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmind.vsvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmind_vsvmvl(vd1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vfmins_vvvl() {
   // CHECK-LABEL: @test_vfmins_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmins.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3077,6 +4522,20 @@ test_vfmins_vsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfmins_vvvmvl() {
+  // CHECK-LABEL: @test_vfmins_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmins.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmins_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vfmins_vsvmvl() {
+  // CHECK-LABEL: @test_vfmins_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmins.vsvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vfmins_vsvmvl(vf1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_pvfmin_vvvl() {
   // CHECK-LABEL: @test_pvfmin_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfmin.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3102,6 +4561,20 @@ test_pvfmin_vsvvl() {
   // CHECK-LABEL: @test_pvfmin_vsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfmin.vsvvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvfmin_vsvvl(v1, vr2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmin_vvvMvl() {
+  // CHECK-LABEL: @test_pvfmin_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmin.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfmin_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmin_vsvMvl() {
+  // CHECK-LABEL: @test_pvfmin_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmin.vsvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvfmin_vsvMvl(v1, vr2, vm1_512, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -3147,6 +4620,27 @@ test_vfmadd_vvsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfmadd_vvvvmvl() {
+  // CHECK-LABEL: @test_vfmadd_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmadd.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmadd_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmadd_vsvvmvl() {
+  // CHECK-LABEL: @test_vfmadd_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmadd.vsvvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmadd_vsvvmvl(vd1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmadd_vvsvmvl() {
+  // CHECK-LABEL: @test_vfmadd_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmadd.vvsvmvl(<256 x double> %{{.*}}, double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmadd_vvsvmvl(vr1, vd1, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
 test_vfmads_vvvvl() {
   // CHECK-LABEL: @test_vfmads_vvvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmads.vvvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3186,6 +4680,27 @@ test_vfmads_vvsvvl() {
   // CHECK-LABEL: @test_vfmads_vvsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmads.vvsvvl(<256 x double> %{{.*}}, float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr4 = _vel_vfmads_vvsvvl(vr1, vf1, vr3, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmads_vvvvmvl() {
+  // CHECK-LABEL: @test_vfmads_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmads.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmads_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmads_vsvvmvl() {
+  // CHECK-LABEL: @test_vfmads_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmads.vsvvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmads_vsvvmvl(vf1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmads_vvsvmvl() {
+  // CHECK-LABEL: @test_vfmads_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmads.vvsvmvl(<256 x double> %{{.*}}, float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmads_vvsvmvl(vr1, vf1, vr3, vm1, vr4, 256);
 }
 
 void __attribute__((noinline))
@@ -3231,6 +4746,27 @@ test_pvfmad_vvsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvfmad_vvvvMvl() {
+  // CHECK-LABEL: @test_pvfmad_vvvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmad.vvvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfmad_vvvvMvl(vr1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmad_vsvvMvl() {
+  // CHECK-LABEL: @test_pvfmad_vsvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmad.vsvvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfmad_vsvvMvl(v1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmad_vvsvMvl() {
+  // CHECK-LABEL: @test_pvfmad_vvsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmad.vvsvMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfmad_vvsvMvl(vr1, v1, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
 test_vfmsbd_vvvvl() {
   // CHECK-LABEL: @test_vfmsbd_vvvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmsbd.vvvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3270,6 +4806,27 @@ test_vfmsbd_vvsvvl() {
   // CHECK-LABEL: @test_vfmsbd_vvsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfmsbd.vvsvvl(<256 x double> %{{.*}}, double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr4 = _vel_vfmsbd_vvsvvl(vr1, vd1, vr3, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmsbd_vvvvmvl() {
+  // CHECK-LABEL: @test_vfmsbd_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmsbd.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmsbd_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmsbd_vsvvmvl() {
+  // CHECK-LABEL: @test_vfmsbd_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmsbd.vsvvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmsbd_vsvvmvl(vd1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmsbd_vvsvmvl() {
+  // CHECK-LABEL: @test_vfmsbd_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmsbd.vvsvmvl(<256 x double> %{{.*}}, double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmsbd_vvsvmvl(vr1, vd1, vr3, vm1, vr4, 256);
 }
 
 void __attribute__((noinline))
@@ -3315,6 +4872,27 @@ test_vfmsbs_vvsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfmsbs_vvvvmvl() {
+  // CHECK-LABEL: @test_vfmsbs_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmsbs.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmsbs_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmsbs_vsvvmvl() {
+  // CHECK-LABEL: @test_vfmsbs_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmsbs.vsvvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmsbs_vsvvmvl(vf1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfmsbs_vvsvmvl() {
+  // CHECK-LABEL: @test_vfmsbs_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfmsbs.vvsvmvl(<256 x double> %{{.*}}, float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfmsbs_vvsvmvl(vr1, vf1, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
 test_pvfmsb_vvvvl() {
   // CHECK-LABEL: @test_pvfmsb_vvvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfmsb.vvvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3354,6 +4932,27 @@ test_pvfmsb_vvsvvl() {
   // CHECK-LABEL: @test_pvfmsb_vvsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfmsb.vvsvvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr4 = _vel_pvfmsb_vvsvvl(vr1, v1, vr3, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmsb_vvvvMvl() {
+  // CHECK-LABEL: @test_pvfmsb_vvvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmsb.vvvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfmsb_vvvvMvl(vr1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmsb_vsvvMvl() {
+  // CHECK-LABEL: @test_pvfmsb_vsvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmsb.vsvvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfmsb_vsvvMvl(v1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfmsb_vvsvMvl() {
+  // CHECK-LABEL: @test_pvfmsb_vvsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfmsb.vvsvMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfmsb_vvsvMvl(vr1, v1, vr3, vm1_512, vr4, 256);
 }
 
 void __attribute__((noinline))
@@ -3399,6 +4998,27 @@ test_vfnmadd_vvsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfnmadd_vvvvmvl() {
+  // CHECK-LABEL: @test_vfnmadd_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmadd.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmadd_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmadd_vsvvmvl() {
+  // CHECK-LABEL: @test_vfnmadd_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmadd.vsvvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmadd_vsvvmvl(vd1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmadd_vvsvmvl() {
+  // CHECK-LABEL: @test_vfnmadd_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmadd.vvsvmvl(<256 x double> %{{.*}}, double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmadd_vvsvmvl(vr1, vd1, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
 test_vfnmads_vvvvl() {
   // CHECK-LABEL: @test_vfnmads_vvvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfnmads.vvvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3438,6 +5058,27 @@ test_vfnmads_vvsvvl() {
   // CHECK-LABEL: @test_vfnmads_vvsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfnmads.vvsvvl(<256 x double> %{{.*}}, float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr4 = _vel_vfnmads_vvsvvl(vr1, vf1, vr3, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmads_vvvvmvl() {
+  // CHECK-LABEL: @test_vfnmads_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmads.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmads_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmads_vsvvmvl() {
+  // CHECK-LABEL: @test_vfnmads_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmads.vsvvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmads_vsvvmvl(vf1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmads_vvsvmvl() {
+  // CHECK-LABEL: @test_vfnmads_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmads.vvsvmvl(<256 x double> %{{.*}}, float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmads_vvsvmvl(vr1, vf1, vr3, vm1, vr4, 256);
 }
 
 void __attribute__((noinline))
@@ -3483,6 +5124,27 @@ test_pvfnmad_vvsvvl() {
 }
 
 void __attribute__((noinline))
+test_pvfnmad_vvvvMvl() {
+  // CHECK-LABEL: @test_pvfnmad_vvvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfnmad.vvvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfnmad_vvvvMvl(vr1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfnmad_vsvvMvl() {
+  // CHECK-LABEL: @test_pvfnmad_vsvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfnmad.vsvvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfnmad_vsvvMvl(v1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfnmad_vvsvMvl() {
+  // CHECK-LABEL: @test_pvfnmad_vvsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfnmad.vvsvMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfnmad_vvsvMvl(vr1, v1, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
 test_vfnmsbd_vvvvl() {
   // CHECK-LABEL: @test_vfnmsbd_vvvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbd.vvvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3522,6 +5184,27 @@ test_vfnmsbd_vvsvvl() {
   // CHECK-LABEL: @test_vfnmsbd_vvsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbd.vvsvvl(<256 x double> %{{.*}}, double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr4 = _vel_vfnmsbd_vvsvvl(vr1, vd1, vr3, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmsbd_vvvvmvl() {
+  // CHECK-LABEL: @test_vfnmsbd_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbd.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmsbd_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmsbd_vsvvmvl() {
+  // CHECK-LABEL: @test_vfnmsbd_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbd.vsvvmvl(double %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmsbd_vsvvmvl(vd1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmsbd_vvsvmvl() {
+  // CHECK-LABEL: @test_vfnmsbd_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbd.vvsvmvl(<256 x double> %{{.*}}, double %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmsbd_vvsvmvl(vr1, vd1, vr3, vm1, vr4, 256);
 }
 
 void __attribute__((noinline))
@@ -3567,6 +5250,27 @@ test_vfnmsbs_vvsvvl() {
 }
 
 void __attribute__((noinline))
+test_vfnmsbs_vvvvmvl() {
+  // CHECK-LABEL: @test_vfnmsbs_vvvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbs.vvvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmsbs_vvvvmvl(vr1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmsbs_vsvvmvl() {
+  // CHECK-LABEL: @test_vfnmsbs_vsvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbs.vsvvmvl(float %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmsbs_vsvvmvl(vf1, vr2, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_vfnmsbs_vvsvmvl() {
+  // CHECK-LABEL: @test_vfnmsbs_vvsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vfnmsbs.vvsvmvl(<256 x double> %{{.*}}, float %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_vfnmsbs_vvsvmvl(vr1, vf1, vr3, vm1, vr4, 256);
+}
+
+void __attribute__((noinline))
 test_pvfnmsb_vvvvl() {
   // CHECK-LABEL: @test_pvfnmsb_vvvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfnmsb.vvvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
@@ -3606,6 +5310,27 @@ test_pvfnmsb_vvsvvl() {
   // CHECK-LABEL: @test_pvfnmsb_vvsvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvfnmsb.vvsvvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr4 = _vel_pvfnmsb_vvsvvl(vr1, v1, vr3, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfnmsb_vvvvMvl() {
+  // CHECK-LABEL: @test_pvfnmsb_vvvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfnmsb.vvvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfnmsb_vvvvMvl(vr1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfnmsb_vsvvMvl() {
+  // CHECK-LABEL: @test_pvfnmsb_vsvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfnmsb.vsvvMvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfnmsb_vsvvMvl(v1, vr2, vr3, vm1_512, vr4, 256);
+}
+
+void __attribute__((noinline))
+test_pvfnmsb_vvsvMvl() {
+  // CHECK-LABEL: @test_pvfnmsb_vvsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvfnmsb.vvsvMvl(<256 x double> %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr4 = _vel_pvfnmsb_vvsvMvl(vr1, v1, vr3, vm1_512, vr4, 256);
 }
 
 void __attribute__((noinline))
@@ -3749,6 +5474,13 @@ test_vcvtwdsx_vvvl() {
 }
 
 void __attribute__((noinline))
+test_vcvtwdsx_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwdsx_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdsx.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwdsx_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_vcvtwdsxrz_vvl() {
   // CHECK-LABEL: @test_vcvtwdsxrz_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdsxrz.vvl(<256 x double> %{{.*}}, i32 256)
@@ -3760,6 +5492,13 @@ test_vcvtwdsxrz_vvvl() {
   // CHECK-LABEL: @test_vcvtwdsxrz_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdsxrz.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vcvtwdsxrz_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vcvtwdsxrz_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwdsxrz_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdsxrz.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwdsxrz_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -3777,6 +5516,13 @@ test_vcvtwdzx_vvvl() {
 }
 
 void __attribute__((noinline))
+test_vcvtwdzx_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwdzx_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdzx.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwdzx_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_vcvtwdzxrz_vvl() {
   // CHECK-LABEL: @test_vcvtwdzxrz_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdzxrz.vvl(<256 x double> %{{.*}}, i32 256)
@@ -3788,6 +5534,13 @@ test_vcvtwdzxrz_vvvl() {
   // CHECK-LABEL: @test_vcvtwdzxrz_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdzxrz.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vcvtwdzxrz_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vcvtwdzxrz_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwdzxrz_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwdzxrz.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwdzxrz_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -3805,6 +5558,13 @@ test_vcvtwssx_vvvl() {
 }
 
 void __attribute__((noinline))
+test_vcvtwssx_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwssx_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwssx.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwssx_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_vcvtwssxrz_vvl() {
   // CHECK-LABEL: @test_vcvtwssxrz_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwssxrz.vvl(<256 x double> %{{.*}}, i32 256)
@@ -3816,6 +5576,13 @@ test_vcvtwssxrz_vvvl() {
   // CHECK-LABEL: @test_vcvtwssxrz_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwssxrz.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vcvtwssxrz_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vcvtwssxrz_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwssxrz_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwssxrz.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwssxrz_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -3833,6 +5600,13 @@ test_vcvtwszx_vvvl() {
 }
 
 void __attribute__((noinline))
+test_vcvtwszx_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwszx_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwszx.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwszx_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_vcvtwszxrz_vvl() {
   // CHECK-LABEL: @test_vcvtwszxrz_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwszxrz.vvl(<256 x double> %{{.*}}, i32 256)
@@ -3844,6 +5618,13 @@ test_vcvtwszxrz_vvvl() {
   // CHECK-LABEL: @test_vcvtwszxrz_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtwszxrz.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vcvtwszxrz_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vcvtwszxrz_vvmvl() {
+  // CHECK-LABEL: @test_vcvtwszxrz_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtwszxrz.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtwszxrz_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -3861,6 +5642,13 @@ test_pvcvtws_vvvl() {
 }
 
 void __attribute__((noinline))
+test_pvcvtws_vvMvl() {
+  // CHECK-LABEL: @test_pvcvtws_vvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvcvtws.vvMvl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvcvtws_vvMvl(vr1, vm1_512, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_pvcvtwsrz_vvl() {
   // CHECK-LABEL: @test_pvcvtwsrz_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvcvtwsrz.vvl(<256 x double> %{{.*}}, i32 256)
@@ -3872,6 +5660,13 @@ test_pvcvtwsrz_vvvl() {
   // CHECK-LABEL: @test_pvcvtwsrz_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.pvcvtwsrz.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_pvcvtwsrz_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_pvcvtwsrz_vvMvl() {
+  // CHECK-LABEL: @test_pvcvtwsrz_vvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.pvcvtwsrz.vvMvl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_pvcvtwsrz_vvMvl(vr1, vm1_512, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -3889,6 +5684,13 @@ test_vcvtld_vvvl() {
 }
 
 void __attribute__((noinline))
+test_vcvtld_vvmvl() {
+  // CHECK-LABEL: @test_vcvtld_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtld.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtld_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
 test_vcvtldrz_vvl() {
   // CHECK-LABEL: @test_vcvtldrz_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtldrz.vvl(<256 x double> %{{.*}}, i32 256)
@@ -3900,6 +5702,13 @@ test_vcvtldrz_vvvl() {
   // CHECK-LABEL: @test_vcvtldrz_vvvl
   // CHECK: call <256 x double> @llvm.ve.vl.vcvtldrz.vvvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vcvtldrz_vvvl(vr1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vcvtldrz_vvmvl() {
+  // CHECK-LABEL: @test_vcvtldrz_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcvtldrz.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcvtldrz_vvmvl(vr1, vm1, vr2, 256);
 }
 
 void __attribute__((noinline))
@@ -3987,6 +5796,62 @@ test_vcvtsd_vvvl() {
 }
 
 void __attribute__((noinline))
+test_vmrg_vvvml() {
+  // CHECK-LABEL: @test_vmrg_vvvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrg.vvvml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vmrg_vvvml(vr1, vr2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vmrg_vvvmvl() {
+  // CHECK-LABEL: @test_vmrg_vvvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrg.vvvmvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmrg_vvvmvl(vr1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmrg_vsvml() {
+  // CHECK-LABEL: @test_vmrg_vsvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrg.vsvml(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vmrg_vsvml(v1, vr2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vmrg_vsvmvl() {
+  // CHECK-LABEL: @test_vmrg_vsvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrg.vsvmvl(i64 %{{.*}}, <256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmrg_vsvmvl(v1, vr2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmrgw_vvvMl() {
+  // CHECK-LABEL: @test_vmrgw_vvvMl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrgw.vvvMl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vmrgw_vvvMl(vr1, vr2, vm1_512, 256);
+}
+
+void __attribute__((noinline))
+test_vmrgw_vvvMvl() {
+  // CHECK-LABEL: @test_vmrgw_vvvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrgw.vvvMvl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmrgw_vvvMvl(vr1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vmrgw_vsvMl() {
+  // CHECK-LABEL: @test_vmrgw_vsvMl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrgw.vsvMl(i32 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vmrgw_vsvMl(v1, vr2, vm1_512, 256);
+}
+
+void __attribute__((noinline))
+test_vmrgw_vsvMvl() {
+  // CHECK-LABEL: @test_vmrgw_vsvMvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vmrgw.vsvMvl(i32 %{{.*}}, <256 x double> %{{.*}}, <512 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vmrgw_vsvMvl(v1, vr2, vm1_512, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vshf_vvvsl() {
   // CHECK-LABEL: @test_vshf_vvvsl
   // CHECK: call <256 x double> @llvm.ve.vl.vshf.vvvsl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i32 256)
@@ -4001,10 +5866,2019 @@ test_vshf_vvvsvl() {
 }
 
 void __attribute__((noinline))
+test_vcp_vvmvl() {
+  // CHECK-LABEL: @test_vcp_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vcp.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vcp_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vex_vvmvl() {
+  // CHECK-LABEL: @test_vex_vvmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vex.vvmvl(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vex_vvmvl(vr1, vm1, vr2, 256);
+}
+
+void __attribute__((noinline))
+test_vfmklat_ml(int vl) {
+  // CHECK-LABEL: @test_vfmklat_ml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklat.ml(i32 %{{.*}})
+  vm1 = _vel_vfmklat_ml(vl);
+}
+
+void __attribute__((noinline))
+test_vfmklaf_ml(int vl) {
+  // CHECK-LABEL: @test_vfmklaf_ml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklaf.ml(i32 %{{.*}})
+  vm1 = _vel_vfmklaf_ml(vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkat_Ml(int vl) {
+  // CHECK-LABEL: @test_pvfmkat_Ml
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkat.Ml(i32 %{{.*}})
+  vm1_512 = _vel_pvfmkat_Ml(vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkaf_Ml(int vl) {
+  // CHECK-LABEL: @test_pvfmkaf_Ml
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkaf.Ml(i32 %{{.*}})
+  vm1_512 = _vel_pvfmkaf_Ml(vl);
+}
+
+void __attribute__((noinline))
+test_vfmklgt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklgt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklgt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklgt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklgt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklgt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklgt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklgt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkllt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkllt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkllt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkllt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkllt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkllt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkllt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkllt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklne_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklne_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklne.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklne_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklne_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklne_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklne.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklne_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkleq_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkleq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkleq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkleq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkleq_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkleq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkleq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkleq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklge_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklge_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklle_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklle_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklle.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklle_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklle_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklle_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklle.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklle_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklnum_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklnum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklnum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklnum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklnum_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklnum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklnum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklnum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklgtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklgtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklgtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklgtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklgtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklgtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklgtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklgtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklnenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklnenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklnenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklnenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklnenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklnenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklnenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklnenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkleqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkleqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkleqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkleqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkleqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkleqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkleqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkleqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklgenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmklgenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklgenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklgenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmklgenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmklgenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmklgenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmklgenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkllenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkllenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkllenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkllenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkllenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkllenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkllenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkllenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwgt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwgt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwgt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwgt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwgt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwgt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwgt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwgt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwlt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwlt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwlt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwlt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwlt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwlt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwlt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwlt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwne_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwne_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwne.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwne_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwne_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwne_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwne.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwne_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkweq_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkweq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkweq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkweq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkweq_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkweq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkweq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkweq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwge_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwge_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwle_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwle_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwle.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwle_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwle_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwle_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwle.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwle_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwnum_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwnum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwnum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwnum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwnum_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwnum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwnum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwnum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwgtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwgtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwgtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwgtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwgtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwgtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwgtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwgtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwnenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwnenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwnenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwnenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwnenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwnenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwnenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwnenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkweqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkweqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkweqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkweqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkweqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkweqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkweqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkweqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwgenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwgenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwgenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwgenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwgenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwgenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwgenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwgenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwlenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkwlenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwlenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwlenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkwlenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkwlenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkwlenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkwlenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlogt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlogt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlogt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlogt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupgt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupgt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupgt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupgt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlogt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlogt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlogt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlogt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupgt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupgt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupgt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupgt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlolt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlolt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlolt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlolt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwuplt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwuplt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwuplt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwuplt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlolt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlolt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlolt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlolt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwuplt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwuplt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwuplt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwuplt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlone_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlone_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlone.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlone_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupne_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupne_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupne.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupne_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlone_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlone_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlone.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlone_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupne_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupne_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupne.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupne_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloeq_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloeq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloeq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloeq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupeq_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupeq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupeq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupeq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloeq_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloeq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloeq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloeq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupeq_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupeq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupeq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupeq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloge_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupge_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloge_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupge_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlole_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlole_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlole.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlole_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwuple_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwuple_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwuple.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwuple_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlole_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlole_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlole.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlole_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwuple_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwuple_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwuple.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwuple_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlonum_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlonum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlonum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlonum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupnum_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupnum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupnum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupnum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlonum_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlonum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlonum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlonum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupnum_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupnum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupnum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupnum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlonan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlonan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlonan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlonan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlonan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlonan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlonan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlonan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlogtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlogtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlogtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlogtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupgtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupgtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupgtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupgtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlogtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlogtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlogtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlogtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupgtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupgtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupgtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupgtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlonenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlonenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlonenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlonenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupnenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupnenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupnenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupnenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlonenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlonenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlonenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlonenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupnenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupnenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupnenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupnenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloeqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloeqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloeqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloeqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupeqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupeqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupeqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupeqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwloeqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwloeqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwloeqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwloeqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupeqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupeqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupeqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupeqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlogenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlogenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlogenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlogenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupgenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupgenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupgenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupgenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlogenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlogenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlogenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlogenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwupgenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwupgenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwupgenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwupgenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlolenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlolenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlolenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlolenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwuplenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwuplenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwuplenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwuplenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlolenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlolenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwlolenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwlolenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwuplenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkwuplenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkwuplenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkwuplenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwgt_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwgt_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwgt.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwgt_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwgt_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwgt_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwgt.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwgt_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlt_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlt_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwlt.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwlt_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlt_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlt_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwlt.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwlt_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwne_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwne_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwne.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwne_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwne_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwne_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwne.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwne_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkweq_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkweq_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkweq.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkweq_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkweq_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkweq_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkweq.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkweq_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwge_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwge_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwge.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwge_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwge_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwge_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwge.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwge_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwle_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwle_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwle.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwle_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwle_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwle_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwle.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwle_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwnum_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwnum_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwnum.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwnum_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwnum_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwnum_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwnum.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwnum_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwgtnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwgtnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwgtnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwgtnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwgtnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwgtnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwgtnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwgtnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwltnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwltnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwltnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwltnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwltnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwltnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwltnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwltnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwnenan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwnenan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwnenan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwnenan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwnenan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwnenan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwnenan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwnenan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkweqnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkweqnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkweqnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkweqnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkweqnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkweqnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkweqnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkweqnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwgenan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwgenan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwgenan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwgenan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwgenan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwgenan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwgenan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwgenan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlenan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlenan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwlenan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwlenan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkwlenan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkwlenan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkwlenan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkwlenan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdgt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdgt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdgt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdgt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdgt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdgt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdgt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdgt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdlt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdlt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdlt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdlt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdlt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdlt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdlt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdlt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdne_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdne_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdne.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdne_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdne_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdne_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdne.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdne_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdeq_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdeq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdeq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdeq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdeq_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdeq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdeq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdeq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdge_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdge_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdle_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdle_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdle.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdle_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdle_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdle_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdle.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdle_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdnum_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdnum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdnum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdnum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdnum_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdnum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdnum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdnum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdgtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdgtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdgtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdgtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdgtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdgtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdgtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdgtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdnenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdnenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdnenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdnenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdnenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdnenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdnenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdnenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdeqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdeqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdeqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdeqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdeqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdeqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdeqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdeqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdgenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdgenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdgenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdgenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdgenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdgenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdgenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdgenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdlenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkdlenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdlenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdlenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkdlenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkdlenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkdlenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkdlenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksgt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksgt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksgt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksgt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksgt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksgt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksgt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksgt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkslt_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkslt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkslt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkslt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkslt_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkslt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkslt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkslt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksne_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksne_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksne.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksne_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksne_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksne_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksne.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksne_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkseq_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkseq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkseq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkseq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkseq_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkseq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkseq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkseq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksge_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksge_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksle_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksle_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksle.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksle_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksle_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksle_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksle.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksle_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksnum_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksnum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksnum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksnum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksnum_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksnum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksnum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksnum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksgtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksgtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksgtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksgtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksgtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksgtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksgtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksgtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksnenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksnenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksnenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksnenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksnenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksnenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksnenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksnenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkseqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkseqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkseqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkseqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkseqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkseqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkseqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkseqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksgenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmksgenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksgenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksgenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmksgenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmksgenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmksgenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmksgenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkslenan_mvl(int vl) {
+  // CHECK-LABEL: @test_vfmkslenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkslenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkslenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_vfmkslenan_mvml(int vl) {
+  // CHECK-LABEL: @test_vfmkslenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.vfmkslenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_vfmkslenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslogt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslogt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslogt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslogt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupgt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupgt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupgt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupgt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslogt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslogt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslogt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslogt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupgt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupgt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupgt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupgt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslolt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslolt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslolt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslolt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksuplt_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksuplt_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksuplt.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksuplt_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslolt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslolt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslolt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslolt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksuplt_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksuplt_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksuplt.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksuplt_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslone_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslone_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslone.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslone_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupne_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupne_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupne.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupne_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslone_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslone_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslone.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslone_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupne_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupne_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupne.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupne_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloeq_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksloeq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloeq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloeq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupeq_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupeq_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupeq.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupeq_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloeq_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksloeq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloeq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloeq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupeq_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupeq_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupeq.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupeq_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloge_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksloge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupge_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupge_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupge.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupge_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloge_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksloge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupge_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupge_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupge.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupge_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslole_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslole_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslole.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslole_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksuple_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksuple_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksuple.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksuple_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslole_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslole_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslole.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslole_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksuple_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksuple_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksuple.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksuple_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslonum_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslonum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslonum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslonum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupnum_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupnum_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupnum.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupnum_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslonum_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslonum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslonum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslonum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupnum_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupnum_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupnum.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupnum_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslonan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslonan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslonan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslonan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslonan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslonan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslonan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslonan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslogtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslogtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslogtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslogtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupgtnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupgtnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupgtnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupgtnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslogtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslogtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslogtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslogtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupgtnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupgtnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupgtnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupgtnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksloltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupltnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupltnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupltnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupltnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksloltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupltnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupltnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupltnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupltnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslonenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslonenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslonenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslonenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupnenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupnenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupnenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupnenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslonenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslonenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslonenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslonenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupnenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupnenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupnenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupnenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloeqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksloeqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloeqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloeqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupeqnan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupeqnan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupeqnan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupeqnan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksloeqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksloeqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksloeqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksloeqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupeqnan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupeqnan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupeqnan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupeqnan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslogenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslogenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslogenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslogenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupgenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksupgenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupgenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupgenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslogenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslogenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslogenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslogenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksupgenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksupgenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksupgenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksupgenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslolenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslolenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslolenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslolenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksuplenan_mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksuplenan_mvl
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksuplenan.mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksuplenan_mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslolenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmkslolenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmkslolenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmkslolenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksuplenan_mvml(int vl) {
+  // CHECK-LABEL: @test_pvfmksuplenan_mvml
+  // CHECK: call <256 x i1> @llvm.ve.vl.pvfmksuplenan.mvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 %{{.*}})
+  vm1 = _vel_pvfmksuplenan_mvml(vr1, vm2, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksgt_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksgt_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksgt.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksgt_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksgt_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksgt_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksgt.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksgt_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslt_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslt_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkslt.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkslt_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslt_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslt_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkslt.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkslt_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksne_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksne_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksne.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksne_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksne_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksne_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksne.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksne_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkseq_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkseq_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkseq.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkseq_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkseq_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkseq_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkseq.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkseq_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksge_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksge_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksge.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksge_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksge_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksge_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksge.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksge_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksle_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksle_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksle.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksle_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksle_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksle_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksle.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksle_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksnum_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksnum_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksnum.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksnum_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksnum_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksnum_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksnum.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksnum_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksgtnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksgtnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksgtnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksgtnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksgtnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksgtnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksgtnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksgtnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksltnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksltnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksltnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksltnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksltnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksltnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksltnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksltnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksnenan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksnenan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksnenan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksnenan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksnenan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksnenan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksnenan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksnenan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkseqnan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkseqnan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkseqnan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkseqnan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkseqnan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkseqnan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkseqnan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkseqnan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksgenan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmksgenan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksgenan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksgenan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmksgenan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmksgenan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmksgenan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmksgenan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslenan_Mvl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslenan_Mvl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkslenan.Mvl(<256 x double> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkslenan_Mvl(vr1, vl);
+}
+
+void __attribute__((noinline))
+test_pvfmkslenan_MvMl(int vl) {
+  // CHECK-LABEL: @test_pvfmkslenan_MvMl
+  // CHECK: call <512 x i1> @llvm.ve.vl.pvfmkslenan.MvMl(<256 x double> %{{.*}}, <512 x i1> %{{.*}}, i32 %{{.*}})
+  vm1_512 = _vel_pvfmkslenan_MvMl(vr1, vm2_512, vl);
+}
+
+void __attribute__((noinline))
 test_vsumwsx_vvl() {
   // CHECK-LABEL: @test_vsumwsx_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsumwsx.vvl(<256 x double> %{{.*}}, i32 256)
   vr2 = _vel_vsumwsx_vvl(vr1, 256);
+}
+
+void __attribute__((noinline))
+test_vsumwsx_vvml() {
+  // CHECK-LABEL: @test_vsumwsx_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vsumwsx.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr2 = _vel_vsumwsx_vvml(vr1, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4015,10 +7889,24 @@ test_vsumwzx_vvl() {
 }
 
 void __attribute__((noinline))
+test_vsumwzx_vvml() {
+  // CHECK-LABEL: @test_vsumwzx_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vsumwzx.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr2 = _vel_vsumwzx_vvml(vr1, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vsuml_vvl() {
   // CHECK-LABEL: @test_vsuml_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vsuml.vvl(<256 x double> %{{.*}}, i32 256)
   vr2 = _vel_vsuml_vvl(vr1, 256);
+}
+
+void __attribute__((noinline))
+test_vsuml_vvml() {
+  // CHECK-LABEL: @test_vsuml_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vsuml.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr2 = _vel_vsuml_vvml(vr1, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4029,10 +7917,24 @@ test_vfsumd_vvl() {
 }
 
 void __attribute__((noinline))
+test_vfsumd_vvml() {
+  // CHECK-LABEL: @test_vfsumd_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vfsumd.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr2 = _vel_vfsumd_vvml(vr1, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vfsums_vvl() {
   // CHECK-LABEL: @test_vfsums_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vfsums.vvl(<256 x double> %{{.*}}, i32 256)
   vr2 = _vel_vfsums_vvl(vr1, 256);
+}
+
+void __attribute__((noinline))
+test_vfsums_vvml() {
+  // CHECK-LABEL: @test_vfsums_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vfsums.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr2 = _vel_vfsums_vvml(vr1, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4323,6 +8225,13 @@ test_vrand_vvl() {
 }
 
 void __attribute__((noinline))
+test_vrand_vvml() {
+  // CHECK-LABEL: @test_vrand_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vrand.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vrand_vvml(vr1, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vror_vvl() {
   // CHECK-LABEL: @test_vror_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vror.vvl(<256 x double> %{{.*}}, i32 256)
@@ -4330,10 +8239,24 @@ test_vror_vvl() {
 }
 
 void __attribute__((noinline))
+test_vror_vvml() {
+  // CHECK-LABEL: @test_vror_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vror.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vror_vvml(vr1, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vrxor_vvl() {
   // CHECK-LABEL: @test_vrxor_vvl
   // CHECK: call <256 x double> @llvm.ve.vl.vrxor.vvl(<256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vrxor_vvl(vr1, 256);
+}
+
+void __attribute__((noinline))
+test_vrxor_vvml() {
+  // CHECK-LABEL: @test_vrxor_vvml
+  // CHECK: call <256 x double> @llvm.ve.vl.vrxor.vvml(<256 x double> %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vrxor_vvml(vr1, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4351,6 +8274,20 @@ test_vgt_vvssvl() {
 }
 
 void __attribute__((noinline))
+test_vgt_vvssml() {
+  // CHECK-LABEL: @test_vgt_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgt.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgt_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgt_vvssmvl() {
+  // CHECK-LABEL: @test_vgt_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgt.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgt_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vgtnc_vvssl() {
   // CHECK-LABEL: @test_vgtnc_vvssl
   // CHECK: call <256 x double> @llvm.ve.vl.vgtnc.vvssl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
@@ -4362,6 +8299,20 @@ test_vgtnc_vvssvl() {
   // CHECK-LABEL: @test_vgtnc_vvssvl
   // CHECK: call <256 x double> @llvm.ve.vl.vgtnc.vvssvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vgtnc_vvssvl(vr1, v1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vgtnc_vvssml() {
+  // CHECK-LABEL: @test_vgtnc_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtnc.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgtnc_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgtnc_vvssmvl() {
+  // CHECK-LABEL: @test_vgtnc_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtnc.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgtnc_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -4379,6 +8330,20 @@ test_vgtu_vvssvl() {
 }
 
 void __attribute__((noinline))
+test_vgtu_vvssml() {
+  // CHECK-LABEL: @test_vgtu_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtu.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgtu_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgtu_vvssmvl() {
+  // CHECK-LABEL: @test_vgtu_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtu.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgtu_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vgtunc_vvssl() {
   // CHECK-LABEL: @test_vgtunc_vvssl
   // CHECK: call <256 x double> @llvm.ve.vl.vgtunc.vvssl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
@@ -4390,6 +8355,20 @@ test_vgtunc_vvssvl() {
   // CHECK-LABEL: @test_vgtunc_vvssvl
   // CHECK: call <256 x double> @llvm.ve.vl.vgtunc.vvssvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vgtunc_vvssvl(vr1, v1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vgtunc_vvssml() {
+  // CHECK-LABEL: @test_vgtunc_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtunc.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgtunc_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgtunc_vvssmvl() {
+  // CHECK-LABEL: @test_vgtunc_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtunc.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgtunc_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -4407,6 +8386,20 @@ test_vgtlsx_vvssvl() {
 }
 
 void __attribute__((noinline))
+test_vgtlsx_vvssml() {
+  // CHECK-LABEL: @test_vgtlsx_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlsx.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlsx_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgtlsx_vvssmvl() {
+  // CHECK-LABEL: @test_vgtlsx_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlsx.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlsx_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vgtlsxnc_vvssl() {
   // CHECK-LABEL: @test_vgtlsxnc_vvssl
   // CHECK: call <256 x double> @llvm.ve.vl.vgtlsxnc.vvssl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
@@ -4418,6 +8411,20 @@ test_vgtlsxnc_vvssvl() {
   // CHECK-LABEL: @test_vgtlsxnc_vvssvl
   // CHECK: call <256 x double> @llvm.ve.vl.vgtlsxnc.vvssvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x double> %{{.*}}, i32 256)
   vr3 = _vel_vgtlsxnc_vvssvl(vr1, v1, v2, vr3, 256);
+}
+
+void __attribute__((noinline))
+test_vgtlsxnc_vvssml() {
+  // CHECK-LABEL: @test_vgtlsxnc_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlsxnc.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlsxnc_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgtlsxnc_vvssmvl() {
+  // CHECK-LABEL: @test_vgtlsxnc_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlsxnc.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlsxnc_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
 }
 
 void __attribute__((noinline))
@@ -4435,6 +8442,20 @@ test_vgtlzx_vvssvl() {
 }
 
 void __attribute__((noinline))
+test_vgtlzx_vvssml() {
+  // CHECK-LABEL: @test_vgtlzx_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlzx.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlzx_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgtlzx_vvssmvl() {
+  // CHECK-LABEL: @test_vgtlzx_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlzx.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlzx_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vgtlzxnc_vvssl() {
   // CHECK-LABEL: @test_vgtlzxnc_vvssl
   // CHECK: call <256 x double> @llvm.ve.vl.vgtlzxnc.vvssl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
@@ -4449,10 +8470,31 @@ test_vgtlzxnc_vvssvl() {
 }
 
 void __attribute__((noinline))
+test_vgtlzxnc_vvssml() {
+  // CHECK-LABEL: @test_vgtlzxnc_vvssml
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlzxnc.vvssml(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlzxnc_vvssml(vr1, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_vgtlzxnc_vvssmvl() {
+  // CHECK-LABEL: @test_vgtlzxnc_vvssmvl
+  // CHECK: call <256 x double> @llvm.ve.vl.vgtlzxnc.vvssmvl(<256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, <256 x double> %{{.*}}, i32 256)
+  vr3 = _vel_vgtlzxnc_vvssmvl(vr1, v1, v2, vm1, vr3, 256);
+}
+
+void __attribute__((noinline))
 test_vsc_vvssl() {
   // CHECK-LABEL: @test_vsc_vvssl
   // CHECK: call void @llvm.ve.vl.vsc.vvssl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
   _vel_vsc_vvssl(vr1, vr2, v1, v2, 256);
+}
+
+void __attribute__((noinline))
+test_vsc_vvssml() {
+  // CHECK-LABEL: @test_vsc_vvssml
+  // CHECK: call void @llvm.ve.vl.vsc.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vsc_vvssml(vr1, vr2, v1, v2, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4463,10 +8505,24 @@ test_vscnc_vvssl() {
 }
 
 void __attribute__((noinline))
+test_vscnc_vvssml() {
+  // CHECK-LABEL: @test_vscnc_vvssml
+  // CHECK: call void @llvm.ve.vl.vscnc.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscnc_vvssml(vr1, vr2, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vscot_vvssl() {
   // CHECK-LABEL: @test_vscot_vvssl
   // CHECK: call void @llvm.ve.vl.vscot.vvssl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
   _vel_vscot_vvssl(vr1, vr2, v1, v2, 256);
+}
+
+void __attribute__((noinline))
+test_vscot_vvssml() {
+  // CHECK-LABEL: @test_vscot_vvssml
+  // CHECK: call void @llvm.ve.vl.vscot.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscot_vvssml(vr1, vr2, v1, v2, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4477,10 +8533,24 @@ test_vscncot_vvssl() {
 }
 
 void __attribute__((noinline))
+test_vscncot_vvssml() {
+  // CHECK-LABEL: @test_vscncot_vvssml
+  // CHECK: call void @llvm.ve.vl.vscncot.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscncot_vvssml(vr1, vr2, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vscu_vvssl() {
   // CHECK-LABEL: @test_vscu_vvssl
   // CHECK: call void @llvm.ve.vl.vscu.vvssl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
   _vel_vscu_vvssl(vr1, vr2, v1, v2, 256);
+}
+
+void __attribute__((noinline))
+test_vscu_vvssml() {
+  // CHECK-LABEL: @test_vscu_vvssml
+  // CHECK: call void @llvm.ve.vl.vscu.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscu_vvssml(vr1, vr2, v1, v2, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4491,10 +8561,24 @@ test_vscunc_vvssl() {
 }
 
 void __attribute__((noinline))
+test_vscunc_vvssml() {
+  // CHECK-LABEL: @test_vscunc_vvssml
+  // CHECK: call void @llvm.ve.vl.vscunc.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscunc_vvssml(vr1, vr2, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vscuot_vvssl() {
   // CHECK-LABEL: @test_vscuot_vvssl
   // CHECK: call void @llvm.ve.vl.vscuot.vvssl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
   _vel_vscuot_vvssl(vr1, vr2, v1, v2, 256);
+}
+
+void __attribute__((noinline))
+test_vscuot_vvssml() {
+  // CHECK-LABEL: @test_vscuot_vvssml
+  // CHECK: call void @llvm.ve.vl.vscuot.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscuot_vvssml(vr1, vr2, v1, v2, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4505,10 +8589,24 @@ test_vscuncot_vvssl() {
 }
 
 void __attribute__((noinline))
+test_vscuncot_vvssml() {
+  // CHECK-LABEL: @test_vscuncot_vvssml
+  // CHECK: call void @llvm.ve.vl.vscuncot.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscuncot_vvssml(vr1, vr2, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vscl_vvssl() {
   // CHECK-LABEL: @test_vscl_vvssl
   // CHECK: call void @llvm.ve.vl.vscl.vvssl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
   _vel_vscl_vvssl(vr1, vr2, v1, v2, 256);
+}
+
+void __attribute__((noinline))
+test_vscl_vvssml() {
+  // CHECK-LABEL: @test_vscl_vvssml
+  // CHECK: call void @llvm.ve.vl.vscl.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vscl_vvssml(vr1, vr2, v1, v2, vm1, 256);
 }
 
 void __attribute__((noinline))
@@ -4519,6 +8617,13 @@ test_vsclnc_vvssl() {
 }
 
 void __attribute__((noinline))
+test_vsclnc_vvssml() {
+  // CHECK-LABEL: @test_vsclnc_vvssml
+  // CHECK: call void @llvm.ve.vl.vsclnc.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vsclnc_vvssml(vr1, vr2, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vsclot_vvssl() {
   // CHECK-LABEL: @test_vsclot_vvssl
   // CHECK: call void @llvm.ve.vl.vsclot.vvssl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
@@ -4526,10 +8631,129 @@ test_vsclot_vvssl() {
 }
 
 void __attribute__((noinline))
+test_vsclot_vvssml() {
+  // CHECK-LABEL: @test_vsclot_vvssml
+  // CHECK: call void @llvm.ve.vl.vsclot.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vsclot_vvssml(vr1, vr2, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
 test_vsclncot_vvssl() {
   // CHECK-LABEL: @test_vsclncot_vvssl
   // CHECK: call void @llvm.ve.vl.vsclncot.vvssl(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, i32 256)
   _vel_vsclncot_vvssl(vr1, vr2, v1, v2, 256);
+}
+
+void __attribute__((noinline))
+test_vsclncot_vvssml() {
+  // CHECK-LABEL: @test_vsclncot_vvssml
+  // CHECK: call void @llvm.ve.vl.vsclncot.vvssml(<256 x double> %{{.*}}, <256 x double> %{{.*}}, i64 %{{.*}}, i64 %{{.*}}, <256 x i1> %{{.*}}, i32 256)
+  _vel_vsclncot_vvssml(vr1, vr2, v1, v2, vm1, 256);
+}
+
+void __attribute__((noinline))
+test_andm_mmm() {
+  // CHECK-LABEL: @test_andm_mmm
+  // CHECK: call <256 x i1> @llvm.ve.vl.andm.mmm(<256 x i1> %{{.*}}, <256 x i1> %{{.*}})
+  vm3 = _vel_andm_mmm(vm1, vm2);
+}
+
+void __attribute__((noinline))
+test_andm_MMM() {
+  // CHECK-LABEL: @test_andm_MMM
+  // CHECK: call <512 x i1> @llvm.ve.vl.andm.MMM(<512 x i1> %{{.*}}, <512 x i1> %{{.*}})
+  vm3_512 = _vel_andm_MMM(vm1_512, vm2_512);
+}
+
+void __attribute__((noinline))
+test_orm_mmm() {
+  // CHECK-LABEL: @test_orm_mmm
+  // CHECK: call <256 x i1> @llvm.ve.vl.orm.mmm(<256 x i1> %{{.*}}, <256 x i1> %{{.*}})
+  vm3 = _vel_orm_mmm(vm1, vm2);
+}
+
+void __attribute__((noinline))
+test_orm_MMM() {
+  // CHECK-LABEL: @test_orm_MMM
+  // CHECK: call <512 x i1> @llvm.ve.vl.orm.MMM(<512 x i1> %{{.*}}, <512 x i1> %{{.*}})
+  vm3_512 = _vel_orm_MMM(vm1_512, vm2_512);
+}
+
+void __attribute__((noinline))
+test_xorm_mmm() {
+  // CHECK-LABEL: @test_xorm_mmm
+  // CHECK: call <256 x i1> @llvm.ve.vl.xorm.mmm(<256 x i1> %{{.*}}, <256 x i1> %{{.*}})
+  vm3 = _vel_xorm_mmm(vm1, vm2);
+}
+
+void __attribute__((noinline))
+test_xorm_MMM() {
+  // CHECK-LABEL: @test_xorm_MMM
+  // CHECK: call <512 x i1> @llvm.ve.vl.xorm.MMM(<512 x i1> %{{.*}}, <512 x i1> %{{.*}})
+  vm3_512 = _vel_xorm_MMM(vm1_512, vm2_512);
+}
+
+void __attribute__((noinline))
+test_eqvm_mmm() {
+  // CHECK-LABEL: @test_eqvm_mmm
+  // CHECK: call <256 x i1> @llvm.ve.vl.eqvm.mmm(<256 x i1> %{{.*}}, <256 x i1> %{{.*}})
+  vm3 = _vel_eqvm_mmm(vm1, vm2);
+}
+
+void __attribute__((noinline))
+test_eqvm_MMM() {
+  // CHECK-LABEL: @test_eqvm_MMM
+  // CHECK: call <512 x i1> @llvm.ve.vl.eqvm.MMM(<512 x i1> %{{.*}}, <512 x i1> %{{.*}})
+  vm3_512 = _vel_eqvm_MMM(vm1_512, vm2_512);
+}
+
+void __attribute__((noinline))
+test_nndm_mmm() {
+  // CHECK-LABEL: @test_nndm_mmm
+  // CHECK: call <256 x i1> @llvm.ve.vl.nndm.mmm(<256 x i1> %{{.*}}, <256 x i1> %{{.*}})
+  vm3 = _vel_nndm_mmm(vm1, vm2);
+}
+
+void __attribute__((noinline))
+test_nndm_MMM() {
+  // CHECK-LABEL: @test_nndm_MMM
+  // CHECK: call <512 x i1> @llvm.ve.vl.nndm.MMM(<512 x i1> %{{.*}}, <512 x i1> %{{.*}})
+  vm3_512 = _vel_nndm_MMM(vm1_512, vm2_512);
+}
+
+void __attribute__((noinline))
+test_negm_mm() {
+  // CHECK-LABEL: @test_negm_mm
+  // CHECK: call <256 x i1> @llvm.ve.vl.negm.mm(<256 x i1> %{{.*}})
+  vm2 = _vel_negm_mm(vm1);
+}
+
+void __attribute__((noinline))
+test_negm_MM() {
+  // CHECK-LABEL: @test_negm_MM
+  // CHECK: call <512 x i1> @llvm.ve.vl.negm.MM(<512 x i1> %{{.*}})
+  vm2_512 = _vel_negm_MM(vm1_512);
+}
+
+void __attribute__((noinline))
+test_pcvm_sml() {
+  // CHECK-LABEL: @test_pcvm_sml
+  // CHECK: call i64 @llvm.ve.vl.pcvm.sml(<256 x i1> %{{.*}}, i32 256)
+  v1 = _vel_pcvm_sml(vm1, 256);
+}
+
+void __attribute__((noinline))
+test_lzvm_sml() {
+  // CHECK-LABEL: @test_lzvm_sml
+  // CHECK: call i64 @llvm.ve.vl.lzvm.sml(<256 x i1> %{{.*}}, i32 256)
+  v1 = _vel_lzvm_sml(vm1, 256);
+}
+
+void __attribute__((noinline))
+test_tovm_sml() {
+  // CHECK-LABEL: @test_tovm_sml
+  // CHECK: call i64 @llvm.ve.vl.tovm.sml(<256 x i1> %{{.*}}, i32 256)
+  v1 = _vel_tovm_sml(vm1, 256);
 }
 
 void __attribute__((noinline))
