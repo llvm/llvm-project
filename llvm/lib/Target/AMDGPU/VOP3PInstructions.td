@@ -503,6 +503,8 @@ defm V_MFMA_F32_32X32X2F32  : MAIInst<"v_mfma_f32_32x32x2f32",  "F32_F32_X16",  
 defm V_MFMA_F32_32X32X4F16  : MAIInst<"v_mfma_f32_32x32x4f16",  "F32_V4F16_X32", int_amdgcn_mfma_f32_32x32x4f16>;
 defm V_MFMA_F32_32X32X8F16  : MAIInst<"v_mfma_f32_32x32x8f16",  "F32_V4F16_X16", int_amdgcn_mfma_f32_32x32x8f16>;
 defm V_MFMA_I32_32X32X4I8   : MAIInst<"v_mfma_i32_32x32x4i8",   "I32_I32_X32",   int_amdgcn_mfma_i32_32x32x4i8>;
+
+let Predicates = [isGFX908orGFX90A] in {
 defm V_MFMA_I32_16X16X16I8  : MAIInst<"v_mfma_i32_16x16x16i8",  "I32_I32_X4",    int_amdgcn_mfma_i32_16x16x16i8>;
 defm V_MFMA_I32_32X32X8I8   : MAIInst<"v_mfma_i32_32x32x8i8",   "I32_I32_X16",   int_amdgcn_mfma_i32_32x32x8i8>;
 defm V_MFMA_F32_4X4X2BF16   : MAIInst<"v_mfma_f32_4x4x2bf16",   "F32_V2I16_X4",  int_amdgcn_mfma_f32_4x4x2bf16>;
@@ -510,6 +512,7 @@ defm V_MFMA_F32_16X16X2BF16 : MAIInst<"v_mfma_f32_16x16x2bf16", "F32_V2I16_X16",
 defm V_MFMA_F32_16X16X8BF16 : MAIInst<"v_mfma_f32_16x16x8bf16", "F32_V2I16_X4",  int_amdgcn_mfma_f32_16x16x8bf16>;
 defm V_MFMA_F32_32X32X2BF16 : MAIInst<"v_mfma_f32_32x32x2bf16", "F32_V2I16_X32", int_amdgcn_mfma_f32_32x32x2bf16>;
 defm V_MFMA_F32_32X32X4BF16 : MAIInst<"v_mfma_f32_32x32x4bf16", "F32_V2I16_X16", int_amdgcn_mfma_f32_32x32x4bf16>;
+}
 
 } // End SubtargetPredicate = HasMAIInsts
 
@@ -704,6 +707,7 @@ defm V_MFMA_I32_32X32X4I8   : VOP3P_Real_MFMA <0x50, "v_mfma_i32_32x32x4_2b_i8">
 defm V_MFMA_I32_16X16X4I8   : VOP3P_Real_MFMA <0x51, "v_mfma_i32_16x16x4_4b_i8">;
 defm V_MFMA_I32_4X4X4I8     : VOP3P_Real_MFMA <0x52, "v_mfma_i32_4x4x4_16b_i8">;
 
+let SubtargetPredicate = isGFX908orGFX90A in {
 defm V_MFMA_I32_16X16X16I8  : VOP3P_Real_MFMA <0x55>;
 defm V_MFMA_I32_32X32X8I8   : VOP3P_Real_MFMA <0x54>;
 defm V_MFMA_F32_32X32X2BF16 : VOP3P_Real_MFMA <0x68>;
@@ -711,6 +715,7 @@ defm V_MFMA_F32_16X16X2BF16 : VOP3P_Real_MFMA <0x69>;
 defm V_MFMA_F32_4X4X2BF16   : VOP3P_Real_MFMA <0x6b>;
 defm V_MFMA_F32_32X32X4BF16 : VOP3P_Real_MFMA <0x6c>;
 defm V_MFMA_F32_16X16X8BF16 : VOP3P_Real_MFMA <0x6d>;
+}
 
 } // End SubtargetPredicate = HasMAIInsts
 
