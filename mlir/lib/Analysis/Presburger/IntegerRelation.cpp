@@ -52,6 +52,13 @@ void IntegerRelation::append(const IntegerRelation &other) {
   }
 }
 
+IntegerRelation IntegerRelation::intersect(IntegerRelation other) const {
+  IntegerRelation result = *this;
+  result.mergeLocalIds(other);
+  result.append(other);
+  return result;
+}
+
 bool IntegerRelation::isEqual(const IntegerRelation &other) const {
   assert(PresburgerLocalSpace::isEqual(other) && "Spaces must be equal.");
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));

@@ -97,11 +97,9 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
                             getNumSymbolIds());
   for (const IntegerRelation &csA : integerRelations) {
     for (const IntegerRelation &csB : set.integerRelations) {
-      IntegerRelation csACopy = csA, csBCopy = csB;
-      csACopy.mergeLocalIds(csBCopy);
-      csACopy.append(csBCopy);
-      if (!csACopy.isEmpty())
-        result.unionInPlace(csACopy);
+      IntegerRelation intersection = csA.intersect(csB);
+      if (!intersection.isEmpty())
+        result.unionInPlace(intersection);
     }
   }
   return result;
