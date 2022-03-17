@@ -139,6 +139,7 @@ interesting areas to contribute to lldb.
    use/qemu-testing
    use/troubleshooting
    use/links
+   use/intel_pt
 
 .. toctree::
    :hidden:
