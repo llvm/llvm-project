@@ -4713,6 +4713,14 @@ def fno_sycl : Flag<["-"], "fno-sycl">, Flags<[NoXarchOption, CoreOption]>,
   Group<sycl_Group>, HelpText<"Disables SYCL kernels compilation for device">;
 
 //===----------------------------------------------------------------------===//
+// FLangOption + NoXarchOption
+//===----------------------------------------------------------------------===//
+
+def flang_experimental_exec : Flag<["-"], "flang-experimental-exec">,
+  Flags<[FlangOption, FlangOnlyOption, NoXarchOption, HelpHidden]>,
+  HelpText<"Enable support for generating executables (experimental)">;
+
+//===----------------------------------------------------------------------===//
 // FLangOption + CoreOption + NoXarchOption
 //===----------------------------------------------------------------------===//
 
