@@ -1746,27 +1746,65 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
 
   LogicalResult matchAndRewrite(IfOp op,
                                 PatternRewriter &rewriter) const override {
-    // Both `if` ops must not yield results and have only `then` block.
-    if (op->getNumResults() != 0 || op.elseBlock())
-      return failure();
-
     auto nestedOps = op.thenBlock()->without_terminator();
     // Nested `if` must be the only op in block.
     if (!llvm::hasSingleElement(nestedOps))
       return failure();
 
-    auto nestedIf = dyn_cast<IfOp>(*nestedOps.begin());
-    if (!nestedIf || nestedIf->getNumResults() != 0 || nestedIf.elseBlock())
+    // If there is an else block, it can only yield
+    if (op.elseBlock() && !llvm::hasSingleElement(*op.elseBlock()))
       return failure();
+
+    auto nestedIf = dyn_cast<IfOp>(*nestedOps.begin());
+    if (!nestedIf)
+      return failure();
+
+    if (nestedIf.elseBlock() && !llvm::hasSingleElement(*nestedIf.elseBlock()))
+      return failure();
+
+    SmallVector<Value> thenYield(op.thenYield().getOperands());
+    SmallVector<Value> elseYield;
+    if (op.elseBlock())
+      llvm::append_range(elseYield, op.elseYield().getOperands());
+
+    // If the outer scf.if yields a value produced by the inner scf.if,
+    // only permit combining if the value yielded when the condition
+    // is false in the outer scf.if is the same value yielded when the
+    // inner scf.if condition is false.
+    // Note that the array access to elseYield will not go out of bounds
+    // since it must have the same length as thenYield, since they both
+    // come from the same scf.if.
+    for (auto tup : llvm::enumerate(thenYield)) {
+      if (tup.value().getDefiningOp() == nestedIf) {
+        auto nestedIdx = tup.value().cast<OpResult>().getResultNumber();
+        if (nestedIf.elseYield().getOperand(nestedIdx) !=
+            elseYield[tup.index()]) {
+          return failure();
+        }
+        // If the correctness test passes, we will yield
+        // corresponding value from the inner scf.if
+        thenYield[tup.index()] = nestedIf.thenYield().getOperand(nestedIdx);
+      }
+    }
 
     Location loc = op.getLoc();
     Value newCondition = rewriter.create<arith::AndIOp>(
         loc, op.getCondition(), nestedIf.getCondition());
-    auto newIf = rewriter.create<IfOp>(loc, newCondition);
+    auto newIf = rewriter.create<IfOp>(loc, op.getResultTypes(), newCondition);
     Block *newIfBlock = newIf.thenBlock();
-    rewriter.eraseOp(newIfBlock->getTerminator());
+    if (newIfBlock)
+      rewriter.eraseOp(newIfBlock->getTerminator());
+    else
+      newIfBlock = rewriter.createBlock(&newIf.getThenRegion());
     rewriter.mergeBlocks(nestedIf.thenBlock(), newIfBlock);
-    rewriter.eraseOp(op);
+    rewriter.setInsertionPointToEnd(newIf.thenBlock());
+    rewriter.replaceOpWithNewOp<YieldOp>(newIf.thenYield(), thenYield);
+    if (!elseYield.empty()) {
+      rewriter.createBlock(&newIf.getElseRegion());
+      rewriter.setInsertionPointToEnd(newIf.elseBlock());
+      rewriter.create<YieldOp>(loc, elseYield);
+    }
+    rewriter.replaceOp(op, newIf.getResults());
     return success();
   }
 };
