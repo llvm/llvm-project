@@ -142,7 +142,7 @@ using RISCVPredefinedMacroT = uint8_t;
 enum RISCVPredefinedMacro : RISCVPredefinedMacroT {
   Basic = 0,
   V = 1 << 1,
-  Zfh = 1 << 2,
+  Zvfh = 1 << 2,
   RV64 = 1 << 3,
   VectorMaxELen64 = 1 << 4,
   VectorMaxELenFp32 = 1 << 5,
@@ -806,7 +806,7 @@ RVVIntrinsic::RVVIntrinsic(
   // Init RISC-V extensions
   for (const auto &T : OutInTypes) {
     if (T->isFloatVector(16) || T->isFloat(16))
-      RISCVPredefinedMacros |= RISCVPredefinedMacro::Zfh;
+      RISCVPredefinedMacros |= RISCVPredefinedMacro::Zvfh;
     if (T->isFloatVector(32))
       RISCVPredefinedMacros |= RISCVPredefinedMacro::VectorMaxELenFp32;
     if (T->isFloatVector(64))
@@ -986,7 +986,7 @@ void RVVEmitter::createHeader(raw_ostream &OS) {
       }
     }
   }
-  OS << "#if defined(__riscv_zfh)\n";
+  OS << "#if defined(__riscv_zvfh)\n";
   for (int Log2LMUL : Log2LMULs) {
     auto T = computeType('x', Log2LMUL, "v");
     if (T.hasValue())
@@ -1344,8 +1344,8 @@ bool RVVEmitter::emitMacroRestrictionStr(RISCVPredefinedMacroT PredefinedMacros,
   ListSeparator LS(" && ");
   if (PredefinedMacros & RISCVPredefinedMacro::V)
     OS << LS << "defined(__riscv_v)";
-  if (PredefinedMacros & RISCVPredefinedMacro::Zfh)
-    OS << LS << "defined(__riscv_zfh)";
+  if (PredefinedMacros & RISCVPredefinedMacro::Zvfh)
+    OS << LS << "defined(__riscv_zvfh)";
   if (PredefinedMacros & RISCVPredefinedMacro::RV64)
     OS << LS << "(__riscv_xlen == 64)";
   if (PredefinedMacros & RISCVPredefinedMacro::VectorMaxELen64)

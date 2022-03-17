@@ -477,9 +477,8 @@ TEST(DiagnosticTest, ClangTidySuppressionComment) {
       #define BAD2 BAD
       double h = BAD2;  // NOLINT
       // NOLINTBEGIN
-      // FIXME: re-enable when NOLINTBEGIN suppresss block is enabled in clangd.
-      // double x = BAD2;
-      // double y = BAD2;
+      double x = BAD2;
+      double y = BAD2;
       // NOLINTEND
 
       // verify no crashes on unmatched nolints.

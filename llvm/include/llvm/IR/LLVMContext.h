@@ -305,6 +305,9 @@ public:
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate&);
 
+  /// Whether we've decided on using opaque pointers or typed pointers yet.
+  bool hasSetOpaquePointersValue() const;
+
   /// Enable opaque pointers. Can only be called before creating the first
   /// pointer type.
   void enableOpaquePointers() const;

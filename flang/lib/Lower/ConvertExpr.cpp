@@ -345,10 +345,16 @@ static fir::ExtendedValue genLoad(fir::FirOpBuilder &builder,
         return builder.create<fir::LoadOp>(loc, fir::getBase(v));
       },
       [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
-        TODO(loc, "genLoad for MutableBoxValue");
+        return genLoad(builder, loc,
+                       fir::factory::genMutableBoxRead(builder, loc, box));
       },
       [&](const fir::BoxValue &box) -> fir::ExtendedValue {
-        TODO(loc, "genLoad for BoxValue");
+        if (box.isUnlimitedPolymorphic())
+          fir::emitFatalError(
+              loc,
+              "lowering attempting to load an unlimited polymorphic entity");
+        return genLoad(builder, loc,
+                       fir::factory::readBoxValue(builder, loc, box));
       },
       [&](const auto &) -> fir::ExtendedValue {
         fir::emitFatalError(
@@ -566,6 +572,25 @@ public:
   ExtValue genMutableBoxValueImpl(const T &) {
     // NULL() case should not be handled here.
     fir::emitFatalError(getLoc(), "NULL() must be lowered in its context");
+  }
+
+  /// A `NULL()` in a position where a mutable box is expected has the same
+  /// semantics as an absent optional box value.
+  ExtValue genMutableBoxValueImpl(const Fortran::evaluate::NullPointer &) {
+    mlir::Location loc = getLoc();
+    auto nullConst = builder.createNullConstant(loc);
+    auto noneTy = mlir::NoneType::get(builder.getContext());
+    auto polyRefTy = fir::LLVMPointerType::get(noneTy);
+    // MutableBoxValue will dereference the box, so create a bogus temporary for
+    // the `nullptr`. The LLVM optimizer will garbage collect the temp.
+    auto temp =
+        builder.createTemporary(loc, polyRefTy, /*shape=*/mlir::ValueRange{});
+    auto nullPtr = builder.createConvert(loc, polyRefTy, nullConst);
+    builder.create<fir::StoreOp>(loc, nullPtr, temp);
+    auto nullBoxTy = builder.getRefType(fir::BoxType::get(noneTy));
+    return fir::MutableBoxValue(builder.createConvert(loc, nullBoxTy, temp),
+                                /*lenParameters=*/mlir::ValueRange{},
+                                /*mutableProperties=*/{});
   }
 
   template <typename T>

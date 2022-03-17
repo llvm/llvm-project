@@ -25,7 +25,7 @@ subroutine ichar_test(c)
   ! CHECK: fir.call @{{.*}}EndIoStatement
   print *, ichar(str(J))
 
-  ! "Magic" 88 below is the value returned by IACHAR (’X’)
+  ! "Magic" 88 below is the ASCII code for `X` and the value returned by IACHAR (’X’)
   ! CHECK: %[[c88:.*]] = arith.constant 88 : i32
   ! CHECK-NEXT: fir.call @{{.*}}OutputInteger32({{.*}}, %[[c88]])
   ! CHECK-NEXT: fir.call @{{.*}}EndIoStatement

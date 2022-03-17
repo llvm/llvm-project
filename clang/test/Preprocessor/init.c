@@ -1247,6 +1247,7 @@
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-scei-ps4 < /dev/null | FileCheck -match-full-lines -check-prefix PS4 %s
 //
 // PS4:#define _LP64 1
+// PS4:#define __BIGGEST_ALIGNMENT__ 32
 // PS4:#define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // PS4:#define __CHAR16_TYPE__ unsigned short
 // PS4:#define __CHAR32_TYPE__ unsigned int

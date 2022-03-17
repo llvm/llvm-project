@@ -345,7 +345,8 @@ void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
 
 StorageLocation *Environment::getStorageLocation(const Expr &E,
                                                  SkipPast SP) const {
-  auto It = ExprToLoc.find(&E);
+  // FIXME: Add a test with parens.
+  auto It = ExprToLoc.find(E.IgnoreParens());
   return It == ExprToLoc.end() ? nullptr : &skip(*It->second, SP);
 }
 

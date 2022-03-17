@@ -8,17 +8,13 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -2400,7 +2396,30 @@ OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
   /// load(memrefcast) -> load
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
-  return OpFoldResult();
+
+  // Fold load from a global constant memref.
+  auto getGlobalOp = memref().getDefiningOp<memref::GetGlobalOp>();
+  if (!getGlobalOp)
+    return {};
+  // Get to the memref.global defining the symbol.
+  auto *symbolTableOp = getGlobalOp->getParentWithTrait<OpTrait::SymbolTable>();
+  if (!symbolTableOp)
+    return {};
+  auto global = dyn_cast_or_null<memref::GlobalOp>(
+      SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.nameAttr()));
+  if (!global)
+    return {};
+  if (auto cstAttr =
+          global.getConstantInitValue().dyn_cast_or_null<DenseElementsAttr>()) {
+    // We can fold only if we know the indices.
+    if (!getAffineMap().isConstant())
+      return {};
+    auto indices = llvm::to_vector<4>(
+        llvm::map_range(getAffineMap().getConstantResults(),
+                        [](int64_t v) -> uint64_t { return v; }));
+    return cstAttr.getValues<Attribute>()[indices];
+  }
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

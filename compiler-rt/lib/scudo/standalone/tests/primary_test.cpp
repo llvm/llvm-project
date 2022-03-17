@@ -105,7 +105,7 @@ template <class BaseConfig> struct ScudoPrimaryTest : public Test {};
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
   using FIXTURE##NAME##_##TYPE = FIXTURE##NAME<TYPE>;                          \
-  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { Run(); }
+  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { FIXTURE##NAME<TYPE>::Run(); }
 
 #define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
   template <class TypeParam>                                                   \
@@ -207,7 +207,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
     V.push_back(std::make_pair(ClassId, P));
   }
   scudo::uptr Found = 0;
-  auto Lambda = [V, &Found](scudo::uptr Block) {
+  auto Lambda = [&V, &Found](scudo::uptr Block) {
     for (const auto &Pair : V) {
       if (Pair.second == reinterpret_cast<void *>(Block))
         Found++;
