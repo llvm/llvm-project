@@ -1399,6 +1399,37 @@ multiclass BufferAtomicPat<string OpPrefix, ValueType vt, string Inst> {
   } // end foreach RtnMode
 }
 
+multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> {
+  foreach RtnMode = ["ret", "noret"] in {
+
+  defvar Op = !cast<SDPatternOperator>("AMDGPUatomic_cmp_swap_global_" # RtnMode
+                                       # "_" # vt.Size);
+  defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
+
+  defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
+    getVregSrcForVT<data_vt>.ret:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
+    offset:$offset);
+  def : Pat<
+    (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset), data_vt:$vdata_in)),
+    !if(!eq(RtnMode, "ret"),
+      (EXTRACT_SUBREG OffsetResDag, !if(!eq(vt, i32), sub0, sub0_sub1)),
+      OffsetResDag)
+  >;
+
+  defvar Addr64ResDag = (!cast<MUBUF_Pseudo>(Inst # "_ADDR64" # InstSuffix)
+    getVregSrcForVT<data_vt>.ret:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
+    SCSrc_b32:$soffset, offset:$offset);
+  def : Pat<
+    (vt (Op (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
+      data_vt:$vdata_in)),
+    !if(!eq(RtnMode, "ret"),
+      (EXTRACT_SUBREG Addr64ResDag, !if(!eq(vt, i32), sub0, sub0_sub1)),
+      Addr64ResDag)
+  >;
+
+  } // end foreach RtnMode
+}
+
 foreach Ty = [i32, i64] in {
 
 defvar Suffix = !if(!eq(Ty, i64), "_X2", "");
@@ -1417,6 +1448,9 @@ defm : BufferAtomicPat<"atomic_inc_global", Ty, "BUFFER_ATOMIC_INC" # Suffix>;
 defm : BufferAtomicPat<"atomic_dec_global", Ty, "BUFFER_ATOMIC_DEC" # Suffix>;
 
 } // end foreach Ty
+
+defm : BufferAtomicCmpSwapPat<i32, v2i32, "BUFFER_ATOMIC_CMPSWAP">;
+defm : BufferAtomicCmpSwapPat<i64, v2i64, "BUFFER_ATOMIC_CMPSWAP_X2">;
 
 multiclass SIBufferAtomicPat<string OpPrefix, ValueType vt, string Inst,
                              list<string> RtnModes = ["ret", "noret"]> {

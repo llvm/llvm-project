@@ -912,6 +912,22 @@ void SIFoldOperands::foldOperand(
   }
 
   if (!FoldingImmLike) {
+    if (OpToFold.isReg() && ST->needsAlignedVGPRs()) {
+      // Don't fold if OpToFold doesn't hold an aligned register.
+      const TargetRegisterClass *RC =
+          TRI->getRegClassForReg(*MRI, OpToFold.getReg());
+      if (TRI->hasVectorRegisters(RC) && OpToFold.getSubReg()) {
+        unsigned SubReg = OpToFold.getSubReg();
+        const TargetRegisterClass *SubRC = TRI->getSubRegClass(RC, SubReg);
+        RC = TRI->getCompatibleSubRegClass(RC, SubRC, SubReg);
+        if (RC)
+          RC = SubRC;
+      }
+
+      if (!RC || !TRI->isProperlyAlignedRC(*RC))
+        return;
+    }
+
     tryAddToFoldList(FoldList, UseMI, UseOpIdx, &OpToFold, TII);
 
     // FIXME: We could try to change the instruction from 64-bit to 32-bit

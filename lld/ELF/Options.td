@@ -583,6 +583,8 @@ def opt_remarks_with_hotness: FF<"opt-remarks-with-hotness">,
   HelpText<"Include hotness information in the optimization remarks file">;
 def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
   HelpText<"The format used for serializing remarks (default: YAML)">;
+def opt_stats_filename: JJ<"stats-file=">,
+  HelpText<"Filename to write statistics to">;
 def save_temps: F<"save-temps">, HelpText<"Save intermediate LTO compilation results">;
 def lto_basic_block_sections: JJ<"lto-basic-block-sections=">,
   HelpText<"Enable basic block sections for LTO">;
