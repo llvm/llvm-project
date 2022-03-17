@@ -74,7 +74,7 @@ class FuncOp:
 
   @property
   def type(self):
-    return FunctionType(TypeAttr(self.attributes["type"]).value)
+    return FunctionType(TypeAttr(self.attributes["function_type"]).value)
 
   @property
   def visibility(self):
@@ -211,7 +211,7 @@ class FuncOp:
           # Recompute the function type.
           return_types = [v.type for v in return_values]
           function_type = FunctionType.get(inputs=inputs, results=return_types)
-          func_op.attributes["type"] = TypeAttr.get(function_type)
+          func_op.attributes["function_type"] = TypeAttr.get(function_type)
 
       def emit_call_op(*call_args):
         call_op = func.CallOp(return_types, FlatSymbolRefAttr.get(symbol_name),

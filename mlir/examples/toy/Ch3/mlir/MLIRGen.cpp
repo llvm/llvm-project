@@ -161,8 +161,8 @@ private:
     } else if (returnOp.hasOperand()) {
       // Otherwise, if this return operation has an operand then add a result to
       // the function.
-      function.setType(builder.getFunctionType(function.getType().getInputs(),
-                                               getType(VarType{})));
+      function.setType(builder.getFunctionType(
+          function.getFunctionType().getInputs(), getType(VarType{})));
     }
 
     return function;

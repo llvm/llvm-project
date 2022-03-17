@@ -1390,7 +1390,7 @@ mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     }
   } else {
     // Wrapper was already built, ensure it has the sought type
-    assert(function.getType() == funcType &&
+    assert(function.getFunctionType() == funcType &&
            "conflict between intrinsic wrapper types");
   }
   return function;
@@ -1435,7 +1435,7 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
     fir::emitFatalError(loc, buffer);
   }
 
-  mlir::FunctionType actualFuncType = funcOp.getType();
+  mlir::FunctionType actualFuncType = funcOp.getFunctionType();
   assert(actualFuncType.getNumResults() == soughtFuncType.getNumResults() &&
          actualFuncType.getNumInputs() == soughtFuncType.getNumInputs() &&
          actualFuncType.getNumResults() == 1 && "Bad intrinsic match");
