@@ -12022,7 +12022,7 @@ static QualType checkArithmeticOrEnumeralCompare(Sema &S, ExprResult &LHS,
 
   // Check for comparisons of floating point operands using != and ==.
   if (Type->hasFloatingRepresentation() && BinaryOperator::isEqualityOp(Opc))
-    S.CheckFloatComparison(Loc, LHS.get(), RHS.get());
+    S.CheckFloatComparison(Loc, LHS.get(), RHS.get(), Opc);
 
   // The result of comparisons is 'bool' in C++, 'int' in C.
   return S.Context.getLogicalOperationType();
@@ -12618,7 +12618,7 @@ QualType Sema::CheckVectorCompareOperands(ExprResult &LHS, ExprResult &RHS,
   if (BinaryOperator::isEqualityOp(Opc) &&
       LHSType->hasFloatingRepresentation()) {
     assert(RHS.get()->getType()->hasFloatingRepresentation());
-    CheckFloatComparison(Loc, LHS.get(), RHS.get());
+    CheckFloatComparison(Loc, LHS.get(), RHS.get(), Opc);
   }
 
   // Return a signed type for the vector.
