@@ -90,16 +90,17 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
     addStats(&pass);
 
   // Sort the statistics by pass name and then by record name.
-  std::vector<std::pair<StringRef, std::vector<Statistic>>> passAndStatistics;
-  for (auto &passIt : mergedStats)
-    passAndStatistics.emplace_back(passIt.first(), std::move(passIt.second));
-  llvm::sort(passAndStatistics, [](const auto &lhs, const auto &rhs) {
-    return lhs.first.compare(rhs.first) < 0;
-  });
+  auto passAndStatistics =
+      llvm::to_vector<16>(llvm::make_pointer_range(mergedStats));
+  llvm::array_pod_sort(passAndStatistics.begin(), passAndStatistics.end(),
+                       [](const decltype(passAndStatistics)::value_type *lhs,
+                          const decltype(passAndStatistics)::value_type *rhs) {
+                         return (*lhs)->getKey().compare((*rhs)->getKey());
+                       });
 
   // Print the timing information sequentially.
   for (auto &statData : passAndStatistics)
-    printPassEntry(os, /*indent=*/2, statData.first, statData.second);
+    printPassEntry(os, /*indent=*/2, statData->first(), statData->second);
 }
 
 /// Print the results in pipeline mode that mirrors the internal pass manager

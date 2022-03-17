@@ -87,10 +87,11 @@ void DebugCounter::print(raw_ostream &os) const {
   // Order the registered counters by name.
   SmallVector<const llvm::StringMapEntry<Counter> *, 16> sortedCounters(
       llvm::make_pointer_range(counters));
-  llvm::sort(sortedCounters, [](const llvm::StringMapEntry<Counter> *lhs,
-                                const llvm::StringMapEntry<Counter> *rhs) {
-    return lhs->getKey() < rhs->getKey();
-  });
+  llvm::array_pod_sort(sortedCounters.begin(), sortedCounters.end(),
+                       [](const decltype(sortedCounters)::value_type *lhs,
+                          const decltype(sortedCounters)::value_type *rhs) {
+                         return (*lhs)->getKey().compare((*rhs)->getKey());
+                       });
 
   os << "DebugCounter counters:\n";
   for (const llvm::StringMapEntry<Counter> *counter : sortedCounters) {
