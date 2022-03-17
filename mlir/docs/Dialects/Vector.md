@@ -98,23 +98,30 @@ Vectors) are welcome future extensions.
 Some existing Arithmetic and Vector Dialect on `n-D` `vector` types comprise:
 
 ```mlir
-%2 = arith.addf %0, %1 : vector<3x7x8xf32> // -> vector<3x7x8xf32> %2 =
-arith.mulf %0, %1 : vector<3x7x8xf32> // -> vector<3x7x8xf32> %2 = vector.splat
-%1 : vector<3x7x8xf32> // -> vector<3x7x8xf32>
+// Produces a vector<3x7x8xf32>
+%a = arith.addf %0, %1 : vector<3x7x8xf32>
+// Produces a vector<3x7x8xf32>
+%b = arith.mulf %0, %1 : vector<3x7x8xf32>
+// Produces a vector<3x7x8xf32>
+%c = vector.splat %1 : vector<3x7x8xf32>
 
-%1 = vector.extract %0[1]: vector<3x7x8xf32> // -> vector<7x8xf32> %1 =
-vector.extract %0[1, 5]: vector<3x7x8xf32> // -> vector<8xf32> %2 =
-vector.outerproduct %0, %1: vector<4xf32>, vector<8xf32> // -> vector<4x8xf32>
-%3 = vector.outerproduct %0, %1, %2: vector<4xf32>, vector<8xf32> // fma when
-adding %2 %3 = vector.strided_slice %0 {offsets = [2, 2], sizes = [2, 2],
-strides = [1, 1]}: vector<4x8x16xf32> // Returns a slice of type
-vector<2x2x16xf32>
+%d = vector.extract %0[1]: vector<3x7x8xf32>     // -> vector<7x8xf32>
+%e = vector.extract %0[1, 5]: vector<3x7x8xf32>  // -> vector<8xf32>
+%f = vector.outerproduct %0, %1: vector<4xf32>, vector<8xf32>      // -> vector<4x8xf32>
+%g = vector.outerproduct %0, %1, %2: vector<4xf32>, vector<8xf32>  // fma when adding %2
 
-%2 = vector.transfer_read %A[%0, %1] {permutation_map = (d0, d1) -> (d0)}:
-memref<7x?xf32>, vector<4xf32>
+// Returns a slice of type vector<2x2x16xf32>
+%h = vector.strided_slice %0
+    {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]}:
+  vector<4x8x16xf32>
 
-vector.transfer_write %f1, %A[%i0, %i1, %i2, %i3] {permutation_map = (d0, d1,
-d2, d3) -> (d3, d1, d0)} : vector<5x4x3xf32>, memref<?x?x?x?xf32>
+%i = vector.transfer_read %A[%0, %1]
+    {permutation_map = (d0, d1) -> (d0)}:
+  memref<7x?xf32>, vector<4xf32>
+
+vector.transfer_write %f1, %A[%i0, %i1, %i2, %i3]
+    {permutation_map = (d0, d1, d2, d3) -> (d3, d1, d0)} :
+  vector<5x4x3xf32>, memref<?x?x?x?xf32>
 ```
 
 The list of Vector is currently undergoing evolutions and is best kept track of
