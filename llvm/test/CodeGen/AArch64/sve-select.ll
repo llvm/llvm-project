@@ -547,8 +547,7 @@ define <vscale x 4 x float> @select_f32_invert_fmul(<vscale x 4 x float> %a, <vs
 ; CHECK-LABEL: select_f32_invert_fmul:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
@@ -561,8 +560,7 @@ define <vscale x 4 x float> @select_f32_invert_fadd(<vscale x 4 x float> %a, <vs
 ; CHECK-LABEL: select_f32_invert_fadd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    not p0.b, p0/z, p1.b
+; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
