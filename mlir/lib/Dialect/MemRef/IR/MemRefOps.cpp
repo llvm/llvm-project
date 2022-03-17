@@ -1275,6 +1275,13 @@ LogicalResult GlobalOp::verify() {
   return success();
 }
 
+ElementsAttr GlobalOp::getConstantInitValue() {
+  auto initVal = initial_value();
+  if (constant() && initVal.hasValue())
+    return initVal.getValue().cast<ElementsAttr>();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // GetGlobalOp
 //===----------------------------------------------------------------------===//
