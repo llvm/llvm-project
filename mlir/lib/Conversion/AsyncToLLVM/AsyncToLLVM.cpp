@@ -1042,8 +1042,9 @@ void ConvertAsyncToLLVMPass::runOnOperation() {
   target.addIllegalDialect<AsyncDialect>();
 
   // Add dynamic legality constraints to apply conversions defined above.
-  target.addDynamicallyLegalOp<FuncOp>(
-      [&](FuncOp op) { return converter.isSignatureLegal(op.getType()); });
+  target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
+    return converter.isSignatureLegal(op.getFunctionType());
+  });
   target.addDynamicallyLegalOp<func::ReturnOp>([&](func::ReturnOp op) {
     return converter.isLegal(op.getOperandTypes());
   });

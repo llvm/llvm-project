@@ -30,7 +30,7 @@ struct SerializerOption {
 
 class Serializer {
 public:
-  Serializer(const API &API, SerializerOption Options = {})
+  Serializer(const APISet &API, SerializerOption Options = {})
       : API(API), Options(Options) {}
 
   Object serialize();
@@ -44,7 +44,7 @@ private:
 
   bool shouldSkip(const APIRecord &Record) const;
 
-  const API &API;
+  const APISet &API;
   SerializerOption Options;
   Array Symbols;
   Array Relationships;

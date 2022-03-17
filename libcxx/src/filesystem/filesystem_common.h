@@ -25,16 +25,14 @@
 # define WIN32_LEAN_AND_MEAN
 # define NOMINMAX
 # include <windows.h>
-#endif
-
-#if !defined(_LIBCPP_WIN32API)
+#else
 # include <dirent.h>   // for DIR & friends
 # include <fcntl.h>    /* values for fchmodat */
 # include <sys/stat.h>
 # include <sys/statvfs.h>
 # include <sys/time.h> // for ::utimes as used in __last_write_time
 # include <unistd.h>
-#endif
+#endif // defined(_LIBCPP_WIN32API)
 
 #include "../include/apple_availability.h"
 
@@ -46,10 +44,9 @@
 #endif
 #endif
 
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wunused-function")
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-function")
 
 #if defined(_LIBCPP_WIN32API)
 #define PS(x) (L##x)
@@ -610,5 +607,7 @@ static file_time_type get_write_time(const WIN32_FIND_DATAW& data) {
 } // end namespace detail
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
+
+_LIBCPP_DIAGNOSTIC_POP
 
 #endif // FILESYSTEM_COMMON_H

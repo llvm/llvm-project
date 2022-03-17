@@ -134,8 +134,8 @@ struct TestFuncSetType
       auto sym = func->getAttrOfType<FlatSymbolRefAttr>("test.set_type_from");
       if (!sym)
         continue;
-      func.setType(
-          symbolTable.lookup<FunctionOpInterface>(sym.getValue()).getType());
+      func.setType(symbolTable.lookup<FunctionOpInterface>(sym.getValue())
+                       .getFunctionType());
     }
   }
 };

@@ -733,8 +733,6 @@ template <class BidirectionalIterator, class Compare>
 #include <type_traits>
 #include <version>
 
-#include <utility> // TODO: Remove this
-
 #include <__algorithm/adjacent_find.h>
 #include <__algorithm/all_of.h>
 #include <__algorithm/any_of.h>

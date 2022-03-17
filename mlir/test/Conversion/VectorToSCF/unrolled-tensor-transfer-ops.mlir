@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(convert-vector-to-scf{full-unroll=true lower-tensors=true})" -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf{full-unroll=true lower-tensors=true})" -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL: func @transfer_read_2d(
 //       CHECK: %[[V_INIT:.*]] = arith.constant dense<-4.200000e+01> : vector<4x9xf32>

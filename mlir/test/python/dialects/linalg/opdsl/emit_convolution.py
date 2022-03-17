@@ -46,7 +46,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[SUM:.+]] = arith.addi %[[OUT]], %[[PROD]] : i32
     # CHECK-NEXT:   linalg.yield %[[SUM]] : i32
     # CHECK-NEXT: -> tensor<1x2x4x1xi32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((1, 4, 16, 1), f32),
         RankedTensorType.get((2, 2, 1), f32),
         RankedTensorType.get((1, 2, 4, 1), i32))

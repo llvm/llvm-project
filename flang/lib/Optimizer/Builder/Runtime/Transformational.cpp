@@ -24,7 +24,7 @@ void fir::runtime::genCshift(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value arrayBox,
                              mlir::Value shiftBox, mlir::Value dimBox) {
   auto cshiftFunc = fir::runtime::getRuntimeFunc<mkRTKey(Cshift)>(loc, builder);
-  auto fTy = cshiftFunc.getType();
+  auto fTy = cshiftFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
@@ -40,7 +40,7 @@ void fir::runtime::genCshiftVector(fir::FirOpBuilder &builder,
                                    mlir::Value arrayBox, mlir::Value shiftBox) {
   auto cshiftFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(CshiftVector)>(loc, builder);
-  auto fTy = cshiftFunc.getType();
+  auto fTy = cshiftFunc.getFunctionType();
 
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
@@ -57,7 +57,7 @@ void fir::runtime::genEoshift(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value dimBox) {
   auto eoshiftFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Eoshift)>(loc, builder);
-  auto fTy = eoshiftFunc.getType();
+  auto fTy = eoshiftFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(6));
@@ -74,7 +74,7 @@ void fir::runtime::genEoshiftVector(fir::FirOpBuilder &builder,
                                     mlir::Value boundBox) {
   auto eoshiftFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(EoshiftVector)>(loc, builder);
-  auto fTy = eoshiftFunc.getType();
+  auto fTy = eoshiftFunc.getFunctionType();
 
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
@@ -91,7 +91,7 @@ void fir::runtime::genMatmul(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value matrixABox,
                              mlir::Value matrixBBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Matmul)>(loc, builder);
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
@@ -106,7 +106,7 @@ void fir::runtime::genPack(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value resultBox, mlir::Value arrayBox,
                            mlir::Value maskBox, mlir::Value vectorBox) {
   auto packFunc = fir::runtime::getRuntimeFunc<mkRTKey(Pack)>(loc, builder);
-  auto fTy = packFunc.getType();
+  auto fTy = packFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
@@ -122,7 +122,7 @@ void fir::runtime::genReshape(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value shapeBox, mlir::Value padBox,
                               mlir::Value orderBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Reshape)>(loc, builder);
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(6));
@@ -137,7 +137,7 @@ void fir::runtime::genSpread(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value sourceBox,
                              mlir::Value dim, mlir::Value ncopies) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Spread)>(loc, builder);
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));
@@ -151,7 +151,7 @@ void fir::runtime::genSpread(fir::FirOpBuilder &builder, mlir::Location loc,
 void fir::runtime::genTranspose(fir::FirOpBuilder &builder, mlir::Location loc,
                                 mlir::Value resultBox, mlir::Value sourceBox) {
   auto func = fir::runtime::getRuntimeFunc<mkRTKey(Transpose)>(loc, builder);
-  auto fTy = func.getType();
+  auto fTy = func.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(3));
@@ -165,7 +165,7 @@ void fir::runtime::genUnpack(fir::FirOpBuilder &builder, mlir::Location loc,
                              mlir::Value resultBox, mlir::Value vectorBox,
                              mlir::Value maskBox, mlir::Value fieldBox) {
   auto unpackFunc = fir::runtime::getRuntimeFunc<mkRTKey(Unpack)>(loc, builder);
-  auto fTy = unpackFunc.getType();
+  auto fTy = unpackFunc.getFunctionType();
   auto sourceFile = fir::factory::locationToFilename(builder, loc);
   auto sourceLine =
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(5));

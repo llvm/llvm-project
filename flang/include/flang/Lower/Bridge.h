@@ -64,10 +64,10 @@ public:
   //===--------------------------------------------------------------------===//
 
   mlir::MLIRContext &getMLIRContext() { return context; }
-  mlir::ModuleOp &getModule() {
-    assert(module && "This bridge is missing an MLIR module");
-    return *module.get();
-  }
+
+  /// Get the ModuleOp. It can never be null, which is asserted in the ctor.
+  mlir::ModuleOp &getModule() { return *module.get(); }
+
   const Fortran::common::IntrinsicTypeDefaultKinds &getDefaultKinds() const {
     return defaultKinds;
   }
@@ -83,8 +83,6 @@ public:
 
   /// Create a folding context. Careful: this is very expensive.
   Fortran::evaluate::FoldingContext createFoldingContext() const;
-
-  bool validModule() { return (module != nullptr); }
 
   //===--------------------------------------------------------------------===//
   // Perform the creation of an mlir::ModuleOp

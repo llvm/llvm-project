@@ -515,8 +515,8 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
   mlir::Location loc = converter.getCurrentLocation();
   mlir::FuncOp func = builder.getFunction();
   mlir::Value tupleArg;
-  for (auto [ty, arg] : llvm::reverse(
-           llvm::zip(func.getType().getInputs(), func.front().getArguments())))
+  for (auto [ty, arg] : llvm::reverse(llvm::zip(
+           func.getFunctionType().getInputs(), func.front().getArguments())))
     if (ty == argTy) {
       tupleArg = arg;
       break;

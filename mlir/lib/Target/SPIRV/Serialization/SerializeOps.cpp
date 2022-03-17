@@ -180,13 +180,13 @@ LogicalResult Serializer::processFuncOp(spirv::FuncOp op) {
 
   uint32_t fnTypeID = 0;
   // Generate type of the function.
-  if (failed(processType(op.getLoc(), op.getType(), fnTypeID)))
+  if (failed(processType(op.getLoc(), op.getFunctionType(), fnTypeID)))
     return failure();
 
   // Add the function definition.
   SmallVector<uint32_t, 4> operands;
   uint32_t resTypeID = 0;
-  auto resultTypes = op.getType().getResults();
+  auto resultTypes = op.getFunctionType().getResults();
   if (resultTypes.size() > 1) {
     return op.emitError("cannot serialize function with multiple return types");
   }

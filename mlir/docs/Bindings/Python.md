@@ -639,7 +639,7 @@ from mlir.dialects import builtin
 with Context():
   module = Module.create()
   with InsertionPoint(module.body), Location.unknown():
-    func = builtin.FuncOp("main", ([], []))
+    func = func.FuncOp("main", ([], []))
 ```
 
 Also see below for constructors generated from ODS.
@@ -660,12 +660,12 @@ with Context():
   with InsertionPoint(module.body), Location.unknown():
     # Operations can be created in a generic way.
     func = Operation.create(
-        "builtin.func", results=[], operands=[],
-        attributes={"type":TypeAttr.get(FunctionType.get([], []))},
+        "func.func", results=[], operands=[],
+        attributes={"function_type":TypeAttr.get(FunctionType.get([], []))},
         successors=None, regions=1)
     # The result will be downcasted to the concrete `OpView` subclass if
     # available.
-    assert isinstance(func, builtin.FuncOp)
+    assert isinstance(func, func.FuncOp)
 ```
 
 Regions are created for an operation when constructing it on the C++ side. They

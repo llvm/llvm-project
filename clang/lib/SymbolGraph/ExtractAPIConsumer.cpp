@@ -39,7 +39,7 @@ public:
       : Context(Context),
         API(Context.getTargetInfo().getTriple(), Context.getLangOpts()) {}
 
-  const API &getAPI() const { return API; }
+  const APISet &getAPI() const { return API; }
 
   bool VisitVarDecl(const VarDecl *Decl) {
     // Skip function parameters.
@@ -165,7 +165,7 @@ private:
   }
 
   ASTContext &Context;
-  API API;
+  APISet API;
 };
 
 class ExtractAPIConsumer : public ASTConsumer {

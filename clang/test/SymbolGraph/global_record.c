@@ -4,7 +4,9 @@
 // RUN: %t/reference.output.json
 // RUN: %clang -extract-api -target arm64-apple-macosx \
 // RUN: %t/input.c -o %t/output.json | FileCheck -allow-empty %s
-// RUN: sed -e "s@\"generator\": \"clang.*\"@\"generator\": \"clang\"@g" \
+
+// Generator version is not consistent across test runs, normalize it.
+// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
 // RUN: %t/output.json >> %t/output-normalized.json
 // RUN: diff %t/reference.output.json %t/output-normalized.json
 
@@ -32,7 +34,7 @@ char unavailable __attribute__((unavailable));
       "minor": 5,
       "patch": 3
     },
-    "generator": "clang"
+    "generator": "?"
   },
   "module": {
     "name": "",
