@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <compare>
 #include <cstddef>
 
 #include "test_macros.h"
@@ -70,6 +71,16 @@ struct BinaryTransform {
     TEST_CONSTEXPR std::nullptr_t operator()(void*, void*) const { return nullptr; }
 };
 
+#if TEST_STD_VER > 17
+struct ThreeWay {
+    int *copies_;
+    constexpr explicit ThreeWay(int *copies) : copies_(copies) {}
+    constexpr ThreeWay(const ThreeWay& rhs) : copies_(rhs.copies_) { *copies_ += 1; }
+    constexpr ThreeWay& operator=(const ThreeWay&) = default;
+    constexpr std::strong_ordering operator()(void*, void*) const { return std::strong_ordering::equal; }
+};
+#endif
+
 TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
 {
     void *a[10] = {};
@@ -94,12 +105,14 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::clamp(value, value, value, Less(&copies)); assert(copies == 0);
 #endif
     (void)std::count_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
+    (void)std::copy_if(first, last, first2, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::equal(first, last, first2, Equal(&copies)); assert(copies == 0);
 #if TEST_STD_VER > 11
     (void)std::equal(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
 #endif
     (void)std::equal_range(first, last, value, Less(&copies)); assert(copies == 0);
     (void)std::find_end(first, last, first2, mid2, Equal(&copies)); assert(copies == 0);
+    //(void)std::find_first_of(first, last, first2, last2, Equal(&copies)); assert(copies == 0);
     (void)std::find_if(first, last, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::find_if_not(first, last, UnaryTrue(&copies)); assert(copies == 0);
     (void)std::for_each(first, last, UnaryVoid(&copies)); assert(copies == 1); copies = 0;
@@ -120,7 +133,9 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     (void)std::is_sorted_until(first, last, Less(&copies)); assert(copies == 0);
     if (!TEST_IS_CONSTANT_EVALUATED) { (void)std::inplace_merge(first, mid, last, Less(&copies)); assert(copies == 0); }
     (void)std::lexicographical_compare(first, last, first2, last2, Less(&copies)); assert(copies == 0);
-    // TODO: lexicographical_compare_three_way
+#if TEST_STD_VER > 17
+    //(void)std::lexicographical_compare_three_way(first, last, first2, last2, ThreeWay(&copies)); assert(copies == 0);
+#endif
     (void)std::lower_bound(first, last, value, Less(&copies)); assert(copies == 0);
     (void)std::make_heap(first, last, Less(&copies)); assert(copies == 0);
     (void)std::max(value, value, Less(&copies)); assert(copies == 0);
