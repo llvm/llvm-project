@@ -112,4 +112,8 @@
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 #cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN}
 
+/* Define if llvm_unreachable should be optimized with undefined behavior
+ * in non assert builds */
+#cmakedefine01 LLVM_UNREACHABLE_OPTIMIZE
+
 #endif
