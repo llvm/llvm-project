@@ -42,7 +42,7 @@ RUN echo 6
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils git gdb
+RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils python3-psutil git gdb
 
 # Locales for gdb and localization tests
 RUN apt-get update && apt-get install -y language-pack-en language-pack-fr \
