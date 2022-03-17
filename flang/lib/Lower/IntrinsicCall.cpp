@@ -485,6 +485,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -735,6 +736,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"substring", asAddr},
        {"back", asValue, handleDynamicOptional},
        {"kind", asValue}}}},
+    {"ior", &I::genIor},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
     {"lbound",
@@ -2510,6 +2512,13 @@ IntrinsicLibrary::genIndex(mlir::Type resultType,
                                    backOpt, kindVal);
   // Read back the result from the mutable box.
   return readAndAddCleanUp(mutBox, resultType, "INDEX");
+}
+
+// IOR
+mlir::Value IntrinsicLibrary::genIor(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return builder.create<mlir::arith::OrIOp>(loc, args[0], args[1]);
 }
 
 // ISHFT
