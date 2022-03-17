@@ -1,3 +1,16 @@
+//===-- UncheckedOptionalAccessModel.cpp ------------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines a dataflow analysis that detects unsafe uses of optional
+//  values.
+//
+//===----------------------------------------------------------------------===//
+
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
@@ -76,6 +89,22 @@ auto isOptionalValueOrConversionConstructor() {
       unless(hasDeclaration(
           cxxConstructorDecl(anyOf(isCopyConstructor(), isMoveConstructor())))),
       argumentCountIs(1), hasArgument(0, unless(hasNulloptType())));
+}
+
+auto isOptionalValueOrConversionAssignment() {
+  return cxxOperatorCallExpr(
+      hasOverloadedOperatorName("="),
+      callee(cxxMethodDecl(ofClass(optionalClass()))),
+      unless(hasDeclaration(cxxMethodDecl(
+          anyOf(isCopyAssignmentOperator(), isMoveAssignmentOperator())))),
+      argumentCountIs(2), hasArgument(1, unless(hasNulloptType())));
+}
+
+auto isOptionalNulloptAssignment() {
+  return cxxOperatorCallExpr(hasOverloadedOperatorName("="),
+                             callee(cxxMethodDecl(ofClass(optionalClass()))),
+                             argumentCountIs(2),
+                             hasArgument(1, hasNulloptType()));
 }
 
 /// Creates a symbolic value for an `optional` value using `HasValueVal` as the
@@ -186,34 +215,78 @@ void assignOptionalValue(const Expr &E, LatticeTransferState &State,
   }
 }
 
+/// Returns a symbolic value for the "has_value" property of an `optional<T>`
+/// value that is constructed/assigned from a value of type `U` or `optional<U>`
+/// where `T` is constructible from `U`.
+BoolValue &
+getValueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
+                             const MatchFinder::MatchResult &MatchRes,
+                             LatticeTransferState &State) {
+  assert(F.getTemplateSpecializationArgs()->size() > 0);
+
+  const int TemplateParamOptionalWrappersCount = countOptionalWrappers(
+      *MatchRes.Context,
+      stripReference(F.getTemplateSpecializationArgs()->get(0).getAsType()));
+  const int ArgTypeOptionalWrappersCount =
+      countOptionalWrappers(*MatchRes.Context, stripReference(E.getType()));
+
+  // Check if this is a constructor/assignment call for `optional<T>` with
+  // argument of type `U` such that `T` is constructible from `U`.
+  if (TemplateParamOptionalWrappersCount == ArgTypeOptionalWrappersCount)
+    return State.Env.getBoolLiteralValue(true);
+
+  // This is a constructor/assignment call for `optional<T>` with argument of
+  // type `optional<U>` such that `T` is constructible from `U`.
+  if (BoolValue *Val = getHasValue(State.Env.getValue(E, SkipPast::Reference)))
+    return *Val;
+  return State.Env.makeAtomicBoolValue();
+}
+
 void transferValueOrConversionConstructor(
     const CXXConstructExpr *E, const MatchFinder::MatchResult &MatchRes,
     LatticeTransferState &State) {
-  assert(E->getConstructor()->getTemplateSpecializationArgs()->size() > 0);
   assert(E->getNumArgs() > 0);
 
-  const int TemplateParamOptionalWrappersCount = countOptionalWrappers(
-      *MatchRes.Context, stripReference(E->getConstructor()
-                                            ->getTemplateSpecializationArgs()
-                                            ->get(0)
-                                            .getAsType()));
-  const int ArgTypeOptionalWrappersCount = countOptionalWrappers(
-      *MatchRes.Context, stripReference(E->getArg(0)->getType()));
-  auto *HasValueVal =
-      (TemplateParamOptionalWrappersCount == ArgTypeOptionalWrappersCount)
-          // This is a constructor call for optional<T> with argument of type U
-          // such that T is constructible from U.
-          ? &State.Env.getBoolLiteralValue(true)
-          // This is a constructor call for optional<T> with argument of type
-          // optional<U> such that T is constructible from U.
-          : getHasValue(State.Env.getValue(*E->getArg(0), SkipPast::Reference));
-  if (HasValueVal == nullptr)
-    HasValueVal = &State.Env.makeAtomicBoolValue();
+  assignOptionalValue(*E, State,
+                      getValueOrConversionHasValue(*E->getConstructor(),
+                                                   *E->getArg(0), MatchRes,
+                                                   State));
+}
 
-  assignOptionalValue(*E, State, *HasValueVal);
+void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
+                        LatticeTransferState &State) {
+  assert(E->getNumArgs() > 0);
+
+  auto *OptionalLoc =
+      State.Env.getStorageLocation(*E->getArg(0), SkipPast::Reference);
+  assert(OptionalLoc != nullptr);
+
+  State.Env.setValue(*OptionalLoc, createOptionalValue(State.Env, HasValueVal));
+
+  // Assign a storage location for the whole expression.
+  State.Env.setStorageLocation(*E, *OptionalLoc);
+}
+
+void transferValueOrConversionAssignment(
+    const CXXOperatorCallExpr *E, const MatchFinder::MatchResult &MatchRes,
+    LatticeTransferState &State) {
+  assert(E->getNumArgs() > 1);
+  transferAssignment(E,
+                     getValueOrConversionHasValue(
+                         *E->getDirectCallee(), *E->getArg(1), MatchRes, State),
+                     State);
+}
+
+void transferNulloptAssignment(const CXXOperatorCallExpr *E,
+                               const MatchFinder::MatchResult &,
+                               LatticeTransferState &State) {
+  transferAssignment(E, State.Env.getBoolLiteralValue(false), State);
 }
 
 auto buildTransferMatchSwitch() {
+  // FIXME: Evaluate the efficiency of matchers. If using matchers results in a
+  // lot of duplicated work (e.g. string comparisons), consider providing APIs
+  // that avoid it through memoization.
   return MatchSwitchBuilder<LatticeTransferState>()
       // Attach a symbolic "has_value" state to optional values that we see for
       // the first time.
@@ -223,7 +296,7 @@ auto buildTransferMatchSwitch() {
       // make_optional
       .CaseOf<CallExpr>(isMakeOptionalCall(), transferMakeOptionalCall)
 
-      // constructors:
+      // optional::optional
       .CaseOf<CXXConstructExpr>(
           isOptionalInPlaceConstructor(),
           [](const CXXConstructExpr *E, const MatchFinder::MatchResult &,
@@ -239,6 +312,12 @@ auto buildTransferMatchSwitch() {
           })
       .CaseOf<CXXConstructExpr>(isOptionalValueOrConversionConstructor(),
                                 transferValueOrConversionConstructor)
+
+      // optional::operator=
+      .CaseOf<CXXOperatorCallExpr>(isOptionalValueOrConversionAssignment(),
+                                   transferValueOrConversionAssignment)
+      .CaseOf<CXXOperatorCallExpr>(isOptionalNulloptAssignment(),
+                                   transferNulloptAssignment)
 
       // optional::value
       .CaseOf<CXXMemberCallExpr>(

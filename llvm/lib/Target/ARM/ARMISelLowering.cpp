@@ -15978,7 +15978,7 @@ static SDValue CombineBaseUpdate(SDNode *N,
   // first, and constant updates are sorted to not break a sequence of
   // strided accesses (if there is any).
   std::stable_sort(BaseUpdates.begin(), BaseUpdates.end(),
-                   [](BaseUpdateUser &LHS, BaseUpdateUser &RHS) {
+                   [](const BaseUpdateUser &LHS, const BaseUpdateUser &RHS) {
                      return LHS.ConstInc < RHS.ConstInc;
                    });
   for (BaseUpdateUser &User : BaseUpdates) {
