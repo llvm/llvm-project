@@ -499,6 +499,7 @@ struct IntrinsicLibrary {
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -786,6 +787,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"random_seed",
      &I::genRandomSeed,
      {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
+     /*isElemental=*/false},
+    {"repeat",
+     &I::genRepeat,
+     {{{"string", asAddr}, {"ncopies", asValue}}},
      /*isElemental=*/false},
     {"reshape",
      &I::genReshape,
@@ -2838,6 +2843,25 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
       return;
     }
   Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
+}
+
+// REPEAT
+fir::ExtendedValue
+IntrinsicLibrary::genRepeat(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value string = builder.createBox(loc, args[0]);
+  mlir::Value ncopies = fir::getBase(args[1]);
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genRepeat(builder, loc, resultIrBox, string, ncopies);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType, "REPEAT");
 }
 
 // RESHAPE
