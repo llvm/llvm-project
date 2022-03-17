@@ -2999,6 +2999,23 @@ cc_library(
 )
 
 cc_library(
+    name = "MlirLspServerSupportLib",
+    srcs = glob(
+        [
+            "lib/Tools/lsp-server-support/*.cpp",
+        ],
+    ),
+    hdrs = glob(
+        [
+            "lib/Tools/lsp-server-support/*.h",
+        ],
+    ),
+    deps = [
+        ":Support",
+    ],
+)
+
+cc_library(
     name = "MlirLspServerLib",
     srcs = glob(
         [
@@ -3014,6 +3031,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":IR",
+        ":MlirLspServerSupportLib",
         ":Parser",
         ":Support",
         "//llvm:Support",
