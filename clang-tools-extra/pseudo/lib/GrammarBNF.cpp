@@ -203,7 +203,7 @@ private:
     const auto &T = G.table();
     for (SymbolID SID = 0; SID < T.Nonterminals.size(); ++SID) {
       auto Range = T.Nonterminals[SID].RuleRange;
-      if (Range.start == Range.end)
+      if (Range.Start == Range.End)
         Diagnostics.push_back(
             llvm::formatv("No rules for nonterminal: {0}", G.symbolName(SID)));
       llvm::StringRef NameRef = T.Nonterminals[SID].Name;
@@ -216,7 +216,7 @@ private:
       if (T.Rules[RID] == T.Rules[RID + 1])
         Diagnostics.push_back(
             llvm::formatv("Duplicate rule: `{0}`", G.dumpRule(RID)));
-      // Warning for nullable non-terminals
+      // Warning for nullable nonterminals
       if (T.Rules[RID].Size == 0)
         Diagnostics.push_back(
             llvm::formatv("Rule `{0}` has a nullable RHS", G.dumpRule(RID)));
