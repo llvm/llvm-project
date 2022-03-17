@@ -1,6 +1,6 @@
 {
   "scopeName": "source.cpp.mlir",
-  "injectionSelector": "L:source.cpp",
+  "injectionSelector": "L:source.cpp -string.quoted.double.cpp -string.quoted.double.raw",
   "patterns": [
     {
       "include": "#mlir-raw-string"
