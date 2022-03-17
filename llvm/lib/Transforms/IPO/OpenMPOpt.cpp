@@ -2798,7 +2798,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
   SmallSetVector<const BasicBlock *, 16> SingleThreadedBBs;
 
   /// Total number of basic blocks in this function.
-  long unsigned NumBBs;
+  long unsigned NumBBs = 0;
 };
 
 ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
