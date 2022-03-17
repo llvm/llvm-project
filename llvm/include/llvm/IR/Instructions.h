@@ -5310,6 +5310,10 @@ public:
   }
 };
 
+//===----------------------------------------------------------------------===//
+//                          Helper functions
+//===----------------------------------------------------------------------===//
+
 /// A helper function that returns the pointer operand of a load or store
 /// instruction. Returns nullptr if not load or store.
 inline const Value *getLoadStorePointerOperand(const Value *V) {
@@ -5363,6 +5367,24 @@ inline Type *getLoadStoreType(Value *I) {
   if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getType();
   return cast<StoreInst>(I)->getValueOperand()->getType();
+}
+
+/// A helper function that returns an atomic operation's sync scope; returns
+/// None if it is not an atomic operation.
+inline Optional<SyncScope::ID> getAtomicSyncScopeID(const Instruction *I) {
+  if (!I->isAtomic())
+    return None;
+  if (auto *AI = dyn_cast<LoadInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<StoreInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<FenceInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<AtomicCmpXchgInst>(I))
+    return AI->getSyncScopeID();
+  if (auto *AI = dyn_cast<AtomicRMWInst>(I))
+    return AI->getSyncScopeID();
+  llvm_unreachable("unhandled atomic operation");
 }
 
 //===----------------------------------------------------------------------===//
