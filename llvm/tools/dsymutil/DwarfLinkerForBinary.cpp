@@ -507,7 +507,8 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
   if (auto *MO = dyn_cast<llvm::object::MachOObjectFile>(OF->getBinary())) {
     // Collect the swift reflection sections before emitting them. This is
     // done so we control the order they're emitted.
-    std::unordered_map<Swift5ReflectionSectionKind, object::SectionRef>
+    std::array<Optional<object::SectionRef>,
+               Swift5ReflectionSectionKind::last + 1>
         SwiftSections;
     for (auto &Section : MO->sections()) {
       llvm::Expected<llvm::StringRef> NameOrErr =
@@ -527,9 +528,9 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
                                Swift5ReflectionSectionKind::fieldmd,
                                Swift5ReflectionSectionKind::reflstr};
     for (auto SectionKind : SectionKindsToEmit) {
-      if (!SwiftSections.count(SectionKind))
+      if (!SwiftSections[SectionKind])
         continue;
-      auto &Section = SwiftSections[SectionKind];
+      auto &Section = *SwiftSections[SectionKind];
       llvm::Expected<llvm::StringRef> SectionContents = Section.getContents();
       if (!SectionContents)
         continue;
