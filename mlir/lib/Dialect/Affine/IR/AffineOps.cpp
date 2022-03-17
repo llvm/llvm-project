@@ -33,7 +33,7 @@ using namespace mlir;
 /// `region` or is an argument of `region`. A value of index type defined at the
 /// top level of a `AffineScope` region is always a valid symbol for all
 /// uses in that region.
-static bool isTopLevelValue(Value value, Region *region) {
+bool mlir::isTopLevelValue(Value value, Region *region) {
   if (auto arg = value.dyn_cast<BlockArgument>())
     return arg.getParentRegion() == region;
   return value.getDefiningOp()->getParentRegion() == region;
