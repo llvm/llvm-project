@@ -2548,7 +2548,13 @@ SDValue SITargetLowering::LowerFormalArguments(
     assert(VA.isRegLoc() && "Parameter must be in a register!");
 
     Register Reg = VA.getLocReg();
-    const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg, VT);
+    const TargetRegisterClass *RC = nullptr;
+    if (AMDGPU::VGPR_32RegClass.contains(Reg))
+      RC = &AMDGPU::VGPR_32RegClass;
+    else if (AMDGPU::SGPR_32RegClass.contains(Reg))
+      RC = &AMDGPU::SGPR_32RegClass;
+    else
+      llvm_unreachable("Unexpected register class in LowerFormalArguments!");
     EVT ValVT = VA.getValVT();
 
     Reg = MF.addLiveIn(Reg, RC);
