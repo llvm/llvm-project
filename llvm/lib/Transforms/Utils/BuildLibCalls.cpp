@@ -247,6 +247,13 @@ static bool setAllocSize(Function &F, unsigned ElemSizeArg,
   return true;
 }
 
+static bool setAllocFamily(Function &F, StringRef Family) {
+  if (F.hasFnAttribute("alloc-family"))
+    return false;
+  F.addFnAttr("alloc-family", Family);
+  return true;
+}
+
 bool llvm::inferLibFuncAttributes(Module *M, StringRef Name,
                                   const TargetLibraryInfo &TLI) {
   Function *F = M->getFunction(Name);
@@ -383,6 +390,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setArgNoUndef(F, 1);
     LLVM_FALLTHROUGH;
   case LibFunc_strdup:
+    Changed |= setAllocFamily(F, "malloc");
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
@@ -444,7 +452,10 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     LLVM_FALLTHROUGH;
   case LibFunc_valloc:
   case LibFunc_malloc:
+    Changed |= setAllocFamily(F, "malloc");
+    LLVM_FALLTHROUGH;
   case LibFunc_vec_malloc:
+    Changed |= setAllocFamily(F, "vec_malloc");
     Changed |= setAllocSize(F, 0, None);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
@@ -508,6 +519,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyReadsMemory(F, 1);
     return Changed;
   case LibFunc_memalign:
+    Changed |= setAllocFamily(F, "malloc");
     Changed |= setAllocSize(F, 1, None);
     Changed |= setAlignedAllocParam(F, 0);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
@@ -529,8 +541,11 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_realloc:
-  case LibFunc_vec_realloc:
   case LibFunc_reallocf:
+    Changed |= setAllocFamily(F, "malloc");
+    LLVM_FALLTHROUGH;
+  case LibFunc_vec_realloc:
+    Changed |= setAllocFamily(F, "vec_malloc");
     Changed |= setAllocatedPointerParam(F, 0);
     Changed |= setAllocSize(F, 1, None);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
@@ -605,7 +620,10 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setOnlyWritesMemory(F, 0);
     return Changed;
   case LibFunc_calloc:
+    Changed |= setAllocFamily(F, "malloc");
+    LLVM_FALLTHROUGH;
   case LibFunc_vec_calloc:
+    Changed |= setAllocFamily(F, "vec_malloc");
     Changed |= setAllocSize(F, 0, 1);
     Changed |= setOnlyAccessesInaccessibleMemory(F);
     Changed |= setRetAndArgsNoUndef(F);
@@ -664,7 +682,10 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 0);
     return Changed;
   case LibFunc_free:
+    Changed |= setAllocFamily(F, "malloc");
+    LLVM_FALLTHROUGH;
   case LibFunc_vec_free:
+    Changed |= setAllocFamily(F, "vec_malloc");
     Changed |= setAllocatedPointerParam(F, 0);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMem(F);
     Changed |= setArgsNoUndef(F);
