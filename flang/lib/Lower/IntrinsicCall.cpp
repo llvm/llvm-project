@@ -442,6 +442,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
@@ -481,6 +483,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -491,6 +494,7 @@ struct IntrinsicLibrary {
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
@@ -623,6 +627,8 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"btest", &I::genBtest},
+    {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
     {"count",
      &I::genCount,
@@ -718,6 +724,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"mod", &I::genMod},
     {"modulo", &I::genModulo},
+    {"nearest", &I::genNearest},
     {"nint", &I::genNint},
     {"not", &I::genNot},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
@@ -756,6 +763,10 @@ static constexpr IntrinsicHandler handlers[]{
        {"pad", asBox, handleDynamicOptional},
        {"order", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"scale",
+     &I::genScale,
+     {{{"x", asValue}, {"i", asValue}}},
+     /*isElemental=*/true},
     {"scan",
      &I::genScan,
      {{{"string", asAddr},
@@ -896,6 +907,9 @@ static mlir::FunctionType genIntF32FuncType(mlir::MLIRContext *context) {
 static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"abs", "llvm.fabs.f32", genF32F32FuncType},
     {"abs", "llvm.fabs.f64", genF64F64FuncType},
+    // ceil is used for CEILING but is different, it returns a real.
+    {"ceil", "llvm.ceil.f32", genF32F32FuncType},
+    {"ceil", "llvm.ceil.f64", genF64F64FuncType},
     // llvm.floor is used for FLOOR, but returns real.
     {"floor", "llvm.floor.f32", genF32F32FuncType},
     {"floor", "llvm.floor.f64", genF64F64FuncType},
@@ -1769,6 +1783,35 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
   return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
 }
 
+// BTEST
+mlir::Value IntrinsicLibrary::genBtest(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // A conformant BTEST(I,POS) call satisfies:
+  //     POS >= 0
+  //     POS < BIT_SIZE(I)
+  // Return:  (I >> POS) & 1
+  assert(args.size() == 2);
+  mlir::Type argType = args[0].getType();
+  mlir::Value pos = builder.createConvert(loc, argType, args[1]);
+  auto shift = builder.create<mlir::arith::ShRUIOp>(loc, args[0], pos);
+  mlir::Value one = builder.createIntegerConstant(loc, argType, 1);
+  auto res = builder.create<mlir::arith::AndIOp>(loc, shift, one);
+  return builder.createConvert(loc, resultType, res);
+}
+
+// CEILING
+mlir::Value IntrinsicLibrary::genCeiling(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  // Optional KIND argument.
+  assert(args.size() >= 1);
+  mlir::Value arg = args[0];
+  // Use ceil that is not an actual Fortran intrinsic but that is
+  // an llvm intrinsic that does the same, but return a floating
+  // point.
+  mlir::Value ceil = genRuntimeCall("ceil", arg.getType(), {arg});
+  return builder.createConvert(loc, resultType, ceil);
+}
+
 // CHAR
 fir::ExtendedValue
 IntrinsicLibrary::genChar(mlir::Type type,
@@ -2502,6 +2545,18 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                remainder);
 }
 
+// NEAREST
+mlir::Value IntrinsicLibrary::genNearest(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value realX = fir::getBase(args[0]);
+  mlir::Value realS = fir::getBase(args[1]);
+
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genNearest(builder, loc, realX, realS));
+}
+
 // NINT
 mlir::Value IntrinsicLibrary::genNint(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
@@ -2655,6 +2710,18 @@ IntrinsicLibrary::genReshape(mlir::Type resultType,
 
   return readAndAddCleanUp(resultMutableBox, resultType,
                            "unexpected result for RESHAPE");
+}
+
+// SCALE
+mlir::Value IntrinsicLibrary::genScale(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value realX = fir::getBase(args[0]);
+  mlir::Value intI = fir::getBase(args[1]);
+
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genScale(builder, loc, realX, intI));
 }
 
 // SCAN
