@@ -1439,3 +1439,40 @@ loop:                                             ; preds = %loop, %entry
 exit:                                             ; preds = %loop
   ret void
 }
+
+define void @test22(i16* %ptr) {
+; CHECK-LABEL: @test22(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i16 0, i16* [[PTR:%.*]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDVARS:%.*]] = trunc i32 [[IV]] to i16
+; CHECK-NEXT:    [[VAL_INC:%.*]] = add i16 [[INDVARS]], 1
+; CHECK-NEXT:    store i16 [[VAL_INC]], i16* [[PTR]], align 4
+; CHECK-NEXT:    [[IV_WIDE:%.*]] = zext i32 [[IV]] to i64
+; CHECK-NEXT:    call void @foo(i64 [[IV_WIDE]])
+; CHECK-NEXT:    [[IV_NEXT]] = zext i16 [[VAL_INC]] to i32
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp eq i32 [[IV]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i16 0, i16* %ptr, align 4
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %val = phi i16 [ %val.inc, %loop ], [ 0, %entry ]
+  %iv = phi i32 [ %iv.next, %loop ], [ 0, %entry ]
+  %val.inc = add i16 %val, 1
+  store i16 %val.inc, i16* %ptr, align 4
+  %iv.wide = zext i32 %iv to i64
+  call void @foo(i64 %iv.wide)
+  %iv.next = zext i16 %val.inc to i32
+  %loop.cond = icmp eq i32 %iv, 1000
+  br i1 %loop.cond, label %exit, label %loop
+
+exit:                                             ; preds = %loop
+  ret void
+}
