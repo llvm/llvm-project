@@ -1819,6 +1819,12 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
 
   if (PointerType *PTy = dyn_cast<PointerType>(Ty)) {
     if (Attrs.hasAttribute(Attribute::ByVal)) {
+      if (Attrs.hasAttribute(Attribute::Alignment)) {
+        Align AttrAlign = Attrs.getAlignment().valueOrOne();
+        Align MaxAlign(ParamMaxAlignment);
+        Assert(AttrAlign <= MaxAlign,
+               "Attribute 'align' exceed the max size 2^14", V);
+      }
       SmallPtrSet<Type *, 4> Visited;
       Assert(Attrs.getByValType()->isSized(&Visited),
              "Attribute 'byval' does not support unsized types!", V);
@@ -3154,7 +3160,7 @@ void Verifier::visitCallBase(CallBase &Call) {
       return;
     Align ABIAlign = DL.getABITypeAlign(Ty);
     Align MaxAlign(ParamMaxAlignment);
-    Assert(ABIAlign < MaxAlign,
+    Assert(ABIAlign <= MaxAlign,
            "Incorrect alignment of " + Message + " to called function!", Call);
   };
 
