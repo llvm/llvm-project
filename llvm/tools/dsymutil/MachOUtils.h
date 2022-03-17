@@ -37,13 +37,29 @@ struct ArchAndFile {
   ~ArchAndFile();
 };
 
+struct DwarfRelocationApplicationInfo {
+  // The position in the stream that should be patched, starting from the
+  // Dwarf's segment file address.
+  uint64_t AddressFromDwarfStart;
+  int32_t Value;
+  // If we should subtract the Dwarf segment's VM address from value before
+  // writing it.
+  bool ShouldSubtractDwarfVM;
+
+  DwarfRelocationApplicationInfo(uint64_t AddressFromDwarfVM, uint32_t Value,
+                                 bool ShouldSubtractDwarfVM)
+      : AddressFromDwarfStart(AddressFromDwarfVM), Value(Value),
+        ShouldSubtractDwarfVM(ShouldSubtractDwarfVM) {}
+};
+
 bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName, const LinkOptions &,
                              StringRef SDKPath);
-
-bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                           const DebugMap &DM, SymbolMapTranslator &Translator,
-                           MCStreamer &MS, raw_fd_ostream &OutFile);
+bool generateDsymCompanion(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
+    SymbolMapTranslator &Translator, MCStreamer &MS, raw_fd_ostream &OutFile,
+    const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
+        &RelocationsToApply);
 
 std::string getArchName(StringRef Arch);
 } // namespace MachOUtils
