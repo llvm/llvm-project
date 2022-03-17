@@ -26,6 +26,9 @@ class AffineApplyOp;
 class AffineBound;
 class AffineValueMap;
 
+/// TODO: These should be renamed if they are on the mlir namespace.
+///       Ideally, they should go in a mlir::affine:: namespace.
+
 /// A utility function to check if a value is defined at the top level of an
 /// op with trait `AffineScope` or is a region argument for such an op. A value
 /// of index type defined at the top level is always a valid symbol for all its
