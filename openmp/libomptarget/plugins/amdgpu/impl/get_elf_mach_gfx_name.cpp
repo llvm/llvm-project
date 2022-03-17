@@ -38,8 +38,12 @@ const char *get_elf_mach_gfx_name(uint32_t EFlags) {
     return "gfx908";
   case EF_AMDGPU_MACH_AMDGCN_GFX909:
     return "gfx909";
+  case EF_AMDGPU_MACH_AMDGCN_GFX90A:
+    return "gfx90a";
   case EF_AMDGPU_MACH_AMDGCN_GFX90C:
     return "gfx90c";
+  case EF_AMDGPU_MACH_AMDGCN_GFX940:
+    return "gfx940";
   case EF_AMDGPU_MACH_AMDGCN_GFX1010:
     return "gfx1010";
   case EF_AMDGPU_MACH_AMDGCN_GFX1011:
