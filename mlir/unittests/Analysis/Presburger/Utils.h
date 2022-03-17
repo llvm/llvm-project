@@ -15,8 +15,10 @@
 
 #include "../../Dialect/Affine/Analysis/AffineStructuresParser.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
+#include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/LLVM.h"
 
 #include <gtest/gtest.h>
 
@@ -31,6 +33,51 @@ inline IntegerPolyhedron parsePoly(StringRef str) {
   FailureOr<IntegerPolyhedron> poly = parseIntegerSetToFAC(str, &context);
   EXPECT_TRUE(succeeded(poly));
   return *poly;
+}
+
+/// Parse a list of StringRefs to IntegerRelation and combine them into a
+/// PresburgerSet be using the union operation. It is expected that the strings
+/// are all valid IntegerSet representation and that all of them have the same
+/// number of dimensions as is specified by the numDims argument.
+inline PresburgerSet
+parsePresburgerSetFromPolyStrings(unsigned numDims, ArrayRef<StringRef> strs) {
+  PresburgerSet set = PresburgerSet::getEmpty(numDims);
+  for (StringRef str : strs)
+    set.unionInPlace(parsePoly(str));
+  return set;
+}
+
+inline Matrix makeMatrix(unsigned numRow, unsigned numColumns,
+                         ArrayRef<SmallVector<int64_t, 8>> matrix) {
+  Matrix results(numRow, numColumns);
+  assert(matrix.size() == numRow);
+  for (unsigned i = 0; i < numRow; ++i) {
+    assert(matrix[i].size() == numColumns &&
+           "Output expression has incorrect dimensionality!");
+    for (unsigned j = 0; j < numColumns; ++j)
+      results(i, j) = matrix[i][j];
+  }
+  return results;
+}
+
+/// Construct a PWMAFunction given the dimensionalities and an array describing
+/// the list of pieces. Each piece is given by a string describing the domain
+/// and a 2D array that represents the output.
+inline PWMAFunction parsePWMAF(
+    unsigned numInputs, unsigned numOutputs,
+    ArrayRef<std::pair<StringRef, SmallVector<SmallVector<int64_t, 8>, 8>>>
+        data,
+    unsigned numSymbols = 0) {
+  static MLIRContext context;
+
+  PWMAFunction result(numInputs - numSymbols, numSymbols, numOutputs);
+  for (const auto &pair : data) {
+    IntegerPolyhedron domain = parsePoly(pair.first);
+
+    result.addPiece(
+        domain, makeMatrix(numOutputs, domain.getNumIds() + 1, pair.second));
+  }
+  return result;
 }
 
 /// lhs and rhs represent non-negative integers or positive infinity. The
