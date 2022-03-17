@@ -118,7 +118,7 @@ template <typename T> using ScudoCombinedDeathTest = ScudoCombinedTest<T>;
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
   using FIXTURE##NAME##_##TYPE = FIXTURE##NAME<scudo::TYPE>;                   \
-  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { Run(); }
+  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { FIXTURE##NAME<scudo::TYPE>::Run(); }
 
 #define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
   template <class TypeParam>                                                   \
@@ -643,7 +643,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, OddEven) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemInit) {
   auto *Allocator = this->Allocator.get();
 
-  std::vector<void *> Ptrs(65536, nullptr);
+  std::vector<void *> Ptrs(65536);
 
   Allocator->setOption(scudo::Option::ThreadDisableMemInit, 1);
 

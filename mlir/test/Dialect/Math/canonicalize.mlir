@@ -73,3 +73,12 @@ func @log2_nofold2_64() -> f64 {
   %r = math.log2 %c : f64
   return %r : f64
 }
+
+// CHECK-LABEL: @powf_fold
+// CHECK: %[[cst:.+]] = arith.constant 4.000000e+00 : f32
+// CHECK: return %[[cst]]
+func @powf_fold() -> f32 {
+  %c = arith.constant 2.0 : f32
+  %r = math.powf %c, %c : f32
+  return %r : f32
+}

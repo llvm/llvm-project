@@ -11436,12 +11436,40 @@ Sema::CheckReturnValExpr(Expr *RetValExp, QualType lhsType,
     CheckPPCMMAType(RetValExp->getType(), ReturnLoc);
 }
 
-//===--- CHECK: Floating-Point comparisons (-Wfloat-equal) ---------------===//
+/// Check for comparisons of floating-point values using == and !=. Issue a
+/// warning if the comparison is not likely to do what the programmer intended.
+void Sema::CheckFloatComparison(SourceLocation Loc, Expr *LHS, Expr *RHS,
+                                BinaryOperatorKind Opcode) {
+  // Match and capture subexpressions such as "(float) X == 0.1".
+  FloatingLiteral *FPLiteral;
+  CastExpr *FPCast;
+  auto getCastAndLiteral = [&FPLiteral, &FPCast](Expr *L, Expr *R) {
+    FPLiteral = dyn_cast<FloatingLiteral>(L->IgnoreParens());
+    FPCast = dyn_cast<CastExpr>(R->IgnoreParens());
+    return FPLiteral && FPCast;
+  };
 
-/// Check for comparisons of floating point operands using != and ==.
-/// Issue a warning if these are no self-comparisons, as they are not likely
-/// to do what the programmer intended.
-void Sema::CheckFloatComparison(SourceLocation Loc, Expr* LHS, Expr *RHS) {
+  if (getCastAndLiteral(LHS, RHS) || getCastAndLiteral(RHS, LHS)) {
+    auto *SourceTy = FPCast->getSubExpr()->getType()->getAs<BuiltinType>();
+    auto *TargetTy = FPLiteral->getType()->getAs<BuiltinType>();
+    if (SourceTy && TargetTy && SourceTy->isFloatingPoint() &&
+        TargetTy->isFloatingPoint()) {
+      bool Lossy;
+      llvm::APFloat TargetC = FPLiteral->getValue();
+      TargetC.convert(Context.getFloatTypeSemantics(QualType(SourceTy, 0)),
+                      llvm::APFloat::rmNearestTiesToEven, &Lossy);
+      if (Lossy) {
+        // If the literal cannot be represented in the source type, then a
+        // check for == is always false and check for != is always true.
+        Diag(Loc, diag::warn_float_compare_literal)
+            << (Opcode == BO_EQ) << QualType(SourceTy, 0)
+            << LHS->getSourceRange() << RHS->getSourceRange();
+        return;
+      }
+    }
+  }
+
+  // Match a more general floating-point equality comparison (-Wfloat-equal).
   Expr* LeftExprSansParen = LHS->IgnoreParenImpCasts();
   Expr* RightExprSansParen = RHS->IgnoreParenImpCasts();
 

@@ -363,6 +363,26 @@ func @for_yields_3(%lb : index, %ub : index, %step : index) -> (i32, i32, i32) {
 
 // -----
 
+// Test that an empty loop which iterates at least once and only returns
+// values defined outside of the loop is folded away.
+func @for_yields_4() -> i32 {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %a = arith.constant 3 : i32
+  %b = arith.constant 4 : i32
+  %r = scf.for %i = %c0 to %c2 step %c1 iter_args(%0 = %a) -> i32 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// CHECK-LABEL:   func @for_yields_4
+//  CHECK-NEXT:     %[[b:.*]] = arith.constant 4 : i32
+//  CHECK-NEXT:     return %[[b]] : i32
+
+// -----
+
 // CHECK-LABEL: @replace_true_if
 func @replace_true_if() {
   %true = arith.constant true

@@ -265,6 +265,8 @@ static DecodeStatus DecodeSORegMemOperand(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeAddrMode3Instruction(MCInst &Inst,unsigned Insn,
                                uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeTSBInstruction(MCInst &Inst, unsigned Insn,
+                                         uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSORegImmOperand(MCInst &Inst, unsigned Insn,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeSORegRegOperand(MCInst &Inst, unsigned Insn,
@@ -2011,6 +2013,19 @@ static DecodeStatus DecodeSORegMemOperand(MCInst &Inst, unsigned Val,
   Inst.addOperand(MCOperand::createImm(shift));
 
   return S;
+}
+
+static DecodeStatus DecodeTSBInstruction(MCInst &Inst, unsigned Insn,
+                                         uint64_t Address,
+                                         const void *Decoder) {
+  if (Inst.getOpcode() != ARM::TSB && Inst.getOpcode() != ARM::t2TSB)
+    return MCDisassembler::Fail;
+
+  // The "csync" operand is not encoded into the "tsb" instruction (as this is
+  // the only available operand), but LLVM expects the instruction to have one
+  // operand, so we need to add the csync when decoding.
+  Inst.addOperand(MCOperand::createImm(ARM_TSB::CSYNC));
+  return MCDisassembler::Success;
 }
 
 static DecodeStatus

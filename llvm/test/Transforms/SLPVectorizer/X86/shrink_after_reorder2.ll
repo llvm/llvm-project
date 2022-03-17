@@ -21,11 +21,11 @@ define void @foo(%class.e* %this, %struct.a* %p, i32 %add7) {
 ; CHECK-NEXT:    i32 2, label [[SW_BB]]
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[G]] to <2 x i32>*
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, <2 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[SHRINK_SHUFFLE:%.*]] = shufflevector <4 x i32> [[SHUFFLE]], <4 x i32> poison, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = xor <2 x i32> [[SHRINK_SHUFFLE]], <i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[SHRINK_SHUFFLE]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[G]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i32>, <2 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add <2 x i32> [[TMP4]], [[TMP2]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
 ; CHECK:       sw.epilog:
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ undef, [[ENTRY:%.*]] ], [ [[TMP5]], [[SW_BB]] ]

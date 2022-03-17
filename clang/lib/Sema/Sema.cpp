@@ -257,6 +257,12 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     PP.setCurrentFPEvalMethod(SourceLocation(),
                               getLangOpts().getFPEvalMethod());
   CurFPFeatures.setFPEvalMethod(PP.getCurrentFPEvalMethod());
+  // When `-ffast-math` option is enabled, it triggers several driver math
+  // options to be enabled. Among those, only one the following two modes
+  // affect the eval-method:  reciprocal or reassociate.
+  if (getLangOpts().AllowFPReassoc || getLangOpts().AllowRecip)
+    PP.setCurrentFPEvalMethod(SourceLocation(),
+                              LangOptions::FEM_Indeterminable);
 }
 
 // Anchor Sema's type info to this TU.
