@@ -24,7 +24,7 @@ const int OPR_ID_UNKNOWN = -1;
 const int OPR_ID_UNSUPPORTED = -2;
 
 template <class T> struct CustomOperand {
-  StringLiteral Name = "";
+  StringLiteral Name;
   int Encoding = 0;
   bool (*Cond)(T Context) = nullptr;
 };
