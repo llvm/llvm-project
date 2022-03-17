@@ -293,6 +293,7 @@ to it.
 A code snippet for such a walk looks like this:
 
 .. code-block:: c++
+
   MemoryDef *Def;  // find who's optimized or defining for this MemoryDef
   for (auto& U : Def->uses()) {
     MemoryAccess *MA = cast<MemoryAccess>(Use.getUser());
@@ -309,6 +310,7 @@ clobbered by that store by walking the immediate and transitive uses of
 the store.
 
 .. code-block:: c++
+
   checkUses(MemoryAccess *Def) { // Def can be a MemoryDef or a MemoryPhi.
     for (auto& U : Def->uses()) {
       MemoryAccess *MA = cast<MemoryAccess>(Use.getUser());
