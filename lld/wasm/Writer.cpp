@@ -1010,6 +1010,8 @@ void Writer::createSyntheticInitFunctions() {
         make<SyntheticFunction>(nullSignature,
                                 "__wasm_apply_global_tls_relocs"));
     WasmSym::applyGlobalTLSRelocs->markLive();
+    // TLS relocations depend on  the __tls_base symbols
+    WasmSym::tlsBase->markLive();
   }
 
   if (config->isPic ||
@@ -1438,6 +1440,7 @@ void Writer::createInitTLSFunction() {
 
       writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
       writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "global index");
+      WasmSym::tlsBase->markLive();
 
       // FIXME(wvo): this local needs to be I64 in wasm64, or we need an extend op.
       writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
