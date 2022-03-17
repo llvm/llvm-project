@@ -17623,10 +17623,12 @@ static SDValue trySwapVSelectOperands(SDNode *N, SelectionDAG &DAG) {
   if (SelectA != SelectB.getOperand(0))
     return SDValue();
 
-  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC->getOperand(2))->get();
-  auto InverseSetCC = DAG.getSetCC(
-      SDLoc(SetCC), SetCC.getValueType(), SetCC.getOperand(0),
-      SetCC.getOperand(1), ISD::getSetCCInverse(CC, SetCC.getValueType()));
+  ISD::CondCode CC = cast<CondCodeSDNode>(SetCC.getOperand(2))->get();
+  ISD::CondCode InverseCC =
+      ISD::getSetCCInverse(CC, SetCC.getOperand(0).getValueType());
+  auto InverseSetCC =
+      DAG.getSetCC(SDLoc(SetCC), SetCC.getValueType(), SetCC.getOperand(0),
+                   SetCC.getOperand(1), InverseCC);
 
   return DAG.getNode(ISD::VSELECT, SDLoc(N), NTy,
                      {InverseSetCC, SelectB, SelectA});

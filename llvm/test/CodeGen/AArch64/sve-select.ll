@@ -547,7 +547,8 @@ define <vscale x 4 x float> @select_f32_invert_fmul(<vscale x 4 x float> %a, <vs
 ; CHECK-LABEL: select_f32_invert_fmul:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
 ; CHECK-NEXT:    fmul z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
@@ -560,7 +561,8 @@ define <vscale x 4 x float> @select_f32_invert_fadd(<vscale x 4 x float> %a, <vs
 ; CHECK-LABEL: select_f32_invert_fadd:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    fcmeq p1.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    not p0.b, p0/z, p1.b
 ; CHECK-NEXT:    fadd z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
@@ -569,14 +571,14 @@ define <vscale x 4 x float> @select_f32_invert_fadd(<vscale x 4 x float> %a, <vs
   ret <vscale x 4 x float> %sel
 }
 
-define <vscale x 4 x float> @select_f32_invert_fsub(<vscale x 4 x float> %a, <vscale x 4 x float> %b) {
+define <vscale x 4 x float> @select_f32_invert_fsub(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x i32> %c) {
 ; CHECK-LABEL: select_f32_invert_fsub:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fcmne p0.s, p0/z, z0.s, #0.0
+; CHECK-NEXT:    cmpne p0.s, p0/z, z2.s, #0
 ; CHECK-NEXT:    fsub z0.s, p0/m, z0.s, z1.s
 ; CHECK-NEXT:    ret
-  %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
+  %p = icmp eq <vscale x 4 x i32> %c, zeroinitializer
   %fsub = fsub <vscale x 4 x float> %a, %b
   %sel = select <vscale x 4 x i1> %p, <vscale x 4 x float> %a, <vscale x 4 x float> %fsub
   ret <vscale x 4 x float> %sel
