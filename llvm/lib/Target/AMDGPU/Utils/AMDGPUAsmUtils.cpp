@@ -56,7 +56,7 @@ namespace Hwreg {
 // Disable lint checking for this block since it makes the table unreadable.
 // NOLINTBEGIN
 const CustomOperand<const MCSubtargetInfo &> Opr[] = {
-  {},
+  {{""}},
   {{"HW_REG_MODE"},          ID_MODE},
   {{"HW_REG_STATUS"},        ID_STATUS},
   {{"HW_REG_TRAPSTS"},       ID_TRAPSTS},
@@ -68,13 +68,13 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_GPR_ALLOC"},     ID_GPR_ALLOC},
   {{"HW_REG_LDS_ALLOC"},     ID_LDS_ALLOC},
   {{"HW_REG_IB_STS"},        ID_IB_STS},
-  {},
-  {},
-  {},
-  {},
-  {},
-  {},
-  {},
+  {{""}},
+  {{""}},
+  {{""}},
+  {{""}},
+  {{""}},
+  {{""}},
+  {{""}},
   {{"HW_REG_SH_MEM_BASES"},  ID_MEM_BASES,   isGFX9Plus},
   {{"HW_REG_TBA_LO"},        ID_TBA_LO,      isGFX9_GFX10},
   {{"HW_REG_TBA_HI"},        ID_TBA_HI,      isGFX9_GFX10},
@@ -90,9 +90,9 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_HW_ID1"},        ID_HW_ID1,      isGFX10Plus},
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
-  {},
-  {},
-  {},
+  {{""}},
+  {{""}},
+  {{""}},
   {{"HW_REG_SHADER_CYCLES"}, ID_SHADER_CYCLES, isGFX10_BEncoding},
 
   // GFX940 specific registers
