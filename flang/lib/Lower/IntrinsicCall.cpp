@@ -486,11 +486,13 @@ struct IntrinsicLibrary {
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
@@ -729,6 +731,13 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genRandomSeed,
      {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
      /*isElemental=*/false},
+    {"reshape",
+     &I::genReshape,
+     {{{"source", asBox},
+       {"shape", asBox},
+       {"pad", asBox, handleDynamicOptional},
+       {"order", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"scan",
      &I::genScan,
      {{{"string", asAddr},
@@ -742,6 +751,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
+     /*isElemental=*/false},
+    {"spread",
+     &I::genSpread,
+     {{{"source", asAddr}, {"dim", asValue}, {"ncopies", asValue}}},
      /*isElemental=*/false},
     {"sum",
      &I::genSum,
@@ -2501,6 +2514,52 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
   Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
 }
 
+// RESHAPE
+fir::ExtendedValue
+IntrinsicLibrary::genReshape(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+
+  // Handle source argument
+  mlir::Value source = builder.createBox(loc, args[0]);
+
+  // Handle shape argument
+  mlir::Value shape = builder.createBox(loc, args[1]);
+  assert(fir::BoxValue(shape).rank() == 1);
+  mlir::Type shapeTy = shape.getType();
+  mlir::Type shapeArrTy = fir::dyn_cast_ptrOrBoxEleTy(shapeTy);
+  auto resultRank = shapeArrTy.cast<fir::SequenceType>().getShape();
+
+  assert(resultRank[0] != fir::SequenceType::getUnknownExtent() &&
+         "shape arg must have constant size");
+
+  // Handle optional pad argument
+  mlir::Value pad = isAbsent(args[2])
+                        ? builder.create<fir::AbsentOp>(
+                              loc, fir::BoxType::get(builder.getI1Type()))
+                        : builder.createBox(loc, args[2]);
+
+  // Handle optional order argument
+  mlir::Value order = isAbsent(args[3])
+                          ? builder.create<fir::AbsentOp>(
+                                loc, fir::BoxType::get(builder.getI1Type()))
+                          : builder.createBox(loc, args[3]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  mlir::Type type = builder.getVarLenSeqTy(resultType, resultRank[0]);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, type);
+
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genReshape(builder, loc, resultIrBox, source, shape, pad,
+                           order);
+
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for RESHAPE");
+}
+
 // SCAN
 fir::ExtendedValue
 IntrinsicLibrary::genScan(mlir::Type resultType,
@@ -2587,6 +2646,38 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genSetExponent(builder, loc, fir::getBase(args[0]),
                                    fir::getBase(args[1])));
+}
+
+// SPREAD
+fir::ExtendedValue
+IntrinsicLibrary::genSpread(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 3);
+
+  // Handle source argument
+  mlir::Value source = builder.createBox(loc, args[0]);
+  fir::BoxValue sourceTmp = source;
+  unsigned sourceRank = sourceTmp.rank();
+
+  // Handle Dim argument
+  mlir::Value dim = fir::getBase(args[1]);
+
+  // Handle ncopies argument
+  mlir::Value ncopies = fir::getBase(args[2]);
+
+  // Generate result descriptor
+  mlir::Type resultArrayType =
+      builder.getVarLenSeqTy(resultType, sourceRank + 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genSpread(builder, loc, resultIrBox, source, dim, ncopies);
+
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for SPREAD");
 }
 
 // SUM
