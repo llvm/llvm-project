@@ -543,8 +543,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len ); // C++1
 #include <type_traits>
 #include <version>
 
-#include <utility> // TODO: Remove this
-
 // TODO: remove these headers
 #include <__functional/binary_function.h>
 #include <__functional/invoke.h>

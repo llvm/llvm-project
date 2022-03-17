@@ -486,9 +486,6 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
                                                      std::string &line) {
   io_handler.SetIsDone(true);
-  //    StreamSP output_stream =
-  //    io_handler.GetDebugger().GetAsyncOutputStream();
-  //    StreamSP error_stream = io_handler.GetDebugger().GetAsyncErrorStream();
   StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
   StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
 

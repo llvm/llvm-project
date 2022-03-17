@@ -1,5 +1,5 @@
 add_lldb_unittest(TraceIntelPTTests
-  IntelPTManagerTests.cpp
+  IntelPTCollectorTests.cpp
 
   LINK_LIBS
     lldbPluginProcessLinux

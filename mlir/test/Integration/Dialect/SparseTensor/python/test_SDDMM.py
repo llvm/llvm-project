@@ -12,6 +12,7 @@ from mlir import execution_engine
 
 from mlir.dialects import sparse_tensor as st
 from mlir.dialects import builtin
+from mlir.dialects import func
 from mlir.dialects.linalg.opdsl import lang as dsl
 
 _SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -44,7 +45,7 @@ def build_SDDMM(attr: st.EncodingAttr):
   arguments = [a, b, s, c]
   with ir.InsertionPoint(module.body):
 
-    @builtin.FuncOp.from_py_func(*arguments)
+    @func.FuncOp.from_py_func(*arguments)
     def sddmm(*args):
       return sddmm_dsl(args[0], args[1], args[2], outs=[args[3]])
 

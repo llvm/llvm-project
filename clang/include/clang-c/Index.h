@@ -2600,7 +2600,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPGenericLoopDirective = 295,
 
-  CXCursor_LastStmt = CXCursor_OMPGenericLoopDirective,
+  /** OpenMP teams loop directive.
+   */
+  CXCursor_OMPTeamsGenericLoopDirective = 296,
+
+  CXCursor_LastStmt = CXCursor_OMPTeamsGenericLoopDirective,
 
   /**
    * Cursor that represents the translation unit itself.

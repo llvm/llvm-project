@@ -18,13 +18,8 @@
 
 #include "test_macros.h"
 
-#if defined(TEST_COMPILER_CLANG)
-#pragma clang diagnostic ignored "-Wliteral-conversion"
-#endif
-
-#ifdef TEST_COMPILER_MSVC
-#pragma warning(disable: 4244) // conversion from 'X' to 'Y', possible loss of data
-#endif
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wliteral-conversion")
+TEST_MSVC_DIAGNOSTIC_IGNORED(4244) // conversion from 'X' to 'Y', possible loss of data
 
 int main(int, char**)
 {

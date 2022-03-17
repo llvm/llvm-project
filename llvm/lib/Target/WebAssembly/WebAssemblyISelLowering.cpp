@@ -911,6 +911,30 @@ WebAssemblyTargetLowering::getPreferredVectorAction(MVT VT) const {
   return TargetLoweringBase::getPreferredVectorAction(VT);
 }
 
+bool WebAssemblyTargetLowering::shouldSimplifyDemandedVectorElts(
+    SDValue Op, const TargetLoweringOpt &TLO) const {
+  // ISel process runs DAGCombiner after legalization; this step is called
+  // SelectionDAG optimization phase. This post-legalization combining process
+  // runs DAGCombiner on each node, and if there was a change to be made,
+  // re-runs legalization again on it and its user nodes to make sure
+  // everythiing is in a legalized state.
+  //
+  // The legalization calls lowering routines, and we do our custom lowering for
+  // build_vectors (LowerBUILD_VECTOR), which converts undef vector elements
+  // into zeros. But there is a set of routines in DAGCombiner that turns unused
+  // (= not demanded) nodes into undef, among which SimplifyDemandedVectorElts
+  // turns unused vector elements into undefs. But this routine does not work
+  // with our custom LowerBUILD_VECTOR, which turns undefs into zeros. This
+  // combination can result in a infinite loop, in which undefs are converted to
+  // zeros in legalization and back to undefs in combining.
+  //
+  // So after DAG is legalized, we prevent SimplifyDemandedVectorElts from
+  // running for build_vectors.
+  if (Op.getOpcode() == ISD::BUILD_VECTOR && TLO.LegalOps && TLO.LegalTys)
+    return false;
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // WebAssembly Lowering private implementation.
 //===----------------------------------------------------------------------===//

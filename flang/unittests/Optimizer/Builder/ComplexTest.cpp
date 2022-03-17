@@ -15,6 +15,8 @@
 struct ComplexTest : public testing::Test {
 public:
   void SetUp() override {
+    fir::support::loadDialects(context);
+
     mlir::OpBuilder builder(&context);
     auto loc = builder.getUnknownLoc();
 
@@ -27,7 +29,6 @@ public:
     mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
 
-    fir::support::loadDialects(context);
     kindMap = std::make_unique<fir::KindMapping>(&context);
     firBuilder = std::make_unique<fir::FirOpBuilder>(mod, *kindMap);
     helper = std::make_unique<fir::factory::Complex>(*firBuilder, loc);

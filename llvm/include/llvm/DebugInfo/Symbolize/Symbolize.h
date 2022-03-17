@@ -62,9 +62,10 @@ public:
     std::string FallbackDebugPath;
     std::string DWPName;
     std::vector<std::string> DebugFileDirectory;
-    size_t MaxCacheSize = sizeof(size_t) == 4
-                              ? 512 * 1024 * 1024 /* 512 MiB */
-                              : 4ULL * 1024 * 1024 * 1024 /* 4 GiB */;
+    size_t MaxCacheSize =
+        sizeof(size_t) == 4
+            ? 512 * 1024 * 1024 /* 512 MiB */
+            : static_cast<size_t>(4ULL * 1024 * 1024 * 1024) /* 4 GiB */;
   };
 
   LLVMSymbolizer();

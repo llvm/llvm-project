@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -pass-pipeline='builtin.func(canonicalize)' -split-input-file | FileCheck --dump-input-context 20 %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -pass-pipeline='func.func(canonicalize)' -split-input-file | FileCheck --dump-input-context 20 %s
 
 /// Test the folding of BranchOp.
 

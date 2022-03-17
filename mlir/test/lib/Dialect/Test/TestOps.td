@@ -375,6 +375,14 @@ def VariadicNoTerminatorOp : TEST_Op<"variadic_no_terminator_op",
 // Test Call Interfaces
 //===----------------------------------------------------------------------===//
 
+def TestCallOp : TEST_Op<"call", [DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<AnyType>:$operands);
+  let results = (outs Variadic<AnyType>);
+  let assemblyFormat = [{
+    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+  }];
+}
+
 def ConversionCallOp : TEST_Op<"conversion_call_op",
     [CallOpInterface]> {
   let arguments = (ins Variadic<AnyType>:$arg_operands, SymbolRefAttr:$callee);

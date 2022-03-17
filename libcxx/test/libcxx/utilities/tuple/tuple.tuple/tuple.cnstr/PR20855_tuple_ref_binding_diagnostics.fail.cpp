@@ -12,12 +12,9 @@
 
 // See llvm.org/PR20855
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wdangling-field"
-#endif
-
 #include <tuple>
 #include <string>
+
 #include "test_macros.h"
 
 template <class Tp>

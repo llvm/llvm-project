@@ -19,12 +19,11 @@
 #include <cassert>
 #include <streambuf>
 #include <sstream>
+
 #include "test_iterators.h"
 #include "test_macros.h"
 
-#ifdef TEST_COMPILER_MSVC
-#pragma warning(disable: 4146) // unary minus operator applied to unsigned type, result still unsigned
-#endif
+TEST_MSVC_DIAGNOSTIC_IGNORED(4146) // unary minus operator applied to unsigned type, result still unsigned
 
 typedef std::num_get<char, cpp17_input_iterator<const char*> > F;
 

@@ -21,6 +21,7 @@ add_flang_library(FortranLower
   PFTBuilder.cpp
   Runtime.cpp
   SymbolMap.cpp
+  VectorSubscripts.cpp
 
   DEPENDS
   FIRDialect

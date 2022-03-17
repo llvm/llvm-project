@@ -216,8 +216,9 @@ private:
     } else if (returnOp.hasOperand()) {
       // Otherwise, if this return operation has an operand then add a result to
       // the function.
-      function.setType(builder.getFunctionType(function.getType().getInputs(),
-                                               *returnOp.operand_type_begin()));
+      function.setType(
+          builder.getFunctionType(function.getFunctionType().getInputs(),
+                                  *returnOp.operand_type_begin()));
     }
 
     // If this function isn't main, then set the visibility to private.
@@ -519,7 +520,7 @@ private:
     }
     mlir::toy::FuncOp calledFunc = calledFuncIt->second;
     return builder.create<GenericCallOp>(
-        location, calledFunc.getType().getResult(0),
+        location, calledFunc.getFunctionType().getResult(0),
         mlir::SymbolRefAttr::get(builder.getContext(), callee), operands);
   }
 

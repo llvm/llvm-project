@@ -503,8 +503,10 @@ struct YieldOpInterface
 
 void mlir::scf::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<ExecuteRegionOp, ExecuteRegionOpInterface>();
-  registry.addOpInterface<ForOp, ForOpInterface>();
-  registry.addOpInterface<IfOp, IfOpInterface>();
-  registry.addOpInterface<YieldOp, YieldOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, scf::SCFDialect *dialect) {
+    ExecuteRegionOp::attachInterface<ExecuteRegionOpInterface>(*ctx);
+    ForOp::attachInterface<ForOpInterface>(*ctx);
+    IfOp::attachInterface<IfOpInterface>(*ctx);
+    YieldOp::attachInterface<YieldOpInterface>(*ctx);
+  });
 }

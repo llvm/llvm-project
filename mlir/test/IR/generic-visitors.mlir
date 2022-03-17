@@ -20,7 +20,7 @@ func @structured_cfg() {
 }
 
 // CHECK: step 0 op 'builtin.module' before all regions
-// CHECK: step 1 op 'builtin.func' before all regions
+// CHECK: step 1 op 'func.func' before all regions
 // CHECK: step 2 op 'arith.constant' before all regions
 // CHECK: step 3 op 'arith.constant' before all regions
 // CHECK: step 4 op 'arith.constant' before all regions
@@ -37,7 +37,7 @@ func @structured_cfg() {
 // CHECK: step 15 op 'scf.yield' before all regions
 // CHECK: step 16 op 'scf.for' after all regions
 // CHECK: step 17 op 'func.return' before all regions
-// CHECK: step 18 op 'builtin.func' after all regions
+// CHECK: step 18 op 'func.func' after all regions
 // CHECK: step 19 op 'builtin.module' after all regions
 
 // -----

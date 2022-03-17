@@ -366,7 +366,7 @@ multiclass FLAT_Scratch_Load_Pseudo<string opName, RegisterClass regClass, bit H
     def _SADDR : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1>,
                  FlatScratchInst<opName, "SS">;
 
-    let SubtargetPredicate = isGFX940Plus in
+    let SubtargetPredicate = HasFlatScratchSVSMode in
     def _SVS : FLAT_Scratch_Load_Pseudo<opName, regClass, HasTiedOutput, 1, 1>,
                FlatScratchInst<opName, "SVS">;
 
@@ -383,7 +383,7 @@ multiclass FLAT_Scratch_Store_Pseudo<string opName, RegisterClass regClass> {
     def _SADDR : FLAT_Scratch_Store_Pseudo<opName, regClass, 1>,
                  FlatScratchInst<opName, "SS">;
 
-    let SubtargetPredicate = isGFX940Plus in
+    let SubtargetPredicate = HasFlatScratchSVSMode in
     def _SVS : FLAT_Scratch_Store_Pseudo<opName, regClass, 1, 1>,
                FlatScratchInst<opName, "SVS">;
 
@@ -1272,7 +1272,7 @@ multiclass ScratchFLATLoadPats<FLAT_Pseudo inst, SDPatternOperator node, ValueTy
   }
 
   def : ScratchLoadSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = isGFX940Plus;
+    let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
@@ -1288,7 +1288,7 @@ multiclass ScratchFLATStorePats<FLAT_Pseudo inst, SDPatternOperator node,
   }
 
   def : ScratchStoreSVaddrPat<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = isGFX940Plus;
+    let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }
@@ -1303,7 +1303,7 @@ multiclass ScratchFLATLoadPats_D16<FLAT_Pseudo inst, SDPatternOperator node, Val
   }
 
   def : ScratchLoadSVaddrPat_D16 <!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SVS"), node, vt> {
-    let SubtargetPredicate = isGFX940Plus;
+    let SubtargetPredicate = HasFlatScratchSVSMode;
     let AddedComplexity = 27;
   }
 }

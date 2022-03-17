@@ -51,19 +51,15 @@ void test_comparisons()
     assert(!(nullptr != p));
 }
 
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wnull-conversion"
-#endif
+TEST_DIAGNOSTIC_PUSH
+TEST_CLANG_DIAGNOSTIC_IGNORED("-Wnull-conversion")
 void test_nullptr_conversions() {
     {
         bool b(nullptr);
         assert(!b);
     }
 }
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
+TEST_DIAGNOSTIC_POP
 
 
 int main(int, char**)

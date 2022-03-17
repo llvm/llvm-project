@@ -256,12 +256,12 @@ def int_wasm_relaxed_trunc_unsigned:
             [llvm_v4f32_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_relaxed_trunc_zero_signed:
+def int_wasm_relaxed_trunc_signed_zero:
   Intrinsic<[llvm_v4i32_ty],
             [llvm_v2f64_ty],
             [IntrNoMem, IntrSpeculatable]>;
 
-def int_wasm_relaxed_trunc_zero_unsigned:
+def int_wasm_relaxed_trunc_unsigned_zero:
   Intrinsic<[llvm_v4i32_ty],
             [llvm_v2f64_ty],
             [IntrNoMem, IntrSpeculatable]>;

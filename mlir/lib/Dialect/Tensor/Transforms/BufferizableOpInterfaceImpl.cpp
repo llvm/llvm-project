@@ -700,15 +700,17 @@ struct RankOpInterface
 
 void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<CastOp, CastOpInterface>();
-  registry.addOpInterface<CollapseShapeOp, CollapseShapeOpInterface>();
-  registry.addOpInterface<DimOp, DimOpInterface>();
-  registry.addOpInterface<ExpandShapeOp, ExpandShapeOpInterface>();
-  registry.addOpInterface<ExtractSliceOp, ExtractSliceOpInterface>();
-  registry.addOpInterface<ExtractOp, ExtractOpInterface>();
-  registry.addOpInterface<FromElementsOp, FromElementsOpInterface>();
-  registry.addOpInterface<GenerateOp, GenerateOpInterface>();
-  registry.addOpInterface<InsertOp, InsertOpInterface>();
-  registry.addOpInterface<InsertSliceOp, InsertSliceOpInterface>();
-  registry.addOpInterface<RankOp, RankOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
+    CastOp::attachInterface<CastOpInterface>(*ctx);
+    CollapseShapeOp::attachInterface<CollapseShapeOpInterface>(*ctx);
+    DimOp::attachInterface<DimOpInterface>(*ctx);
+    ExpandShapeOp::attachInterface<ExpandShapeOpInterface>(*ctx);
+    ExtractSliceOp::attachInterface<ExtractSliceOpInterface>(*ctx);
+    ExtractOp::attachInterface<ExtractOpInterface>(*ctx);
+    FromElementsOp::attachInterface<FromElementsOpInterface>(*ctx);
+    GenerateOp::attachInterface<GenerateOpInterface>(*ctx);
+    InsertOp::attachInterface<InsertOpInterface>(*ctx);
+    InsertSliceOp::attachInterface<InsertSliceOpInterface>(*ctx);
+    RankOp::attachInterface<RankOpInterface>(*ctx);
+  });
 }

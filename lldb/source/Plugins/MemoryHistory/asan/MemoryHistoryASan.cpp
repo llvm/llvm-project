@@ -72,7 +72,7 @@ const char *memory_history_asan_command_prefix = R"(
         void *alloc_trace[256];
         size_t alloc_count;
         int alloc_tid;
-        
+
         void *free_trace[256];
         size_t free_count;
         int free_tid;
@@ -179,9 +179,11 @@ HistoryThreads MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address) {
   ExpressionResults expr_result = UserExpression::Evaluate(
       exe_ctx, options, expr.GetString(), "", return_value_sp, eval_error);
   if (expr_result != eExpressionCompleted) {
-    process_sp->GetTarget().GetDebugger().GetAsyncOutputStream()->Printf(
-        "Warning: Cannot evaluate AddressSanitizer expression:\n%s\n",
-        eval_error.AsCString());
+    StreamString ss;
+    ss << "cannot evaluate AddressSanitizer expression:\n";
+    ss << eval_error.AsCString();
+    Debugger::ReportWarning(ss.GetString().str(),
+                            process_sp->GetTarget().GetDebugger().GetID());
     return result;
   }
 

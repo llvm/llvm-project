@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="builtin.func(convert-shape-constraints)" <%s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="func.func(convert-shape-constraints)" <%s | FileCheck %s
 
 // There's not very much useful to check here other than pasting the output.
 // CHECK-LABEL:   func @cstr_broadcastable(

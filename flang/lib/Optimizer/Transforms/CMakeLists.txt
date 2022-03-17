@@ -9,6 +9,7 @@ add_flang_library(FIRTransforms
   MemoryAllocation.cpp
   MemRefDataFlowOpt.cpp
   RewriteLoop.cpp
+  SimplifyRegionLite.cpp
 
   DEPENDS
   FIRBuilder

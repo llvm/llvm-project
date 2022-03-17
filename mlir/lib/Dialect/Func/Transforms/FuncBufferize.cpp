@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements bufferization of builtin.func's and func.call's.
+// This file implements bufferization of func.func's and func.call's.
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,7 +35,7 @@ struct FuncBufferizePass : public FuncBufferizeBase<FuncBufferizePass> {
     populateFunctionOpInterfaceTypeConversionPattern<FuncOp>(patterns,
                                                              typeConverter);
     target.addDynamicallyLegalOp<FuncOp>([&](FuncOp op) {
-      return typeConverter.isSignatureLegal(op.getType()) &&
+      return typeConverter.isSignatureLegal(op.getFunctionType()) &&
              typeConverter.isLegal(&op.getBody());
     });
     populateCallOpTypeConversionPattern(patterns, typeConverter);
