@@ -643,7 +643,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, OddEven) {
 SCUDO_TYPED_TEST(ScudoCombinedTest, DisableMemInit) {
   auto *Allocator = this->Allocator.get();
 
-  std::vector<void *> Ptrs(65536, nullptr);
+  std::vector<void *> Ptrs(65536);
 
   Allocator->setOption(scudo::Option::ThreadDisableMemInit, 1);
 
