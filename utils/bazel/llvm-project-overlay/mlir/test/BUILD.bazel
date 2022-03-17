@@ -251,6 +251,7 @@ cc_library(
     deps = [
         ":TestDialect",
         "//llvm:Support",
+        "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",
         "//mlir:Support",
@@ -485,6 +486,7 @@ cc_library(
         "lib/Dialect/SPIRV/*.cpp",
     ]),
     deps = [
+        "//mlir:FuncDialect",
         "//mlir:GPUDialect",
         "//mlir:IR",
         "//mlir:Pass",
