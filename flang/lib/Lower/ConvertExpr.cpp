@@ -345,10 +345,16 @@ static fir::ExtendedValue genLoad(fir::FirOpBuilder &builder,
         return builder.create<fir::LoadOp>(loc, fir::getBase(v));
       },
       [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
-        TODO(loc, "genLoad for MutableBoxValue");
+        return genLoad(builder, loc,
+                       fir::factory::genMutableBoxRead(builder, loc, box));
       },
       [&](const fir::BoxValue &box) -> fir::ExtendedValue {
-        TODO(loc, "genLoad for BoxValue");
+        if (box.isUnlimitedPolymorphic())
+          fir::emitFatalError(
+              loc,
+              "lowering attempting to load an unlimited polymorphic entity");
+        return genLoad(builder, loc,
+                       fir::factory::readBoxValue(builder, loc, box));
       },
       [&](const auto &) -> fir::ExtendedValue {
         fir::emitFatalError(
