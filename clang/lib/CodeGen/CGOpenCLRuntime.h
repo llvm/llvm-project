@@ -46,6 +46,7 @@ protected:
     llvm::Function *InvokeFunc; /// Block invoke function.
     llvm::Function *Kernel;     /// Enqueued block kernel.
     llvm::Value *BlockArg;      /// The first argument to enqueued block kernel.
+    llvm::Type *BlockTy;        /// Type of the block argument.
   };
   /// Maps block expression to block information.
   llvm::DenseMap<const Expr *, EnqueuedBlockInfo> EnqueuedBlockMap;
@@ -93,7 +94,7 @@ public:
   /// \param InvokeF invoke function emitted for the block expression.
   /// \param Block block literal emitted for the block expression.
   void recordBlockInfo(const BlockExpr *E, llvm::Function *InvokeF,
-                       llvm::Value *Block);
+                       llvm::Value *Block, llvm::Type *BlockTy);
 
   /// \return LLVM block invoke function emitted for an expression derived from
   /// the block expression.

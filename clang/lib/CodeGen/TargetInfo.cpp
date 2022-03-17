@@ -9214,7 +9214,7 @@ public:
   llvm::Function *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
-                            llvm::Value *BlockLiteral) const override;
+                            llvm::Type *BlockTy) const override;
   bool shouldEmitStaticExternCAliases() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
 };
@@ -11461,7 +11461,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 llvm::Function *
 TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                              llvm::Function *Invoke,
-                                             llvm::Value *BlockLiteral) const {
+                                             llvm::Type *BlockTy) const {
   auto *InvokeFT = Invoke->getFunctionType();
   llvm::SmallVector<llvm::Type *, 2> ArgTys;
   for (auto &P : InvokeFT->params())
@@ -11495,11 +11495,10 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
 /// has "enqueued-block" function attribute and kernel argument metadata.
 llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
     CodeGenFunction &CGF, llvm::Function *Invoke,
-    llvm::Value *BlockLiteral) const {
+    llvm::Type *BlockTy) const {
   auto &Builder = CGF.Builder;
   auto &C = CGF.getLLVMContext();
 
-  auto *BlockTy = BlockLiteral->getType()->getPointerElementType();
   auto *InvokeFT = Invoke->getFunctionType();
   llvm::SmallVector<llvm::Type *, 2> ArgTys;
   llvm::SmallVector<llvm::Metadata *, 8> AddressQuals;
