@@ -1,6 +1,6 @@
 // RUN: mlir-translate -split-input-file -mlir-to-cpp -verify-diagnostics %s
 
-// expected-error@+1 {{'builtin.func' op with multiple blocks needs variables declared at top}}
+// expected-error@+1 {{'func.func' op with multiple blocks needs variables declared at top}}
 func @multiple_blocks() {
 ^bb1:
     cf.br ^bb2

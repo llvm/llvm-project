@@ -26,11 +26,24 @@ class AffineApplyOp;
 class AffineBound;
 class AffineValueMap;
 
+/// TODO: These should be renamed if they are on the mlir namespace.
+///       Ideally, they should go in a mlir::affine:: namespace.
+
 /// A utility function to check if a value is defined at the top level of an
 /// op with trait `AffineScope` or is a region argument for such an op. A value
 /// of index type defined at the top level is always a valid symbol for all its
 /// uses.
 bool isTopLevelValue(Value value);
+
+/// A utility function to check if a value is defined at the top level of
+/// `region` or is an argument of `region`. A value of index type defined at the
+/// top level of a `AffineScope` region is always a valid symbol for all
+/// uses in that region.
+bool isTopLevelValue(Value value, Region *region);
+
+/// Returns the closest region enclosing `op` that is held by an operation with
+/// trait `AffineScope`; `nullptr` if there is no such region.
+Region *getAffineScope(Operation *op);
 
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
 /// from a source memref to a destination memref. The source and destination

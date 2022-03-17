@@ -362,7 +362,7 @@ struct LinalgStrategyEnablePass
       hoistRedundantVectorTransfersOnTensor(funcOp);
 
     // Run CSE to cleanup after canonicalization.
-    OpPassManager dynamicPM("builtin.func");
+    OpPassManager dynamicPM("func.func");
     dynamicPM.addPass(createCSEPass());
     if (failed(runPipeline(dynamicPM, funcOp)))
       return signalPassFailure();

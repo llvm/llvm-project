@@ -7217,9 +7217,8 @@ TEST_F(FormatTest, MemoizationTests) {
   OnePerLine.BinPackParameters = false;
   std::string input = "Constructor()\n"
                       "    : aaaa(a,\n";
-  for (unsigned i = 0, e = 80; i != e; ++i) {
+  for (unsigned i = 0, e = 80; i != e; ++i)
     input += "           a,\n";
-  }
   input += "           a) {}";
   verifyFormat(input, OnePerLine);
 }
@@ -9919,10 +9918,13 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignLeft);
   verifyFormat("template <typename T> void operator=(T) &;", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) const&;", AlignLeft);
-  verifyFormat("template <typename T> void operator=(T) & noexcept;", AlignLeft);
-  verifyFormat("template <typename T> void operator=(T) & = default;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) & noexcept;",
+               AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) & = default;",
+               AlignLeft);
   verifyFormat("template <typename T> void operator=(T) &&;", AlignLeft);
-  verifyFormat("template <typename T> void operator=(T) && = delete;", AlignLeft);
+  verifyFormat("template <typename T> void operator=(T) && = delete;",
+               AlignLeft);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignLeft);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignLeft);
 
@@ -9948,10 +9950,13 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
                AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) &;", AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) const &;", AlignMiddle);
-  verifyFormat("template <typename T> void operator=(T) & noexcept;", AlignMiddle);
-  verifyFormat("template <typename T> void operator=(T) & = default;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) & noexcept;",
+               AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) & = default;",
+               AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) &&;", AlignMiddle);
-  verifyFormat("template <typename T> void operator=(T) && = delete;", AlignMiddle);
+  verifyFormat("template <typename T> void operator=(T) && = delete;",
+               AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) & {}", AlignMiddle);
   verifyFormat("template <typename T> void operator=(T) && {}", AlignMiddle);
 
@@ -10328,6 +10333,11 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<a * b> v;");
   verifyFormat("foo<b && false>();");
   verifyFormat("foo<b & 1>();");
+  verifyFormat("foo<b & (1)>();");
+  verifyFormat("foo<b & (~0)>();");
+  verifyFormat("foo<b & (true)>();");
+  verifyFormat("foo<b & ((1))>();");
+  verifyFormat("foo<b & (/*comment*/ 1)>();");
   verifyFormat("decltype(*::std::declval<const T &>()) void F();");
   verifyFormat("typeof(*::std::declval<const T &>()) void F();");
   verifyFormat("_Atomic(*::std::declval<const T &>()) void F();");

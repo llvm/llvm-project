@@ -4,6 +4,10 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+namespace func {
+class FuncOp;
+} // namespace func
+
 namespace bufferization {
 struct OneShotBufferizationOptions;
 
@@ -31,7 +35,7 @@ std::unique_ptr<Pass> createBufferResultsToOutParamsPass();
 
 /// Creates a pass that finalizes a partial bufferization by removing remaining
 /// bufferization.to_tensor and bufferization.to_memref operations.
-std::unique_ptr<OperationPass<FuncOp>> createFinalizingBufferizePass();
+std::unique_ptr<OperationPass<func::FuncOp>> createFinalizingBufferizePass();
 
 /// Create a pass that bufferizes all ops that implement BufferizableOpInterface
 /// with One-Shot Bufferize.

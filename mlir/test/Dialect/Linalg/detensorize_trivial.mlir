@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(linalg-detensorize{aggressive-mode})" | FileCheck %s -check-prefix=DET-ALL
-// RUN: mlir-opt %s -pass-pipeline="builtin.func(linalg-detensorize)" | FileCheck %s -check-prefix=DET-CF
+// RUN: mlir-opt %s -pass-pipeline="func.func(linalg-detensorize{aggressive-mode})" | FileCheck %s -check-prefix=DET-ALL
+// RUN: mlir-opt %s -pass-pipeline="func.func(linalg-detensorize)" | FileCheck %s -check-prefix=DET-CF
 
 
 #map0 = affine_map<() -> ()>

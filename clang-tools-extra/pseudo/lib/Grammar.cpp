@@ -36,8 +36,8 @@ Grammar::Grammar(std::unique_ptr<GrammarTable> Table) : T(std::move(Table)) {
 llvm::ArrayRef<Rule> Grammar::rulesFor(SymbolID SID) const {
   assert(isNonterminal(SID));
   const auto &R = T->Nonterminals[SID].RuleRange;
-  assert(R.end <= T->Rules.size());
-  return llvm::makeArrayRef(&T->Rules[R.start], R.end - R.start);
+  assert(R.End <= T->Rules.size());
+  return llvm::makeArrayRef(&T->Rules[R.Start], R.End - R.Start);
 }
 
 const Rule &Grammar::lookupRule(RuleID RID) const {
@@ -65,7 +65,7 @@ std::string Grammar::dumpRules(SymbolID SID) const {
   assert(isNonterminal(SID));
   std::string Result;
   const auto &Range = T->Nonterminals[SID].RuleRange;
-  for (RuleID RID = Range.start; RID < Range.end; ++RID)
+  for (RuleID RID = Range.Start; RID < Range.End; ++RID)
     Result.append(dumpRule(RID)).push_back('\n');
   return Result;
 }
@@ -140,17 +140,17 @@ std::vector<llvm::DenseSet<SymbolID>> followSets(const Grammar &G) {
     for (const auto &R : G.table().Rules) {
       // Rule 2: for a rule X := ... Y Z, we add all symbols from FIRST(Z) to
       // FOLLOW(Y).
-      for (size_t i = 0; i + 1 < R.seq().size(); ++i) {
-        if (isToken(R.seq()[i]))
+      for (size_t I = 0; I + 1 < R.seq().size(); ++I) {
+        if (isToken(R.seq()[I]))
           continue;
         // We only need to consider the next symbol because symbols are
         // non-nullable.
-        SymbolID Next = R.seq()[i + 1];
+        SymbolID Next = R.seq()[I + 1];
         if (isToken(Next))
           // First set for a terminal is itself.
-          Changed |= ExpandFollowSet(R.seq()[i], {Next});
+          Changed |= ExpandFollowSet(R.seq()[I], {Next});
         else
-          Changed |= ExpandFollowSet(R.seq()[i], FirstSets[Next]);
+          Changed |= ExpandFollowSet(R.seq()[I], FirstSets[Next]);
       }
       // Rule 3: for a rule X := ... Z, we add all symbols from FOLLOW(X) to
       // FOLLOW(Z).

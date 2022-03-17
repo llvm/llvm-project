@@ -77,14 +77,14 @@ def testConstantIndexOp():
 # CHECK-LABEL: TEST: testFunctionCalls
 @constructAndPrintInModule
 def testFunctionCalls():
-  foo = builtin.FuncOp("foo", ([], []))
+  foo = func.FuncOp("foo", ([], []))
   foo.sym_visibility = StringAttr.get("private")
-  bar = builtin.FuncOp("bar", ([], [IndexType.get()]))
+  bar = func.FuncOp("bar", ([], [IndexType.get()]))
   bar.sym_visibility = StringAttr.get("private")
-  qux = builtin.FuncOp("qux", ([], [F32Type.get()]))
+  qux = func.FuncOp("qux", ([], [F32Type.get()]))
   qux.sym_visibility = StringAttr.get("private")
 
-  with InsertionPoint(builtin.FuncOp("caller", ([], [])).add_entry_block()):
+  with InsertionPoint(func.FuncOp("caller", ([], [])).add_entry_block()):
     func.CallOp(foo, [])
     func.CallOp([IndexType.get()], "bar", [])
     func.CallOp([F32Type.get()], FlatSymbolRefAttr.get("qux"), [])

@@ -121,6 +121,8 @@ struct TransferWriteOpInterface
 
 void mlir::vector::registerBufferizableOpInterfaceExternalModels(
     DialectRegistry &registry) {
-  registry.addOpInterface<TransferReadOp, TransferReadOpInterface>();
-  registry.addOpInterface<TransferWriteOp, TransferWriteOpInterface>();
+  registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
+    TransferReadOp::attachInterface<TransferReadOpInterface>(*ctx);
+    TransferWriteOp::attachInterface<TransferWriteOpInterface>(*ctx);
+  });
 }

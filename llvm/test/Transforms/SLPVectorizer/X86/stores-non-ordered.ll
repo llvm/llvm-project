@@ -19,15 +19,15 @@ define i32 @non-ordered-stores(i32* noalias nocapture %in, i32* noalias nocaptur
 ; CHECK-NEXT:    [[LOAD_7:%.*]] = load i32, i32* [[GEP_5]], align 4
 ; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 3
 ; CHECK-NEXT:    [[LOAD_8:%.*]] = load i32, i32* [[GEP_6]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_2]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[LOAD_4]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_6]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[LOAD_8]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[LOAD_3]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_5]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[LOAD_7]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <2 x i32> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_1]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[LOAD_3]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_5]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[LOAD_7]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_2]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[LOAD_4]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_6]], i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[LOAD_8]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <2 x i32> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    br label [[BLOCK1:%.*]]
 ; CHECK:       block1:
@@ -42,9 +42,9 @@ define i32 @non-ordered-stores(i32* noalias nocapture %in, i32* noalias nocaptur
 ; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 4
 ; CHECK-NEXT:    store i32 [[LOAD_9]], i32* [[GEP_9]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[GEP_10]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP10]], <2 x i32>* [[TMP11]], align 4
+; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[GEP_7]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP12]], align 4
+; CHECK-NEXT:    store <2 x i32> [[TMP10]], <2 x i32>* [[TMP12]], align 4
 ; CHECK-NEXT:    ret i32 undef
 ;
   %in.addr = getelementptr inbounds i32, i32* %in, i64 0

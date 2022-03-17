@@ -41,7 +41,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   }
 
   // Rewrite the original GPU function to an LLVM function.
-  auto funcType = typeConverter->convertType(gpuFuncOp.getType())
+  auto funcType = typeConverter->convertType(gpuFuncOp.getFunctionType())
                       .template cast<LLVM::LLVMPointerType>()
                       .getElementType();
 
@@ -49,7 +49,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   TypeConverter::SignatureConversion signatureConversion(
       gpuFuncOp.front().getNumArguments());
   getTypeConverter()->convertFunctionSignature(
-      gpuFuncOp.getType(), /*isVariadic=*/false, signatureConversion);
+      gpuFuncOp.getFunctionType(), /*isVariadic=*/false, signatureConversion);
 
   // Create the new function operation. Only copy those attributes that are
   // not specific to function modeling.

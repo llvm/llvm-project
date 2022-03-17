@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRQuantTransforms
 
   LINK_LIBS PUBLIC
   MLIRArithmetic
+  MLIRFunc
   MLIRIR
   MLIRQuant
   MLIRQuantUtils

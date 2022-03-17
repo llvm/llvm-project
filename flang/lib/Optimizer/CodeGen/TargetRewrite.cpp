@@ -454,7 +454,7 @@ public:
   /// Rewrite the signatures and body of the `FuncOp`s in the module for
   /// the immediately subsequent target code gen.
   void convertSignature(mlir::FuncOp func) {
-    auto funcTy = func.getType().cast<mlir::FunctionType>();
+    auto funcTy = func.getFunctionType().cast<mlir::FunctionType>();
     if (hasPortableSignature(funcTy))
       return;
     llvm::SmallVector<mlir::Type> newResTys;
@@ -543,7 +543,7 @@ public:
       // return ops as required. These fixups are done in place.
       auto loc = func.getLoc();
       const auto fixupSize = fixups.size();
-      const auto oldArgTys = func.getType().getInputs();
+      const auto oldArgTys = func.getFunctionType().getInputs();
       int offset = 0;
       for (std::remove_const_t<decltype(fixupSize)> i = 0; i < fixupSize; ++i) {
         const auto &fixup = fixups[i];

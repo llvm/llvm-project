@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='builtin.func(canonicalize)' | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -pass-pipeline='func.func(canonicalize)' | FileCheck %s
 
 // Test case: Simple case of deleting a dead pure op.
 
@@ -82,7 +82,7 @@ func @f(%arg0: f32, %pred: i1) {
 // CHECK-NEXT:     return
 
 func @f(%arg0: f32) {
-  builtin.func @g(%arg1: f32) {
+  func.func @g(%arg1: f32) {
     %0 = "arith.addf"(%arg1, %arg1) : (f32, f32) -> f32
     return
   }

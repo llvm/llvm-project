@@ -239,7 +239,7 @@ struct TestVectorTransposeLowering
                   .lower8x8xf32()));
     }
 
-    OpPassManager dynamicPM("builtin.func");
+    OpPassManager dynamicPM("func.func");
     dynamicPM.addPass(createLinalgStrategyLowerVectorsPass(options));
     if (failed(runPipeline(dynamicPM, getOperation())))
       return signalPassFailure();

@@ -211,7 +211,7 @@ define <4 x float> @demote_zero_v4f32(<2 x double> %x) {
 ; CHECK:         .functype demote_zero_v4f32 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.demote_zero_f64x2
+; CHECK-NEXT:    f32x4.demote_f64x2_zero
 ; CHECK-NEXT:    # fallthrough-return
   %v = shufflevector <2 x double> %x, <2 x double> zeroinitializer,
          <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -224,7 +224,7 @@ define <4 x float> @demote_zero_v4f32_2(<2 x double> %x) {
 ; CHECK:         .functype demote_zero_v4f32_2 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    f32x4.demote_zero_f64x2
+; CHECK-NEXT:    f32x4.demote_f64x2_zero
 ; CHECK-NEXT:    # fallthrough-return
   %v = fptrunc <2 x double> %x to <2 x float>
   %a = shufflevector <2 x float> %v, <2 x float> zeroinitializer,

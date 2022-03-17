@@ -4184,8 +4184,10 @@ FileSpec TargetProperties::GetSaveJITObjectsDir() const {
 }
 
 void TargetProperties::CheckJITObjectsDir() {
-  const uint32_t idx = ePropertySaveObjectsDir;
   FileSpec new_dir = GetSaveJITObjectsDir();
+  if (!new_dir)
+    return;
+
   const FileSystem &instance = FileSystem::Instance();
   bool exists = instance.Exists(new_dir);
   bool is_directory = instance.IsDirectory(new_dir);
@@ -4193,26 +4195,25 @@ void TargetProperties::CheckJITObjectsDir() {
   bool writable = llvm::sys::fs::can_write(path);
   if (exists && is_directory && writable)
     return;
-  m_collection_sp->GetPropertyAtIndex(nullptr, true, idx)->GetValue()
+
+  m_collection_sp->GetPropertyAtIndex(nullptr, true, ePropertySaveObjectsDir)
+      ->GetValue()
       ->Clear();
-  StreamSP error_strm_sp;
-  if (m_target) {
-    // FIXME: How can I warn the user when setting this on the Debugger?
-    error_strm_sp = m_target->GetDebugger().GetAsyncErrorStream();
-  } else if (Debugger::GetNumDebuggers() == 1) {
-    error_strm_sp = Debugger::GetDebuggerAtIndex(0)->GetAsyncErrorStream();
-  }
-  if (error_strm_sp) {
-    error_strm_sp->Format("JIT object dir '{0}' ", path);
-    if (!exists)
-      error_strm_sp->PutCString("does not exist.");
-    else if (!is_directory)
-      error_strm_sp->PutCString("is not a directory.");
-    else if (!writable)
-      error_strm_sp->PutCString("is not writable.");
-    error_strm_sp->EOL();
-    error_strm_sp->Flush();
-  }
+
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+  os << "JIT object dir '" << path << "' ";
+  if (!exists)
+    os << "does not exist";
+  else if (!is_directory)
+    os << "is not a directory";
+  else if (!writable)
+    os << "is not writable";
+
+  llvm::Optional<lldb::user_id_t> debugger_id = llvm::None;
+  if (m_target)
+    debugger_id = m_target->GetDebugger().GetID();
+  Debugger::ReportError(os.str(), debugger_id);
 }
 
 bool TargetProperties::GetEnableSyntheticValue() const {

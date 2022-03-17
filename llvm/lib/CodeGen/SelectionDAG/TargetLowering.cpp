@@ -2640,6 +2640,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
 
   KnownUndef = KnownZero = APInt::getZero(NumElts);
 
+  const TargetLowering &TLI = TLO.DAG.getTargetLoweringInfo();
+  if (!TLI.shouldSimplifyDemandedVectorElts(Op, TLO))
+    return false;
+
   // TODO: For now we assume we know nothing about scalable vectors.
   if (VT.isScalableVector())
     return false;
