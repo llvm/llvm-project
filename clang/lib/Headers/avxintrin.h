@@ -3177,7 +3177,7 @@ _mm256_loadu_si256(__m256i_u const *__p)
 ///    A pointer to a 256-bit integer vector containing integer values.
 /// \returns A 256-bit integer vector containing the moved values.
 static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_lddqu_si256(__m256i const *__p)
+_mm256_lddqu_si256(__m256i_u const *__p)
 {
   return (__m256i)__builtin_ia32_lddqu256((char const *)__p);
 }
