@@ -638,36 +638,29 @@ struct DWARFTypePrinter {
     if (FirstParamIfArtificial) {
       if (DWARFDie P = FirstParamIfArtificial) {
         if (P.getTag() == DW_TAG_pointer_type) {
-          DWARFDie C;
-          DWARFDie V;
           auto CVStep = [&](DWARFDie CV) {
             if (DWARFDie U = resolveReferencedType(CV)) {
-              if (U.getTag() == DW_TAG_const_type)
-                return C = U;
-              if (U.getTag() == DW_TAG_volatile_type)
-                return V = U;
+              Const |= U.getTag() == DW_TAG_const_type;
+              Volatile |= U.getTag() == DW_TAG_volatile_type;
+              return U;
             }
             return DWARFDie();
           };
           if (DWARFDie CV = CVStep(P)) {
             CVStep(CV);
           }
-          if (C)
-            OS << " const";
-          if (V)
-            OS << " volatile";
         }
       }
-    } else {
-      if (Const)
-        OS << " const";
-      if (Volatile)
-        OS << " volatile";
     }
+    if (Const)
+      OS << " const";
+    if (Volatile)
+      OS << " volatile";
     if (D.find(DW_AT_reference))
       OS << " &";
     if (D.find(DW_AT_rvalue_reference))
       OS << " &&";
+
     appendUnqualifiedNameAfter(Inner, resolveReferencedType(Inner));
   }
   void appendScopes(DWARFDie D) {
