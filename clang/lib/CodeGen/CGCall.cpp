@@ -3936,7 +3936,9 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   // because of the crazy ObjC compatibility rules.
 
   llvm::PointerType *destType =
-    cast<llvm::PointerType>(CGF.ConvertType(CRE->getType()));
+      cast<llvm::PointerType>(CGF.ConvertType(CRE->getType()));
+  llvm::Type *destElemType =
+      CGF.ConvertTypeForMem(CRE->getType()->getPointeeType());
 
   // If the address is a constant null, just pass the appropriate null.
   if (isProvablyNull(srcAddr.getPointer())) {
@@ -3946,8 +3948,8 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   }
 
   // Create the temporary.
-  Address temp = CGF.CreateTempAlloca(destType->getPointerElementType(),
-                                      CGF.getPointerAlign(), "icr.temp");
+  Address temp =
+      CGF.CreateTempAlloca(destElemType, CGF.getPointerAlign(), "icr.temp");
   // Loading an l-value can introduce a cleanup if the l-value is __weak,
   // and that cleanup will be conditional if we can't prove that the l-value
   // isn't null, so we need to register a dominating point so that the cleanups
@@ -3957,8 +3959,8 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
   // Zero-initialize it if we're not doing a copy-initialization.
   bool shouldCopy = CRE->shouldCopy();
   if (!shouldCopy) {
-    llvm::Value *null = llvm::ConstantPointerNull::get(
-        cast<llvm::PointerType>(destType->getPointerElementType()));
+    llvm::Value *null =
+        llvm::ConstantPointerNull::get(cast<llvm::PointerType>(destElemType));
     CGF.Builder.CreateStore(null, temp);
   }
 
@@ -4000,8 +4002,7 @@ static void emitWritebackArg(CodeGenFunction &CGF, CallArgList &args,
     assert(srcRV.isScalar());
 
     llvm::Value *src = srcRV.getScalarVal();
-    src = CGF.Builder.CreateBitCast(src, destType->getPointerElementType(),
-                                    "icr.cast");
+    src = CGF.Builder.CreateBitCast(src, destElemType, "icr.cast");
 
     // Use an ordinary store, not a store-to-lvalue.
     CGF.Builder.CreateStore(src, temp);
@@ -5136,14 +5137,16 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
 #ifndef NDEBUG
         // Assert that these structs have equivalent element types.
         llvm::StructType *FullTy = CallInfo.getArgStruct();
-        llvm::StructType *DeclaredTy =
-            cast<llvm::StructType>(LastParamTy->getPointerElementType());
-        assert(DeclaredTy->getNumElements() == FullTy->getNumElements());
-        for (llvm::StructType::element_iterator DI = DeclaredTy->element_begin(),
-                                                DE = DeclaredTy->element_end(),
-                                                FI = FullTy->element_begin();
-             DI != DE; ++DI, ++FI)
-          assert(*DI == *FI);
+        if (!LastParamTy->isOpaquePointerTy()) {
+          llvm::StructType *DeclaredTy = cast<llvm::StructType>(
+              LastParamTy->getNonOpaquePointerElementType());
+          assert(DeclaredTy->getNumElements() == FullTy->getNumElements());
+          for (auto DI = DeclaredTy->element_begin(),
+                    DE = DeclaredTy->element_end(),
+                    FI = FullTy->element_begin();
+               DI != DE; ++DI, ++FI)
+            assert(*DI == *FI);
+        }
 #endif
         Arg = Builder.CreateBitCast(Arg, LastParamTy);
       }
