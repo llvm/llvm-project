@@ -3012,6 +3012,7 @@ cc_library(
     ),
     deps = [
         ":Support",
+        "//llvm:Support",
     ],
 )
 
