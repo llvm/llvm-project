@@ -215,8 +215,7 @@ File::ModeFlags File::mode_flags(const char *mode) {
       ++main_mode_count;
       break;
     case '+':
-      flags |= (static_cast<ModeFlags>(OpenMode::WRITE) |
-                static_cast<ModeFlags>(OpenMode::READ));
+      flags |= static_cast<ModeFlags>(OpenMode::PLUS);
       break;
     case 'b':
       flags |= static_cast<ModeFlags>(ContentType::BINARY);

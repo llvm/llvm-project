@@ -21,6 +21,8 @@ namespace __llvm_libc {
 // suitable for their platform.
 class File {
 public:
+  static constexpr size_t DEFAULT_BUFFER_SIZE = 1024;
+
   using LockFunc = void(File *);
   using UnlockFunc = void(File *);
 
@@ -41,6 +43,7 @@ public:
     READ = 0x1,
     WRITE = 0x2,
     APPEND = 0x4,
+    PLUS = 0x8,
   };
 
   // Denotes a file opened in binary mode (which is specified by including
@@ -97,11 +100,13 @@ private:
 protected:
   bool write_allowed() const {
     return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
-                   static_cast<ModeFlags>(OpenMode::APPEND));
+                   static_cast<ModeFlags>(OpenMode::APPEND) |
+                   static_cast<ModeFlags>(OpenMode::PLUS));
   }
 
   bool read_allowed() const {
-    return mode & static_cast<ModeFlags>(OpenMode::READ);
+    return mode & (static_cast<ModeFlags>(OpenMode::READ) |
+                   static_cast<ModeFlags>(OpenMode::PLUS));
   }
 
 public:
@@ -184,6 +189,10 @@ public:
   FileLock(const FileLock &) = delete;
   FileLock(FileLock &&) = delete;
 };
+
+// The implementaiton of this function is provided by the platfrom_file
+// library.
+File *openfile(const char *path, const char *mode);
 
 } // namespace __llvm_libc
 
