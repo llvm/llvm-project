@@ -13,6 +13,9 @@
 #  - the file merely describes the core C++ grammar. Preprocessor directives and
 #    lexical conversions are omitted as we reuse clang's lexer and run a fake
 #    preprocessor;
+#  - grammar rules with the >> token are adjusted, the greatergreater token is
+#    split into two > tokens, to make the GLR parser aware of nested templates
+#    and right shift operator;
 #
 # Guidelines:
 #   - non-terminals are lower_case; terminals (aka tokens) correspond to
@@ -96,7 +99,7 @@ fold-operator := %
 fold-operator := ^
 fold-operator := |
 fold-operator := <<
-fold-operator := >>
+fold-operator := greatergreater
 fold-operator := +=
 fold-operator := -=
 fold-operator := *=
@@ -202,7 +205,7 @@ additive-expression := additive-expression - multiplicative-expression
 # expr.shift
 shift-expression := additive-expression
 shift-expression := shift-expression << additive-expression
-shift-expression := shift-expression >> additive-expression
+shift-expression := shift-expression greatergreater additive-expression
 # expr.spaceship
 compare-expression := shift-expression
 compare-expression := compare-expression <=> shift-expression
@@ -615,7 +618,7 @@ operator-name := <=>
 operator-name := ^^
 operator-name := ||
 operator-name := <<
-operator-name := >>
+operator-name := greatergreater
 operator-name := <<=
 operator-name := >>=
 operator-name := ++
@@ -737,3 +740,8 @@ contextual-zero := NUMERIC_CONSTANT
 module-keyword := IDENTIFIER
 import-keyword := IDENTIFIER
 export-keyword := IDENTIFIER
+
+#! greatergreater token -- clang lexer always lexes it as a single token, we
+#! split it into two tokens to make the GLR parser aware of the nested-template
+#! case.
+greatergreater := > >

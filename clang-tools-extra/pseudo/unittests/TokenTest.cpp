@@ -171,6 +171,25 @@ no_indent \
                             }));
 }
 
+TEST(TokenTest, SplitGreaterGreater) {
+  LangOptions Opts;
+  std::string Code = R"cpp(
+>> // split
+// >> with an escaped newline in the middle, split
+>\
+>
+>>= // not split
+)cpp";
+  TokenStream Split = stripComments(cook(lex(Code, Opts), Opts));
+  EXPECT_THAT(Split.tokens(), ElementsAreArray({
+                                  token(">", tok::greater),
+                                  token(">", tok::greater),
+                                  token(">", tok::greater),
+                                  token(">", tok::greater),
+                                  token(">>=", tok::greatergreaterequal),
+                              }));
+}
+
 TEST(TokenTest, DropComments) {
   LangOptions Opts;
   std::string Code = R"cpp(
