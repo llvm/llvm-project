@@ -825,7 +825,7 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
     The `memref.global` operation declares or defines a named global memref
     variable. The backing memory for the variable is allocated statically and is
     described by the type of the variable (which should be a statically shaped
-    memref type). The operation is a declaration if no `inital_value` is
+    memref type). The operation is a declaration if no `initial_value` is
     specified, else it is a definition. The `initial_value` can either be a unit
     attribute to represent a definition of an uninitialized global variable, or
     an elements attribute to represent the definition of a global variable with
@@ -878,6 +878,9 @@ def MemRef_GlobalOp : MemRef_Op<"global", [Symbol]> {
      bool isUninitialized() {
        return !isExternal() && initial_value().getValue().isa<UnitAttr>();
      }
+     /// Returns the constant initial value if the memref.global is a constant,
+     /// or null otherwise.
+     ElementsAttr getConstantInitValue();
   }];
   let hasVerifier = 1;
 }

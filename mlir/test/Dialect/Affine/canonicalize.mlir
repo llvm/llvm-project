@@ -1080,3 +1080,21 @@ func @canonicalize_single_min_max(%i0: index, %i1: index) -> (index, index) {
 
   return %0, %1: index, index
 }
+
+// -----
+
+module {
+  memref.global "private" constant @__constant_1x5x1xf32 : memref<1x5x1xf32> = dense<[[[6.250000e-02], [2.500000e-01], [3.750000e-01], [2.500000e-01], [6.250000e-02]]]>
+  // CHECK-LABEL: func @fold_const_init_global_memref
+  func @fold_const_init_global_memref() -> (f32, f32) {
+    %m = memref.get_global @__constant_1x5x1xf32 : memref<1x5x1xf32>
+    %v0 = affine.load %m[0, 0, 0] : memref<1x5x1xf32>
+    %v1 = affine.load %m[0, 1, 0] : memref<1x5x1xf32>
+    return %v0, %v1 : f32, f32
+    // CHECK-DAG: %[[C0:.*]] = arith.constant 6.250000e-02 : f32
+    // CHECK-DAG: %[[C1:.*]] = arith.constant 2.500000e-01 : f32
+    // CHECK-NEXT: return
+    // CHECK-SAME: %[[C0]]
+    // CHECK-SAME: %[[C1]]
+  }
+}
