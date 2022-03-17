@@ -107,7 +107,7 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* ...
+* The Zvfh extension was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
