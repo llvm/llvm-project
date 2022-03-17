@@ -144,7 +144,6 @@ namespace llvm {
           ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
           XRayOmitFunctionIndex(false), DebugStrictDwarf(false),
           Hotpatch(false), PPCGenScalarMASSEntries(false), JMCInstrument(false),
-          MisExpect(false),
           FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
 
     /// DisableFramePointerElim - This returns true if frame pointer elimination
@@ -356,10 +355,6 @@ namespace llvm {
 
     /// Enable JustMyCode instrumentation.
     unsigned JMCInstrument : 1;
-
-    /// When set to true, enable MisExpect Diagnostics
-    /// By default, it is set to false
-    unsigned MisExpect : 1;
 
     /// Name of the stack usage file (i.e., .su file) if user passes
     /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
