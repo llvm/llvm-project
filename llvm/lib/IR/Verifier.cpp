@@ -279,6 +279,12 @@ namespace {
 class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   friend class InstVisitor<Verifier>;
 
+  // ISD::ArgFlagsTy::MemAlign only have 4 bits for alignment, so
+  // the alignment size should not exceed 2^15. Since encode(Align)
+  // would plus the shift value by 1, the alignment size should
+  // not exceed 2^14, otherwise it can NOT be properly lowered
+  // in backend.
+  static constexpr unsigned ParamMaxAlignment = 1 << 14;
   DominatorTree DT;
 
   /// When verifying a basic block, keep track of all of the
@@ -3142,6 +3148,21 @@ void Verifier::visitCallBase(CallBase &Call) {
 
   Assert(verifyAttributeCount(Attrs, Call.arg_size()),
          "Attribute after last parameter!", Call);
+
+  auto VerifyTypeAlign = [&](Type *Ty, const Twine &Message) {
+    if (!Ty->isSized())
+      return;
+    Align ABIAlign = DL.getABITypeAlign(Ty);
+    Align MaxAlign(ParamMaxAlignment);
+    Assert(ABIAlign < MaxAlign,
+           "Incorrect alignment of " + Message + " to called function!", Call);
+  };
+
+  VerifyTypeAlign(FTy->getReturnType(), "return type");
+  for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
+    Type *Ty = FTy->getParamType(i);
+    VerifyTypeAlign(Ty, "argument passed");
+  }
 
   Function *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
