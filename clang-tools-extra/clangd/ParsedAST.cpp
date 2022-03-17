@@ -467,7 +467,7 @@ ParsedAST::build(llvm::StringRef Filename, const ParseInputs &Inputs,
           if (IsInsideMainFile && CTContext->shouldSuppressDiagnostic(
                                       DiagLevel, Info, TidySuppressedErrors,
                                       /*AllowIO=*/false,
-                                      /*EnableNolintBlocks=*/false)) {
+                                      /*EnableNolintBlocks=*/true)) {
             // FIXME: should we expose the suppression error (invalid use of
             // NOLINT comments)?
             return DiagnosticsEngine::Ignored;
