@@ -1284,6 +1284,23 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "symbol_graph",
+    srcs = glob([
+        "lib/SymbolGraph/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/clang/SymbolGraph/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":frontend",
+        ":index",
+    ],
+)
+
 gentbl(
     name = "driver_options_inc_gen",
     tbl_outs = [(
@@ -1716,6 +1733,7 @@ cc_library(
         ":frontend",
         ":frontend_rewrite",
         ":static_analyzer_frontend",
+        ":symbol_graph",
         "//llvm:Option",
         "//llvm:Support",
     ],
