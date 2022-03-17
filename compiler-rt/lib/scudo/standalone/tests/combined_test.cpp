@@ -118,7 +118,7 @@ template <typename T> using ScudoCombinedDeathTest = ScudoCombinedTest<T>;
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
   using FIXTURE##NAME##_##TYPE = FIXTURE##NAME<scudo::TYPE>;                   \
-  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { Run(); }
+  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { FIXTURE##NAME<scudo::TYPE>::Run(); }
 
 #define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
   template <class TypeParam>                                                   \

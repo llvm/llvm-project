@@ -105,7 +105,7 @@ template <class BaseConfig> struct ScudoPrimaryTest : public Test {};
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
   using FIXTURE##NAME##_##TYPE = FIXTURE##NAME<TYPE>;                          \
-  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { Run(); }
+  TEST_F(FIXTURE##NAME##_##TYPE, NAME) { FIXTURE##NAME<TYPE>::Run(); }
 
 #define SCUDO_TYPED_TEST(FIXTURE, NAME)                                        \
   template <class TypeParam>                                                   \
