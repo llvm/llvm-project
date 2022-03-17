@@ -1,4 +1,4 @@
-//===--- Grammar.cpp - Grammar for clang pseudo parser  ----------*- C++-*-===//
+//===--- Grammar.cpp - Grammar for clang pseudoparser  -----------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -118,7 +118,7 @@ std::vector<llvm::DenseSet<SymbolID>> followSets(const Grammar &G) {
   auto FirstSets = firstSets(G);
   std::vector<llvm::DenseSet<SymbolID>> FollowSets(
       G.table().Nonterminals.size());
-  // Expand the follow set of a non-terminal symbol Y by adding all from the
+  // Expand the follow set of a nonterminal symbol Y by adding all from the
   // given symbol set.
   auto ExpandFollowSet = [&FollowSets](SymbolID Y,
                                        const llvm::DenseSet<SymbolID> &ToAdd) {

@@ -430,8 +430,7 @@ define i32 @highmask_i64_mask32(i64 %val) {
 ; CHECK-LABEL: highmask_i64_mask32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testq $-1048576, %rdi # encoding: [0x48,0xf7,0xc7,0x00,0x00,0xf0,0xff]
-; CHECK-NEXT:    # imm = 0xFFF00000
+; CHECK-NEXT:    shrq $20, %rdi # encoding: [0x48,0xc1,0xef,0x14]
 ; CHECK-NEXT:    sete %al # encoding: [0x0f,0x94,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, -1048576
@@ -502,8 +501,7 @@ define i32 @lowmask_i64_mask32(i64 %val) {
 ; CHECK-LABEL: lowmask_i64_mask32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    testl $1048575, %edi # encoding: [0xf7,0xc7,0xff,0xff,0x0f,0x00]
-; CHECK-NEXT:    # imm = 0xFFFFF
+; CHECK-NEXT:    shlq $44, %rdi # encoding: [0x48,0xc1,0xe7,0x2c]
 ; CHECK-NEXT:    setne %al # encoding: [0x0f,0x95,0xc0]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %and = and i64 %val, 1048575

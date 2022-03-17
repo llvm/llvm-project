@@ -18,10 +18,10 @@
 //
 //  Typically, based on the category of the grammar symbol, the LRTable is
 //  broken into two logically separate tables:
-//    - ACTION table with terminals as columns -- e.g ACTION[S, a] specifies
+//    - ACTION table with terminals as columns -- e.g. ACTION[S, a] specifies
 //      next action (shift/reduce/accept/error) on state S under a lookahead
 //      terminal a
-//    - GOTO table with nonterminals as columns -- e.g. GOTO[S, X] specify
+//    - GOTO table with nonterminals as columns -- e.g. GOTO[S, X] specifies
 //      the state which we transist to from the state S with the nonterminal X
 //
 //  LRTable is *performance-critial* as it is consulted frequently during a
@@ -161,7 +161,7 @@ private:
 
   // Index is nonterminal SymbolID, value is the offset into States/Actions
   // where the entries for this nonterminal begin.
-  // Give a non-terminal id, the corresponding half-open range of StateIdx is
+  // Give a nonterminal id, the corresponding half-open range of StateIdx is
   // [NontermIdx[id], NontermIdx[id+1]).
   std::vector<uint32_t> NontermOffset;
   // Similar to NontermOffset, but for terminals, index is tok::TokenKind.
