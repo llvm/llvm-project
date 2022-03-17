@@ -467,6 +467,7 @@ struct IntrinsicLibrary {
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -661,6 +662,12 @@ static constexpr IntrinsicHandler handlers[]{
     {"ibset", &I::genIbset},
     {"ichar", &I::genIchar},
     {"ieor", &I::genIeor},
+    {"index",
+     &I::genIndex,
+     {{{"string", asAddr},
+       {"substring", asAddr},
+       {"back", asValue, handleDynamicOptional},
+       {"kind", asValue}}}},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
     {"len",
@@ -2111,6 +2118,60 @@ mlir::Value IntrinsicLibrary::genIeor(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   return builder.create<mlir::arith::XOrIOp>(loc, args[0], args[1]);
+}
+
+// INDEX
+fir::ExtendedValue
+IntrinsicLibrary::genIndex(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() >= 2 && args.size() <= 4);
+
+  mlir::Value stringBase = fir::getBase(args[0]);
+  fir::KindTy kind =
+      fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+          stringBase.getType());
+  mlir::Value stringLen = fir::getLen(args[0]);
+  mlir::Value substringBase = fir::getBase(args[1]);
+  mlir::Value substringLen = fir::getLen(args[1]);
+  mlir::Value back =
+      isAbsent(args, 2)
+          ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+          : fir::getBase(args[2]);
+  if (isAbsent(args, 3))
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genIndex(builder, loc, kind, stringBase, stringLen,
+                               substringBase, substringLen, back));
+
+  // Call the descriptor-based Index implementation
+  mlir::Value string = builder.createBox(loc, args[0]);
+  mlir::Value substring = builder.createBox(loc, args[1]);
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    fir::LogicalType logTy = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    mlir::Value temp = builder.createTemporary(loc, logTy);
+    mlir::Value castb = builder.createConvert(loc, logTy, b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
+  mlir::Value backOpt = isAbsent(args, 2)
+                            ? builder.create<fir::AbsentOp>(
+                                  loc, fir::BoxType::get(builder.getI1Type()))
+                            : makeRefThenEmbox(fir::getBase(args[2]));
+  mlir::Value kindVal = isAbsent(args, 3)
+                            ? builder.createIntegerConstant(
+                                  loc, builder.getIndexType(),
+                                  builder.getKindMap().defaultIntegerKind())
+                            : fir::getBase(args[3]);
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue mutBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resBox = fir::factory::getMutableIRBox(builder, loc, mutBox);
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genIndexDescriptor(builder, loc, resBox, string, substring,
+                                   backOpt, kindVal);
+  // Read back the result from the mutable box.
+  return readAndAddCleanUp(mutBox, resultType, "INDEX");
 }
 
 // ISHFT
