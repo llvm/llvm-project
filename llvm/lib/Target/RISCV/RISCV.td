@@ -395,6 +395,11 @@ def HasVInstructionsAnyF : Predicate<"Subtarget->hasVInstructionsAnyF()">,
           "'V' (Vector Extension for Application Processors), 'Zve32f', "
           "'Zve64f' or 'Zve64d' (Vector Extensions for Embedded Processors)">;
 
+def FeatureStdExtZvfh
+    : SubtargetFeature<"experimental-zvfh", "HasStdExtZvfh", "true",
+                       "'Zvfh' (Vector Half-Precision Floating-Point)",
+                       [FeatureStdExtZve32f]>;
+
 def Feature64Bit
     : SubtargetFeature<"64bit", "HasRV64", "true", "Implements RV64">;
 def IsRV64 : Predicate<"Subtarget->is64Bit()">,
