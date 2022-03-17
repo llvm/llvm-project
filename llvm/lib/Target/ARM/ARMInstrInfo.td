@@ -5129,6 +5129,7 @@ let hasNoSchedulingInfo = 1 in
 def TSB : AInoP<(outs), (ins tsb_opt:$opt), MiscFrm, NoItinerary,
                 "tsb", "\t$opt", []>, Requires<[IsARM, HasV8_4a]> {
   let Inst{31-0} = 0xe320f012;
+  let DecoderMethod = "DecodeTSBInstruction";
 }
 
 }
