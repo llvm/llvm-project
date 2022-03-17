@@ -27,6 +27,7 @@ TEST_F(ObjCMemberwiseInitializerTest, TestAvailability) {
     @end
   )cpp");
 
+  ExtraArgs.push_back("-fobjc-runtime=macosx");
   ExtraArgs.push_back("-fobjc-arc");
 
   // Ensure the action can be initiated on the interface and implementation,
@@ -88,6 +89,7 @@ TEST_F(ObjCMemberwiseInitializerTest, TestAvailability) {
 
 TEST_F(ObjCMemberwiseInitializerTest, Test) {
   FileName = "TestTU.m";
+  ExtraArgs.push_back("-fobjc-runtime=macosx");
   ExtraArgs.push_back("-fobjc-arc");
 
   const char *Input = R"cpp(
