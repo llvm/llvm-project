@@ -229,6 +229,7 @@ public:
   SizeOffsetType visitInstruction(Instruction &I);
 
 private:
+  SizeOffsetType combineSizeOffset(SizeOffsetType LHS, SizeOffsetType RHS);
   SizeOffsetType computeImpl(Value *V);
   bool CheckedZextOrTrunc(APInt &I);
 };
