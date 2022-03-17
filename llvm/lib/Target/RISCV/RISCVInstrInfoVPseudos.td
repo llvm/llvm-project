@@ -3357,7 +3357,7 @@ multiclass VPatNullaryV<string intrinsic, string instruction>
 multiclass VPatNullaryM<string intrinsic, string inst> {
   foreach mti = AllMasks in
     def : Pat<(mti.Mask (!cast<Intrinsic>(intrinsic)
-                        (XLenVT (VLOp (XLenVT (XLenVT GPR:$vl)))))),
+                        VLOpFrag)),
                         (!cast<Instruction>(inst#"_M_"#mti.BX)
                         GPR:$vl, mti.Log2SEW)>;
 }
