@@ -7217,9 +7217,8 @@ TEST_F(FormatTest, MemoizationTests) {
   OnePerLine.BinPackParameters = false;
   std::string input = "Constructor()\n"
                       "    : aaaa(a,\n";
-  for (unsigned i = 0, e = 80; i != e; ++i) {
+  for (unsigned i = 0, e = 80; i != e; ++i)
     input += "           a,\n";
-  }
   input += "           a) {}";
   verifyFormat(input, OnePerLine);
 }
