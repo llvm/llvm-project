@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
@@ -445,6 +446,8 @@ struct IntrinsicLibrary {
   mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue
+      genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCharacterCompare(mlir::Type,
@@ -463,6 +466,8 @@ struct IntrinsicLibrary {
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
+  void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
+  void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -634,6 +639,7 @@ static constexpr IntrinsicHandler handlers[]{
     {"btest", &I::genBtest},
     {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
+    {"command_argument_count", &I::genCommandArgumentCount},
     {"count",
      &I::genCount,
      {{{"mask", asAddr}, {"dim", asValue}, {"kind", asValue}}},
@@ -672,6 +678,23 @@ static constexpr IntrinsicHandler handlers[]{
     {"exponent", &I::genExponent},
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
+    {"get_command_argument",
+     &I::genGetCommandArgument,
+     {{{"number", asValue},
+       {"value", asAddr},
+       {"length", asAddr},
+       {"status", asAddr},
+       {"errmsg", asAddr}}},
+     /*isElemental=*/false},
+    {"get_environment_variable",
+     &I::genGetEnvironmentVariable,
+     {{{"name", asValue},
+       {"value", asAddr},
+       {"length", asAddr},
+       {"status", asAddr},
+       {"trim_name", asValue},
+       {"errmsg", asAddr}}},
+     /*isElemental=*/false},
     {"iachar", &I::genIchar},
     {"iand", &I::genIand},
     {"ibclr", &I::genIbclr},
@@ -1843,6 +1866,17 @@ IntrinsicLibrary::genChar(mlir::Type type,
   return fir::CharBoxValue{cast, len};
 }
 
+// COMMAND_ARGUMENT_COUNT
+fir::ExtendedValue IntrinsicLibrary::genCommandArgumentCount(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  assert(resultType == builder.getDefaultIntegerType() &&
+         "result type is not default integer kind type");
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genCommandArgumentCount(builder, loc));
+  ;
+}
+
 // COUNT
 fir::ExtendedValue
 IntrinsicLibrary::genCount(mlir::Type resultType,
@@ -2094,6 +2128,105 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
+}
+
+// GET_COMMAND_ARGUMENT
+void IntrinsicLibrary::genGetCommandArgument(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 5);
+
+  auto processCharBox = [&](llvm::Optional<fir::CharBoxValue> arg,
+                            mlir::Value &value) -> void {
+    if (arg.hasValue()) {
+      value = builder.createBox(loc, *arg);
+    } else {
+      value = builder
+                  .create<fir::AbsentOp>(
+                      loc, fir::BoxType::get(builder.getNoneType()))
+                  .getResult();
+    }
+  };
+
+  // Handle NUMBER argument
+  mlir::Value number = fir::getBase(args[0]);
+  if (!number)
+    fir::emitFatalError(loc, "expected NUMBER parameter");
+
+  // Handle optional VALUE argument
+  mlir::Value value;
+  llvm::Optional<fir::CharBoxValue> valBox;
+  if (const fir::CharBoxValue *charBox = args[1].getCharBox())
+    valBox = *charBox;
+  processCharBox(valBox, value);
+
+  // Handle optional LENGTH argument
+  mlir::Value length = fir::getBase(args[2]);
+
+  // Handle optional STATUS argument
+  mlir::Value status = fir::getBase(args[3]);
+
+  // Handle optional ERRMSG argument
+  mlir::Value errmsg;
+  llvm::Optional<fir::CharBoxValue> errmsgBox;
+  if (const fir::CharBoxValue *charBox = args[4].getCharBox())
+    errmsgBox = *charBox;
+  processCharBox(errmsgBox, errmsg);
+
+  fir::runtime::genGetCommandArgument(builder, loc, number, value, length,
+                                      status, errmsg);
+}
+
+// GET_ENVIRONMENT_VARIABLE
+void IntrinsicLibrary::genGetEnvironmentVariable(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 6);
+
+  auto processCharBox = [&](llvm::Optional<fir::CharBoxValue> arg,
+                            mlir::Value &value) -> void {
+    if (arg.hasValue()) {
+      value = builder.createBox(loc, *arg);
+    } else {
+      value = builder
+                  .create<fir::AbsentOp>(
+                      loc, fir::BoxType::get(builder.getNoneType()))
+                  .getResult();
+    }
+  };
+
+  // Handle NAME argument
+  mlir::Value name;
+  if (const fir::CharBoxValue *charBox = args[0].getCharBox()) {
+    llvm::Optional<fir::CharBoxValue> nameBox = *charBox;
+    assert(nameBox.hasValue());
+    name = builder.createBox(loc, *nameBox);
+  }
+
+  // Handle optional VALUE argument
+  mlir::Value value;
+  llvm::Optional<fir::CharBoxValue> valBox;
+  if (const fir::CharBoxValue *charBox = args[1].getCharBox())
+    valBox = *charBox;
+  processCharBox(valBox, value);
+
+  // Handle optional LENGTH argument
+  mlir::Value length = fir::getBase(args[2]);
+
+  // Handle optional STATUS argument
+  mlir::Value status = fir::getBase(args[3]);
+
+  // Handle optional TRIM_NAME argument
+  mlir::Value trim_name =
+      isAbsent(args[4]) ? builder.createBool(loc, true) : fir::getBase(args[4]);
+
+  // Handle optional ERRMSG argument
+  mlir::Value errmsg;
+  llvm::Optional<fir::CharBoxValue> errmsgBox;
+  if (const fir::CharBoxValue *charBox = args[5].getCharBox())
+    errmsgBox = *charBox;
+  processCharBox(errmsgBox, errmsg);
+
+  fir::runtime::genGetEnvironmentVariable(builder, loc, name, value, length,
+                                          status, trim_name, errmsg);
 }
 
 // IAND
