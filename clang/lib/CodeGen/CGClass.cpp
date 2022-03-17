@@ -1669,6 +1669,34 @@ namespace {
     CGF.EmitNounwindRuntimeCall(Fn, Args);
   }
 
+  /// Poison base class with a trivial destructor.
+  struct SanitizeDtorTrivialBase final : EHScopeStack::Cleanup {
+    const CXXRecordDecl *BaseClass;
+    bool BaseIsVirtual;
+    SanitizeDtorTrivialBase(const CXXRecordDecl *Base, bool BaseIsVirtual)
+        : BaseClass(Base), BaseIsVirtual(BaseIsVirtual) {}
+
+    void Emit(CodeGenFunction &CGF, Flags flags) override {
+      const CXXRecordDecl *DerivedClass =
+          cast<CXXMethodDecl>(CGF.CurCodeDecl)->getParent();
+
+      Address Addr = CGF.GetAddressOfDirectBaseInCompleteClass(
+          CGF.LoadCXXThisAddress(), DerivedClass, BaseClass, BaseIsVirtual);
+
+      const ASTRecordLayout &BaseLayout =
+          CGF.getContext().getASTRecordLayout(BaseClass);
+      CharUnits BaseSize = BaseLayout.getSize();
+
+      if (!BaseSize.isPositive())
+        return;
+
+      EmitSanitizerDtorCallback(CGF, Addr.getPointer(), BaseSize.getQuantity());
+
+      // Prevent the current stack frame from disappearing from the stack trace.
+      CGF.CurFn->addFnAttr("disable-tail-calls", "true");
+    }
+  };
+
   class SanitizeDtorMembers final : public EHScopeStack::Cleanup {
     const CXXDestructorDecl *Dtor;
 
@@ -1844,13 +1872,19 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
       auto *BaseClassDecl =
           cast<CXXRecordDecl>(Base.getType()->castAs<RecordType>()->getDecl());
 
-      // Ignore trivial destructors.
-      if (BaseClassDecl->hasTrivialDestructor())
-        continue;
-
-      EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup,
-                                        BaseClassDecl,
-                                        /*BaseIsVirtual*/ true);
+      if (BaseClassDecl->hasTrivialDestructor()) {
+        // Under SanitizeMemoryUseAfterDtor, poison the trivial base class
+        // memory. For non-trival base classes the same is done in the class
+        // destructor.
+        if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
+            SanOpts.has(SanitizerKind::Memory) && !BaseClassDecl->isEmpty())
+          EHStack.pushCleanup<SanitizeDtorTrivialBase>(NormalAndEHCleanup,
+                                                       BaseClassDecl,
+                                                       /*BaseIsVirtual*/ true);
+      } else {
+        EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
+                                          /*BaseIsVirtual*/ true);
+      }
     }
 
     return;
@@ -1872,13 +1906,16 @@ void CodeGenFunction::EnterDtorCleanups(const CXXDestructorDecl *DD,
 
     CXXRecordDecl *BaseClassDecl = Base.getType()->getAsCXXRecordDecl();
 
-    // Ignore trivial destructors.
-    if (BaseClassDecl->hasTrivialDestructor())
-      continue;
-
-    EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup,
-                                      BaseClassDecl,
-                                      /*BaseIsVirtual*/ false);
+    if (BaseClassDecl->hasTrivialDestructor()) {
+      if (CGM.getCodeGenOpts().SanitizeMemoryUseAfterDtor &&
+          SanOpts.has(SanitizerKind::Memory) && !BaseClassDecl->isEmpty())
+        EHStack.pushCleanup<SanitizeDtorTrivialBase>(NormalAndEHCleanup,
+                                                     BaseClassDecl,
+                                                     /*BaseIsVirtual*/ false);
+    } else {
+      EHStack.pushCleanup<CallBaseDtor>(NormalAndEHCleanup, BaseClassDecl,
+                                        /*BaseIsVirtual*/ false);
+    }
   }
 
   // Poison fields such that access after their destructors are
