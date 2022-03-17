@@ -741,7 +741,8 @@ void GCNScheduleDAGMILive::collectRematerializableInstructions(
       continue;
 
     MachineInstr *Def = MRI.getOneDef(Reg)->getParent();
-    if (!Def || !isTriviallyReMaterializable(*Def, AA))
+    if (!Def || Def->getOperand(0).getSubReg() != 0 ||
+        !isTriviallyReMaterializable(*Def, AA))
       continue;
 
     MachineInstr *UseI = &*MRI.use_instr_begin(Reg);
