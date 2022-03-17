@@ -21,6 +21,7 @@
 
 #include "GISel/M88kGlobalISelUtils.h"
 #include "M88kTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
