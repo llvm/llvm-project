@@ -4361,18 +4361,18 @@ public:
             break;
         } else
           break;
+      }
 
-        if (select_helper.FDIsSetRead(pipe_read_fd)) {
-          size_t bytes_read;
-          // Consume the interrupt byte
-          Status error = m_pipe.Read(&ch, 1, bytes_read);
-          if (error.Success()) {
-            if (ch == 'q')
-              break;
-            if (ch == 'i')
-              if (StateIsRunningState(m_process->GetState()))
-                m_process->SendAsyncInterrupt();
-          }
+      if (select_helper.FDIsSetRead(pipe_read_fd)) {
+        size_t bytes_read;
+        // Consume the interrupt byte
+        Status error = m_pipe.Read(&ch, 1, bytes_read);
+        if (error.Success()) {
+          if (ch == 'q')
+            break;
+          if (ch == 'i')
+            if (StateIsRunningState(m_process->GetState()))
+              m_process->SendAsyncInterrupt();
         }
       }
     }
