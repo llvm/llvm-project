@@ -1326,6 +1326,8 @@ struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
   }
 };
 
+/// Hoist any yielded results whose operands are defined outside
+/// the if, to a select instruction.
 struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
   using OpRewritePattern<IfOp>::OpRewritePattern;
 
@@ -1334,30 +1336,57 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
     if (op->getNumResults() == 0)
       return failure();
 
-    if (!llvm::hasSingleElement(op.getThenRegion().front()) ||
-        !llvm::hasSingleElement(op.getElseRegion().front()))
-      return failure();
-
     auto cond = op.getCondition();
-    auto thenYieldArgs =
-        cast<scf::YieldOp>(op.getThenRegion().front().getTerminator())
-            .getOperands();
-    auto elseYieldArgs =
-        cast<scf::YieldOp>(op.getElseRegion().front().getTerminator())
-            .getOperands();
-    SmallVector<Value> results(op->getNumResults());
-    assert(thenYieldArgs.size() == results.size());
-    assert(elseYieldArgs.size() == results.size());
+    auto thenYieldArgs = op.thenYield().getOperands();
+    auto elseYieldArgs = op.elseYield().getOperands();
+
+    SmallVector<Type> nonHoistable;
     for (const auto &it :
          llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
       Value trueVal = std::get<0>(it.value());
       Value falseVal = std::get<1>(it.value());
-      if (trueVal == falseVal)
+      if (&op.getThenRegion() == trueVal.getParentRegion() ||
+          &op.getElseRegion() == falseVal.getParentRegion())
+        nonHoistable.push_back(trueVal.getType());
+    }
+    // Early exit if there aren't any yielded values we can
+    // hoist outside the if.
+    if (nonHoistable.size() == op->getNumResults())
+      return failure();
+
+    IfOp replacement = rewriter.create<IfOp>(op.getLoc(), nonHoistable, cond);
+    if (replacement.thenBlock())
+      rewriter.eraseBlock(replacement.thenBlock());
+    replacement.getThenRegion().takeBody(op.getThenRegion());
+    replacement.getElseRegion().takeBody(op.getElseRegion());
+
+    SmallVector<Value> results(op->getNumResults());
+    assert(thenYieldArgs.size() == results.size());
+    assert(elseYieldArgs.size() == results.size());
+
+    SmallVector<Value> trueYields;
+    SmallVector<Value> falseYields;
+    for (const auto &it :
+         llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
+      Value trueVal = std::get<0>(it.value());
+      Value falseVal = std::get<1>(it.value());
+      if (&replacement.getThenRegion() == trueVal.getParentRegion() ||
+          &replacement.getElseRegion() == falseVal.getParentRegion()) {
+        results[it.index()] = replacement.getResult(trueYields.size());
+        trueYields.push_back(trueVal);
+        falseYields.push_back(falseVal);
+      } else if (trueVal == falseVal)
         results[it.index()] = trueVal;
       else
         results[it.index()] = rewriter.create<arith::SelectOp>(
             op.getLoc(), cond, trueVal, falseVal);
     }
+
+    rewriter.setInsertionPointToEnd(replacement.thenBlock());
+    rewriter.replaceOpWithNewOp<YieldOp>(replacement.thenYield(), trueYields);
+
+    rewriter.setInsertionPointToEnd(replacement.elseBlock());
+    rewriter.replaceOpWithNewOp<YieldOp>(replacement.elseYield(), falseYields);
 
     rewriter.replaceOp(op, results);
     return success();
