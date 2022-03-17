@@ -56,7 +56,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
     # CHECK-SAME: ins(%[[A]], %[[B]]
     # CHECK-SAME: outs(%[[INITC]]
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32))
     def test_matmul_mono(lhs, rhs):
       init_result = linalg.InitTensorOp([4, 8], f32)
@@ -70,7 +70,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = arith.addi %[[C_ARG]], %[[MUL]] : i32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i32
     # CHECK-NEXT: -> tensor<4x8xi32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
         RankedTensorType.get((4, 8), i32))
     def test_i8i8i32_matmul(lhs, rhs, init_result):
@@ -79,7 +79,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-LABEL: @test_i8i8i32_matmul_unsigned
     # CHECK:   = arith.extui
     # CHECK:   = arith.extui
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
         RankedTensorType.get((4, 8), i32))
     def test_i8i8i32_matmul_unsigned(lhs, rhs, init_result):
@@ -94,7 +94,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = arith.addi %[[C_ARG]], %[[MUL]] : i32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i32
     # CHECK-NEXT: -> tensor<4x8xi32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i16),
         RankedTensorType.get((4, 8), i32))
     def test_i8i16i32_matmul(lhs, rhs, init_result):
@@ -108,7 +108,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = arith.addi %[[C_ARG]], %[[MUL]] : i16
     # CHECK-NEXT:   linalg.yield %[[ADD]] : i16
     # CHECK-NEXT: -> tensor<4x8xi16>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), i32), RankedTensorType.get((16, 8), i32),
         RankedTensorType.get((4, 8), i16))
     def test_i32i32i16_matmul(lhs, rhs, init_result):
@@ -122,7 +122,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = arith.addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
         RankedTensorType.get((4, 8), f32))
     def test_i8i8f32_matmul(lhs, rhs, init_result):
@@ -131,7 +131,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-LABEL: @test_i8i8f32_matmul_unsigned
     # CHECK:   = arith.uitofp
     # CHECK:   = arith.uitofp
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), i8), RankedTensorType.get((16, 8), i8),
         RankedTensorType.get((4, 8), f32))
     def test_i8i8f32_matmul_unsigned(lhs, rhs, init_result):
@@ -146,7 +146,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = arith.addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f16), RankedTensorType.get((16, 8), f16),
         RankedTensorType.get((4, 8), f32))
     def test_f16f16f32_matmul(lhs, rhs, init_result):
@@ -160,7 +160,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-NEXT:   %[[ADD:.+]] = arith.addf %[[C_ARG]], %[[MUL]] : f32
     # CHECK-NEXT:   linalg.yield %[[ADD]] : f32
     # CHECK-NEXT: -> tensor<4x8xf32>
-    @builtin.FuncOp.from_py_func(
+    @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f64), RankedTensorType.get((16, 8), f64),
         RankedTensorType.get((4, 8), f32))
     def test_f64f64f32_matmul(lhs, rhs, init_result):

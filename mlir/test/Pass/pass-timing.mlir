@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=LIST %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=PIPELINE %s
-// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=MT_LIST %s
-// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=MT_PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=LIST %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=MT_LIST %s
+// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=MT_PIPELINE %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=false -test-pm-nested-pipeline -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=NESTED_PIPELINE %s
 
 // LIST: Execution time report
@@ -16,7 +16,7 @@
 // PIPELINE: Total Execution Time:
 // PIPELINE: Name
 // PIPELINE-NEXT: Parser
-// PIPELINE-NEXT: 'builtin.func' Pipeline
+// PIPELINE-NEXT: 'func.func' Pipeline
 // PIPELINE-NEXT:   CSE
 // PIPELINE-NEXT:     (A) DominanceInfo
 // PIPELINE-NEXT:   Canonicalizer
@@ -38,7 +38,7 @@
 // MT_PIPELINE: Total Execution Time:
 // MT_PIPELINE: Name
 // MT_PIPELINE-NEXT: Parser
-// MT_PIPELINE-NEXT: 'builtin.func' Pipeline
+// MT_PIPELINE-NEXT: 'func.func' Pipeline
 // MT_PIPELINE-NEXT:   CSE
 // MT_PIPELINE-NEXT:     (A) DominanceInfo
 // MT_PIPELINE-NEXT:   Canonicalizer
@@ -52,12 +52,12 @@
 // NESTED_PIPELINE: Total Execution Time:
 // NESTED_PIPELINE: Name
 // NESTED_PIPELINE-NEXT: Parser
-// NESTED_PIPELINE-NEXT: Pipeline Collection : ['builtin.func', 'builtin.module']
-// NESTED_PIPELINE-NEXT:   'builtin.func' Pipeline
+// NESTED_PIPELINE-NEXT: Pipeline Collection : ['builtin.module', 'func.func']
+// NESTED_PIPELINE-NEXT:   'func.func' Pipeline
 // NESTED_PIPELINE-NEXT:     TestFunctionPass
 // NESTED_PIPELINE-NEXT:   'builtin.module' Pipeline
 // NESTED_PIPELINE-NEXT:     TestModulePass
-// NESTED_PIPELINE-NEXT:     'builtin.func' Pipeline
+// NESTED_PIPELINE-NEXT:     'func.func' Pipeline
 // NESTED_PIPELINE-NEXT:       TestFunctionPass
 // NESTED_PIPELINE-NEXT: Output
 // NESTED_PIPELINE-NEXT: Rest

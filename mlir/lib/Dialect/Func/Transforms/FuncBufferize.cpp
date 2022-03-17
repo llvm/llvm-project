@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements bufferization of builtin.func's and func.call's.
+// This file implements bufferization of func.func's and func.call's.
 //
 //===----------------------------------------------------------------------===//
 

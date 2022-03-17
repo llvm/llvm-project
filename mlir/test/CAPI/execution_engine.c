@@ -26,7 +26,7 @@
 void lowerModuleToLLVM(MlirContext ctx, MlirModule module) {
   MlirPassManager pm = mlirPassManagerCreate(ctx);
   MlirOpPassManager opm = mlirPassManagerGetNestedUnder(
-      pm, mlirStringRefCreateFromCString("builtin.func"));
+      pm, mlirStringRefCreateFromCString("func.func"));
   mlirPassManagerAddOwnedPass(pm, mlirCreateConversionConvertFuncToLLVM());
   mlirOpPassManagerAddOwnedPass(opm,
                                 mlirCreateConversionConvertArithmeticToLLVM());

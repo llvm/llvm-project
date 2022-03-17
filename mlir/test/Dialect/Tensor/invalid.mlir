@@ -91,7 +91,7 @@ func @tensor.generate(%m : index, %n : index)
 
 func @tensor.generate(%m : index, %n : index)
     -> tensor<?x3x?xf32> {
-  // expected-error @+4 {{'func.return' op expects parent op 'builtin.func'}}
+  // expected-error @+4 {{'func.return' op expects parent op 'func.func'}}
   %tnsr = tensor.generate %m, %n {
     ^bb0(%i : index, %j : index, %k : index):
       %elem = arith.constant 8.0 : f32

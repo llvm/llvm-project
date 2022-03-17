@@ -542,7 +542,7 @@ func @return_type_mismatch() -> i32 {
 
 func @return_inside_loop() {
   affine.for %i = 1 to 100 {
-    // expected-error@+1 {{'func.return' op expects parent op 'builtin.func'}}
+    // expected-error@+1 {{'func.return' op expects parent op 'func.func'}}
     return
   }
   return

@@ -2,7 +2,7 @@
 
 from mlir.ir import *
 import numpy as np
-import mlir.dialects.builtin as builtin
+import mlir.dialects.func as func
 import mlir.dialects.shape as shape
 
 
@@ -19,7 +19,7 @@ def testConstShape():
     module = Module.create()
     f32 = F32Type.get()
     with InsertionPoint(module.body):
-      @builtin.FuncOp.from_py_func(
+      @func.FuncOp.from_py_func(
           RankedTensorType.get((12, -1), f32))
       def const_shape_tensor(arg):
         return shape.ConstShapeOp(

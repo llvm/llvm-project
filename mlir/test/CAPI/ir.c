@@ -101,7 +101,7 @@ MlirModule makeAndDumpAdd(MlirContext ctx, MlirLocation location) {
           mlirIdentifierGet(ctx, mlirStringRefCreateFromCString("sym_name")),
           funcNameAttr)};
   MlirOperationState funcState = mlirOperationStateGet(
-      mlirStringRefCreateFromCString("builtin.func"), location);
+      mlirStringRefCreateFromCString("func.func"), location);
   mlirOperationStateAddAttributes(&funcState, 2, funcAttrs);
   mlirOperationStateAddOwnedRegions(&funcState, 1, &funcBodyRegion);
   MlirOperation func = mlirOperationCreate(&funcState);

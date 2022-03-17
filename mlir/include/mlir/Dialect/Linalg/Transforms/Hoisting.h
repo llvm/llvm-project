@@ -10,7 +10,9 @@
 #define MLIR_DIALECT_LINALG_TRANSFORMS_HOISTING_H_
 
 namespace mlir {
+namespace func {
 class FuncOp;
+} // namespace func
 
 namespace linalg {
 
@@ -27,11 +29,11 @@ namespace linalg {
 /// results in scf::ForOp yielding the value that originally transited through
 /// memory.
 // TODO: generalize on a per-need basis.
-void hoistRedundantVectorTransfers(FuncOp func);
+void hoistRedundantVectorTransfers(func::FuncOp func);
 
 /// Same behavior as `hoistRedundantVectorTransfers` but works on tensors
 /// instead of buffers.
-void hoistRedundantVectorTransfersOnTensor(FuncOp func);
+void hoistRedundantVectorTransfersOnTensor(func::FuncOp func);
 
 } // namespace linalg
 } // namespace mlir

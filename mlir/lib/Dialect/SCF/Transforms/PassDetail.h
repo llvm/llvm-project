@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef DIALECT_LOOPOPS_TRANSFORMS_PASSDETAIL_H_
-#define DIALECT_LOOPOPS_TRANSFORMS_PASSDETAIL_H_
+#ifndef DIALECT_SCF_TRANSFORMS_PASSDETAIL_H_
+#define DIALECT_SCF_TRANSFORMS_PASSDETAIL_H_
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -39,4 +40,4 @@ class TensorDialect;
 
 } // namespace mlir
 
-#endif // DIALECT_LOOPOPS_TRANSFORMS_PASSDETAIL_H_
+#endif // DIALECT_SCF_TRANSFORMS_PASSDETAIL_H_
