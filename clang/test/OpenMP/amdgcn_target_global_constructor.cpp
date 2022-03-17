@@ -93,8 +93,8 @@ S A;
 // CHECK: attributes #3 = { convergent }
 // CHECK: attributes #4 = { convergent nounwind }
 //.
-// CHECK: !0 = !{i32 0, i32 42, i32 18149483, !"__omp_offloading_{{.*}}_ctor", i32 19, i32 1}
-// CHECK: !1 = !{i32 0, i32 42, i32 18149483, !"__omp_offloading_{{.*}}_dtor", i32 19, i32 2}
+// CHECK: !0 = !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_ctor", i32 19, i32 1}
+// CHECK: !1 = !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_dtor", i32 19, i32 2}
 // CHECK: !2 = !{i32 1, !"A", i32 0, i32 0}
 // CHECK: !3 = !{void ()* @__omp_offloading_{{.*}}_ctor, !"kernel", i32 1}
 // CHECK: !4 = !{void ()* @__omp_offloading_{{.*}}_dtor, !"kernel", i32 1}
