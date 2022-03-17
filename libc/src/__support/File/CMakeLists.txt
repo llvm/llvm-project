@@ -15,3 +15,19 @@ add_object_library(
     libc.include.errno
     libc.src.errno.errno
 )
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}_file.cpp)
+  add_object_library(
+    platform_file
+    SRCS
+      ${LIBC_TARGET_OS}_file.cpp
+    DEPENDS
+      .file
+      libc.include.errno
+      libc.include.fcntl
+      libc.include.sys_syscall
+      libc.src.__support.OSUtil.osutil
+      libc.src.errno.errno
+  )
+endif()
+
