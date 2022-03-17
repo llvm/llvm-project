@@ -70,6 +70,7 @@ cc_test(
         "//llvm:TestingSupport",
         "//llvm:gtest_main",
         "//mlir:Analysis",
+        "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:Pass",
     ],
