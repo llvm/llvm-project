@@ -18,6 +18,14 @@
 
 using namespace mlir;
 
+detail::InterfaceMap::InterfaceMap(
+    MutableArrayRef<std::pair<TypeID, void *>> elements)
+    : interfaces(elements.begin(), elements.end()) {
+  llvm::sort(interfaces, [](const auto &lhs, const auto &rhs) {
+    return compare(lhs.first, rhs.first);
+  });
+}
+
 void detail::InterfaceMap::insert(
     ArrayRef<std::pair<TypeID, void *>> elements) {
   // Insert directly into the right position to keep the interfaces sorted.
