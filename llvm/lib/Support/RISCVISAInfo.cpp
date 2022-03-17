@@ -104,6 +104,7 @@ static const RISCVSupportedExtension SupportedExperimentalExtensions[] = {
     {"zbp", RISCVExtensionVersion{0, 93}},
     {"zbr", RISCVExtensionVersion{0, 93}},
     {"zbt", RISCVExtensionVersion{0, 93}},
+    {"zvfh", RISCVExtensionVersion{0, 1}},
 };
 
 static bool stripExperimentalPrefix(StringRef &Ext) {
@@ -723,6 +724,13 @@ Error RISCVISAInfo::checkDependency() {
         errc::invalid_argument,
         "zve64d requires d or zdinx extension to also be specified");
 
+  if (Exts.count("zvfh") && !Exts.count("zfh") && !Exts.count("zfhmin") &&
+      !Exts.count("zhinx") && !Exts.count("zhinxmin"))
+    return createStringError(
+        errc::invalid_argument,
+        "zvfh requires zfh, zfhmin, zhinx or zhinxmin extension to also be "
+        "specified");
+
   if (HasZvl && !HasVector)
     return createStringError(
         errc::invalid_argument,
@@ -760,6 +768,7 @@ static const char *ImpliedExtsZvl64b[] = {"zvl32b"};
 static const char *ImpliedExtsZk[] = {"zkn", "zkt", "zkr"};
 static const char *ImpliedExtsZkn[] = {"zbkb", "zbkc", "zbkx", "zkne", "zknd", "zknh"};
 static const char *ImpliedExtsZks[] = {"zbkb", "zbkc", "zbkx", "zksed", "zksh"};
+static const char *ImpliedExtsZvfh[] = {"zve32f"};
 
 struct ImpliedExtsEntry {
   StringLiteral Name;
@@ -788,6 +797,7 @@ static constexpr ImpliedExtsEntry ImpliedExts[] = {
     {{"zve64d"}, {ImpliedExtsZve64d}},
     {{"zve64f"}, {ImpliedExtsZve64f}},
     {{"zve64x"}, {ImpliedExtsZve64x}},
+    {{"zvfh"}, {ImpliedExtsZvfh}},
     {{"zvl1024b"}, {ImpliedExtsZvl1024b}},
     {{"zvl128b"}, {ImpliedExtsZvl128b}},
     {{"zvl16384b"}, {ImpliedExtsZvl16384b}},
