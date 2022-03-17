@@ -486,15 +486,19 @@ struct IntrinsicLibrary {
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
@@ -727,12 +731,30 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genRandomSeed,
      {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
      /*isElemental=*/false},
+    {"reshape",
+     &I::genReshape,
+     {{{"source", asBox},
+       {"shape", asBox},
+       {"pad", asBox, handleDynamicOptional},
+       {"order", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"scan",
+     &I::genScan,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"back", asValue, handleDynamicOptional},
+       {"kind", asValue}}},
+     /*isElemental=*/true},
     {"set_exponent", &I::genSetExponent},
     {"size",
      &I::genSize,
      {{{"array", asBox},
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
+     /*isElemental=*/false},
+    {"spread",
+     &I::genSpread,
+     {{{"source", asAddr}, {"dim", asValue}, {"ncopies", asValue}}},
      /*isElemental=*/false},
     {"sum",
      &I::genSum,
@@ -756,6 +778,13 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genUnpack,
      {{{"vector", asBox}, {"mask", asBox}, {"field", asBox}}},
      /*isElemental=*/false},
+    {"verify",
+     &I::genVerify,
+     {{{"string", asAddr},
+       {"set", asAddr},
+       {"back", asValue, handleDynamicOptional},
+       {"kind", asValue}}},
+     /*isElemental=*/true},
 };
 
 static const IntrinsicHandler *findIntrinsicHandler(llvm::StringRef name) {
@@ -2485,6 +2514,129 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
   Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
 }
 
+// RESHAPE
+fir::ExtendedValue
+IntrinsicLibrary::genReshape(mlir::Type resultType,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 4);
+
+  // Handle source argument
+  mlir::Value source = builder.createBox(loc, args[0]);
+
+  // Handle shape argument
+  mlir::Value shape = builder.createBox(loc, args[1]);
+  assert(fir::BoxValue(shape).rank() == 1);
+  mlir::Type shapeTy = shape.getType();
+  mlir::Type shapeArrTy = fir::dyn_cast_ptrOrBoxEleTy(shapeTy);
+  auto resultRank = shapeArrTy.cast<fir::SequenceType>().getShape();
+
+  assert(resultRank[0] != fir::SequenceType::getUnknownExtent() &&
+         "shape arg must have constant size");
+
+  // Handle optional pad argument
+  mlir::Value pad = isAbsent(args[2])
+                        ? builder.create<fir::AbsentOp>(
+                              loc, fir::BoxType::get(builder.getI1Type()))
+                        : builder.createBox(loc, args[2]);
+
+  // Handle optional order argument
+  mlir::Value order = isAbsent(args[3])
+                          ? builder.create<fir::AbsentOp>(
+                                loc, fir::BoxType::get(builder.getI1Type()))
+                          : builder.createBox(loc, args[3]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  mlir::Type type = builder.getVarLenSeqTy(resultType, resultRank[0]);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, type);
+
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genReshape(builder, loc, resultIrBox, source, shape, pad,
+                           order);
+
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for RESHAPE");
+}
+
+// SCAN
+fir::ExtendedValue
+IntrinsicLibrary::genScan(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 4);
+
+  if (isAbsent(args[3])) {
+    // Kind not specified, so call scan/verify runtime routine that is
+    // specialized on the kind of characters in string.
+
+    // Handle required string base arg
+    mlir::Value stringBase = fir::getBase(args[0]);
+
+    // Handle required set string base arg
+    mlir::Value setBase = fir::getBase(args[1]);
+
+    // Handle kind argument; it is the kind of character in this case
+    fir::KindTy kind =
+        fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+            stringBase.getType());
+
+    // Get string length argument
+    mlir::Value stringLen = fir::getLen(args[0]);
+
+    // Get set string length argument
+    mlir::Value setLen = fir::getLen(args[1]);
+
+    // Handle optional back argument
+    mlir::Value back =
+        isAbsent(args[2])
+            ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+            : fir::getBase(args[2]);
+
+    return builder.createConvert(loc, resultType,
+                                 fir::runtime::genScan(builder, loc, kind,
+                                                       stringBase, stringLen,
+                                                       setBase, setLen, back));
+  }
+  // else use the runtime descriptor version of scan/verify
+
+  // Handle optional argument, back
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    fir::LogicalType logTy = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    mlir::Value temp = builder.createTemporary(loc, logTy);
+    mlir::Value castb = builder.createConvert(loc, logTy, b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
+  mlir::Value back = fir::isUnboxedValue(args[2])
+                         ? makeRefThenEmbox(*args[2].getUnboxed())
+                         : builder.create<fir::AbsentOp>(
+                               loc, fir::BoxType::get(builder.getI1Type()));
+
+  // Handle required string argument
+  mlir::Value string = builder.createBox(loc, args[0]);
+
+  // Handle required set argument
+  mlir::Value set = builder.createBox(loc, args[1]);
+
+  // Handle kind argument
+  mlir::Value kind = fir::getBase(args[3]);
+
+  // Create result descriptor
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genScanDescriptor(builder, loc, resultIrBox, string, set, back,
+                                  kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  return readAndAddCleanUp(resultMutableBox, resultType, "SCAN");
+}
+
 // SET_EXPONENT
 mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
                                              llvm::ArrayRef<mlir::Value> args) {
@@ -2494,6 +2646,38 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
       loc, resultType,
       fir::runtime::genSetExponent(builder, loc, fir::getBase(args[0]),
                                    fir::getBase(args[1])));
+}
+
+// SPREAD
+fir::ExtendedValue
+IntrinsicLibrary::genSpread(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 3);
+
+  // Handle source argument
+  mlir::Value source = builder.createBox(loc, args[0]);
+  fir::BoxValue sourceTmp = source;
+  unsigned sourceRank = sourceTmp.rank();
+
+  // Handle Dim argument
+  mlir::Value dim = fir::getBase(args[1]);
+
+  // Handle ncopies argument
+  mlir::Value ncopies = fir::getBase(args[2]);
+
+  // Generate result descriptor
+  mlir::Type resultArrayType =
+      builder.getVarLenSeqTy(resultType, sourceRank + 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genSpread(builder, loc, resultIrBox, source, dim, ncopies);
+
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for SPREAD");
 }
 
 // SUM
@@ -2708,6 +2892,83 @@ IntrinsicLibrary::genUnpack(mlir::Type resultType,
 
   return readAndAddCleanUp(resultMutableBox, resultType,
                            "unexpected result for UNPACK");
+}
+
+// VERIFY
+fir::ExtendedValue
+IntrinsicLibrary::genVerify(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 4);
+
+  if (isAbsent(args[3])) {
+    // Kind not specified, so call scan/verify runtime routine that is
+    // specialized on the kind of characters in string.
+
+    // Handle required string base arg
+    mlir::Value stringBase = fir::getBase(args[0]);
+
+    // Handle required set string base arg
+    mlir::Value setBase = fir::getBase(args[1]);
+
+    // Handle kind argument; it is the kind of character in this case
+    fir::KindTy kind =
+        fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+            stringBase.getType());
+
+    // Get string length argument
+    mlir::Value stringLen = fir::getLen(args[0]);
+
+    // Get set string length argument
+    mlir::Value setLen = fir::getLen(args[1]);
+
+    // Handle optional back argument
+    mlir::Value back =
+        isAbsent(args[2])
+            ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+            : fir::getBase(args[2]);
+
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genVerify(builder, loc, kind, stringBase, stringLen,
+                                setBase, setLen, back));
+  }
+  // else use the runtime descriptor version of scan/verify
+
+  // Handle optional argument, back
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    fir::LogicalType logTy = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    mlir::Value temp = builder.createTemporary(loc, logTy);
+    mlir::Value castb = builder.createConvert(loc, logTy, b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
+  mlir::Value back = fir::isUnboxedValue(args[2])
+                         ? makeRefThenEmbox(*args[2].getUnboxed())
+                         : builder.create<fir::AbsentOp>(
+                               loc, fir::BoxType::get(builder.getI1Type()));
+
+  // Handle required string argument
+  mlir::Value string = builder.createBox(loc, args[0]);
+
+  // Handle required set argument
+  mlir::Value set = builder.createBox(loc, args[1]);
+
+  // Handle kind argument
+  mlir::Value kind = fir::getBase(args[3]);
+
+  // Create result descriptor
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genVerifyDescriptor(builder, loc, resultIrBox, string, set,
+                                    back, kind);
+
+  // Handle cleanup of allocatable result descriptor and return
+  return readAndAddCleanUp(resultMutableBox, resultType, "VERIFY");
 }
 
 //===----------------------------------------------------------------------===//

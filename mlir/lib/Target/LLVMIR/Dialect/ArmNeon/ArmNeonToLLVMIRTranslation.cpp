@@ -45,8 +45,10 @@ public:
 
 void mlir::registerArmNeonDialectTranslation(DialectRegistry &registry) {
   registry.insert<arm_neon::ArmNeonDialect>();
-  registry.addDialectInterface<arm_neon::ArmNeonDialect,
-                               ArmNeonDialectLLVMIRTranslationInterface>();
+  registry.addExtension(
+      +[](MLIRContext *ctx, arm_neon::ArmNeonDialect *dialect) {
+        dialect->addInterfaces<ArmNeonDialectLLVMIRTranslationInterface>();
+      });
 }
 
 void mlir::registerArmNeonDialectTranslation(MLIRContext &context) {
