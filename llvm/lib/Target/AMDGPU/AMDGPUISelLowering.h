@@ -320,8 +320,9 @@ public:
 
   enum ImplicitParameter {
     FIRST_IMPLICIT,
-    GRID_DIM = FIRST_IMPLICIT,
-    GRID_OFFSET,
+    PRIVATE_BASE,
+    SHARED_BASE,
+    QUEUE_PTR,
   };
 
   /// Helper function that returns the byte offset of the given

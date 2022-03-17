@@ -542,16 +542,14 @@ private:
   bool funcRetrievesHeapPtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    auto Pos = llvm::AMDGPU::getHeapPtrImplicitArgPosition();
-    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    AAPointerInfo::OffsetAndSize OAS(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesQueuePtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    auto Pos = llvm::AMDGPU::getQueuePtrImplicitArgPosition();
-    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    AAPointerInfo::OffsetAndSize OAS(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 

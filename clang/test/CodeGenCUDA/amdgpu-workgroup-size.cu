@@ -1,17 +1,31 @@
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
 // RUN:     -fcuda-is-device -emit-llvm -o - -x hip %s \
-// RUN:     | FileCheck %s
+// RUN:     | FileCheck -check-prefix=PRECOV5 %s
+
+
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa \
+// RUN:     -fcuda-is-device -mcode-object-version=5 -emit-llvm -o - -x hip %s \
+// RUN:     | FileCheck -check-prefix=COV5 %s
 
 #include "Inputs/cuda.h"
 
-// CHECK-LABEL: test_get_workgroup_size
-// CHECK: call align 4 dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
-// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 4
-// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
-// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 6
-// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
-// CHECK: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 8
-// CHECK: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// PRECOV5-LABEL: test_get_workgroup_size
+// PRECOV5: call align 4 dereferenceable(64) i8 addrspace(4)* @llvm.amdgcn.dispatch.ptr()
+// PRECOV5: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 4
+// PRECOV5: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// PRECOV5: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 6
+// PRECOV5: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// PRECOV5: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 8
+// PRECOV5: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+
+// COV5-LABEL: test_get_workgroup_size
+// COV5: call align 8 dereferenceable(256) i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
+// COV5: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 12
+// COV5: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// COV5: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 14
+// COV5: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
+// COV5: getelementptr i8, i8 addrspace(4)* %{{.*}}, i32 16
+// COV5: load i16, i16 addrspace(4)* %{{.*}}, align 2, !range [[$WS_RANGE:![0-9]*]], !invariant.load
 __device__ void test_get_workgroup_size(int d, int *out)
 {
   switch (d) {

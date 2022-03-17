@@ -5442,24 +5442,41 @@ SDValue SITargetLowering::lowerTrapEndpgm(
   return DAG.getNode(AMDGPUISD::ENDPGM, SL, MVT::Other, Chain);
 }
 
+SDValue SITargetLowering::loadImplicitKernelArgument(SelectionDAG &DAG, MVT VT,
+    const SDLoc &DL, Align Alignment, ImplicitParameter Param) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  uint64_t Offset = getImplicitParameterOffset(MF, Param);
+  SDValue Ptr = lowerKernArgParameterPtr(DAG, DL, DAG.getEntryNode(), Offset);
+  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
+  return DAG.getLoad(VT, DL, DAG.getEntryNode(), Ptr, PtrInfo, Alignment,
+                     MachineMemOperand::MODereferenceable |
+                         MachineMemOperand::MOInvariant);
+}
+
 SDValue SITargetLowering::lowerTrapHsaQueuePtr(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Chain = Op.getOperand(0);
 
-  MachineFunction &MF = DAG.getMachineFunction();
-  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  Register UserSGPR = Info->getQueuePtrUserSGPR();
-
   SDValue QueuePtr;
-  if (UserSGPR == AMDGPU::NoRegister) {
-    // We probably are in a function incorrectly marked with
-    // amdgpu-no-queue-ptr. This is undefined. We don't want to delete the trap,
-    // so just use a null pointer.
-    QueuePtr = DAG.getConstant(0, SL, MVT::i64);
+  // For code object version 5, QueuePtr is passed through implicit kernarg.
+  if (AMDGPU::getAmdhsaCodeObjectVersion() == 5) {
+    QueuePtr =
+        loadImplicitKernelArgument(DAG, MVT::i64, SL, Align(8), QUEUE_PTR);
   } else {
-    QueuePtr = CreateLiveInRegister(
-      DAG, &AMDGPU::SReg_64RegClass, UserSGPR, MVT::i64);
+    MachineFunction &MF = DAG.getMachineFunction();
+    SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+    Register UserSGPR = Info->getQueuePtrUserSGPR();
+
+    if (UserSGPR == AMDGPU::NoRegister) {
+      // We probably are in a function incorrectly marked with
+      // amdgpu-no-queue-ptr. This is undefined. We don't want to delete the
+      // trap, so just use a null pointer.
+      QueuePtr = DAG.getConstant(0, SL, MVT::i64);
+    } else {
+      QueuePtr = CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass, UserSGPR,
+                                      MVT::i64);
+    }
   }
 
   SDValue SGPR01 = DAG.getRegister(AMDGPU::SGPR0_SGPR1, MVT::i64);
@@ -5533,6 +5550,14 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS, const SDLoc &DL,
         DAG.getMachineNode(AMDGPU::S_GETREG_B32, DL, MVT::i32, EncodingImm), 0);
     SDValue ShiftAmount = DAG.getTargetConstant(WidthM1 + 1, DL, MVT::i32);
     return DAG.getNode(ISD::SHL, DL, MVT::i32, ApertureReg, ShiftAmount);
+  }
+
+  // For code object version 5, private_base and shared_base are passed through
+  // implicit kernargs.
+  if (AMDGPU::getAmdhsaCodeObjectVersion() == 5) {
+    ImplicitParameter Param =
+        (AS == AMDGPUAS::LOCAL_ADDRESS) ? SHARED_BASE : PRIVATE_BASE;
+    return loadImplicitKernelArgument(DAG, MVT::i32, DL, Align(4), Param);
   }
 
   MachineFunction &MF = DAG.getMachineFunction();
