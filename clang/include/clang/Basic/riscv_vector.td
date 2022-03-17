@@ -1678,7 +1678,6 @@ defm vncvt_x_x_w : RVVPseudoVNCVTBuiltin<"vnsrl", "vncvt_x", "csi",
                                           ["Uv", "UvUw"]]>;
 
 // 12.8. Vector Integer Comparison Instructions
-let HasPolicy = false in {
 defm vmseq : RVVIntMaskOutBuiltinSet;
 defm vmsne : RVVIntMaskOutBuiltinSet;
 defm vmsltu : RVVUnsignedMaskOutBuiltinSet;
@@ -1689,7 +1688,6 @@ defm vmsgtu : RVVUnsignedMaskOutBuiltinSet;
 defm vmsgt : RVVSignedMaskOutBuiltinSet;
 defm vmsgeu : RVVUnsignedMaskOutBuiltinSet;
 defm vmsge : RVVSignedMaskOutBuiltinSet;
-}
 
 // 12.9. Vector Integer Min/Max Instructions
 let NoMaskPolicy = HasPassthruOperand in {
@@ -1877,14 +1875,12 @@ defm vfneg_v : RVVPseudoVFUnaryBuiltin<"vfsgnjn", "xfd">;
 defm vfabs_v : RVVPseudoVFUnaryBuiltin<"vfsgnjx", "xfd">;
 
 // 14.13. Vector Floating-Point Compare Instructions
-let HasPolicy = false in {
 defm vmfeq : RVVFloatingMaskOutBuiltinSet;
 defm vmfne : RVVFloatingMaskOutBuiltinSet;
 defm vmflt : RVVFloatingMaskOutBuiltinSet;
 defm vmfle : RVVFloatingMaskOutBuiltinSet;
 defm vmfgt : RVVFloatingMaskOutBuiltinSet;
 defm vmfge : RVVFloatingMaskOutBuiltinSet;
-}
 
 // 14.14. Vector Floating-Point Classify Instruction
 let Name = "vfclass_v", NoMaskPolicy = HasPassthruOperand in
@@ -1998,6 +1994,7 @@ def vcpop : RVVMaskOp0Builtin<"um">;
 
 // 16.3. vfirst find-first-set mask bit
 def vfirst : RVVMaskOp0Builtin<"lm">;
+}
 
 // 16.4. vmsbf.m set-before-first mask bit
 def vmsbf : RVVMaskUnaryBuiltin;
@@ -2007,7 +2004,6 @@ def vmsif : RVVMaskUnaryBuiltin;
 
 // 16.6. vmsof.m set-only-first mask bit
 def vmsof : RVVMaskUnaryBuiltin;
-}
 
 let NoMaskPolicy = HasPassthruOperand, HasNoMaskedOverloaded = false in {
   // 16.8. Vector Iota Instruction
