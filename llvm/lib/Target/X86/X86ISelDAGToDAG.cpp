@@ -5614,10 +5614,10 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       uint64_t Mask = MaskC->getZExtValue();
       Mask &= maskTrailingOnes<uint64_t>(CmpVT.getScalarSizeInBits());
 
-      // Check if we can replace AND+IMM64 with a shift. This is possible for
-      // masks like 0xFF000000 or 0x00FFFFFF and if we care only about the zero
-      // flag.
-      if (CmpVT == MVT::i64 && !isInt<32>(Mask) && isShiftedMask_64(Mask) &&
+      // Check if we can replace AND+IMM{32,64} with a shift. This is possible
+      // for masks like 0xFF000000 or 0x00FFFFFF and if we care only about the
+      // zero flag.
+      if (CmpVT == MVT::i64 && !isInt<8>(Mask) && isShiftedMask_64(Mask) &&
           onlyUsesZeroFlag(SDValue(Node, 0))) {
         unsigned ShiftOpcode = ISD::DELETED_NODE;
         unsigned ShiftAmt;
@@ -5626,7 +5626,12 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         unsigned TestOpcode;
         unsigned LeadingZeros = countLeadingZeros(Mask);
         unsigned TrailingZeros = countTrailingZeros(Mask);
-        if (LeadingZeros == 0) {
+
+        // With leading/trailing zeros, the transform is profitable if we can
+        // eliminate a movabsq or shrink a 32-bit immediate to 8-bit without
+        // incurring any extra register moves.
+        bool SavesBytes = !isInt<32>(Mask) || N0.getOperand(0).hasOneUse();
+        if (LeadingZeros == 0 && SavesBytes) {
           // If the mask covers the most significant bit, then we can replace
           // TEST+AND with a SHR and check eflags.
           // This emits a redundant TEST which is subsequently eliminated.
@@ -5634,7 +5639,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           ShiftAmt = TrailingZeros;
           SubRegIdx = 0;
           TestOpcode = X86::TEST64rr;
-        } else if (TrailingZeros == 0) {
+        } else if (TrailingZeros == 0 && SavesBytes) {
           // If the mask covers the least significant bit, then we can replace
           // TEST+AND with a SHL and check eflags.
           // This emits a redundant TEST which is subsequently eliminated.
@@ -5642,9 +5647,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           ShiftAmt = LeadingZeros;
           SubRegIdx = 0;
           TestOpcode = X86::TEST64rr;
-        } else if (MaskC->hasOneUse()) {
-          // If the mask is 8/16 or 32bits wide, then we can replace it with
-          // a SHR and a TEST8rr/TEST16rr/TEST32rr.
+        } else if (MaskC->hasOneUse() && !isInt<32>(Mask)) {
+          // If the shifted mask extends into the high half and is 8/16/32 bits
+          // wide, then replace it with a SHR and a TEST8rr/TEST16rr/TEST32rr.
           unsigned PopCount = 64 - LeadingZeros - TrailingZeros;
           if (PopCount == 8) {
             ShiftOpcode = X86::SHR64ri;

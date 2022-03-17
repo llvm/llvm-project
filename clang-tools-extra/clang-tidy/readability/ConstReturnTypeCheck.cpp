@@ -53,6 +53,18 @@ findConstToRemove(const FunctionDecl *Def,
 
 namespace {
 
+AST_MATCHER(QualType, isLocalConstQualified) {
+  return Node.isLocalConstQualified();
+}
+
+AST_MATCHER(QualType, isTypeOfType) {
+  return isa<TypeOfType>(Node.getTypePtr());
+}
+
+AST_MATCHER(QualType, isTypeOfExprType) {
+  return isa<TypeOfExprType>(Node.getTypePtr());
+}
+
 struct CheckResult {
   // Source range of the relevant `const` token in the definition being checked.
   CharSourceRange ConstRange;
@@ -95,10 +107,14 @@ static CheckResult checkDef(const clang::FunctionDecl *Def,
 
 void ConstReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   // Find all function definitions for which the return types are `const`
-  // qualified.
+  // qualified, ignoring decltype types.
+  auto NonLocalConstType = qualType(
+      unless(isLocalConstQualified()),
+      anyOf(decltypeType(), autoType(), isTypeOfType(), isTypeOfExprType()));
   Finder->addMatcher(
-      functionDecl(returns(isConstQualified()),
-                   anyOf(isDefinition(), cxxMethodDecl(isPure())))
+      functionDecl(
+          returns(allOf(isConstQualified(), unless(NonLocalConstType))),
+          anyOf(isDefinition(), cxxMethodDecl(isPure())))
           .bind("func"),
       this);
 }
