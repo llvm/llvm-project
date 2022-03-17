@@ -485,6 +485,7 @@ struct IntrinsicLibrary {
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
@@ -725,6 +726,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"mask", asBox},
        {"vector", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"present",
+     &I::genPresent,
+     {{{"a", asInquired}}},
      /*isElemental=*/false},
     {"product",
      &I::genProduct,
@@ -2561,6 +2566,15 @@ IntrinsicLibrary::genPack(mlir::Type resultType,
 
   return readAndAddCleanUp(resultMutableBox, resultType,
                            "unexpected result for PACK");
+}
+
+// PRESENT
+fir::ExtendedValue
+IntrinsicLibrary::genPresent(mlir::Type,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  return builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
+                                          fir::getBase(args[0]));
 }
 
 // PRODUCT
