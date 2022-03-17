@@ -103,6 +103,9 @@ Attribute Changes in Clang
     attributes of different kinds.
   - Emit error on GNU attributes for a nested namespace definition.
 
+- Statement attributes ``[[clang::noinline]]`` and  ``[[clang::always_inline]]``
+  can be used to control inlining decisions at callsites.
+
 Windows Support
 ---------------
 
