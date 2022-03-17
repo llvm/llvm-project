@@ -358,8 +358,8 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
-  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound
-    assignments like ``+=`` are aligned along with ``=``.
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
 
     .. code-block:: c++
 
@@ -371,10 +371,9 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short
-    assignment operators are left-padded to the same length as long
-    ones in order to put all assignment operators to the right of
-    the left hand side.
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
 
     .. code-block:: c++
 
@@ -482,8 +481,8 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
-  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound
-    assignments like ``+=`` are aligned along with ``=``.
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
 
     .. code-block:: c++
 
@@ -495,10 +494,9 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short
-    assignment operators are left-padded to the same length as long
-    ones in order to put all assignment operators to the right of
-    the left hand side.
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
 
     .. code-block:: c++
 
@@ -606,8 +604,8 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
-  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound
-    assignments like ``+=`` are aligned along with ``=``.
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
 
     .. code-block:: c++
 
@@ -619,10 +617,9 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short
-    assignment operators are left-padded to the same length as long
-    ones in order to put all assignment operators to the right of
-    the left hand side.
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
 
     .. code-block:: c++
 
@@ -731,8 +728,8 @@ the configuration (without a prefix: ``Auto``).
       /* A comment. */
       double e = 4;
 
-  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound
-    assignments like ``+=`` are aligned along with ``=``.
+  * ``bool AlignCompound`` Only for ``AlignConsecutiveAssignments``.  Whether compound assignments
+    like ``+=`` are aligned along with ``=``.
 
     .. code-block:: c++
 
@@ -744,10 +741,9 @@ the configuration (without a prefix: ``Auto``).
       a &= 2;
       bbb = 2;
 
-  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short
-    assignment operators are left-padded to the same length as long
-    ones in order to put all assignment operators to the right of
-    the left hand side.
+  * ``bool PadOperators`` Only for ``AlignConsecutiveAssignments``.  Whether short assignment
+    operators are left-padded to the same length as long ones in order to
+    put all assignment operators to the right of the left hand side.
 
     .. code-block:: c++
 
