@@ -163,4 +163,7 @@ MCRegister getX86SubSuperRegisterOrZero(MCRegister, unsigned,
 #define GET_SUBTARGETINFO_ENUM
 #include "X86GenSubtargetInfo.inc"
 
+#define GET_X86_MNEMONIC_TABLES_H
+#include "X86GenMnemonicTables.inc"
+
 #endif

@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMX86Desc
   X86MCAsmInfo.cpp
   X86MCCodeEmitter.cpp
   X86MachObjectWriter.cpp
+  X86MnemonicTables.cpp
   X86ELFObjectWriter.cpp
   X86WinCOFFObjectWriter.cpp
   X86WinCOFFStreamer.cpp
