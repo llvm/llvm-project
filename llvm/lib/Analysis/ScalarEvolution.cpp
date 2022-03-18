@@ -13309,8 +13309,8 @@ ScalarEvolution::getUsedLoops(const SCEV *S,
   SCEVTraversal<FindUsedLoops>(F).visitAll(S);
 }
 
-static void getReachableBlocks(SmallPtrSetImpl<BasicBlock *> &Reachable,
-                               Function &F) {
+void ScalarEvolution::getReachableBlocks(
+    SmallPtrSetImpl<BasicBlock *> &Reachable, Function &F) {
   SmallVector<BasicBlock *> Worklist;
   Worklist.push_back(&F.getEntryBlock());
   while (!Worklist.empty()) {
@@ -13318,13 +13318,31 @@ static void getReachableBlocks(SmallPtrSetImpl<BasicBlock *> &Reachable,
     if (!Reachable.insert(BB).second)
       continue;
 
-    const APInt *Cond;
+    Value *Cond;
     BasicBlock *TrueBB, *FalseBB;
-    if (match(BB->getTerminator(),
-              m_Br(m_APInt(Cond), m_BasicBlock(TrueBB), m_BasicBlock(FalseBB))))
-      Worklist.push_back(Cond->isOne() ? TrueBB : FalseBB);
-    else
-      append_range(Worklist, successors(BB));
+    if (match(BB->getTerminator(), m_Br(m_Value(Cond), m_BasicBlock(TrueBB),
+                                        m_BasicBlock(FalseBB)))) {
+      if (auto *C = dyn_cast<ConstantInt>(Cond)) {
+        Worklist.push_back(C->isOne() ? TrueBB : FalseBB);
+        continue;
+      }
+
+      if (auto *Cmp = dyn_cast<ICmpInst>(Cond)) {
+        const SCEV *L = getSCEV(Cmp->getOperand(0));
+        const SCEV *R = getSCEV(Cmp->getOperand(1));
+        if (isKnownPredicateViaConstantRanges(Cmp->getPredicate(), L, R)) {
+          Worklist.push_back(TrueBB);
+          continue;
+        }
+        if (isKnownPredicateViaConstantRanges(Cmp->getInversePredicate(), L,
+                                              R)) {
+          Worklist.push_back(FalseBB);
+          continue;
+        }
+      }
+    }
+
+    append_range(Worklist, successors(BB));
   }
 }
 
@@ -13353,7 +13371,7 @@ void ScalarEvolution::verify() const {
 
   SCEVMapper SCM(SE2);
   SmallPtrSet<BasicBlock *, 16> ReachableBlocks;
-  getReachableBlocks(ReachableBlocks, F);
+  SE2.getReachableBlocks(ReachableBlocks, F);
 
   auto GetDelta = [&](const SCEV *Old, const SCEV *New) -> const SCEV * {
     if (containsUndefs(Old) || containsUndefs(New)) {
