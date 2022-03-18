@@ -413,8 +413,8 @@ lpad:
   resume { i8*, i32 } %lpval
 }
 
-declare i8* @malloc(i32)
-declare void @free(i8*) willreturn
+declare i8* @malloc(i32) allockind("alloc,uninitialized") allocsize(0)
+declare void @free(i8*) willreturn allockind("free")
 declare void @print(i32)
 declare void @foo()
 

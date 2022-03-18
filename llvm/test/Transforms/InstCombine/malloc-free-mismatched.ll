@@ -3,7 +3,7 @@
 
 define dso_local i32 @_Z6answeri(i32 %0) {
 ; CHECK-LABEL: @_Z6answeri(
-; CHECK-NEXT:    [[TMP2:%.*]] = call noalias nonnull dereferenceable(80) i8* @_Znam(i64 80) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call noalias nonnull dereferenceable(80) i8* @_Znam(i64 80) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    call void @free(i8* [[TMP2]])
 ; CHECK-NEXT:    ret i32 42
 ;
@@ -24,7 +24,7 @@ define void @test_alloca() {
 declare dso_local nonnull i8* @_Znam(i64) #1
 
 ; Function Attrs: nounwind
-declare dso_local void @free(i8*)
+declare dso_local void @free(i8*) allockind("free") "alloc-family"="malloc"
 
 attributes #0 = { builtin allocsize(0) }
-attributes #1 = { nobuiltin allocsize(0) }
+attributes #1 = { nobuiltin allocsize(0) allockind("alloc,uninitialized") "alloc-family"="_Znam" }
