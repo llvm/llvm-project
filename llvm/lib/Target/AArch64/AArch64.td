@@ -154,10 +154,6 @@ def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
 def FeatureZCZeroingGP : SubtargetFeature<"zcz-gp", "HasZeroCycleZeroingGP", "true",
                                         "Has zero-cycle zeroing instructions for generic registers">;
 
-// It is generally beneficial to rewrite "fmov s0, wzr" to "movi d0, #0".
-// as movi is more efficient across all cores. Newer cores can eliminate
-// fmovs early and there is no difference with movi, but this not true for
-// all implementations.
 def FeatureNoZCZeroingFP : SubtargetFeature<"no-zcz-fp", "HasZeroCycleZeroingFP", "false",
                                         "Has no zero-cycle zeroing instructions for FP registers">;
 
@@ -172,7 +168,7 @@ def FeatureZCZeroingFPWorkaround : SubtargetFeature<"zcz-fp-workaround",
     "The zero-cycle floating-point zeroing instruction has a bug">;
 
 def FeatureStrictAlign : SubtargetFeature<"strict-align",
-                                          "RequiresStrictAlign", "true",
+                                          "StrictAlign", "true",
                                           "Disallow all unaligned memory "
                                           "access">;
 
@@ -194,11 +190,11 @@ def FeaturePredictableSelectIsExpensive : SubtargetFeature<
     "Prefer likely predicted branches over selects">;
 
 def FeatureCustomCheapAsMoveHandling : SubtargetFeature<"custom-cheap-as-move",
-    "HasCustomCheapAsMoveHandling", "true",
+    "CustomAsCheapAsMove", "true",
     "Use custom handling of cheap instructions">;
 
 def FeatureExynosCheapAsMoveHandling : SubtargetFeature<"exynos-cheap-as-move",
-    "HasExynosCheapAsMoveHandling", "true",
+    "ExynosAsCheapAsMove", "true",
     "Use Exynos specific handling of cheap instructions",
     [FeatureCustomCheapAsMoveHandling]>;
 
@@ -206,12 +202,12 @@ def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
 def FeatureSlowMisaligned128Store : SubtargetFeature<"slow-misaligned-128store",
-    "IsMisaligned128StoreSlow", "true", "Misaligned 128 bit stores are slow">;
+    "Misaligned128StoreIsSlow", "true", "Misaligned 128 bit stores are slow">;
 
 def FeatureSlowPaired128 : SubtargetFeature<"slow-paired-128",
-    "IsPaired128Slow", "true", "Paired 128 bit loads and stores are slow">;
+    "Paired128IsSlow", "true", "Paired 128 bit loads and stores are slow">;
 
-def FeatureSlowSTRQro : SubtargetFeature<"slow-strqro-store", "IsSTRQroSlow",
+def FeatureSlowSTRQro : SubtargetFeature<"slow-strqro-store", "STRQroIsSlow",
     "true", "STR of Q register with register offset is slow">;
 
 def FeatureAlternateSExtLoadCVTF32Pattern : SubtargetFeature<
