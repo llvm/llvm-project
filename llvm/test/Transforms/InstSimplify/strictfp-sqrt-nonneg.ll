@@ -9,8 +9,7 @@ define float @nonneg_u_defaultenv(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_u_defaultenv(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
@@ -22,8 +21,7 @@ define float @nonneg_s_defaultenv(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_s_defaultenv(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
@@ -35,8 +33,7 @@ define float @nonneg_u_maytrap(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_u_maytrap(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
@@ -48,8 +45,7 @@ define float @nonneg_s_maytrap(i32 %a) #0 {
 ; CHECK-LABEL: @nonneg_s_maytrap(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
@@ -63,7 +59,7 @@ define float @nonneg_u_ebstrict(i32 %a) #0 {
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    [[SUB:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
@@ -77,7 +73,7 @@ define float @nonneg_s_ebstrict(i32 %a) #0 {
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    [[SQRA:%.*]] = call float @llvm.experimental.constrained.sqrt.f32(float [[FPA]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    [[SUB:%.*]] = call nnan float @llvm.experimental.constrained.fsub.f32(float [[SQRA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[SQRA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   %sqra = call float @llvm.experimental.constrained.sqrt.f32(float %fpa, metadata !"round.tonearest", metadata !"fpexcept.strict") #0

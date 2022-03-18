@@ -216,12 +216,10 @@ define float @fold_fsub_fabs_nnan_x_n0_ebstrict(float %a) #0 {
   ret float %sub
 }
 
-; TODO: This can't fire currently due to missing constrained support:
 define float @fold_fsub_sitofp_x_n0_defaultenv(i32 %a) #0 {
 ; CHECK-LABEL: @fold_fsub_sitofp_x_n0_defaultenv(
 ; CHECK-NEXT:    [[FPA:%.*]] = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[SUB:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[FPA]], float -0.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    ret float [[SUB]]
+; CHECK-NEXT:    ret float [[FPA]]
 ;
   %fpa = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %a, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
   %sub = call float @llvm.experimental.constrained.fsub.f32(float %fpa, float -0.0, metadata !"round.tonearest", metadata !"fpexcept.ignore") #0
