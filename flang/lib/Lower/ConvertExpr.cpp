@@ -1092,7 +1092,9 @@ public:
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::SetLength<KIND> &x) {
-    TODO(getLoc(), "genval SetLength<KIND>");
+    mlir::Value newLenValue = genunbox(x.right());
+    fir::ExtendedValue lhs = gen(x.left());
+    return replaceScalarCharacterLength(lhs, newLenValue);
   }
 
   template <int KIND>
