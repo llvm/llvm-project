@@ -365,7 +365,7 @@ string HipBinAmd::getDeviceLibPath() const {
   fs::path bitCodePath = rocclrHomePath;
   bitCodePath /= "lib/bitcode";
   string deviceLibPath = var.deviceLibPathEnv_;
-  if (var.deviceLibPathEnv_.empty() && fs::exists(bitCodePath)) {
+  if (deviceLibPath.empty() && fs::exists(bitCodePath)) {
     deviceLibPath = bitCodePath.string();
   }
 
