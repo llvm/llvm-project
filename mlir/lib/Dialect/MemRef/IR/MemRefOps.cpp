@@ -1669,18 +1669,6 @@ computeReshapeCollapsedType(MemRefType type,
           AffineMapAttr::get(layout)));
 }
 
-void ExpandShapeOp::build(OpBuilder &b, OperationState &result, Value src,
-                          ArrayRef<ReassociationIndices> reassociation,
-                          ArrayRef<NamedAttribute> attrs) {
-  auto memRefType = src.getType().cast<MemRefType>();
-  auto resultType = computeReshapeCollapsedType(
-      memRefType, getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
-                      b.getContext(), reassociation)));
-  build(b, result, resultType, src, attrs);
-  result.addAttribute(getReassociationAttrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
-}
-
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
