@@ -9,7 +9,7 @@
 #ifndef _LIBCPP___RANGES_TAKE_VIEW_H
 #define _LIBCPP___RANGES_TAKE_VIEW_H
 
-#include <__algorithm/min.h>
+#include <__algorithm/ranges_min.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/counted_iterator.h>
@@ -118,15 +118,13 @@ namespace ranges {
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto size() requires sized_range<_View> {
       auto __n = ranges::size(__base_);
-      // TODO: use ranges::min here.
-      return std::min(__n, static_cast<decltype(__n)>(__count_));
+      return ranges::min(__n, static_cast<decltype(__n)>(__count_));
     }
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr auto size() const requires sized_range<const _View> {
       auto __n = ranges::size(__base_);
-      // TODO: use ranges::min here.
-      return std::min(__n, static_cast<decltype(__n)>(__count_));
+      return ranges::min(__n, static_cast<decltype(__n)>(__count_));
     }
   };
 

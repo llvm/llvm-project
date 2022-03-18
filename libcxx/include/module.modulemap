@@ -298,6 +298,7 @@ module std [system] {
       module ranges_find_if           { private header "__algorithm/ranges_find_if.h" }
       module ranges_find_if_not       { private header "__algorithm/ranges_find_if_not.h" }
       module ranges_max_element       { private header "__algorithm/ranges_max_element.h" }
+      module ranges_min               { private header "__algorithm/ranges_min.h" }
       module ranges_min_element       { private header "__algorithm/ranges_min_element.h" }
       module ranges_mismatch          { private header "__algorithm/ranges_mismatch.h" }
       module ranges_swap_ranges       { private header "__algorithm/ranges_swap_ranges.h" }

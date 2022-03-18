@@ -15,11 +15,11 @@ Search,lower_bound,Christopher Di Bella,`D105795 <https://llvm.org/D105795>`_,Un
 Search,upper_bound,Christopher Di Bella,`D105795 <https://llvm.org/D105795>`_,Under review
 Search,equal_range,Christopher Di Bella,n/a,Not started
 Search,binary_search,Christopher Di Bella,n/a,Not started
-Search,min,Not assigned,n/a,Not started
+Search,min,Nikolas Klauser,`D119589 <https://llvm.org/D119589>`_,✅
 Search,max,Not assigned,n/a,Not started
 Search,minmax,Not assigned,n/a,Not started
-Search,min_element,Nikolas Klauser,n/a,✅
-Search,max_element,Not assigned,n/a,Not started
+Search,min_element,Nikolas Klauser,`D117025 <https://llvm.org/D117025>`_,✅
+Search,max_element,Nikolas Klauser,`D117523 <https://llvm.org/D117523>`_,✅
 Search,minmax_element,Not assigned,n/a,Not started
 Search,count,Not assigned,n/a,Not started
 Search,count_if,Not assigned,n/a,Not started
