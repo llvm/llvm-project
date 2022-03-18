@@ -77,7 +77,7 @@ private:
   bool expandAtomicLoadToLL(LoadInst *LI);
   bool expandAtomicLoadToCmpXchg(LoadInst *LI);
   StoreInst *convertAtomicStoreToIntegerType(StoreInst *SI);
-  bool expandAtomicStore(StoreInst *SI);
+  void expandAtomicStore(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
@@ -271,8 +271,10 @@ bool AtomicExpand::runOnFunction(Function &F) {
         MadeChange = true;
       }
 
-      if (TLI->shouldExpandAtomicStoreInIR(SI))
-        MadeChange |= expandAtomicStore(SI);
+      if (TLI->shouldExpandAtomicStoreInIR(SI)) {
+        expandAtomicStore(SI);
+        MadeChange = true;
+      }
     } else if (RMWI) {
       // There are two different ways of expanding RMW instructions:
       // - into a load if it is idempotent
@@ -481,7 +483,7 @@ StoreInst *AtomicExpand::convertAtomicStoreToIntegerType(StoreInst *SI) {
   return NewSI;
 }
 
-bool AtomicExpand::expandAtomicStore(StoreInst *SI) {
+void AtomicExpand::expandAtomicStore(StoreInst *SI) {
   // This function is only called on atomic stores that are too large to be
   // atomic if implemented as a native store. So we replace them by an
   // atomic swap, that can be implemented for example as a ldrex/strex on ARM
@@ -495,7 +497,7 @@ bool AtomicExpand::expandAtomicStore(StoreInst *SI) {
   SI->eraseFromParent();
 
   // Now we have an appropriate swap instruction, lower it as usual.
-  return tryExpandAtomicRMW(AI);
+  tryExpandAtomicRMW(AI);
 }
 
 static void createCmpXchgInstFun(IRBuilder<> &Builder, Value *Addr,
