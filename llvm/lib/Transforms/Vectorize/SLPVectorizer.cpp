@@ -2949,7 +2949,11 @@ private:
                           ScheduleData *NextLoadStore);
 
     /// Updates the dependency information of a bundle and of all instructions/
-    /// bundles which depend on the original bundle.
+    /// bundles which depend on the original bundle.  Note that only
+    /// def-use and memory dependencies are explicitly modeled.  We do not
+    /// track control dependencies (e.g. a potentially faulting load following
+    /// a potentially infinte looping readnone call), and as such the resulting
+    /// graph is a subgraph of the full dependency graph.
     void calculateDependencies(ScheduleData *SD, bool InsertInReadyList,
                                BoUpSLP *SLP);
 
@@ -8133,6 +8137,12 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   // For the real scheduling we use a more sophisticated ready-list: it is
   // sorted by the original instruction location. This lets the final schedule
   // be as  close as possible to the original instruction order.
+  // WARNING: This required for correctness in several cases:
+  // * We must prevent reordering of potentially infinte loops inside
+  //   readnone calls with following potentially faulting instructions.
+  // * We must prevent reordering of allocas with stacksave intrinsic calls.
+  // In both cases, we rely on two instructions which are both ready (per the
+  // def-use and memory dependency subgraph) not to be reordered.
   struct ScheduleDataCompare {
     bool operator()(ScheduleData *SD1, ScheduleData *SD2) const {
       return SD2->SchedulingPriority < SD1->SchedulingPriority;
