@@ -942,8 +942,7 @@ getTypeExpansion(QualType Ty, const ASTContext &Context) {
       if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
         assert(!CXXRD->isDynamicClass() &&
                "cannot expand vtable pointers in dynamic classes");
-        for (const CXXBaseSpecifier &BS : CXXRD->bases())
-          Bases.push_back(&BS);
+        llvm::append_range(Bases, llvm::make_pointer_range(CXXRD->bases()));
       }
 
       for (const auto *FD : RD->fields()) {

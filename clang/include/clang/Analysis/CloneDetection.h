@@ -208,13 +208,7 @@ public:
     // The initial assumption is that there is only one clone group and every
     // statement is a clone of the others. This clone group will then be
     // split up with the help of the constraints.
-    CloneGroup AllClones;
-    AllClones.reserve(Sequences.size());
-    for (const auto &C : Sequences) {
-      AllClones.push_back(C);
-    }
-
-    Result.push_back(AllClones);
+    Result.push_back(Sequences);
 
     constrainClones(Result, ConstraintList...);
   }

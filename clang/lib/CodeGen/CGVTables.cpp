@@ -400,9 +400,7 @@ void CodeGenFunction::EmitMustTailThunk(GlobalDecl GD,
   // to translate AST arguments into LLVM IR arguments.  For thunks, we know
   // that the caller prototype more or less matches the callee prototype with
   // the exception of 'this'.
-  SmallVector<llvm::Value *, 8> Args;
-  for (llvm::Argument &A : CurFn->args())
-    Args.push_back(&A);
+  SmallVector<llvm::Value *, 8> Args(llvm::make_pointer_range(CurFn->args()));
 
   // Set the adjusted 'this' pointer.
   const ABIArgInfo &ThisAI = CurFnInfo->arg_begin()->info;
