@@ -38,13 +38,13 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
 
     // These automatically dominate and don't need to be saved.
     if (!DominatingLLVMValue::needsSaving(V))
-      return saved_type(V, ScalarLiteral);
+      return saved_type(V, nullptr, ScalarLiteral);
 
     // Everything else needs an alloca.
     Address addr =
       CGF.CreateDefaultAlignTempAlloca(V->getType(), "saved-rvalue");
     CGF.Builder.CreateStore(V, addr);
-    return saved_type(addr.getPointer(), ScalarAddress);
+    return saved_type(addr.getPointer(), nullptr, ScalarAddress);
   }
 
   if (rv.isComplex()) {
@@ -54,19 +54,19 @@ DominatingValue<RValue>::saved_type::save(CodeGenFunction &CGF, RValue rv) {
     Address addr = CGF.CreateDefaultAlignTempAlloca(ComplexTy, "saved-complex");
     CGF.Builder.CreateStore(V.first, CGF.Builder.CreateStructGEP(addr, 0));
     CGF.Builder.CreateStore(V.second, CGF.Builder.CreateStructGEP(addr, 1));
-    return saved_type(addr.getPointer(), ComplexAddress);
+    return saved_type(addr.getPointer(), nullptr, ComplexAddress);
   }
 
   assert(rv.isAggregate());
   Address V = rv.getAggregateAddress(); // TODO: volatile?
   if (!DominatingLLVMValue::needsSaving(V.getPointer()))
-    return saved_type(V.getPointer(), AggregateLiteral,
+    return saved_type(V.getPointer(), V.getElementType(), AggregateLiteral,
                       V.getAlignment().getQuantity());
 
   Address addr =
     CGF.CreateTempAlloca(V.getType(), CGF.getPointerAlign(), "saved-rvalue");
   CGF.Builder.CreateStore(V.getPointer(), addr);
-  return saved_type(addr.getPointer(), AggregateAddress,
+  return saved_type(addr.getPointer(), V.getElementType(), AggregateAddress,
                     V.getAlignment().getQuantity());
 }
 
@@ -86,11 +86,11 @@ RValue DominatingValue<RValue>::saved_type::restore(CodeGenFunction &CGF) {
     return RValue::get(CGF.Builder.CreateLoad(getSavingAddress(Value)));
   case AggregateLiteral:
     return RValue::getAggregate(
-        Address::deprecated(Value, CharUnits::fromQuantity(Align)));
+        Address(Value, ElementType, CharUnits::fromQuantity(Align)));
   case AggregateAddress: {
     auto addr = CGF.Builder.CreateLoad(getSavingAddress(Value));
     return RValue::getAggregate(
-        Address::deprecated(addr, CharUnits::fromQuantity(Align)));
+        Address(addr, ElementType, CharUnits::fromQuantity(Align)));
   }
   case ComplexAddress: {
     Address address = getSavingAddress(Value);
