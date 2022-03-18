@@ -1344,7 +1344,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
     DenseMap<Value *, OffsetInfo> OffsetInfoMap;
     OffsetInfoMap[&AssociatedValue] = OffsetInfo{0};
 
-    auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo &PtrOI,
+    auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo PtrOI,
                                      bool &Follow) {
       OffsetInfo &UsrOI = OffsetInfoMap[Usr];
       UsrOI = PtrOI;
