@@ -68,17 +68,8 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
       for (CallBase *CB : Calls) {
         Function *Caller = CB->getCaller();
         OptimizationRemarkEmitter ORE(Caller);
-        auto OIC = shouldInline(
-            *CB,
-            [&](CallBase &CB) {
-              return InlineCost::getAlways("always inline attribute");
-            },
-            ORE);
-        assert(OIC);
         DebugLoc DLoc = CB->getDebugLoc();
         BasicBlock *Block = CB->getParent();
-        emitInlinedIntoBasedOnCost(ORE, DLoc, Block, F, *Caller, *OIC, false,
-                                   DEBUG_TYPE);
 
         InlineFunctionInfo IFI(
             /*cg=*/nullptr, GetAssumptionCache, &PSI,
@@ -97,6 +88,11 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
           });
           continue;
         }
+
+        emitInlinedIntoBasedOnCost(
+            ORE, DLoc, Block, F, *Caller,
+            InlineCost::getAlways("always inline attribute"),
+            /*ForProfileContext=*/false, DEBUG_TYPE);
 
         // Merge the attributes based on the inlining.
         AttributeFuncs::mergeAttributesForInlining(*Caller, F);
