@@ -219,19 +219,25 @@ define void @test6(i64* %a, i64* %b, i64* %c) {
   ret void
 }
 
-; FIXME: We are hoisting a possible faulting load above a call which may
-; not return, this is wrong.
+; In this case, we can't vectorize the load pair because there's no valid
+; scheduling point which respects both memory and control dependence.  If
+; we scheduled the second load before the store holding the first one in place,
+; we'd have hoisted a potentially faulting load above a potentially infinite
+; call and thus have introduced a possible fault into a program which didn't
+; previously exist.
 define void @test7(i64* %a, i64* %b, i64* %c) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, i64* [[A:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[A]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i64, i64* [[A:%.*]], align 4
 ; CHECK-NEXT:    store i64 0, i64* [[A]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @may_inf_loop_ro()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_inf_loop_ro()
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, i64* [[A]], i32 1
+; CHECK-NEXT:    [[V2:%.*]] = load i64, i64* [[A2]], align 4
 ; CHECK-NEXT:    [[CA2:%.*]] = getelementptr i64, i64* [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[C]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[C]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[V2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr i64, i64* [[B:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64* [[B]] to <2 x i64>*
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 4
@@ -255,18 +261,20 @@ define void @test7(i64* %a, i64* %b, i64* %c) {
   ret void
 }
 
-; FIXME: Same as test7, but with a throwing call
+; Same as test7, but with a throwing call
 define void @test8(i64* %a, i64* %b, i64* %c) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, i64* [[A:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[A]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i64, i64* [[A:%.*]], align 4
 ; CHECK-NEXT:    store i64 0, i64* [[A]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @may_throw() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_throw() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, i64* [[A]], i32 1
+; CHECK-NEXT:    [[V2:%.*]] = load i64, i64* [[A2]], align 4
 ; CHECK-NEXT:    [[CA2:%.*]] = getelementptr i64, i64* [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i64* [[C]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, <2 x i64>* [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP2]], [[TMP5]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[C]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[V1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[V2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr i64, i64* [[B:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64* [[B]] to <2 x i64>*
 ; CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 4
@@ -328,23 +336,24 @@ define void @test9(i64* %a, i64* %b, i64* %c) {
 }
 
 ; A variant of test7 which shows the same problem with a non-load instruction
-; FIXME: This is wrong, we're hoisting a faulting udiv above an infinite loop.
 define void @test10(i64* %a, i64* %b, i64* %c) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, i64* [[A:%.*]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[A]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv <2 x i64> <i64 200, i64 200>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
-; CHECK-NEXT:    store i64 [[TMP4]], i64* [[A]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @may_inf_loop_ro()
+; CHECK-NEXT:    [[V1:%.*]] = load i64, i64* [[A:%.*]], align 4
+; CHECK-NEXT:    [[A2:%.*]] = getelementptr i64, i64* [[A]], i32 1
+; CHECK-NEXT:    [[V2:%.*]] = load i64, i64* [[A2]], align 4
+; CHECK-NEXT:    [[U1:%.*]] = udiv i64 200, [[V1]]
+; CHECK-NEXT:    store i64 [[U1]], i64* [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_inf_loop_ro()
+; CHECK-NEXT:    [[U2:%.*]] = udiv i64 200, [[V2]]
 ; CHECK-NEXT:    [[CA2:%.*]] = getelementptr i64, i64* [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[C]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[C]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[U1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[U2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr i64, i64* [[B:%.*]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64* [[B]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP8]], <2 x i64>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64* [[B]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v1 = load i64, i64* %a
