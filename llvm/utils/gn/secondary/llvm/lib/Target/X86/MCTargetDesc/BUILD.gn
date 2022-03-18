@@ -21,6 +21,15 @@ tablegen("X86GenInstrInfo") {
   td_file = "../X86.td"
 }
 
+tablegen("X86GenMnemonicTables") {
+  visibility = [ ":MCTargetDesc" ]
+  args = [
+    "-gen-x86-mnemonic-tables",
+    "-asmwriternum=1",
+  ]
+  td_file = "../X86.td"
+}
+
 tablegen("X86GenRegisterInfo") {
   visibility = [ ":MCTargetDesc" ]
   args = [ "-gen-register-info" ]
@@ -41,6 +50,7 @@ static_library("MCTargetDesc") {
   # should be in deps instead.
   public_deps = [
     ":X86GenInstrInfo",
+    ":X86GenMnemonicTables",
     ":X86GenRegisterInfo",
     ":X86GenSubtargetInfo",
   ]
@@ -66,6 +76,7 @@ static_library("MCTargetDesc") {
     "X86MCCodeEmitter.cpp",
     "X86MCTargetDesc.cpp",
     "X86MachObjectWriter.cpp",
+    "X86MnemonicTables.cpp",
     "X86ShuffleDecode.cpp",
     "X86WinCOFFObjectWriter.cpp",
     "X86WinCOFFStreamer.cpp",
