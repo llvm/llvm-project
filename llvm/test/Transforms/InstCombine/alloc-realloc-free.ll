@@ -17,8 +17,8 @@ declare dso_local void @free(i8* nocapture noundef) local_unnamed_addr #2
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 attributes #0 = { mustprogress nounwind uwtable willreturn }
-attributes #1 = { inaccessiblememonly mustprogress nofree nounwind willreturn }
-attributes #2 = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn }
-attributes #3 = { nofree nosync nounwind readnone speculatable willreturn }
+attributes #1 = { inaccessiblememonly mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") "alloc-family"="malloc" }
+attributes #2 = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allockind("realloc") "alloc-family"="malloc" }
+attributes #3 = { nofree nosync nounwind readnone speculatable willreturn allockind("free") "alloc-family"="malloc" }
 attributes #4 = { nounwind }
 

@@ -4,8 +4,8 @@
 target triple = "nvptx64"
 
 declare void @user(i8*)
-declare i8* @malloc(i64)
-declare void @free(i8*)
+declare i8* @malloc(i64) allockind("alloc,uninitialized") "alloc-family"="malloc" allocsize(0)
+declare void @free(i8*) allockind("free") "alloc-family"="malloc"
 
 ; Ensure the nvptx backend states malloc & free are a thing so we can recognize
 ; so we will optimize them properly. In the test below the malloc-free chain is

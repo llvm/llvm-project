@@ -16,7 +16,7 @@ define void @init() {
   ret void
 }
 
-declare noalias i8* @malloc(i64)
+declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0)
 
 define i32 @get() {
 ; CHECK-LABEL: @get(

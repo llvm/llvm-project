@@ -74,8 +74,8 @@ declare i1 @llvm.coro.alloc(token)
 declare i8* @llvm.coro.begin(token, i8*)
 declare i1 @llvm.coro.end(i8*, i1) 
 
-declare noalias i8* @malloc(i32)
+declare noalias i8* @malloc(i32) allockind("alloc,uninitialized") "alloc-family"="malloc"
 declare void @print(i32)
-declare void @free(i8*) willreturn
+declare void @free(i8*) willreturn allockind("free") "alloc-family"="malloc"
 
 !0 = !{i32 846595819, i8** null}

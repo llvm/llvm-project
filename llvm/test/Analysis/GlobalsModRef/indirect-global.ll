@@ -9,7 +9,7 @@ target datalayout = "p:32:32:32"
 
 @G = internal global i32* null		; <i32**> [#uses=3]
 
-declare noalias i8* @malloc(i32)
+declare noalias i8* @malloc(i32) allockind("alloc,uninitialized") allocsize(0) inaccessiblememonly
 define void @malloc_init() {
 ; CHECK-LABEL: @malloc_init(
 ; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) i8* @malloc(i32 4)
@@ -38,7 +38,7 @@ define i32 @malloc_test(i32* %P) {
 
 @G2 = internal global i32* null		; <i32**> [#uses=3]
 
-declare noalias i8* @calloc(i32, i32)
+declare noalias i8* @calloc(i32, i32) allockind("alloc,zeroed") allocsize(0,1) inaccessiblememonly
 define void @calloc_init() {
 ; CHECK-LABEL: @calloc_init(
 ; CHECK-NEXT:    [[A:%.*]] = call dereferenceable_or_null(4) i8* @calloc(i32 4, i32 1)

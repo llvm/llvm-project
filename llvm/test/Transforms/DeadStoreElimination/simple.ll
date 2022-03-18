@@ -264,9 +264,9 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 }
 
 
-declare noalias i8* @malloc(i64) willreturn
+declare noalias i8* @malloc(i64) willreturn allockind("alloc,uninitialized")
 declare noalias i8* @custom_malloc(i32) willreturn
-declare noalias i8* @calloc(i32, i32) willreturn
+declare noalias i8* @calloc(i32, i32) willreturn allockind("alloc,zeroed")
 
 define void @test14(i32* %Q) {
 ; CHECK-LABEL: @test14(
@@ -693,7 +693,7 @@ entry:
   ret void
 }
 
-declare void @free(i8* nocapture)
+declare void @free(i8* nocapture) allockind("free")
 
 ; We cannot remove `store i32 1, i32* %p`, because @unknown_func may unwind
 ; and the caller may read %p while unwinding.

@@ -4,8 +4,8 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-apple-darwin10.0"
 
-declare noalias i8* @malloc(i64) nounwind
-declare noalias i8* @calloc(i64, i64)
+declare noalias i8* @malloc(i64) nounwind allockind("alloc,uninitialized") allocsize(0) inaccessiblememonly
+declare noalias i8* @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) inaccessiblememonly
 declare noalias i8* @_Znwm(i64)
 declare void @escape(i8*)
 
