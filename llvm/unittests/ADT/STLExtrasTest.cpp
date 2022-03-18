@@ -457,6 +457,30 @@ TEST(STLExtrasTest, DropBeginDefaultTest) {
   EXPECT_EQ(i, 5);
 }
 
+TEST(STLExtrasTest, DropEndTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  for (int n = 0; n < 5; ++n) {
+    int i = 0;
+    for (auto &v : drop_end(vec, n)) {
+      EXPECT_EQ(v, i);
+      i += 1;
+    }
+    EXPECT_EQ(i, 5 - n);
+  }
+}
+
+TEST(STLExtrasTest, DropEndDefaultTest) {
+  SmallVector<int, 5> vec{0, 1, 2, 3, 4};
+
+  int i = 0;
+  for (auto &v : drop_end(vec)) {
+    EXPECT_EQ(v, i);
+    i += 1;
+  }
+  EXPECT_EQ(i, 4);
+}
+
 TEST(STLExtrasTest, EarlyIncrementTest) {
   std::list<int> L = {1, 2, 3, 4};
 
