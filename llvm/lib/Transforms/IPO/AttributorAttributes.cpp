@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -5844,7 +5845,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     bool HasPotentiallyFreeingUnknownUses = false;
 
     /// The set of free calls that use this allocation.
-    SmallPtrSet<CallBase *, 1> PotentialFreeCalls{};
+    SmallSetVector<CallBase *, 1> PotentialFreeCalls{};
   };
 
   struct DeallocationInfo {
@@ -5856,7 +5857,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     bool MightFreeUnknownObjects = false;
 
     /// The set of allocation calls that are potentially freed.
-    SmallPtrSet<CallBase *, 1> PotentialAllocationCalls{};
+    SmallSetVector<CallBase *, 1> PotentialAllocationCalls{};
   };
 
   AAHeapToStackFunction(const IRPosition &IRP, Attributor &A)
@@ -5866,9 +5867,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
     // Ensure we call the destructor so we release any memory allocated in the
     // sets.
     for (auto &It : AllocationInfos)
-      It.getSecond()->~AllocationInfo();
+      It.second->~AllocationInfo();
     for (auto &It : DeallocationInfos)
-      It.getSecond()->~DeallocationInfo();
+      It.second->~DeallocationInfo();
   }
 
   void initialize(Attributor &A) override {
@@ -5942,7 +5943,8 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
   bool isAssumedHeapToStack(const CallBase &CB) const override {
     if (isValidState())
-      if (AllocationInfo *AI = AllocationInfos.lookup(&CB))
+      if (AllocationInfo *AI =
+              AllocationInfos.lookup(const_cast<CallBase *>(&CB)))
         return AI->Status != AllocationInfo::INVALID;
     return false;
   }
@@ -6091,11 +6093,11 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
   /// Collection of all malloc-like calls in a function with associated
   /// information.
-  DenseMap<CallBase *, AllocationInfo *> AllocationInfos;
+  MapVector<CallBase *, AllocationInfo *> AllocationInfos;
 
   /// Collection of all free-like calls in a function with associated
   /// information.
-  DenseMap<CallBase *, DeallocationInfo *> DeallocationInfos;
+  MapVector<CallBase *, DeallocationInfo *> DeallocationInfos;
 
   ChangeStatus updateImpl(Attributor &A) override;
 };
@@ -9866,10 +9868,10 @@ private:
 
   /// Used to answer if a call base inside this function can reach a specific
   /// function.
-  DenseMap<const CallBase *, QueryResolver> CBQueries;
+  MapVector<const CallBase *, QueryResolver> CBQueries;
 
   /// This is for instruction queries than scan "forward".
-  DenseMap<const Instruction *, QueryResolver> InstQueries;
+  MapVector<const Instruction *, QueryResolver> InstQueries;
 };
 } // namespace
 
