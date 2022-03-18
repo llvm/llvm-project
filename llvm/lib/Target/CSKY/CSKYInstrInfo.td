@@ -709,8 +709,6 @@ let Predicates= [iHasE2] in {
   def MOVI32 : I_16_MOV<0x10, "movi32", uimm16>;
   let Size = 4, isCodeGenOnly = 0 in
   def BGENI : CSKYPseudo<(outs GPR:$dst), (ins uimm5:$imm), "bgeni\t$dst, $imm", []>;
-  def : InstAlias<"bgeni16 $dst, $imm", (BGENI GPR:$dst, uimm5:$imm)>;
-  def : InstAlias<"bgeni32 $dst, $imm", (BGENI GPR:$dst, uimm5:$imm)>;
   def MOVIH32 : I_16_MOV<0x11, "movih32", uimm16_16_xform>;
   def MVC32 : R_Z_1<0x1, 0x8, "mvc32">;
   let isCodeGenOnly = 1 in
@@ -779,8 +777,6 @@ def BNEZAD32 : CSKY32Inst<AddrModeNone, 0x3a,
 
 def BSR32 : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>;
 
-def : InstAlias<"bsr $dst", (BSR32 call_symbol:$dst)>;
-
 def BSR32_BR : J<0x38, (outs), (ins call_symbol:$offset), "bsr32", []>{
   let isCodeGenOnly = 1;
   let isBranch = 1;
@@ -804,7 +800,6 @@ let Predicates = [iHas2E3] in {
 
 def GRS32 : I_18_Z_L<0x3, "grs32\t$rz, $offset",
                     (outs GPR:$rz), (ins bare_symbol:$offset), []>;
-def : InstAlias<"grs\t$rz, $offset", (GRS32 GPR:$rz, bare_symbol:$offset)>;
 
 let Uses = [R28] in {
 def LRS32B : I_18_Z_L<0x0, "lrs32.b\t$rz, $offset",
@@ -1291,8 +1286,6 @@ let Predicates = [iHasE2] in {
 let isCall = 1, Defs = [ R15 ], mayLoad = 1, Size = 4, isCodeGenOnly = 0 in
 def JBSR32 : CSKYPseudo<(outs), (ins call_symbol:$src1), "jbsr32\t$src1", []>;
 
-def : InstAlias<"jbsr\t$src1", (JBSR32 call_symbol:$src1)>;
-
 def JBR32 : CSKYPseudo<(outs), (ins br_symbol:$src1), "jbr32\t$src1", []> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -1338,18 +1331,13 @@ let mayLoad = 1, Size = 2, isCodeGenOnly = 0 in
 def PseudoLRW32 : CSKYPseudo<(outs GPR:$rz), (ins bare_symbol:$src), "lrw32 $rz, $src", []>;
 
 
-def : InstAlias<"lrw $rz, $src", (PseudoLRW32 GPR:$rz, bare_symbol:$src)>;
-def : InstAlias<"lrw $rz, $src", (LRW32 GPR:$rz, constpool_symbol:$src)>;
+
 
 let mayLoad = 1, Size = 4, isCodeGenOnly = 0 in
 def PseudoJSRI32 : CSKYPseudo<(outs), (ins call_symbol:$src), "jsri32 $src", []>;
-def : InstAlias<"jsri $dst", (PseudoJSRI32 call_symbol:$dst)>;
-def : InstAlias<"jsri $dst", (JSRI32 constpool_symbol:$dst)>;
 
 let mayLoad = 1, Size = 4, isCodeGenOnly = 0 in
 def PseudoJMPI32 : CSKYPseudo<(outs), (ins br_symbol:$src), "jmpi32 $src", []>;
-def : InstAlias<"jmpi $dst", (PseudoJMPI32 br_symbol:$dst)>;
-def : InstAlias<"jmpi $dst", (JMPI32 constpool_symbol:$dst)>;
 
 let isNotDuplicable = 1, mayLoad = 1, mayStore = 0, Size = 8 in
 def PseudoTLSLA32 : CSKYPseudo<(outs GPR:$dst1, GPR:$dst2),
@@ -1362,3 +1350,4 @@ def CONSTPOOL_ENTRY : CSKYPseudo<(outs),
 include "CSKYInstrInfo16Instr.td"
 include "CSKYInstrInfoF1.td"
 include "CSKYInstrInfoF2.td"
+include "CSKYInstrAlias.td"

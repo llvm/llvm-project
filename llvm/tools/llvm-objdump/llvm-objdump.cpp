@@ -441,8 +441,13 @@ static bool isArmElf(const ObjectFile *Obj) {
   return Elf && Elf->getEMachine() == ELF::EM_ARM;
 }
 
+static bool isCSKYElf(const ObjectFile *Obj) {
+  const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj);
+  return Elf && Elf->getEMachine() == ELF::EM_CSKY;
+}
+
 static bool hasMappingSymbols(const ObjectFile *Obj) {
-  return isArmElf(Obj) || isAArch64Elf(Obj);
+  return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) ;
 }
 
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,

@@ -67,15 +67,170 @@ static void writeData(uint32_t Bin, unsigned Size, raw_ostream &OS) {
   support::endian::write<uint16_t>(OS, LO16, support::little);
 }
 
+void CSKYMCCodeEmitter::expandJBTF(const MCInst &MI, raw_ostream &OS,
+                                   SmallVectorImpl<MCFixup> &Fixups,
+                                   const MCSubtargetInfo &STI) const {
+
+  MCInst TmpInst;
+
+  uint32_t Binary;
+
+  TmpInst =
+      MCInstBuilder(MI.getOpcode() == CSKY::JBT_E ? CSKY::BF16 : CSKY::BT16)
+          .addOperand(MI.getOperand(0))
+          .addImm(6);
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  writeData(Binary, 2, OS);
+
+  if (!STI.getFeatureBits()[CSKY::Has2E3])
+    TmpInst = MCInstBuilder(CSKY::BR32)
+                  .addOperand(MI.getOperand(1))
+                  .addOperand(MI.getOperand(2));
+  else
+    TmpInst = MCInstBuilder(CSKY::JMPI32).addOperand(MI.getOperand(2));
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  Fixups[Fixups.size() - 1].setOffset(2);
+  writeData(Binary, 4, OS);
+}
+
+void CSKYMCCodeEmitter::expandNEG(const MCInst &MI, raw_ostream &OS,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const {
+
+  MCInst TmpInst;
+  uint32_t Binary;
+  unsigned Size = MI.getOpcode() == CSKY::NEG32 ? 4 : 2;
+
+  TmpInst = MCInstBuilder(Size == 4 ? CSKY::NOT32 : CSKY::NOT16)
+                .addOperand(MI.getOperand(0))
+                .addOperand(MI.getOperand(1));
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  writeData(Binary, Size, OS);
+
+  TmpInst = MCInstBuilder(Size == 4 ? CSKY::ADDI32 : CSKY::ADDI16)
+                .addOperand(MI.getOperand(0))
+                .addOperand(MI.getOperand(0))
+                .addImm(1);
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  writeData(Binary, Size, OS);
+}
+
+void CSKYMCCodeEmitter::expandRSUBI(const MCInst &MI, raw_ostream &OS,
+                                    SmallVectorImpl<MCFixup> &Fixups,
+                                    const MCSubtargetInfo &STI) const {
+
+  MCInst TmpInst;
+  uint32_t Binary;
+  unsigned Size = MI.getOpcode() == CSKY::RSUBI32 ? 4 : 2;
+
+  TmpInst = MCInstBuilder(Size == 4 ? CSKY::NOT32 : CSKY::NOT16)
+                .addOperand(MI.getOperand(0))
+                .addOperand(MI.getOperand(1));
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  writeData(Binary, Size, OS);
+
+  TmpInst = MCInstBuilder(Size == 4 ? CSKY::ADDI32 : CSKY::ADDI16)
+                .addOperand(MI.getOperand(0))
+                .addOperand(MI.getOperand(0))
+                .addImm(MI.getOperand(2).getImm() + 1);
+  Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  writeData(Binary, Size, OS);
+}
+
 void CSKYMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MII.get(MI.getOpcode());
   unsigned Size = Desc.getSize();
 
+  MCInst TmpInst;
+
+  switch (MI.getOpcode()) {
+  default:
+    TmpInst = MI;
+    break;
+  case CSKY::JBT_E:
+  case CSKY::JBF_E:
+    expandJBTF(MI, OS, Fixups, STI);
+    MCNumEmitted += 2;
+    return;
+  case CSKY::NEG32:
+  case CSKY::NEG16:
+    expandNEG(MI, OS, Fixups, STI);
+    MCNumEmitted += 2;
+    return;
+  case CSKY::RSUBI32:
+  case CSKY::RSUBI16:
+    expandRSUBI(MI, OS, Fixups, STI);
+    MCNumEmitted += 2;
+    return;
+  case CSKY::JBSR32:
+    TmpInst = MCInstBuilder(CSKY::BSR32).addOperand(MI.getOperand(0));
+    break;
+  case CSKY::JBR16:
+    TmpInst = MCInstBuilder(CSKY::BR16).addOperand(MI.getOperand(0));
+    break;
+  case CSKY::JBR32:
+    TmpInst = MCInstBuilder(CSKY::BR32).addOperand(MI.getOperand(0));
+    break;
+  case CSKY::JBT16:
+    TmpInst = MCInstBuilder(CSKY::BT16)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1));
+    break;
+  case CSKY::JBT32:
+    TmpInst = MCInstBuilder(CSKY::BT32)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1));
+    break;
+  case CSKY::JBF16:
+    TmpInst = MCInstBuilder(CSKY::BF16)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1));
+    break;
+  case CSKY::JBF32:
+    TmpInst = MCInstBuilder(CSKY::BF32)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1));
+    break;
+  case CSKY::LRW32_Gen:
+    TmpInst = MCInstBuilder(CSKY::LRW32)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(2));
+    break;
+  case CSKY::LRW16_Gen:
+    TmpInst = MCInstBuilder(CSKY::LRW16)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(2));
+    break;
+  case CSKY::CMPLEI32:
+    TmpInst = MCInstBuilder(CSKY::CMPLTI32)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1))
+                  .addImm(MI.getOperand(2).getImm() + 1);
+    break;
+  case CSKY::CMPLEI16:
+    TmpInst = MCInstBuilder(CSKY::CMPLTI16)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1))
+                  .addImm(MI.getOperand(2).getImm() + 1);
+    break;
+  case CSKY::ROTRI32:
+    TmpInst = MCInstBuilder(CSKY::ROTLI32)
+                  .addOperand(MI.getOperand(0))
+                  .addOperand(MI.getOperand(1))
+                  .addImm(32 - MI.getOperand(2).getImm());
+    break;
+  case CSKY::BGENI:
+    auto V = 1 << MI.getOperand(1).getImm();
+    TmpInst =
+        MCInstBuilder(CSKY::MOVI32).addOperand(MI.getOperand(0)).addImm(V);
+    break;
+  }
+
   ++MCNumEmitted;
 
-  uint32_t Bin = getBinaryCodeForInstr(MI, Fixups, STI);
+  uint32_t Bin = getBinaryCodeForInstr(TmpInst, Fixups, STI);
 
   uint16_t LO16 = static_cast<uint16_t>(Bin);
   uint16_t HI16 = static_cast<uint16_t>(Bin >> 16);
