@@ -345,10 +345,16 @@ static fir::ExtendedValue genLoad(fir::FirOpBuilder &builder,
         return builder.create<fir::LoadOp>(loc, fir::getBase(v));
       },
       [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
-        TODO(loc, "genLoad for MutableBoxValue");
+        return genLoad(builder, loc,
+                       fir::factory::genMutableBoxRead(builder, loc, box));
       },
       [&](const fir::BoxValue &box) -> fir::ExtendedValue {
-        TODO(loc, "genLoad for BoxValue");
+        if (box.isUnlimitedPolymorphic())
+          fir::emitFatalError(
+              loc,
+              "lowering attempting to load an unlimited polymorphic entity");
+        return genLoad(builder, loc,
+                       fir::factory::readBoxValue(builder, loc, box));
       },
       [&](const auto &) -> fir::ExtendedValue {
         fir::emitFatalError(
@@ -566,6 +572,25 @@ public:
   ExtValue genMutableBoxValueImpl(const T &) {
     // NULL() case should not be handled here.
     fir::emitFatalError(getLoc(), "NULL() must be lowered in its context");
+  }
+
+  /// A `NULL()` in a position where a mutable box is expected has the same
+  /// semantics as an absent optional box value.
+  ExtValue genMutableBoxValueImpl(const Fortran::evaluate::NullPointer &) {
+    mlir::Location loc = getLoc();
+    auto nullConst = builder.createNullConstant(loc);
+    auto noneTy = mlir::NoneType::get(builder.getContext());
+    auto polyRefTy = fir::LLVMPointerType::get(noneTy);
+    // MutableBoxValue will dereference the box, so create a bogus temporary for
+    // the `nullptr`. The LLVM optimizer will garbage collect the temp.
+    auto temp =
+        builder.createTemporary(loc, polyRefTy, /*shape=*/mlir::ValueRange{});
+    auto nullPtr = builder.createConvert(loc, polyRefTy, nullConst);
+    builder.create<fir::StoreOp>(loc, nullPtr, temp);
+    auto nullBoxTy = builder.getRefType(fir::BoxType::get(noneTy));
+    return fir::MutableBoxValue(builder.createConvert(loc, nullBoxTy, temp),
+                                /*lenParameters=*/mlir::ValueRange{},
+                                /*mutableProperties=*/{});
   }
 
   template <typename T>
@@ -1067,7 +1092,9 @@ public:
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::SetLength<KIND> &x) {
-    TODO(getLoc(), "genval SetLength<KIND>");
+    mlir::Value newLenValue = genunbox(x.right());
+    fir::ExtendedValue lhs = gen(x.left());
+    return replaceScalarCharacterLength(lhs, newLenValue);
   }
 
   template <int KIND>
@@ -1801,7 +1828,7 @@ public:
   template <typename A>
   ExtValue genFunctionRef(const Fortran::evaluate::FunctionRef<A> &funcRef) {
     if (!funcRef.GetType().has_value())
-      fir::emitFatalError(getLoc(), "internal: a function must have a type");
+      fir::emitFatalError(getLoc(), "a function must have a type");
     mlir::Type resTy = genType(*funcRef.GetType());
     return genProcedureRef(funcRef, {resTy});
   }
@@ -1811,12 +1838,8 @@ public:
   template <typename A>
   ExtValue gen(const Fortran::evaluate::FunctionRef<A> &funcRef) {
     ExtValue retVal = genFunctionRef(funcRef);
-    mlir::Value retValBase = fir::getBase(retVal);
-    if (fir::conformsWithPassByRef(retValBase.getType()))
-      return retVal;
-    auto mem = builder.create<fir::AllocaOp>(getLoc(), retValBase.getType());
-    builder.create<fir::StoreOp>(getLoc(), retValBase, mem);
-    return fir::substBase(retVal, mem.getResult());
+    mlir::Type resultType = converter.genType(toEvExpr(funcRef));
+    return placeScalarValueInMemory(builder, getLoc(), retVal, resultType);
   }
 
   /// helper to detect statement functions
@@ -2432,6 +2455,25 @@ public:
           caller.placeInput(arg, boxStorage);
           continue;
         }
+        if (fir::isPointerType(argTy) &&
+            !Fortran::evaluate::IsObjectPointer(
+                *expr, converter.getFoldingContext())) {
+          // Passing a non POINTER actual argument to a POINTER dummy argument.
+          // Create a pointer of the dummy argument type and assign the actual
+          // argument to it.
+          mlir::Value irBox =
+              builder.createTemporary(loc, fir::unwrapRefType(argTy));
+          // Non deferred parameters will be evaluated on the callee side.
+          fir::MutableBoxValue pointer(irBox,
+                                       /*nonDeferredParams=*/mlir::ValueRange{},
+                                       /*mutableProperties=*/{});
+          Fortran::lower::associateMutableBox(converter, loc, pointer, *expr,
+                                              /*lbounds*/ mlir::ValueRange{},
+                                              stmtCtx);
+          caller.placeInput(arg, irBox);
+          continue;
+        }
+        // Passing a POINTER to a POINTER, or an ALLOCATABLE to an ALLOCATABLE.
         fir::MutableBoxValue mutableBox = genMutableBoxValue(*expr);
         mlir::Value irBox =
             fir::factory::getMutableIRBox(builder, loc, mutableBox);
@@ -4481,14 +4523,34 @@ public:
     TODO(getLoc(), "genarr ComplexConstructor<KIND>");
   }
 
+  /// Fortran's concatenation operator `//`.
   template <int KIND>
   CC genarr(const Fortran::evaluate::Concat<KIND> &x) {
-    TODO(getLoc(), "genarr Concat<KIND>");
+    mlir::Location loc = getLoc();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto lhs = lf(iters);
+      auto rhs = rf(iters);
+      const fir::CharBoxValue *lchr = lhs.getCharBox();
+      const fir::CharBoxValue *rchr = rhs.getCharBox();
+      if (lchr && rchr) {
+        return fir::factory::CharacterExprHelper{builder, loc}
+            .createConcatenate(*lchr, *rchr);
+      }
+      TODO(loc, "concat on unexpected extended values");
+      return mlir::Value{};
+    };
   }
 
   template <int KIND>
   CC genarr(const Fortran::evaluate::SetLength<KIND> &x) {
-    TODO(getLoc(), "genarr SetLength<KIND>");
+    auto lf = genarr(x.left());
+    mlir::Value rhs = fir::getBase(asScalar(x.right()));
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value lhs = fir::getBase(lf(iters));
+      return fir::CharBoxValue{lhs, rhs};
+    };
   }
 
   template <typename A>
@@ -5682,8 +5744,32 @@ public:
     };
   }
 
+  /// Lower a component path with or without rank.
+  /// Example: <code>array%baz%qux%waldo</code>
   CC genarr(const Fortran::evaluate::Component &x, ComponentPath &components) {
-    TODO(getLoc(), "genarr Component");
+    if (explicitSpaceIsActive()) {
+      if (x.base().Rank() == 0 && x.Rank() > 0)
+        components.reversePath.push_back(ImplicitSubscripts{});
+      if (fir::ArrayLoadOp load = explicitSpace->findBinding(&x))
+        return applyPathToArrayLoad(load, components);
+    } else {
+      if (x.base().Rank() == 0)
+        return genImplicitArrayAccess(x, components);
+    }
+    bool atEnd = pathIsEmpty(components);
+    if (!getLastSym(x).test(Fortran::semantics::Symbol::Flag::ParentComp))
+      // Skip parent components; their components are placed directly in the
+      // object.
+      components.reversePath.push_back(&x);
+    auto result = genarr(x.base(), components);
+    if (components.applied)
+      return result;
+    if (atEnd)
+      return genAsScalar(x);
+    mlir::Location loc = getLoc();
+    return [=](IterSpace) -> ExtValue {
+      fir::emitFatalError(loc, "reached component with path");
+    };
   }
 
   /// Array reference with subscripts. If this has rank > 0, this is a form
@@ -5885,7 +5971,8 @@ public:
 
   CC genarr(const Fortran::evaluate::ComplexPart &x,
             ComponentPath &components) {
-    TODO(getLoc(), "genarr ComplexPart");
+    components.reversePath.push_back(&x);
+    return genarr(x.complex(), components);
   }
 
   CC genarr(const Fortran::evaluate::StaticDataObject::Pointer &,
@@ -5895,7 +5982,9 @@ public:
 
   /// Substrings (see 9.4.1)
   CC genarr(const Fortran::evaluate::Substring &x, ComponentPath &components) {
-    TODO(getLoc(), "genarr Substring");
+    components.substring = &x;
+    return std::visit([&](const auto &v) { return genarr(v, components); },
+                      x.parent());
   }
 
   /// Base case of generating an array reference,

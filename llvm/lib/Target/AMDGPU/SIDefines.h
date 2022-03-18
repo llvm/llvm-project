@@ -780,6 +780,17 @@ enum OpSel : uint64_t {
 
 } // namespace VOP3PEncoding
 
+namespace ImplicitArg {
+// Implicit kernel argument offset for code object version 5.
+enum Offset_COV5 : unsigned {
+  HOSTCALL_PTR_OFFSET = 80,
+  HEAP_PTR_OFFSET = 96,
+  PRIVATE_BASE_OFFSET = 192,
+  SHARED_BASE_OFFSET = 196,
+  QUEUE_PTR_OFFSET = 200,
+};
+
+} // namespace ImplicitArg
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

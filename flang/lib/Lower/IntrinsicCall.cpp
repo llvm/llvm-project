@@ -25,10 +25,12 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
+#include "flang/Optimizer/Builder/Runtime/Command.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Runtime/Numeric.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Reduction.h"
+#include "flang/Optimizer/Builder/Runtime/Stop.h"
 #include "flang/Optimizer/Builder/Runtime/Transformational.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
@@ -107,6 +109,9 @@ static bool isAbsent(const fir::ExtendedValue &exv) {
 }
 static bool isAbsent(llvm::ArrayRef<fir::ExtendedValue> args, size_t argIndex) {
   return args.size() <= argIndex || isAbsent(args[argIndex]);
+}
+static bool isAbsent(llvm::ArrayRef<mlir::Value> args, size_t argIndex) {
+  return args.size() <= argIndex || !args[argIndex];
 }
 
 /// Test if an ExtendedValue is present.
@@ -435,30 +440,42 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genAdjustRtCall(mlir::Type,
                                      llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAimag(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genAint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAll(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAllocated(mlir::Type,
                                   llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue
+      genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCharacterCompare(mlir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genCmplx(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genDim(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genDotProduct(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genDprod(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genEoshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  void genExit(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genExponent(mlir::Type, llvm::ArrayRef<mlir::Value>);
   template <Extremum, ExtremumBehavior>
   mlir::Value genExtremum(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFloor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
+  void genGetCommandArgument(mlir::ArrayRef<fir::ExtendedValue> args);
+  void genGetEnvironmentVariable(llvm::ArrayRef<fir::ExtendedValue>);
   /// Lowering for the IAND intrinsic. The IAND intrinsic expects two arguments
   /// in the llvm::ArrayRef.
   mlir::Value genIand(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -467,38 +484,58 @@ struct IntrinsicLibrary {
   mlir::Value genIbset(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genIchar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genIeor(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genIndex(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genIor(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshft(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genIshftc(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genLbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLen(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genLenTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genMerge(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genPack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genRRSpacing(mlir::Type resultType,
+                           llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
+  mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genSpacing(mlir::Type resultType,
+                         llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genTranspose(mlir::Type,
+                                  llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  /// Implement all conversion functions like DBLE, the first argument is
+  /// the value to convert. There may be an additional KIND arguments that
+  /// is ignored because this is already reflected in the result type.
+  mlir::Value genConversion(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
@@ -603,6 +640,7 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"string", asAddr}}},
      /*isElemental=*/true},
     {"aimag", &I::genAimag},
+    {"aint", &I::genAint},
     {"all",
      &I::genAll,
      {{{"mask", asAddr}, {"dim", asValue}}},
@@ -611,6 +649,7 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAllocated,
      {{{"array", asInquired}, {"scalar", asInquired}}},
      /*isElemental=*/false},
+    {"anint", &I::genAnint},
     {"any",
      &I::genAny,
      {{{"mask", asAddr}, {"dim", asValue}}},
@@ -619,7 +658,14 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genAssociated,
      {{{"pointer", asInquired}, {"target", asInquired}}},
      /*isElemental=*/false},
+    {"btest", &I::genBtest},
+    {"ceiling", &I::genCeiling},
     {"char", &I::genChar},
+    {"cmplx",
+     &I::genCmplx,
+     {{{"x", asValue}, {"y", asValue, handleDynamicOptional}}}},
+    {"command_argument_count", &I::genCommandArgumentCount},
+    {"conjg", &I::genConjg},
     {"count",
      &I::genCount,
      {{{"mask", asAddr}, {"dim", asValue}, {"kind", asValue}}},
@@ -639,11 +685,13 @@ static constexpr IntrinsicHandler handlers[]{
        {"zone", asAddr, handleDynamicOptional},
        {"values", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"dble", &I::genConversion},
     {"dim", &I::genDim},
     {"dot_product",
      &I::genDotProduct,
      {{{"vector_a", asBox}, {"vector_b", asBox}}},
      /*isElemental=*/false},
+    {"dprod", &I::genDprod},
     {"eoshift",
      &I::genEoshift,
      {{{"array", asBox},
@@ -651,9 +699,30 @@ static constexpr IntrinsicHandler handlers[]{
        {"boundary", asBox, handleDynamicOptional},
        {"dim", asValue}}},
      /*isElemental=*/false},
+    {"exit",
+     &I::genExit,
+     {{{"status", asValue}}},
+     /*isElemental=*/false},
     {"exponent", &I::genExponent},
     {"floor", &I::genFloor},
     {"fraction", &I::genFraction},
+    {"get_command_argument",
+     &I::genGetCommandArgument,
+     {{{"number", asValue},
+       {"value", asAddr},
+       {"length", asAddr},
+       {"status", asAddr},
+       {"errmsg", asAddr}}},
+     /*isElemental=*/false},
+    {"get_environment_variable",
+     &I::genGetEnvironmentVariable,
+     {{{"name", asValue},
+       {"value", asAddr},
+       {"length", asAddr},
+       {"status", asAddr},
+       {"trim_name", asValue},
+       {"errmsg", asAddr}}},
+     /*isElemental=*/false},
     {"iachar", &I::genIchar},
     {"iand", &I::genIand},
     {"ibclr", &I::genIbclr},
@@ -661,8 +730,19 @@ static constexpr IntrinsicHandler handlers[]{
     {"ibset", &I::genIbset},
     {"ichar", &I::genIchar},
     {"ieor", &I::genIeor},
+    {"index",
+     &I::genIndex,
+     {{{"string", asAddr},
+       {"substring", asAddr},
+       {"back", asValue, handleDynamicOptional},
+       {"kind", asValue}}}},
+    {"ior", &I::genIor},
     {"ishft", &I::genIshft},
     {"ishftc", &I::genIshftc},
+    {"lbound",
+     &I::genLbound,
+     {{{"array", asInquired}, {"dim", asValue}, {"kind", asValue}}},
+     /*isElemental=*/false},
     {"len",
      &I::genLen,
      {{{"string", asInquired}, {"kind", asValue}}},
@@ -672,6 +752,10 @@ static constexpr IntrinsicHandler handlers[]{
     {"lgt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sgt>},
     {"lle", &I::genCharacterCompare<mlir::arith::CmpIPredicate::sle>},
     {"llt", &I::genCharacterCompare<mlir::arith::CmpIPredicate::slt>},
+    {"matmul",
+     &I::genMatmul,
+     {{{"matrix_a", asAddr}, {"matrix_b", asAddr}}},
+     /*isElemental=*/false},
     {"max", &I::genExtremum<Extremum::Max, ExtremumBehavior::MinMaxss>},
     {"maxloc",
      &I::genMaxloc,
@@ -687,6 +771,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"merge", &I::genMerge},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"minloc",
      &I::genMinloc,
@@ -704,6 +789,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"mod", &I::genMod},
     {"modulo", &I::genModulo},
+    {"nearest", &I::genNearest},
     {"nint", &I::genNint},
     {"not", &I::genNot},
     {"null", &I::genNull, {{{"mold", asInquired}}}, /*isElemental=*/false},
@@ -712,6 +798,10 @@ static constexpr IntrinsicHandler handlers[]{
      {{{"array", asBox},
        {"mask", asBox},
        {"vector", asBox, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"present",
+     &I::genPresent,
+     {{{"a", asInquired}}},
      /*isElemental=*/false},
     {"product",
      &I::genProduct,
@@ -731,6 +821,10 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genRandomSeed,
      {{{"size", asBox}, {"put", asBox}, {"get", asBox}}},
      /*isElemental=*/false},
+    {"repeat",
+     &I::genRepeat,
+     {{{"string", asAddr}, {"ncopies", asValue}}},
+     /*isElemental=*/false},
     {"reshape",
      &I::genReshape,
      {{{"source", asBox},
@@ -738,6 +832,11 @@ static constexpr IntrinsicHandler handlers[]{
        {"pad", asBox, handleDynamicOptional},
        {"order", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"rrspacing", &I::genRRSpacing},
+    {"scale",
+     &I::genScale,
+     {{{"x", asValue}, {"i", asValue}}},
+     /*isElemental=*/true},
     {"scan",
      &I::genScan,
      {{{"string", asAddr},
@@ -746,12 +845,14 @@ static constexpr IntrinsicHandler handlers[]{
        {"kind", asValue}}},
      /*isElemental=*/true},
     {"set_exponent", &I::genSetExponent},
+    {"sign", &I::genSign},
     {"size",
      &I::genSize,
      {{{"array", asBox},
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/false},
+    {"spacing", &I::genSpacing},
     {"spread",
      &I::genSpread,
      {{{"source", asAddr}, {"dim", asValue}, {"ncopies", asValue}}},
@@ -770,6 +871,11 @@ static constexpr IntrinsicHandler handlers[]{
      &I::genTransfer,
      {{{"source", asAddr}, {"mold", asAddr}, {"size", asValue}}},
      /*isElemental=*/false},
+    {"transpose",
+     &I::genTranspose,
+     {{{"matrix", asAddr}}},
+     /*isElemental=*/false},
+    {"trim", &I::genTrim, {{{"string", asAddr}}}, /*isElemental=*/false},
     {"ubound",
      &I::genUbound,
      {{{"array", asBox}, {"dim", asValue}, {"kind", asValue}}},
@@ -858,6 +964,16 @@ static mlir::FunctionType genF64F64F64FuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {t, t}, {t});
 }
 
+static mlir::FunctionType genF80F80F80FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF80(context);
+  return mlir::FunctionType::get(context, {t, t}, {t});
+}
+
+static mlir::FunctionType genF128F128F128FuncType(mlir::MLIRContext *context) {
+  auto t = mlir::FloatType::getF128(context);
+  return mlir::FunctionType::get(context, {t, t}, {t});
+}
+
 template <int Bits>
 static mlir::FunctionType genIntF64FuncType(mlir::MLIRContext *context) {
   auto t = mlir::FloatType::getF64(context);
@@ -878,6 +994,13 @@ static mlir::FunctionType genIntF32FuncType(mlir::MLIRContext *context) {
 static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"abs", "llvm.fabs.f32", genF32F32FuncType},
     {"abs", "llvm.fabs.f64", genF64F64FuncType},
+    {"aint", "llvm.trunc.f32", genF32F32FuncType},
+    {"aint", "llvm.trunc.f64", genF64F64FuncType},
+    {"anint", "llvm.round.f32", genF32F32FuncType},
+    {"anint", "llvm.round.f64", genF64F64FuncType},
+    // ceil is used for CEILING but is different, it returns a real.
+    {"ceil", "llvm.ceil.f32", genF32F32FuncType},
+    {"ceil", "llvm.ceil.f64", genF64F64FuncType},
     // llvm.floor is used for FLOOR, but returns real.
     {"floor", "llvm.floor.f32", genF32F32FuncType},
     {"floor", "llvm.floor.f64", genF64F64FuncType},
@@ -887,6 +1010,10 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"nint", "llvm.lround.i32.f32", genIntF32FuncType<32>},
     {"pow", "llvm.pow.f32", genF32F32F32FuncType},
     {"pow", "llvm.pow.f64", genF64F64F64FuncType},
+    {"sign", "llvm.copysign.f32", genF32F32F32FuncType},
+    {"sign", "llvm.copysign.f64", genF64F64F64FuncType},
+    {"sign", "llvm.copysign.f80", genF80F80F80FuncType},
+    {"sign", "llvm.copysign.f128", genF128F128F128FuncType},
 };
 
 // This helper class computes a "distance" between two function types.
@@ -1538,6 +1665,13 @@ mlir::Value IntrinsicLibrary::genRuntimeCall(llvm::StringRef name,
   return getRuntimeCallGenerator(name, soughtFuncType)(builder, loc, args);
 }
 
+mlir::Value IntrinsicLibrary::genConversion(mlir::Type resultType,
+                                            llvm::ArrayRef<mlir::Value> args) {
+  // There can be an optional kind in second argument.
+  assert(args.size() >= 1);
+  return builder.convertWithSemantics(loc, resultType, args[0]);
+}
+
 // ABS
 mlir::Value IntrinsicLibrary::genAbs(mlir::Type resultType,
                                      llvm::ArrayRef<mlir::Value> args) {
@@ -1606,6 +1740,15 @@ mlir::Value IntrinsicLibrary::genAimag(mlir::Type resultType,
       args[0], true /* isImagPart */);
 }
 
+// AINT
+mlir::Value IntrinsicLibrary::genAint(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() >= 1 && args.size() <= 2);
+  // Skip optional kind argument to search the runtime; it is already reflected
+  // in result type.
+  return genRuntimeCall("aint", resultType, {args[0]});
+}
+
 // ALL
 fir::ExtendedValue
 IntrinsicLibrary::genAll(mlir::Type resultType,
@@ -1665,6 +1808,15 @@ IntrinsicLibrary::genAllocated(mlir::Type resultType,
         fir::emitFatalError(loc,
                             "allocated arg not lowered to MutableBoxValue");
       });
+}
+
+// ANINT
+mlir::Value IntrinsicLibrary::genAnint(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() >= 1 && args.size() <= 2);
+  // Skip optional kind argument to search the runtime; it is already reflected
+  // in result type.
+  return genRuntimeCall("anint", resultType, {args[0]});
 }
 
 // ANY
@@ -1751,6 +1903,35 @@ IntrinsicLibrary::genAssociated(mlir::Type resultType,
   return Fortran::lower::genAssociated(builder, loc, pointerBox, targetBox);
 }
 
+// BTEST
+mlir::Value IntrinsicLibrary::genBtest(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  // A conformant BTEST(I,POS) call satisfies:
+  //     POS >= 0
+  //     POS < BIT_SIZE(I)
+  // Return:  (I >> POS) & 1
+  assert(args.size() == 2);
+  mlir::Type argType = args[0].getType();
+  mlir::Value pos = builder.createConvert(loc, argType, args[1]);
+  auto shift = builder.create<mlir::arith::ShRUIOp>(loc, args[0], pos);
+  mlir::Value one = builder.createIntegerConstant(loc, argType, 1);
+  auto res = builder.create<mlir::arith::AndIOp>(loc, shift, one);
+  return builder.createConvert(loc, resultType, res);
+}
+
+// CEILING
+mlir::Value IntrinsicLibrary::genCeiling(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  // Optional KIND argument.
+  assert(args.size() >= 1);
+  mlir::Value arg = args[0];
+  // Use ceil that is not an actual Fortran intrinsic but that is
+  // an llvm intrinsic that does the same, but return a floating
+  // point.
+  mlir::Value ceil = genRuntimeCall("ceil", arg.getType(), {arg});
+  return builder.createConvert(loc, resultType, ceil);
+}
+
 // CHAR
 fir::ExtendedValue
 IntrinsicLibrary::genChar(mlir::Type type,
@@ -1767,6 +1948,46 @@ IntrinsicLibrary::genChar(mlir::Type type,
   mlir::Value len =
       builder.createIntegerConstant(loc, builder.getCharacterLengthType(), 1);
   return fir::CharBoxValue{cast, len};
+}
+
+// CMPLX
+mlir::Value IntrinsicLibrary::genCmplx(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() >= 1);
+  fir::factory::Complex complexHelper(builder, loc);
+  mlir::Type partType = complexHelper.getComplexPartType(resultType);
+  mlir::Value real = builder.createConvert(loc, partType, args[0]);
+  mlir::Value imag = isAbsent(args, 1)
+                         ? builder.createRealZeroConstant(loc, partType)
+                         : builder.createConvert(loc, partType, args[1]);
+  return fir::factory::Complex{builder, loc}.createComplex(resultType, real,
+                                                           imag);
+}
+
+// COMMAND_ARGUMENT_COUNT
+fir::ExtendedValue IntrinsicLibrary::genCommandArgumentCount(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 0);
+  assert(resultType == builder.getDefaultIntegerType() &&
+         "result type is not default integer kind type");
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genCommandArgumentCount(builder, loc));
+  ;
+}
+
+// CONJG
+mlir::Value IntrinsicLibrary::genConjg(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+  if (resultType != args[0].getType())
+    llvm_unreachable("argument type mismatch");
+
+  mlir::Value cplx = args[0];
+  auto imag = fir::factory::Complex{builder, loc}.extractComplexPart(
+      cplx, /*isImagPart=*/true);
+  auto negImag = builder.create<mlir::arith::NegFOp>(loc, imag);
+  return fir::factory::Complex{builder, loc}.insertComplexPart(
+      cplx, negImag, /*isImagPart=*/true);
 }
 
 // COUNT
@@ -1917,6 +2138,17 @@ mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
   return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
 }
 
+// DPROD
+mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  assert(fir::isa_real(resultType) &&
+         "Result must be double precision in DPROD");
+  mlir::Value a = builder.createConvert(loc, resultType, args[0]);
+  mlir::Value b = builder.createConvert(loc, resultType, args[1]);
+  return builder.create<mlir::arith::MulFOp>(loc, a, b);
+}
+
 // DOT_PRODUCT
 fir::ExtendedValue
 IntrinsicLibrary::genDotProduct(mlir::Type resultType,
@@ -1974,6 +2206,22 @@ IntrinsicLibrary::genEoshift(mlir::Type resultType,
                            "unexpected result for EOSHIFT");
 }
 
+// EXIT
+void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+
+  mlir::Value status =
+      isAbsent(args[0])
+          ? builder.createIntegerConstant(loc, builder.getDefaultIntegerType(),
+                                          EXIT_SUCCESS)
+          : fir::getBase(args[0]);
+
+  assert(status.getType() == builder.getDefaultIntegerType() &&
+         "STATUS parameter must be an INTEGER of default kind");
+
+  fir::runtime::genExit(builder, loc, status);
+}
+
 // EXPONENT
 mlir::Value IntrinsicLibrary::genExponent(mlir::Type resultType,
                                           llvm::ArrayRef<mlir::Value> args) {
@@ -2004,6 +2252,105 @@ mlir::Value IntrinsicLibrary::genFraction(mlir::Type resultType,
   return builder.createConvert(
       loc, resultType,
       fir::runtime::genFraction(builder, loc, fir::getBase(args[0])));
+}
+
+// GET_COMMAND_ARGUMENT
+void IntrinsicLibrary::genGetCommandArgument(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 5);
+
+  auto processCharBox = [&](llvm::Optional<fir::CharBoxValue> arg,
+                            mlir::Value &value) -> void {
+    if (arg.hasValue()) {
+      value = builder.createBox(loc, *arg);
+    } else {
+      value = builder
+                  .create<fir::AbsentOp>(
+                      loc, fir::BoxType::get(builder.getNoneType()))
+                  .getResult();
+    }
+  };
+
+  // Handle NUMBER argument
+  mlir::Value number = fir::getBase(args[0]);
+  if (!number)
+    fir::emitFatalError(loc, "expected NUMBER parameter");
+
+  // Handle optional VALUE argument
+  mlir::Value value;
+  llvm::Optional<fir::CharBoxValue> valBox;
+  if (const fir::CharBoxValue *charBox = args[1].getCharBox())
+    valBox = *charBox;
+  processCharBox(valBox, value);
+
+  // Handle optional LENGTH argument
+  mlir::Value length = fir::getBase(args[2]);
+
+  // Handle optional STATUS argument
+  mlir::Value status = fir::getBase(args[3]);
+
+  // Handle optional ERRMSG argument
+  mlir::Value errmsg;
+  llvm::Optional<fir::CharBoxValue> errmsgBox;
+  if (const fir::CharBoxValue *charBox = args[4].getCharBox())
+    errmsgBox = *charBox;
+  processCharBox(errmsgBox, errmsg);
+
+  fir::runtime::genGetCommandArgument(builder, loc, number, value, length,
+                                      status, errmsg);
+}
+
+// GET_ENVIRONMENT_VARIABLE
+void IntrinsicLibrary::genGetEnvironmentVariable(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 6);
+
+  auto processCharBox = [&](llvm::Optional<fir::CharBoxValue> arg,
+                            mlir::Value &value) -> void {
+    if (arg.hasValue()) {
+      value = builder.createBox(loc, *arg);
+    } else {
+      value = builder
+                  .create<fir::AbsentOp>(
+                      loc, fir::BoxType::get(builder.getNoneType()))
+                  .getResult();
+    }
+  };
+
+  // Handle NAME argument
+  mlir::Value name;
+  if (const fir::CharBoxValue *charBox = args[0].getCharBox()) {
+    llvm::Optional<fir::CharBoxValue> nameBox = *charBox;
+    assert(nameBox.hasValue());
+    name = builder.createBox(loc, *nameBox);
+  }
+
+  // Handle optional VALUE argument
+  mlir::Value value;
+  llvm::Optional<fir::CharBoxValue> valBox;
+  if (const fir::CharBoxValue *charBox = args[1].getCharBox())
+    valBox = *charBox;
+  processCharBox(valBox, value);
+
+  // Handle optional LENGTH argument
+  mlir::Value length = fir::getBase(args[2]);
+
+  // Handle optional STATUS argument
+  mlir::Value status = fir::getBase(args[3]);
+
+  // Handle optional TRIM_NAME argument
+  mlir::Value trim_name =
+      isAbsent(args[4]) ? builder.createBool(loc, true) : fir::getBase(args[4]);
+
+  // Handle optional ERRMSG argument
+  mlir::Value errmsg;
+  llvm::Optional<fir::CharBoxValue> errmsgBox;
+  if (const fir::CharBoxValue *charBox = args[5].getCharBox())
+    errmsgBox = *charBox;
+  processCharBox(errmsgBox, errmsg);
+
+  fir::runtime::genGetEnvironmentVariable(builder, loc, name, value, length,
+                                          status, trim_name, errmsg);
 }
 
 // IAND
@@ -2111,6 +2458,67 @@ mlir::Value IntrinsicLibrary::genIeor(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
   return builder.create<mlir::arith::XOrIOp>(loc, args[0], args[1]);
+}
+
+// INDEX
+fir::ExtendedValue
+IntrinsicLibrary::genIndex(mlir::Type resultType,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() >= 2 && args.size() <= 4);
+
+  mlir::Value stringBase = fir::getBase(args[0]);
+  fir::KindTy kind =
+      fir::factory::CharacterExprHelper{builder, loc}.getCharacterKind(
+          stringBase.getType());
+  mlir::Value stringLen = fir::getLen(args[0]);
+  mlir::Value substringBase = fir::getBase(args[1]);
+  mlir::Value substringLen = fir::getLen(args[1]);
+  mlir::Value back =
+      isAbsent(args, 2)
+          ? builder.createIntegerConstant(loc, builder.getI1Type(), 0)
+          : fir::getBase(args[2]);
+  if (isAbsent(args, 3))
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genIndex(builder, loc, kind, stringBase, stringLen,
+                               substringBase, substringLen, back));
+
+  // Call the descriptor-based Index implementation
+  mlir::Value string = builder.createBox(loc, args[0]);
+  mlir::Value substring = builder.createBox(loc, args[1]);
+  auto makeRefThenEmbox = [&](mlir::Value b) {
+    fir::LogicalType logTy = fir::LogicalType::get(
+        builder.getContext(), builder.getKindMap().defaultLogicalKind());
+    mlir::Value temp = builder.createTemporary(loc, logTy);
+    mlir::Value castb = builder.createConvert(loc, logTy, b);
+    builder.create<fir::StoreOp>(loc, castb, temp);
+    return builder.createBox(loc, temp);
+  };
+  mlir::Value backOpt = isAbsent(args, 2)
+                            ? builder.create<fir::AbsentOp>(
+                                  loc, fir::BoxType::get(builder.getI1Type()))
+                            : makeRefThenEmbox(fir::getBase(args[2]));
+  mlir::Value kindVal = isAbsent(args, 3)
+                            ? builder.createIntegerConstant(
+                                  loc, builder.getIndexType(),
+                                  builder.getKindMap().defaultIntegerKind())
+                            : fir::getBase(args[3]);
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue mutBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resBox = fir::factory::getMutableIRBox(builder, loc, mutBox);
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genIndexDescriptor(builder, loc, resBox, string, substring,
+                                   backOpt, kindVal);
+  // Read back the result from the mutable box.
+  return readAndAddCleanUp(mutBox, resultType, "INDEX");
+}
+
+// IOR
+mlir::Value IntrinsicLibrary::genIor(mlir::Type resultType,
+                                     llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  return builder.create<mlir::arith::OrIOp>(loc, args[0], args[1]);
 }
 
 // ISHFT
@@ -2243,6 +2651,34 @@ IntrinsicLibrary::genCharacterCompare(mlir::Type type,
       fir::getBase(args[1]), fir::getLen(args[1]));
 }
 
+// MATMUL
+fir::ExtendedValue
+IntrinsicLibrary::genMatmul(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+
+  // Handle required matmul arguments
+  fir::BoxValue matrixTmpA = builder.createBox(loc, args[0]);
+  mlir::Value matrixA = fir::getBase(matrixTmpA);
+  fir::BoxValue matrixTmpB = builder.createBox(loc, args[1]);
+  mlir::Value matrixB = fir::getBase(matrixTmpB);
+  unsigned resultRank =
+      (matrixTmpA.rank() == 1 || matrixTmpB.rank() == 1) ? 1 : 2;
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, resultRank);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genMatmul(builder, loc, resultIrBox, matrixA, matrixB);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for MATMUL");
+}
+
 // Compare two FIR values and return boolean result as i1.
 template <Extremum extremum, ExtremumBehavior behavior>
 static mlir::Value createExtremumCompare(mlir::Location loc,
@@ -2320,6 +2756,27 @@ IntrinsicLibrary::genMaxval(mlir::Type resultType,
   return genExtremumVal(fir::runtime::genMaxval, fir::runtime::genMaxvalDim,
                         fir::runtime::genMaxvalChar, resultType, builder, loc,
                         stmtCtx, "unexpected result for Maxval", args);
+}
+
+// MERGE
+fir::ExtendedValue
+IntrinsicLibrary::genMerge(mlir::Type,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  mlir::Value arg2 = fir::getBase(args[2]);
+  mlir::Type type0 = fir::unwrapRefType(arg0.getType());
+  bool isCharRslt = fir::isa_char(type0); // result is same as first argument
+  mlir::Value mask = builder.createConvert(loc, builder.getI1Type(), arg2);
+  auto rslt = builder.create<mlir::arith::SelectOp>(loc, mask, arg0, arg1);
+  if (isCharRslt) {
+    // Need a CharBoxValue for character results
+    const fir::CharBoxValue *charBox = args[0].getCharBox();
+    fir::CharBoxValue charRslt(rslt, charBox->getLen());
+    return charRslt;
+  }
+  return rslt;
 }
 
 // MINLOC
@@ -2414,6 +2871,18 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
                                                remainder);
 }
 
+// NEAREST
+mlir::Value IntrinsicLibrary::genNearest(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value realX = fir::getBase(args[0]);
+  mlir::Value realS = fir::getBase(args[1]);
+
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genNearest(builder, loc, realX, realS));
+}
+
 // NINT
 mlir::Value IntrinsicLibrary::genNint(mlir::Type resultType,
                                       llvm::ArrayRef<mlir::Value> args) {
@@ -2480,6 +2949,15 @@ IntrinsicLibrary::genPack(mlir::Type resultType,
                            "unexpected result for PACK");
 }
 
+// PRESENT
+fir::ExtendedValue
+IntrinsicLibrary::genPresent(mlir::Type,
+                             llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  return builder.create<fir::IsPresentOp>(loc, builder.getI1Type(),
+                                          fir::getBase(args[0]));
+}
+
 // PRODUCT
 fir::ExtendedValue
 IntrinsicLibrary::genProduct(mlir::Type resultType,
@@ -2512,6 +2990,25 @@ void IntrinsicLibrary::genRandomSeed(llvm::ArrayRef<fir::ExtendedValue> args) {
       return;
     }
   Fortran::lower::genRandomSeed(builder, loc, -1, mlir::Value{});
+}
+
+// REPEAT
+fir::ExtendedValue
+IntrinsicLibrary::genRepeat(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value string = builder.createBox(loc, args[0]);
+  mlir::Value ncopies = fir::getBase(args[1]);
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genRepeat(builder, loc, resultIrBox, string, ncopies);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType, "REPEAT");
 }
 
 // RESHAPE
@@ -2558,6 +3055,28 @@ IntrinsicLibrary::genReshape(mlir::Type resultType,
 
   return readAndAddCleanUp(resultMutableBox, resultType,
                            "unexpected result for RESHAPE");
+}
+
+// RRSPACING
+mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genRRSpacing(builder, loc, fir::getBase(args[0])));
+}
+
+// SCALE
+mlir::Value IntrinsicLibrary::genScale(mlir::Type resultType,
+                                       llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+
+  mlir::Value realX = fir::getBase(args[0]);
+  mlir::Value intI = fir::getBase(args[1]);
+
+  return builder.createConvert(
+      loc, resultType, fir::runtime::genScale(builder, loc, realX, intI));
 }
 
 // SCAN
@@ -2648,51 +3167,29 @@ mlir::Value IntrinsicLibrary::genSetExponent(mlir::Type resultType,
                                    fir::getBase(args[1])));
 }
 
-// SPREAD
-fir::ExtendedValue
-IntrinsicLibrary::genSpread(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
-
-  assert(args.size() == 3);
-
-  // Handle source argument
-  mlir::Value source = builder.createBox(loc, args[0]);
-  fir::BoxValue sourceTmp = source;
-  unsigned sourceRank = sourceTmp.rank();
-
-  // Handle Dim argument
-  mlir::Value dim = fir::getBase(args[1]);
-
-  // Handle ncopies argument
-  mlir::Value ncopies = fir::getBase(args[2]);
-
-  // Generate result descriptor
-  mlir::Type resultArrayType =
-      builder.getVarLenSeqTy(resultType, sourceRank + 1);
-  fir::MutableBoxValue resultMutableBox =
-      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
-  mlir::Value resultIrBox =
-      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
-
-  fir::runtime::genSpread(builder, loc, resultIrBox, source, dim, ncopies);
-
-  return readAndAddCleanUp(resultMutableBox, resultType,
-                           "unexpected result for SPREAD");
+// SIGN
+mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
+                                      llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 2);
+  if (resultType.isa<mlir::IntegerType>()) {
+    mlir::Value abs = genAbs(resultType, {args[0]});
+    mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+    auto neg = builder.create<mlir::arith::SubIOp>(loc, zero, abs);
+    auto cmp = builder.create<mlir::arith::CmpIOp>(
+        loc, mlir::arith::CmpIPredicate::slt, args[1], zero);
+    return builder.create<mlir::arith::SelectOp>(loc, cmp, neg, abs);
+  }
+  return genRuntimeCall("sign", resultType, args);
 }
 
-// SUM
-fir::ExtendedValue
-IntrinsicLibrary::genSum(mlir::Type resultType,
-                         llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genProdOrSum(fir::runtime::genSum, fir::runtime::genSumDim, resultType,
-                      builder, loc, stmtCtx, "unexpected result for Sum", args);
-}
+// SPACING
+mlir::Value IntrinsicLibrary::genSpacing(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
 
-// SYSTEM_CLOCK
-void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 3);
-  Fortran::lower::genSystemClock(builder, loc, fir::getBase(args[0]),
-                                 fir::getBase(args[1]), fir::getBase(args[2]));
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSpacing(builder, loc, fir::getBase(args[0])));
 }
 
 // SIZE
@@ -2739,6 +3236,53 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, size);
       })
       .getResults()[0];
+}
+
+// SPREAD
+fir::ExtendedValue
+IntrinsicLibrary::genSpread(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 3);
+
+  // Handle source argument
+  mlir::Value source = builder.createBox(loc, args[0]);
+  fir::BoxValue sourceTmp = source;
+  unsigned sourceRank = sourceTmp.rank();
+
+  // Handle Dim argument
+  mlir::Value dim = fir::getBase(args[1]);
+
+  // Handle ncopies argument
+  mlir::Value ncopies = fir::getBase(args[2]);
+
+  // Generate result descriptor
+  mlir::Type resultArrayType =
+      builder.getVarLenSeqTy(resultType, sourceRank + 1);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+  fir::runtime::genSpread(builder, loc, resultIrBox, source, dim, ncopies);
+
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for SPREAD");
+}
+
+// SUM
+fir::ExtendedValue
+IntrinsicLibrary::genSum(mlir::Type resultType,
+                         llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genProdOrSum(fir::runtime::genSum, fir::runtime::genSumDim, resultType,
+                      builder, loc, stmtCtx, "unexpected result for Sum", args);
+}
+
+// SYSTEM_CLOCK
+void IntrinsicLibrary::genSystemClock(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  Fortran::lower::genSystemClock(builder, loc, fir::getBase(args[0]),
+                                 fir::getBase(args[1]), fir::getBase(args[2]));
 }
 
 // TRANSFER
@@ -2862,6 +3406,48 @@ IntrinsicLibrary::genUbound(mlir::Type resultType,
     return readAndAddCleanUp(resultMutableBox, resultType, "UBOUND");
   }
   return mlir::Value();
+}
+
+// TRANSPOSE
+fir::ExtendedValue
+IntrinsicLibrary::genTranspose(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
+
+  assert(args.size() == 1);
+
+  // Handle source argument
+  mlir::Value source = builder.createBox(loc, args[0]);
+
+  // Create mutable fir.box to be passed to the runtime for the result.
+  mlir::Type resultArrayType = builder.getVarLenSeqTy(resultType, 2);
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultArrayType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genTranspose(builder, loc, resultIrBox, source);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType,
+                           "unexpected result for TRANSPOSE");
+}
+
+// TRIM
+fir::ExtendedValue
+IntrinsicLibrary::genTrim(mlir::Type resultType,
+                          llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 1);
+  mlir::Value string = builder.createBox(loc, args[0]);
+  // Create mutable fir.box to be passed to the runtime for the result.
+  fir::MutableBoxValue resultMutableBox =
+      fir::factory::createTempMutableBox(builder, loc, resultType);
+  mlir::Value resultIrBox =
+      fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+  // Call runtime. The runtime is allocating the result.
+  fir::runtime::genTrim(builder, loc, resultIrBox, string);
+  // Read result from mutable fir.box and add it to the list of temps to be
+  // finalized by the StatementContext.
+  return readAndAddCleanUp(resultMutableBox, resultType, "TRIM");
 }
 
 // UNPACK

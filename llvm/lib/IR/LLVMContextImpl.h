@@ -1571,6 +1571,7 @@ public:
   // TODO: clean up the following after we no longer support non-opaque pointer
   // types.
   bool getOpaquePointers();
+  bool hasOpaquePointersValue();
   void setOpaquePointers(bool OP);
 
 private:

@@ -54,7 +54,10 @@ add_header_library(
     integer_operations.h
 )
 
+# Thread support is used by other support libraries. So, we add the "threads"
+# before other directories.
+add_subdirectory(threads)
+
 add_subdirectory(File)
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
-add_subdirectory(threads)

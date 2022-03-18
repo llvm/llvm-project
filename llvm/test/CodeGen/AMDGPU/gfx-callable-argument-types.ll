@@ -9496,12 +9496,12 @@ define amdgpu_gfx void @test_call_external_void_func_v32i32_i32_inreg(i32) #0 {
 ; GFX9-NEXT:    ; kill: killed $sgpr34_sgpr35
 ; GFX9-NEXT:    s_load_dwordx16 s[36:51], s[34:35], 0x40
 ; GFX9-NEXT:    s_load_dwordx16 s[4:19], s[34:35], 0x0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v0, s52
-; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:24
 ; GFX9-NEXT:    s_getpc_b64 s[34:35]
 ; GFX9-NEXT:    s_add_u32 s34, s34, external_void_func_v32i32_i32_inreg@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s35, s35, external_void_func_v32i32_i32_inreg@rel32@hi+12
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v0, s52
+; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:24
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s46
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s47
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s48

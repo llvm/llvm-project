@@ -9214,7 +9214,7 @@ public:
   llvm::Function *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
-                            llvm::Value *BlockLiteral) const override;
+                            llvm::Type *BlockTy) const override;
   bool shouldEmitStaticExternCAliases() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
 };
@@ -11461,23 +11461,19 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
 llvm::Function *
 TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                              llvm::Function *Invoke,
-                                             llvm::Value *BlockLiteral) const {
+                                             llvm::Type *BlockTy) const {
   auto *InvokeFT = Invoke->getFunctionType();
-  llvm::SmallVector<llvm::Type *, 2> ArgTys;
-  for (auto &P : InvokeFT->params())
-    ArgTys.push_back(P);
   auto &C = CGF.getLLVMContext();
   std::string Name = Invoke->getName().str() + "_kernel";
-  auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
+  auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C),
+                                     InvokeFT->params(), false);
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::ExternalLinkage, Name,
                                    &CGF.CGM.getModule());
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   auto &Builder = CGF.Builder;
   Builder.SetInsertPoint(BB);
-  llvm::SmallVector<llvm::Value *, 2> Args;
-  for (auto &A : F->args())
-    Args.push_back(&A);
+  llvm::SmallVector<llvm::Value *, 2> Args(llvm::make_pointer_range(F->args()));
   llvm::CallInst *call = Builder.CreateCall(Invoke, Args);
   call->setCallingConv(Invoke->getCallingConv());
   Builder.CreateRetVoid();
@@ -11495,11 +11491,10 @@ TargetCodeGenInfo::createEnqueuedBlockKernel(CodeGenFunction &CGF,
 /// has "enqueued-block" function attribute and kernel argument metadata.
 llvm::Function *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
     CodeGenFunction &CGF, llvm::Function *Invoke,
-    llvm::Value *BlockLiteral) const {
+    llvm::Type *BlockTy) const {
   auto &Builder = CGF.Builder;
   auto &C = CGF.getLLVMContext();
 
-  auto *BlockTy = BlockLiteral->getType()->getPointerElementType();
   auto *InvokeFT = Invoke->getFunctionType();
   llvm::SmallVector<llvm::Type *, 2> ArgTys;
   llvm::SmallVector<llvm::Metadata *, 8> AddressQuals;

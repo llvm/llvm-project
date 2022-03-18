@@ -165,13 +165,13 @@ void f(int c) {
   gs8 = gs8 == ss8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
   gs8 = gs8 == fs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
 
-  ss8 = ss8 & fs8; // expected-error {{invalid operands to binary expression}}
-  ss8 = ss8 & gs8; // expected-error {{invalid operands to binary expression}}
+  ss8 = ss8 & fs8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
+  ss8 = ss8 & gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
 
-  fs8 = fs8 & ss8; // expected-error {{invalid operands to binary expression}}
+  fs8 = fs8 & ss8; // expected-error {{cannot combine fixed-length and sizeless SVE vectors in expression, result is ambiguous}}
   fs8 = fs8 & gs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
 
-  gs8 = gs8 & ss8; // expected-error {{invalid operands to binary expression}}
+  gs8 = gs8 & ss8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
   gs8 = gs8 & fs8; // expected-error {{cannot combine GNU and SVE vectors in expression, result is ambiguous}}
 }
 

@@ -1,7 +1,7 @@
 ; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
 ; RUN:    -o - %s -stop-after=livedebugvars \
 ; RUN:    -experimental-debug-variable-locations=false \
-; RUN: | FileCheck %s --check-prefixes=CHECK
+; RUN: | FileCheck %s --check-prefixes=CHECK,VARLOCS
 ; RUN: llc -O1 -filetype=asm -mtriple x86_64-unknown-linux-gnu -mcpu=x86-64 \
 ; RUN:    -o - %s -stop-after=livedebugvars \
 ; RUN:    -experimental-debug-variable-locations=true \
@@ -16,7 +16,7 @@
 ; INSTRREF:      DBG_INSTR_REF 2, 0
 ; CHECK:         DBG_VALUE $eax
 ; CHECK:         DBG_VALUE $rsp, 0, !{{[0-9]+}}, !DIExpression(DW_OP_constu, 4, DW_OP_minus)
-; CHECK:         DBG_VALUE $eax
+; VARLOCS:       DBG_VALUE $eax
 ; CHECK:         $eax = SHL32rCL killed renamable $eax,
 ; INSTRREF-SAME:      debug-instr-number 3
 ; INSTRREF:      DBG_INSTR_REF 3, 0

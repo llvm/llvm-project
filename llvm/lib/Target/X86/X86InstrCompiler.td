@@ -544,10 +544,10 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
   // i8 register pressure.
   defm _GR8 : CMOVrr_PSEUDO<GR8, i8>;
 
-  let Predicates = [NoCMov] in {
+  let Predicates = [NoCMOV] in {
     defm _GR32 : CMOVrr_PSEUDO<GR32, i32>;
     defm _GR16 : CMOVrr_PSEUDO<GR16, i16>;
-  } // Predicates = [NoCMov]
+  } // Predicates = [NoCMOV]
 
   // fcmov doesn't handle all possible EFLAGS, provide a fallback if there is no
   // SSE1/SSE2.
@@ -670,7 +670,7 @@ def OR32mi8Locked  : Ii8<0x83, MRM1m, (outs), (ins i32mem:$dst, i32i8imm:$zero),
                          Requires<[Not64BitMode]>, OpSize32, LOCK,
                          Sched<[WriteALURMW]>;
 
-let hasSideEffects = 1 in
+let hasSideEffects = 1, isMeta = 1 in
 def Int_MemBarrier : I<0, Pseudo, (outs), (ins),
                      "#MEMBARRIER",
                      [(X86MemBarrier)]>, Sched<[WriteLoad]>;

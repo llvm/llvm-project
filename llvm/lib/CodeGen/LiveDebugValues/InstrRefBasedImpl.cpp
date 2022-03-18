@@ -1634,11 +1634,6 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
       LocIdx SrcIdx = MTracker->getSpillMLoc(SpillID);
       auto ReadValue = MTracker->readMLoc(SrcIdx);
       MTracker->setReg(DestReg, ReadValue);
-
-      if (TTracker) {
-        LocIdx DstLoc = MTracker->getRegMLoc(DestReg);
-        TTracker->transferMlocs(SrcIdx, DstLoc, MI.getIterator());
-      }
     };
 
     for (MCSubRegIterator SRI(Reg, TRI, false); SRI.isValid(); ++SRI) {

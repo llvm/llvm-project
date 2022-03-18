@@ -34,6 +34,8 @@
 
 # Check for the restore.
 # CHECK: $rdi = MOV64rm $rsp,{{.*-8.*}}:: (load (s64) from %stack.0)
+# CHECK-NEXT: $rax = MOV64ri 0
+# CHECK-NEXT: MOV64mr
 # CHECK-NEXT: DBG_VALUE $rdi,{{.*}}![[PVAR]], !DIExpression()
 
 --- |
@@ -310,6 +312,9 @@ body:             |
     MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !20, debug-location !18
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -491,6 +496,9 @@ body:             |
     MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !220, debug-location !218
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
@@ -628,6 +636,9 @@ body:             |
     liveins: $rbx, $r12, $r13, $r14, $r15, $rbp
   
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     renamable $eax = MOV32rm killed renamable $rdi, 1, $noreg, 4, $noreg, debug-location !323 :: (load (s32) from %ir.add.ptr, !tbaa !24)
     RET64 $eax, debug-location !328
 
@@ -715,6 +726,9 @@ body:             |
     MOV64mr $rsp, 1, $noreg, -8, $noreg, killed renamable $rdi :: (store (s64) into %stack.0)
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $rax, 12, implicit-def dead early-clobber $rbx, 12, implicit-def dead early-clobber $rcx, 12, implicit-def dead early-clobber $rdx, 12, implicit-def dead early-clobber $rsi, 12, implicit-def dead early-clobber $rdi, 12, implicit-def dead early-clobber $rbp, 12, implicit-def dead early-clobber $r8, 12, implicit-def dead early-clobber $r9, 12, implicit-def dead early-clobber $r10, 12, implicit-def dead early-clobber $r11, 12, implicit-def dead early-clobber $r12, 12, implicit-def dead early-clobber $r13, 12, implicit-def dead early-clobber $r14, 12, implicit-def dead early-clobber $r15, 12, implicit-def dead early-clobber $eflags, !20, debug-location !409
     renamable $rdi = MOV64rm $rsp, 1, $noreg, -8, $noreg :: (load (s64) from %stack.0)
+    ; Clobber stack location to force variable location to move to $rdi.
+    $rax = MOV64ri 0
+    MOV64mr $rsp, 1, _, -8, _, killed renamable $rax :: (store (s64) into %stack.0)
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp

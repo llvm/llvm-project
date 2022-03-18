@@ -261,8 +261,7 @@ define <16 x i8> @load_v16i8_4_1(float %tmp, <16 x i8> %b, <4 x i8> *%a) {
 ; CHECK-LABEL: load_v16i8_4_1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-NEXT:    ld1 { v0.s }[0], [x0]
 ; CHECK-NEXT:    ret
   %l = load <4 x i8>, <4 x i8> *%a
   %s1 = shufflevector <4 x i8> %l, <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -289,8 +288,7 @@ define <16 x i8> @load_v16i8_4_2(float %tmp, <16 x i8> %b, <4 x i8> *%a) {
 ; CHECK-LABEL: load_v16i8_4_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-NEXT:    ld1 { v0.s }[1], [x0]
 ; CHECK-NEXT:    ret
   %l = load <4 x i8>, <4 x i8> *%a
   %s1 = shufflevector <4 x i8> %l, <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -302,8 +300,7 @@ define <16 x i8> @load_v16i8_4_3(float %tmp, <16 x i8> %b, <4 x i8> *%a) {
 ; CHECK-LABEL: load_v16i8_4_3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-NEXT:    ld1 { v0.s }[2], [x0]
 ; CHECK-NEXT:    ret
   %l = load <4 x i8>, <4 x i8> *%a
   %s1 = shufflevector <4 x i8> %l, <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -315,8 +312,7 @@ define <16 x i8> @load_v16i8_4_4(float %tmp, <16 x i8> %b, <4 x i8> *%a) {
 ; CHECK-LABEL: load_v16i8_4_4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ldr s1, [x0]
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NEXT:    ld1 { v0.s }[3], [x0]
 ; CHECK-NEXT:    ret
   %l = load <4 x i8>, <4 x i8> *%a
   %s1 = shufflevector <4 x i8> %l, <4 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
@@ -329,8 +325,6 @@ define <8 x i8> @load_v8i8_4_1(float %tmp, <8 x i8> %b, <4 x i8> *%a) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
@@ -343,11 +337,9 @@ define <8 x i8> @load_v8i8_4_1(float %tmp, <8 x i8> %b, <4 x i8> *%a) {
 define <8 x i8> @load_v8i8_4_2(float %tmp, <8 x i8> %b, <4 x i8> *%a) {
 ; CHECK-LABEL: load_v8i8_4_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    uzp1 v2.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-NEXT:    ldr s1, [x0]
+; CHECK-NEXT:    mov v0.s[1], v1.s[0]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %l = load <4 x i8>, <4 x i8> *%a
@@ -557,4 +549,86 @@ define <4 x i32> @load_v4i32_2_2(float %tmp, <4 x i32> %b, <2 x i32> *%a) {
   %s1 = shufflevector <2 x i32> %l, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %s2 = shufflevector <4 x i32> %s1, <4 x i32> %b, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
   ret <4 x i32> %s2
+}
+
+; More than a single vector
+
+define <8 x i8> @load2_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
+; CHECK-LABEL: load2_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
+  %la = load <4 x i8>, <4 x i8> *%a
+  %lb = load <4 x i8>, <4 x i8> *%b
+  %s1 = shufflevector <4 x i8> %la, <4 x i8> %lb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %s1
+}
+
+define <16 x i8> @load3_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
+; CHECK-LABEL: load3_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp s0, s1, [x0]
+; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
+  %la = load <4 x i8>, <4 x i8> *%a
+  %lb = load <4 x i8>, <4 x i8> *%b
+  %c = getelementptr <4 x i8>, <4 x i8> *%a, i64 1
+  %d = getelementptr <4 x i8>, <4 x i8> *%b, i64 1
+  %lc = load <4 x i8>, <4 x i8> *%c
+  %s1 = shufflevector <4 x i8> %la, <4 x i8> %lb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s2 = shufflevector <4 x i8> %lc, <4 x i8> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %s3
+}
+
+define <16 x i8> @load4_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
+; CHECK-LABEL: load4_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp s0, s1, [x0]
+; CHECK-NEXT:    ld1 { v0.s }[1], [x1], #4
+; CHECK-NEXT:    ld1 { v1.s }[1], [x1]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
+  %la = load <4 x i8>, <4 x i8> *%a
+  %lb = load <4 x i8>, <4 x i8> *%b
+  %c = getelementptr <4 x i8>, <4 x i8> *%a, i64 1
+  %d = getelementptr <4 x i8>, <4 x i8> *%b, i64 1
+  %lc = load <4 x i8>, <4 x i8> *%c
+  %ld = load <4 x i8>, <4 x i8> *%d
+  %s1 = shufflevector <4 x i8> %la, <4 x i8> %lb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s2 = shufflevector <4 x i8> %lc, <4 x i8> %ld, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %s3
+}
+
+define <16 x i8> @load2multi1_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
+; CHECK-LABEL: load2multi1_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ld1 { v0.s }[1], [x1]
+; CHECK-NEXT:    mov v0.d[1], v0.d[0]
+; CHECK-NEXT:    ret
+  %la = load <4 x i8>, <4 x i8> *%a
+  %lb = load <4 x i8>, <4 x i8> *%b
+  %s1 = shufflevector <4 x i8> %la, <4 x i8> %lb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %s3
+}
+
+define <16 x i8> @load2multi2_v4i8(float %tmp, <4 x i8> *%a, <4 x i8> *%b) {
+; CHECK-LABEL: load2multi2_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1r { v0.2s }, [x0]
+; CHECK-NEXT:    ld1r { v1.2s }, [x1]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
+  %la = load <4 x i8>, <4 x i8> *%a
+  %lb = load <4 x i8>, <4 x i8> *%b
+  %s1 = shufflevector <4 x i8> %la, <4 x i8> %la, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s2 = shufflevector <4 x i8> %lb, <4 x i8> %lb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s3 = shufflevector <8 x i8> %s1, <8 x i8> %s2, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %s3
 }

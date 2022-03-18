@@ -237,3 +237,34 @@ if:
 else:
   ret void
 }
+
+declare void @abort()
+declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
+declare void @dummy(i64)
+; Two uses in two different users of a single successor block. We can sink.
+define i64 @test8(i64 %c) {
+; CHECK-LABEL: @test8(
+; CHECK-NEXT:  bb1:
+; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ugt i64 [[C:%.*]], 2305843009213693951
+; CHECK-NEXT:    br i1 [[OVERFLOW]], label [[ABORT:%.*]], label [[BB2:%.*]]
+; CHECK:       bb2:
+; CHECK-NEXT:    call void @dummy(i64 8)
+; CHECK-NEXT:    ret i64 8
+; CHECK:       abort:
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+;
+bb1:
+  %mul = tail call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %c, i64 8)
+  %overflow = extractvalue { i64, i1 } %mul, 1
+  %select = select i1 %overflow, i64 0, i64 8
+  br i1 %overflow, label %abort, label %bb2
+
+bb2:
+  call void @dummy(i64 %select)
+  ret i64 %select
+
+abort:
+  call void @abort()
+  unreachable
+}

@@ -1852,8 +1852,7 @@ void CodeGenFunction::EmitStoreOfScalar(llvm::Value *Value, Address Addr,
   if (const auto *ClangVecTy = Ty->getAs<VectorType>()) {
     auto *VecTy = dyn_cast<llvm::FixedVectorType>(SrcTy);
     if (VecTy && ClangVecTy->isExtVectorBoolType()) {
-      auto *MemIntTy =
-          cast<llvm::IntegerType>(Addr.getType()->getPointerElementType());
+      auto *MemIntTy = cast<llvm::IntegerType>(Addr.getElementType());
       // Expand to the memory bit width.
       unsigned MemNumElems = MemIntTy->getPrimitiveSizeInBits();
       // <N x i1> --> <P x i1>.

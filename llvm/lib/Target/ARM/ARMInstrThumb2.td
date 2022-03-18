@@ -3561,6 +3561,7 @@ let hasNoSchedulingInfo = 1 in
 def t2TSB : T2I<(outs), (ins tsb_opt:$opt), NoItinerary,
                 "tsb", "\t$opt", []>, Requires<[IsThumb, HasV8_4a]> {
   let Inst{31-0} = 0xf3af8012;
+  let DecoderMethod = "DecodeTSBInstruction";
 }
 }
 

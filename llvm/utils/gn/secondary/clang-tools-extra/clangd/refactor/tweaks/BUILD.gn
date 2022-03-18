@@ -23,6 +23,7 @@ source_set("tweaks") {
     "ExtractFunction.cpp",
     "ExtractVariable.cpp",
     "ObjCLocalizeStringLiteral.cpp",
+    "ObjCMemberwiseInitializer.cpp",
     "PopulateSwitch.cpp",
     "RawStringLiteral.cpp",
     "RemoveUsingNamespace.cpp",

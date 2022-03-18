@@ -29,10 +29,10 @@ define void @exceed(double %0, double %1) {
 ; CHECK-NEXT:    [[IXX22:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
 ; CHECK-NEXT:    [[IX2:%.*]] = fmul double [[TMP8]], [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fadd fast <2 x double> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[TMP2]], double [[TMP1]], i32 1
+; CHECK-NEXT:    [[TMP11:%.*]] = fadd fast <2 x double> [[TMP6]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul fast <2 x double> [[TMP11]], [[TMP9]]
 ; CHECK-NEXT:    [[IXX101:%.*]] = fsub double undef, undef
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[TMP7]], i32 0

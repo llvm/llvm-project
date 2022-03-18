@@ -323,9 +323,9 @@ define void @may_overflow_mul_scale_neg([200 x [ 6 x i8]]* %ptr, i64 %idx.1,i64 
 ; If %v == 10581764700698480926, %idx == 917, so %gep.917 and %gep.idx may alias.
 define i8 @mul_may_overflow_var_nonzero_minabsvarindex_one_index([2000 x i8]* %arr, i8 %x, i64 %v) {
 ; CHECK-LABEL: Function: mul_may_overflow_var_nonzero_minabsvarindex_one_index: 4 pointers, 0 call sites
-; CHECK-NEXT:  NoAlias: [2000 x i8]* %arr, i8* %gep.idx
+; CHECK-NEXT:  MayAlias: [2000 x i8]* %arr, i8* %gep.idx
 ; CHECK-NEXT:  PartialAlias (off 917): [2000 x i8]* %arr, i8* %gep.917
-; CHECK-NEXT:  NoAlias: i8* %gep.917, i8* %gep.idx
+; CHECK-NEXT:  MayAlias: i8* %gep.917, i8* %gep.idx
 ; CHECK-NEXT:  MustAlias: [2000 x i8]* %arr, i8* %gep.0
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.idx
 ; CHECK-NEXT:  NoAlias: i8* %gep.0, i8* %gep.917

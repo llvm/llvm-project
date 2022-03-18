@@ -38,7 +38,7 @@ TEST(MemtagBasicDeathTest, Unsupported) {
   EXPECT_DEATH(addFixedTag(nullptr, 0), "not supported");
 }
 
-class MemtagTest : public ::testing::Test {
+class MemtagTest : public Test {
 protected:
   void SetUp() override {
     if (!archSupportsMemoryTagging() || !systemDetectsMemoryTagFaultsTestOnly())

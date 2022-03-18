@@ -1105,7 +1105,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
 
   if (IsOpenCL) {
     CGM.getOpenCLRuntime().recordBlockInfo(blockInfo.BlockExpression, InvokeFn,
-                                           result);
+                                           result, blockInfo.StructureType);
   }
 
   return result;
@@ -1160,8 +1160,7 @@ llvm::Type *CodeGenModule::getGenericBlockLiteralType() {
     SmallVector<llvm::Type *, 8> StructFields(
         {IntTy, IntTy, getOpenCLRuntime().getGenericVoidPointerType()});
     if (auto *Helper = getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
-      for (auto I : Helper->getCustomFieldTypes())
-        StructFields.push_back(I);
+      llvm::append_range(StructFields, Helper->getCustomFieldTypes());
     }
     GenericBlockLiteralType = llvm::StructType::create(
         StructFields, "struct.__opencl_block_literal_generic");
@@ -1401,7 +1400,8 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
   if (CGM.getContext().getLangOpts().OpenCL)
     CGM.getOpenCLRuntime().recordBlockInfo(
         blockInfo.BlockExpression,
-        cast<llvm::Function>(blockFn->stripPointerCasts()), Result);
+        cast<llvm::Function>(blockFn->stripPointerCasts()), Result,
+        literal->getValueType());
   return Result;
 }
 

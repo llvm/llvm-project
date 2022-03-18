@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-const-return-type %t
+// RUN: %check_clang_tidy -std=c++14 %s readability-const-return-type %t
 
 //  p# = positive test
 //  n# = negative test
@@ -285,3 +285,40 @@ public:
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness
   // CHECK-NOT-FIXES: int getC() { return 1; }
 };
+
+// Don't warn about const auto types, because it may be impossible to make them non-const
+// without a significant semantics change. Since `auto` drops cv-qualifiers,
+// tests check `decltype(auto)`.
+decltype(auto) n16() {
+  static const int i = 42;
+  return i;
+}
+
+// Don't warn about `decltype(<expr>)` types
+const int n17i = 1;
+decltype(n17i) n17() {
+  return 17;
+}
+
+// Do warn when on decltype types with the local const qualifier
+// `const decltype(auto)` won't compile, so check only `const decltype(<expr>)`
+const decltype(n17i) n18() {
+  // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const decltype(n17i)
+  // CHECK-FIXES: decltype(n17i) n18() {
+  return 18;
+}
+
+// `volatile` modifier doesn't affect the checker
+volatile decltype(n17i) n19() {
+  return 19;
+}
+
+// Don't warn about `__typeof__(<expr>)` types
+__typeof__(n17i) n20() {
+  return 20;
+}
+
+// Don't warn about `__typeof__(type)` types
+__typeof__(const int) n21() {
+  return 21;
+}

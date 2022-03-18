@@ -684,6 +684,7 @@ def Math_PowFOp : Math_FloatBinaryOp<"powf"> {
     %x = math.powf %y, %z : tensor<4x?xbf16>
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -723,6 +724,7 @@ def Math_SqrtOp : Math_FloatUnaryOp<"sqrt"> {
     %x = math.sqrt %y : tensor<4x?xf32>
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

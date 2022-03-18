@@ -35,6 +35,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Format.h"
@@ -1966,8 +1967,14 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       CtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI,
                             FunctionArgList(), Loc, Loc);
       auto AL = ApplyDebugLocation::CreateArtificial(CtorCGF);
+      llvm::Constant *AddrInAS0 = Addr;
+      if (Addr->getAddressSpace() != 0)
+        AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
+            Addr, llvm::PointerType::getWithSamePointeeType(
+                      cast<llvm::PointerType>(Addr->getType()), 0));
       CtorCGF.EmitAnyExprToMem(
-          Init, Address::deprecated(Addr, CGM.getContext().getDeclAlign(VD)),
+          Init,
+          Address::deprecated(AddrInAS0, CGM.getContext().getDeclAlign(VD)),
           Init->getType().getQualifiers(),
           /*IsInitializer=*/true);
       CtorCGF.FinishFunction();
@@ -2006,9 +2013,14 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       // Create a scope with an artificial location for the body of this
       // function.
       auto AL = ApplyDebugLocation::CreateArtificial(DtorCGF);
+      llvm::Constant *AddrInAS0 = Addr;
+      if (Addr->getAddressSpace() != 0)
+        AddrInAS0 = llvm::ConstantExpr::getAddrSpaceCast(
+            Addr, llvm::PointerType::getWithSamePointeeType(
+                      cast<llvm::PointerType>(Addr->getType()), 0));
       DtorCGF.emitDestroy(
-          Address::deprecated(Addr, CGM.getContext().getDeclAlign(VD)), ASTTy,
-          DtorCGF.getDestroyer(ASTTy.isDestructedType()),
+          Address::deprecated(AddrInAS0, CGM.getContext().getDeclAlign(VD)),
+          ASTTy, DtorCGF.getDestroyer(ASTTy.isDestructedType()),
           DtorCGF.needsEHCleanup(ASTTy.isDestructedType()));
       DtorCGF.FinishFunction();
       Dtor = Fn;
@@ -6010,19 +6022,19 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   PrivateScope.addPrivate(
       LHSVD,
       // Pull out the pointer to the variable.
-      CGF.Builder.CreateElementBitCast(
-          CGF.EmitLoadOfPointer(
+      CGF.EmitLoadOfPointer(
+          CGF.Builder.CreateElementBitCast(
               CGF.GetAddrOfLocalVar(&ParamInOut),
-              C.getPointerType(C.VoidPtrTy).castAs<PointerType>()),
-          CGF.ConvertTypeForMem(LHSVD->getType())));
+              CGF.ConvertTypeForMem(LHSVD->getType())->getPointerTo()),
+          C.getPointerType(LHSVD->getType())->castAs<PointerType>()));
   PrivateScope.addPrivate(
       RHSVD,
       // Pull out the pointer to the variable.
-      CGF.Builder.CreateElementBitCast(
-          CGF.EmitLoadOfPointer(
-              CGF.GetAddrOfLocalVar(&ParamIn),
-              C.getPointerType(C.VoidPtrTy).castAs<PointerType>()),
-          CGF.ConvertTypeForMem(RHSVD->getType())));
+      CGF.EmitLoadOfPointer(
+          CGF.Builder.CreateElementBitCast(
+            CGF.GetAddrOfLocalVar(&ParamIn),
+            CGF.ConvertTypeForMem(RHSVD->getType())->getPointerTo()),
+          C.getPointerType(RHSVD->getType())->castAs<PointerType>()));
   PrivateScope.Privatize();
   // Emit the combiner body:
   // %2 = <ReductionOp>(<type> *%lhs, <type> *%rhs)
@@ -10019,6 +10031,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
       cast<VarDecl>(cast<DeclRefExpr>(D->getMapperVarRef())->getDecl());
   SourceLocation Loc = D->getLocation();
   CharUnits ElementSize = C.getTypeSizeInChars(Ty);
+  llvm::Type *ElemTy = CGM.getTypes().ConvertTypeForMem(Ty);
 
   // Prepare mapper function arguments and attributes.
   ImplicitParamDecl HandleArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
@@ -10073,8 +10086,7 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
       Size, MapperCGF.Builder.getInt64(ElementSize.getQuantity()));
   llvm::Value *PtrBegin = MapperCGF.Builder.CreateBitCast(
       BeginIn, CGM.getTypes().ConvertTypeForMem(PtrTy));
-  llvm::Value *PtrEnd = MapperCGF.Builder.CreateGEP(
-      PtrBegin->getType()->getPointerElementType(), PtrBegin, Size);
+  llvm::Value *PtrEnd = MapperCGF.Builder.CreateGEP(ElemTy, PtrBegin, Size);
   llvm::Value *MapType = MapperCGF.EmitLoadOfScalar(
       MapperCGF.GetAddrOfLocalVar(&TypeArg), /*Volatile=*/false,
       C.getPointerType(Int64Ty), Loc);
@@ -10106,10 +10118,10 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   llvm::PHINode *PtrPHI = MapperCGF.Builder.CreatePHI(
       PtrBegin->getType(), 2, "omp.arraymap.ptrcurrent");
   PtrPHI->addIncoming(PtrBegin, EntryBB);
-  Address PtrCurrent =
-      Address::deprecated(PtrPHI, MapperCGF.GetAddrOfLocalVar(&BeginArg)
-                                      .getAlignment()
-                                      .alignmentOfArrayElement(ElementSize));
+  Address PtrCurrent(PtrPHI, ElemTy,
+                     MapperCGF.GetAddrOfLocalVar(&BeginArg)
+                         .getAlignment()
+                         .alignmentOfArrayElement(ElementSize));
   // Privatize the declared variable of mapper to be the current array element.
   CodeGenFunction::OMPPrivateScope Scope(MapperCGF);
   Scope.addPrivate(MapperVarDecl, PtrCurrent);
@@ -10231,7 +10243,6 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
 
   // Update the pointer to point to the next element that needs to be mapped,
   // and check whether we have mapped all elements.
-  llvm::Type *ElemTy = PtrPHI->getType()->getPointerElementType();
   llvm::Value *PtrNext = MapperCGF.Builder.CreateConstGEP1_32(
       ElemTy, PtrPHI, /*Idx0=*/1, "omp.arraymap.next");
   PtrPHI->addIncoming(PtrNext, LastBB);

@@ -76,6 +76,17 @@ body:  |
     ; CHECK-NEXT: $ebx = MOV32ri
     ; CHECK-NEXT: DBG_VALUE $rsp
 
+    ;; Try re-loading the variable value from the stack; we shouldn't issue a
+    ;; DBG_VALUE to follow it, the stack locations are usually longer lived and
+    ;; this reduces location list entropy. Then, clobber the stack location,
+    ;; and check that we can relocate the variable to being in the loaded
+    ;; register.
+    $ebx = MOV32rm $rsp, 1, _, -12, _ :: (load 4 from %stack.0)
+    MOV32mr $rsp, 1, _, -12, _, killed $esi :: (store 4 into %stack.0)
+    ; CHECK:      $ebx = MOV32rm
+    ; CHECK-NEXT: MOV32mr $rsp
+    ; CHECK-NEXT: DBG_VALUE $ebx
+
     ;; Now test copies and register masks.
     $eax = COPY $ebx
     DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
