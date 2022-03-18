@@ -1527,6 +1527,7 @@ public:
            T->getStmtClass() == OMPMasterTaskLoopSimdDirectiveClass ||
            T->getStmtClass() == OMPGenericLoopDirectiveClass ||
            T->getStmtClass() == OMPTeamsGenericLoopDirectiveClass ||
+           T->getStmtClass() == OMPTargetTeamsGenericLoopDirectiveClass ||
            T->getStmtClass() == OMPParallelMasterTaskLoopDirectiveClass ||
            T->getStmtClass() == OMPParallelMasterTaskLoopSimdDirectiveClass ||
            T->getStmtClass() == OMPDistributeDirectiveClass ||
@@ -5635,6 +5636,71 @@ public:
   }
 };
 
+/// This represents '#pragma omp target teams loop' directive.
+///
+/// \code
+/// #pragma omp target teams loop private(a,b) order(concurrent)
+/// \endcode
+/// In this example directive '#pragma omp target teams loop' has
+/// clauses 'private' with the variables 'a' and 'b', and order(concurrent).
+///
+class OMPTargetTeamsGenericLoopDirective final : public OMPLoopDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  OMPTargetTeamsGenericLoopDirective(SourceLocation StartLoc,
+                                     SourceLocation EndLoc,
+                                     unsigned CollapsedNum)
+      : OMPLoopDirective(OMPTargetTeamsGenericLoopDirectiveClass,
+                         llvm::omp::OMPD_target_teams_loop, StartLoc, EndLoc,
+                         CollapsedNum) {}
+
+  /// Build an empty directive.
+  ///
+  /// \param CollapsedNum Number of collapsed nested loops.
+  ///
+  explicit OMPTargetTeamsGenericLoopDirective(unsigned CollapsedNum)
+      : OMPLoopDirective(OMPTargetTeamsGenericLoopDirectiveClass,
+                         llvm::omp::OMPD_target_teams_loop, SourceLocation(),
+                         SourceLocation(), CollapsedNum) {}
+
+public:
+  /// Creates directive with a list of \p Clauses.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param CollapsedNum Number of collapsed loops.
+  /// \param Clauses List of clauses.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  /// \param Exprs Helper expressions for CodeGen.
+  ///
+  static OMPTargetTeamsGenericLoopDirective *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+         unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses,
+         Stmt *AssociatedStmt, const HelperExprs &Exprs);
+
+  /// Creates an empty directive with the place
+  /// for \a NumClauses clauses.
+  ///
+  /// \param C AST context.
+  /// \param CollapsedNum Number of collapsed nested loops.
+  /// \param NumClauses Number of clauses.
+  ///
+  static OMPTargetTeamsGenericLoopDirective *CreateEmpty(const ASTContext &C,
+                                                         unsigned NumClauses,
+                                                         unsigned CollapsedNum,
+                                                         EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPTargetTeamsGenericLoopDirectiveClass;
+  }
+};
 } // end namespace clang
 
 #endif

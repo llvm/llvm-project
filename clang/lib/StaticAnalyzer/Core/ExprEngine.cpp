@@ -1298,6 +1298,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::OMPMaskedDirectiveClass:
     case Stmt::OMPGenericLoopDirectiveClass:
     case Stmt::OMPTeamsGenericLoopDirectiveClass:
+    case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
     case Stmt::CapturedStmtClass:
     case Stmt::OMPUnrollDirectiveClass:
     case Stmt::OMPMetaDirectiveClass: {
