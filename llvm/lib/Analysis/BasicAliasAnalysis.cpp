@@ -1297,8 +1297,31 @@ AliasResult BasicAAResult::aliasGEP(
     const VariableGEPIndex &Var = DecompGEP1.VarIndices[0];
     if (Var.Val.TruncBits == 0 &&
         isKnownNonZero(Var.Val.V, DL, 0, &AC, Var.CxtI, DT)) {
-      // If V != 0 then abs(VarIndex) >= abs(Scale).
-      MinAbsVarIndex = Var.Scale.abs();
+      // If V != 0, then abs(VarIndex) > 0.
+      MinAbsVarIndex = APInt(Var.Scale.getBitWidth(), 1);
+
+      // Check if abs(V*Scale) >= abs(Scale) holds in the presence of
+      // potentially wrapping math.
+      auto MultiplyByScaleNoWrap = [](const VariableGEPIndex &Var) {
+        if (Var.IsNSW)
+          return true;
+
+        int ValOrigBW = Var.Val.V->getType()->getPrimitiveSizeInBits();
+        // If Scale is small enough so that abs(V*Scale) >= abs(Scale) holds.
+        // The max value of abs(V) is 2^ValOrigBW - 1. Multiplying with a
+        // constant smaller than 2^(bitwidth(Val) - ValOrigBW) won't wrap.
+        int MaxScaleValueBW = Var.Val.getBitWidth() - ValOrigBW;
+        if (MaxScaleValueBW <= 0)
+          return false;
+        return Var.Scale.ule(
+            APInt::getMaxValue(MaxScaleValueBW).zext(Var.Scale.getBitWidth()));
+      };
+      // Refine MinAbsVarIndex, if abs(Scale*V) >= abs(Scale) holds in the
+      // presence of potentially wrapping math.
+      if (MultiplyByScaleNoWrap(Var)) {
+        // If V != 0 then abs(VarIndex) >= abs(Scale).
+        MinAbsVarIndex = Var.Scale.abs();
+      }
     }
   } else if (DecompGEP1.VarIndices.size() == 2) {
     // VarIndex = Scale*V0 + (-Scale)*V1.
