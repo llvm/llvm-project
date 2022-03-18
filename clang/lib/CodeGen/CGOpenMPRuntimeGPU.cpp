@@ -3558,8 +3558,7 @@ llvm::Function *CGOpenMPRuntimeGPU::createParallelDataSharingWrapper(
       isOpenMPLoopBoundSharingDirective(D.getDirectiveKind())) {
     SharedArgListAddress = CGF.EmitLoadOfPointer(
         GlobalArgs, CGF.getContext()
-                        .getPointerType(CGF.getContext().getPointerType(
-                            CGF.getContext().VoidPtrTy))
+                        .getPointerType(CGF.getContext().VoidPtrTy)
                         .castAs<PointerType>());
   }
   unsigned Idx = 0;
