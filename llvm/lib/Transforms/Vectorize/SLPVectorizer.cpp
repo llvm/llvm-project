@@ -1142,11 +1142,6 @@ public:
 
     /// Loads from consecutive memory addresses, e.g. load(A[i]), load(A[i+1]).
     static const int ScoreConsecutiveLoads = 4;
-    /// The same load multiple times. This should have a better score than
-    /// `ScoreSplat` because it in x86 for a 2-lane vector we can represent it
-    /// with `movddup (%reg), xmm0` which has a throughput of 0.5 versus 0.5 for
-    /// a vector load and 1.0 for a broadcast.
-    static const int ScoreSplatLoads = 3;
     /// Loads from reversed memory addresses, e.g. load(A[i+1]), load(A[i]).
     static const int ScoreReversedLoads = 3;
     /// ExtractElementInst from same vector and consecutive indexes.
@@ -1173,18 +1168,9 @@ public:
     /// MainAltOps.
     static int getShallowScore(Value *V1, Value *V2, const DataLayout &DL,
                                ScalarEvolution &SE, int NumLanes,
-                               ArrayRef<Value *> MainAltOps,
-                               const TargetTransformInfo *TTI) {
-      if (V1 == V2) {
-        if (isa<LoadInst>(V1)) {
-          // A broadcast of a load can be cheaper on some targets.
-          // TODO: For now accept a broadcast load with no other internal uses.
-          if (TTI->isLegalBroadcastLoad(V1->getType(), NumLanes) &&
-              (int)V1->getNumUses() == NumLanes)
-            return VLOperands::ScoreSplatLoads;
-        }
+                               ArrayRef<Value *> MainAltOps) {
+      if (V1 == V2)
         return VLOperands::ScoreSplat;
-      }
 
       auto *LI1 = dyn_cast<LoadInst>(V1);
       auto *LI2 = dyn_cast<LoadInst>(V2);
@@ -1363,7 +1349,7 @@ public:
 
       // Get the shallow score of V1 and V2.
       int ShallowScoreAtThisLevel =
-          getShallowScore(LHS, RHS, DL, SE, getNumLanes(), MainAltOps, R.TTI);
+          getShallowScore(LHS, RHS, DL, SE, getNumLanes(), MainAltOps);
 
       // If reached MaxLevel,
       //  or if V1 and V2 are not instructions,
@@ -5252,9 +5238,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // broadcast.
       assert(VecTy == FinalVecTy &&
              "No reused scalars expected for broadcast.");
-      return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy,
-                                 /*Mask=*/None, /*Index=*/0,
-                                 /*SubTp=*/nullptr, /*Args=*/VL);
+      return TTI->getShuffleCost(TargetTransformInfo::SK_Broadcast, VecTy);
     }
     InstructionCost ReuseShuffleCost = 0;
     if (NeedToShuffleReuses)
