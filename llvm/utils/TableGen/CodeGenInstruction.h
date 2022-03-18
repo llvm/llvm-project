@@ -271,6 +271,7 @@ template <typename T> class ArrayRef;
     bool hasExtraDefRegAllocReq : 1;
     bool isCodeGenOnly : 1;
     bool isPseudo : 1;
+    bool isMeta : 1;
     bool isRegSequence : 1;
     bool isExtractSubreg : 1;
     bool isInsertSubreg : 1;
