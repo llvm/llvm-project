@@ -180,8 +180,7 @@ enum class LexFlags : uint8_t {
   NeedsCleaning = 1 << 1,
 };
 
-/// Derives a token stream by decoding escapes, interpreting raw_identifiers and
-/// splitting the greatergreater token.
+/// Derives a token stream by decoding escapes and interpreting raw_identifiers.
 ///
 /// Tokens containing UCNs, escaped newlines, trigraphs etc are decoded and
 /// their backing data is owned by the returned stream.
