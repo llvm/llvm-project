@@ -509,12 +509,16 @@ struct IntrinsicLibrary {
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genRepeat(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genReshape(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genRRSpacing(mlir::Type resultType,
+                           llvm::ArrayRef<mlir::Value> args);
   mlir::Value genScale(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genScan(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSetExponent(mlir::Type resultType,
                              llvm::ArrayRef<mlir::Value> args);
   mlir::Value genSign(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  mlir::Value genSpacing(mlir::Type resultType,
+                         llvm::ArrayRef<mlir::Value> args);
   fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
@@ -820,6 +824,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"pad", asBox, handleDynamicOptional},
        {"order", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"rrspacing", &I::genRRSpacing},
     {"scale",
      &I::genScale,
      {{{"x", asValue}, {"i", asValue}}},
@@ -839,6 +844,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asAddr, handleDynamicOptional},
        {"kind", asValue}}},
      /*isElemental=*/false},
+    {"spacing", &I::genSpacing},
     {"spread",
      &I::genSpread,
      {{{"source", asAddr}, {"dim", asValue}, {"ncopies", asValue}}},
@@ -3015,6 +3021,16 @@ IntrinsicLibrary::genReshape(mlir::Type resultType,
                            "unexpected result for RESHAPE");
 }
 
+// RRSPACING
+mlir::Value IntrinsicLibrary::genRRSpacing(mlir::Type resultType,
+                                           llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genRRSpacing(builder, loc, fir::getBase(args[0])));
+}
+
 // SCALE
 mlir::Value IntrinsicLibrary::genScale(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -3128,6 +3144,16 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
     return builder.create<mlir::arith::SelectOp>(loc, cmp, neg, abs);
   }
   return genRuntimeCall("sign", resultType, args);
+}
+
+// SPACING
+mlir::Value IntrinsicLibrary::genSpacing(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSpacing(builder, loc, fir::getBase(args[0])));
 }
 
 // SIZE
