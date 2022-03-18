@@ -317,6 +317,7 @@ def RDTIMEH_W : RDTIME_2R<0b0000000000000000011001, "rdtimeh.w">;
 def CPUCFG : ALU_2R<0b0000000000000000011011, "cpucfg">;
 
 /// LA64 instructions
+
 let Predicates = [IsLA64] in {
 
 // Arithmetic Operation Instructions for 64-bits
@@ -494,12 +495,14 @@ def : PatGprGpr<or, OR>;
 def : PatGprGpr<xor, XOR>;
 
 /// LA32 patterns
+
 let Predicates = [IsLA32] in {
 def : PatGprGpr<add, ADD_W>;
 def : PatGprImm<add, ADDI_W, simm12>;
 } // Predicates = [IsLA32]
 
 /// LA64 patterns
+
 let Predicates = [IsLA64] in {
 def : Pat<(sext_inreg GPR:$rj, i32), (ADDI_W GPR:$rj, 0)>;
 
