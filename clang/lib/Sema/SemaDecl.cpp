@@ -9126,8 +9126,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     Diag(D.getIdentifierLoc(), diag::err_function_decl_cmse_ns_call);
 
   SmallVector<TemplateParameterList *, 4> TemplateParamLists;
-  for (TemplateParameterList *TPL : TemplateParamListsRef)
-    TemplateParamLists.push_back(TPL);
+  llvm::append_range(TemplateParamLists, TemplateParamListsRef);
   if (TemplateParameterList *Invented = D.getInventedTemplateParameterList()) {
     if (!TemplateParamLists.empty() &&
         Invented->getDepth() == TemplateParamLists.back()->getDepth())

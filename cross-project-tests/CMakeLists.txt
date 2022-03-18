@@ -78,6 +78,13 @@ add_lit_testsuite(check-debuginfo "Running debuginfo tests"
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
+# Add alias for intrinsic header test subset.
+add_lit_testsuite(check-intrinsic-headers "Running intrinsic header tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/intrinsic-header-tests
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS ${CROSS_PROJECT_TEST_DEPS}
+  )
+
 # Add check-cross-project-* targets.
 add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
@@ -85,3 +92,4 @@ add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
 
 set_target_properties(check-cross-project PROPERTIES FOLDER "Tests")
 set_target_properties(check-debuginfo PROPERTIES FOLDER "Tests")
+set_target_properties(check-intrinsic-headers PROPERTIES FOLDER "Tests")

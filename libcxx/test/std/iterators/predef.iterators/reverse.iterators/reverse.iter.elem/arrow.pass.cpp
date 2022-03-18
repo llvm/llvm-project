@@ -76,43 +76,43 @@ TEST_CONSTEXPR  C gC;
 
 int main(int, char**)
 {
-    A a;
-    test(&a+1, A());
+  A a;
+  test(&a+1, A());
 
-    {
+  {
     std::list<B> l;
     l.push_back(B(0));
     l.push_back(B(1));
     l.push_back(B(2));
 
     {
-    std::list<B>::const_iterator i = l.begin();
-    assert ( i->get() == 0 );  ++i;
-    assert ( i->get() == 1 );  ++i;
-    assert ( i->get() == 2 );  ++i;
-    assert ( i == l.end ());
+      std::list<B>::const_iterator i = l.begin();
+      assert ( i->get() == 0 );  ++i;
+      assert ( i->get() == 1 );  ++i;
+      assert ( i->get() == 2 );  ++i;
+      assert ( i == l.end ());
     }
 
     {
-    std::list<B>::const_reverse_iterator ri = l.rbegin();
-    assert ( ri->get() == 2 );  ++ri;
-    assert ( ri->get() == 1 );  ++ri;
-    assert ( ri->get() == 0 );  ++ri;
-    assert ( ri == l.rend ());
+      std::list<B>::const_reverse_iterator ri = l.rbegin();
+      assert ( ri->get() == 2 );  ++ri;
+      assert ( ri->get() == 1 );  ++ri;
+      assert ( ri->get() == 0 );  ++ri;
+      assert ( ri == l.rend ());
     }
-    }
+  }
 
 #if TEST_STD_VER > 14
-    {
-        typedef std::reverse_iterator<const C *> RI;
-        constexpr RI it1 = std::make_reverse_iterator(&gC+1);
+  {
+    typedef std::reverse_iterator<const C *> RI;
+    constexpr RI it1 = std::make_reverse_iterator(&gC+1);
 
-        static_assert(it1->get() == gC.get(), "");
-    }
+    static_assert(it1->get() == gC.get(), "");
+  }
 #endif
-    {
-        ((void)gC);
-    }
+  {
+    ((void)gC);
+  }
 
   return 0;
 }

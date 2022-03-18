@@ -943,6 +943,7 @@ void InstrInfoEmitter::emitRecord(const CodeGenInstruction &Inst, unsigned Num,
   // Emit all of the target independent flags...
   if (Inst.isPreISelOpcode)    OS << "|(1ULL<<MCID::PreISelOpcode)";
   if (Inst.isPseudo)           OS << "|(1ULL<<MCID::Pseudo)";
+  if (Inst.isMeta)             OS << "|(1ULL<<MCID::Meta)";
   if (Inst.isReturn)           OS << "|(1ULL<<MCID::Return)";
   if (Inst.isEHScopeReturn)    OS << "|(1ULL<<MCID::EHScopeReturn)";
   if (Inst.isBranch)           OS << "|(1ULL<<MCID::Branch)";

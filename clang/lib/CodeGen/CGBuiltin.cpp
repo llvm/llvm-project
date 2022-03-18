@@ -16258,12 +16258,31 @@ Value *EmitAMDGPUDispatchPtr(CodeGenFunction &CGF,
   return CGF.Builder.CreateAddrSpaceCast(Call, RetTy);
 }
 
+Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
+  auto *F = CGF.CGM.getIntrinsic(Intrinsic::amdgcn_implicitarg_ptr);
+  auto *Call = CGF.Builder.CreateCall(F);
+  Call->addRetAttr(
+      Attribute::getWithDereferenceableBytes(Call->getContext(), 256));
+  Call->addRetAttr(Attribute::getWithAlignment(Call->getContext(), Align(8)));
+  return Call;
+}
+
 // \p Index is 0, 1, and 2 for x, y, and z dimension, respectively.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
-  const unsigned XOffset = 4;
-  auto *DP = EmitAMDGPUDispatchPtr(CGF);
-  // Indexing the HSA kernel_dispatch_packet struct.
-  auto *Offset = llvm::ConstantInt::get(CGF.Int32Ty, XOffset + Index * 2);
+  bool IsCOV_5 = CGF.getTarget().getTargetOpts().CodeObjectVersion ==
+                 clang::TargetOptions::COV_5;
+  Constant *Offset;
+  Value *DP;
+  if (IsCOV_5) {
+    // Indexing the implicit kernarg segment.
+    Offset = llvm::ConstantInt::get(CGF.Int32Ty, 12 + Index * 2);
+    DP = EmitAMDGPUImplicitArgPtr(CGF);
+  } else {
+    // Indexing the HSA kernel_dispatch_packet struct.
+    Offset = llvm::ConstantInt::get(CGF.Int32Ty, 4 + Index * 2);
+    DP = EmitAMDGPUDispatchPtr(CGF);
+  }
+
   auto *GEP = CGF.Builder.CreateGEP(CGF.Int8Ty, DP, Offset);
   auto *DstTy =
       CGF.Int16Ty->getPointerTo(GEP->getType()->getPointerAddressSpace());

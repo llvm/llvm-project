@@ -332,6 +332,7 @@ body:             |
   LIFETIME_END 0
   PSEUDO_PROBE 6699318081062747564, 1, 0, 0
   $xmm0 = ARITH_FENCE $xmm0
+  Int_MemBarrier
 ...
 )MIR";
 

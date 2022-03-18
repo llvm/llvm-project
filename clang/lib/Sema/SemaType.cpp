@@ -236,8 +236,8 @@ namespace {
       if (hasSavedAttrs) return;
 
       DeclSpec &spec = getMutableDeclSpec();
-      for (ParsedAttr &AL : spec.getAttributes())
-        savedAttrs.push_back(&AL);
+      llvm::append_range(savedAttrs,
+                         llvm::make_pointer_range(spec.getAttributes()));
       trivial &= savedAttrs.empty();
       hasSavedAttrs = true;
     }

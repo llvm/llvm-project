@@ -3385,10 +3385,8 @@ static bool rebucketPaths(VPtrInfoVector &Paths) {
   // sorted vector to implement a multiset to form the buckets.  Note that the
   // ordering is based on pointers, but it doesn't change our output order.  The
   // current algorithm is designed to match MSVC 2012's names.
-  llvm::SmallVector<std::reference_wrapper<VPtrInfo>, 2> PathsSorted;
-  PathsSorted.reserve(Paths.size());
-  for (auto& P : Paths)
-    PathsSorted.push_back(*P);
+  llvm::SmallVector<std::reference_wrapper<VPtrInfo>, 2> PathsSorted(
+      llvm::make_pointee_range(Paths));
   llvm::sort(PathsSorted, [](const VPtrInfo &LHS, const VPtrInfo &RHS) {
     return LHS.MangledPath < RHS.MangledPath;
   });

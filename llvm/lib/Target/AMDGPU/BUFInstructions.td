@@ -1412,7 +1412,8 @@ multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> 
   def : Pat<
     (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i16:$offset), data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
-      (EXTRACT_SUBREG OffsetResDag, !if(!eq(vt, i32), sub0, sub0_sub1)),
+      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS OffsetResDag, getVregSrcForVT<data_vt>.ret)),
+        !if(!eq(vt, i32), sub0, sub0_sub1)),
       OffsetResDag)
   >;
 
@@ -1423,7 +1424,8 @@ multiclass BufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst> 
     (vt (Op (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i16:$offset),
       data_vt:$vdata_in)),
     !if(!eq(RtnMode, "ret"),
-      (EXTRACT_SUBREG Addr64ResDag, !if(!eq(vt, i32), sub0, sub0_sub1)),
+      (EXTRACT_SUBREG (vt (COPY_TO_REGCLASS Addr64ResDag, getVregSrcForVT<data_vt>.ret)),
+        !if(!eq(vt, i32), sub0, sub0_sub1)),
       Addr64ResDag)
   >;
 
