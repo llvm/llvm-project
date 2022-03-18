@@ -18,6 +18,11 @@
 namespace mlir {
 namespace presburger {
 
+/// The SetCoalescer class contains all functionality concerning the coalesce
+/// heuristic. It is built from a `PresburgerRelation` and has the `coalesce()`
+/// function as its main API.
+class SetCoalescer;
+
 /// A PresburgerRelation represents a union of IntegerRelations that live in
 /// the same PresburgerSpace with support for union, intersection, subtraction,
 /// and complement operations, as well as sampling.
@@ -120,6 +125,8 @@ protected:
 
   /// The list of disjuncts that this set is the union of.
   SmallVector<IntegerRelation, 2> integerRelations;
+
+  friend class SetCoalescer;
 };
 
 class PresburgerSet : public PresburgerRelation {
