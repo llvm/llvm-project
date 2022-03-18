@@ -180,7 +180,7 @@ LogicalResult LexSimplex::addCut(unsigned row) {
   return moveRowUnknownToColumn(nRow - 1);
 }
 
-Optional<unsigned> LexSimplex::maybeGetNonIntegeralVarRow() const {
+Optional<unsigned> LexSimplex::maybeGetNonIntegralVarRow() const {
   for (const Unknown &u : var) {
     if (u.orientation == Orientation::Column)
       continue;
@@ -200,7 +200,7 @@ MaybeOptimum<SmallVector<int64_t, 8>> LexSimplex::findIntegerLexMin() {
     if (empty)
       return OptimumKind::Empty;
 
-    if (Optional<unsigned> maybeRow = maybeGetNonIntegeralVarRow()) {
+    if (Optional<unsigned> maybeRow = maybeGetNonIntegralVarRow()) {
       // Failure occurs when the polytope is integer empty.
       if (failed(addCut(*maybeRow)))
         return OptimumKind::Empty;

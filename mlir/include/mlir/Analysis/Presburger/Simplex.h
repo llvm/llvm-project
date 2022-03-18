@@ -481,7 +481,7 @@ protected:
 
   /// Get a row corresponding to a var that has a non-integral sample value, if
   /// one exists. Otherwise, return an empty optional.
-  Optional<unsigned> maybeGetNonIntegeralVarRow() const;
+  Optional<unsigned> maybeGetNonIntegralVarRow() const;
 
   /// Given two potential pivot columns for a row, return the one that results
   /// in the lexicographically smallest sample vector.
