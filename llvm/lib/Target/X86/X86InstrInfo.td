@@ -981,8 +981,8 @@ def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
 def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
 def HasINVPCID   : Predicate<"Subtarget->hasINVPCID()">;
-def HasCmpxchg8b : Predicate<"Subtarget->hasCmpxchg8b()">;
-def HasCmpxchg16b: Predicate<"Subtarget->hasCmpxchg16b()">;
+def HasCmpxchg8b : Predicate<"Subtarget->hasCMPXCHG8B()">;
+def HasCmpxchg16b: Predicate<"Subtarget->hasCMPXCHG16B()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
 def HasKL        : Predicate<"Subtarget->hasKL()">;
@@ -996,17 +996,17 @@ def HasAMXINT8   : Predicate<"Subtarget->hasAMXINT8()">;
 def HasUINTR     : Predicate<"Subtarget->hasUINTR()">;
 def HasCRC32     : Predicate<"Subtarget->hasCRC32()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
-                             AssemblerPredicate<(all_of (not Mode64Bit)), "Not 64-bit mode">;
+                             AssemblerPredicate<(all_of (not Is64Bit)), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
-                             AssemblerPredicate<(all_of Mode64Bit), "64-bit mode">;
+                             AssemblerPredicate<(all_of Is64Bit), "64-bit mode">;
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
-                             AssemblerPredicate<(all_of Mode16Bit), "16-bit mode">;
+                             AssemblerPredicate<(all_of Is16Bit), "16-bit mode">;
 def Not16BitMode : Predicate<"!Subtarget->is16Bit()">,
-                             AssemblerPredicate<(all_of (not Mode16Bit)), "Not 16-bit mode">;
+                             AssemblerPredicate<(all_of (not Is16Bit)), "Not 16-bit mode">;
 def In32BitMode  : Predicate<"Subtarget->is32Bit()">,
-                             AssemblerPredicate<(all_of Mode32Bit), "32-bit mode">;
+                             AssemblerPredicate<(all_of Is32Bit), "32-bit mode">;
 def IsWin64      : Predicate<"Subtarget->isTargetWin64()">;
 def NotWin64     : Predicate<"!Subtarget->isTargetWin64()">;
 def NotWin64WithoutFP : Predicate<"!Subtarget->isTargetWin64() ||"

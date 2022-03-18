@@ -38,12 +38,12 @@ class X86TTIImpl : public BasicTTIImplBase<X86TTIImpl> {
   const FeatureBitset InlineFeatureIgnoreList = {
       // This indicates the CPU is 64 bit capable not that we are in 64-bit
       // mode.
-      X86::Feature64Bit,
+      X86::FeatureX86_64,
 
       // These features don't have any intrinsics or ABI effect.
       X86::FeatureNOPL,
       X86::FeatureCMPXCHG16B,
-      X86::FeatureLAHFSAHF,
+      X86::FeatureLAHFSAHF64,
 
       // Some older targets can be setup to fold unaligned loads.
       X86::FeatureSSEUnalignedMem,
