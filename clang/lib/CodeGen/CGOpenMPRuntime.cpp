@@ -5993,19 +5993,19 @@ static llvm::Value *emitReduceCombFunction(CodeGenModule &CGM,
   PrivateScope.addPrivate(
       LHSVD,
       // Pull out the pointer to the variable.
-      CGF.Builder.CreateElementBitCast(
-          CGF.EmitLoadOfPointer(
+      CGF.EmitLoadOfPointer(
+          CGF.Builder.CreateElementBitCast(
               CGF.GetAddrOfLocalVar(&ParamInOut),
-              C.getPointerType(C.VoidPtrTy).castAs<PointerType>()),
-          CGF.ConvertTypeForMem(LHSVD->getType())));
+              CGF.ConvertTypeForMem(LHSVD->getType())->getPointerTo()),
+          C.getPointerType(LHSVD->getType())->castAs<PointerType>()));
   PrivateScope.addPrivate(
       RHSVD,
       // Pull out the pointer to the variable.
-      CGF.Builder.CreateElementBitCast(
-          CGF.EmitLoadOfPointer(
-              CGF.GetAddrOfLocalVar(&ParamIn),
-              C.getPointerType(C.VoidPtrTy).castAs<PointerType>()),
-          CGF.ConvertTypeForMem(RHSVD->getType())));
+      CGF.EmitLoadOfPointer(
+          CGF.Builder.CreateElementBitCast(
+            CGF.GetAddrOfLocalVar(&ParamIn),
+            CGF.ConvertTypeForMem(RHSVD->getType())->getPointerTo()),
+          C.getPointerType(RHSVD->getType())->castAs<PointerType>()));
   PrivateScope.Privatize();
   // Emit the combiner body:
   // %2 = <ReductionOp>(<type> *%lhs, <type> *%rhs)
