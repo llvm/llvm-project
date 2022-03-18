@@ -2,10 +2,13 @@
 ; RUN: opt -S -passes=internalize,ipsccp %s | FileCheck %s
 ; PR5569
 
-; IPSCCP should prove that the blocks are dead and delete them, and
-; properly handle the dangling blockaddress constants.
+; If BasicBlocks are unreachable, IPSCCP should convert them to unreachable.
+; Unless they have their address taken, delete them. If they do have their
+; address taken, let other passes replace these "dead" blockaddresses with some
+; other Constant.
 
-; CHECK: @bar.l = internal constant [2 x i8*] [i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 1 to i8*)]
+; CHECK: @bar.l = internal constant [2 x i8*] [i8* blockaddress(@bar, %lab0), i8* blockaddress(@bar, %end)]
+
 
 @code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4 ; <[5 x i32]*> [#uses=0]
 @bar.l = internal constant [2 x i8*] [i8* blockaddress(@bar, %lab0), i8* blockaddress(@bar, %end)] ; <[2 x i8*]*> [#uses=1]
@@ -24,6 +27,10 @@ entry:
 define void @bar(i32* nocapture %pc) nounwind readonly {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    unreachable
+; CHECK:       lab0:
+; CHECK-NEXT:    unreachable
+; CHECK:       end:
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -52,4 +59,30 @@ define i32 @main() nounwind readnone {
 ;
 entry:
   ret i32 0
+}
+
+; https://github.com/llvm/llvm-project/issues/54238
+; https://github.com/llvm/llvm-project/issues/54251
+; https://github.com/llvm/llvm-project/issues/54328
+define i32 @test1() {
+; CHECK-LABEL: @test1(
+; CHECK-NEXT:    unreachable
+; CHECK:       redirected:
+; CHECK-NEXT:    unreachable
+;
+  %1 = bitcast i8* blockaddress(@test1, %redirected) to i64*
+  call void @set_return_addr(i64* %1)
+  ret i32 0
+
+redirected:
+  ret i32 0
+}
+
+define internal void @set_return_addr(i64* %addr) {
+; CHECK-LABEL: @set_return_addr(
+; CHECK-NEXT:    unreachable
+;
+  %addr.addr = alloca i64*, i32 0, align 8
+  store i64* %addr, i64** %addr.addr, align 8
+  ret void
 }
