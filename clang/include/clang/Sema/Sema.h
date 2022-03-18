@@ -11996,7 +11996,8 @@ public:
 
   // type checking for sizeless vector binary operators.
   QualType CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
-                                       SourceLocation Loc);
+                                       SourceLocation Loc,
+                                       ArithConvKind OperationKind);
 
   /// Type checking for matrix binary operators.
   QualType CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,

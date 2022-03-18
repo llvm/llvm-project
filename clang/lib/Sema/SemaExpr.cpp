@@ -10501,7 +10501,8 @@ QualType Sema::CheckVectorOperands(ExprResult &LHS, ExprResult &RHS,
 }
 
 QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
-                                           SourceLocation Loc) {
+                                           SourceLocation Loc,
+                                           ArithConvKind OperationKind) {
   QualType LHSType = LHS.get()->getType().getUnqualifiedType();
   QualType RHSType = RHS.get()->getType().getUnqualifiedType();
 
@@ -10509,7 +10510,8 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
   const BuiltinType *RHSVecType = RHSType->getAs<BuiltinType>();
 
   unsigned DiagID = diag::err_typecheck_invalid_operands;
-  if (LHSVecType->isSVEBool() || RHSVecType->isSVEBool()) {
+  if ((OperationKind == ACK_Arithmetic) &&
+      (LHSVecType->isSVEBool() || RHSVecType->isSVEBool())) {
     Diag(Loc, DiagID) << LHSType << RHSType << LHS.get()->getSourceRange()
                       << RHS.get()->getSourceRange();
     return QualType();
@@ -10637,7 +10639,7 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
                                /*AllowBooleanOperation*/ false,
                                /*ReportInvalid*/ true);
   if (LHSTy->isVLSTBuiltinType() || RHSTy->isVLSTBuiltinType())
-    return CheckSizelessVectorOperands(LHS, RHS, Loc);
+    return CheckSizelessVectorOperands(LHS, RHS, Loc, ACK_Arithmetic);
   if (!IsDiv &&
       (LHSTy->isConstantMatrixType() || RHSTy->isConstantMatrixType()))
     return CheckMatrixMultiplyOperands(LHS, RHS, Loc, IsCompAssign);
@@ -10687,7 +10689,7 @@ QualType Sema::CheckRemainderOperands(
             ->getType()
             ->getSveEltType(Context)
             ->hasIntegerRepresentation())
-      return CheckSizelessVectorOperands(LHS, RHS, Loc);
+      return CheckSizelessVectorOperands(LHS, RHS, Loc, ACK_Arithmetic);
 
     return InvalidOperands(Loc, LHS, RHS);
   }
@@ -11001,7 +11003,8 @@ QualType Sema::CheckAdditionOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (LHS.get()->getType()->isVLSTBuiltinType() ||
       RHS.get()->getType()->isVLSTBuiltinType()) {
-    QualType compType = CheckSizelessVectorOperands(LHS, RHS, Loc);
+    QualType compType =
+        CheckSizelessVectorOperands(LHS, RHS, Loc, ACK_Arithmetic);
     if (CompLHSTy)
       *CompLHSTy = compType;
     return compType;
@@ -11115,7 +11118,8 @@ QualType Sema::CheckSubtractionOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (LHS.get()->getType()->isVLSTBuiltinType() ||
       RHS.get()->getType()->isVLSTBuiltinType()) {
-    QualType compType = CheckSizelessVectorOperands(LHS, RHS, Loc);
+    QualType compType =
+        CheckSizelessVectorOperands(LHS, RHS, Loc, ACK_Arithmetic);
     if (CompLHSTy)
       *CompLHSTy = compType;
     return compType;
@@ -11453,6 +11457,10 @@ QualType Sema::CheckShiftOperands(ExprResult &LHS, ExprResult &RHS,
     }
     return checkVectorShift(*this, LHS, RHS, Loc, IsCompAssign);
   }
+
+  if (LHS.get()->getType()->isVLSTBuiltinType() ||
+      RHS.get()->getType()->isVLSTBuiltinType())
+    return InvalidOperands(Loc, LHS, RHS);
 
   // Shifts don't perform usual arithmetic conversions, they just do integer
   // promotions on each operand. C99 6.5.7p3
@@ -12919,6 +12927,14 @@ inline QualType Sema::CheckBitwiseOperands(ExprResult &LHS, ExprResult &RHS,
                                  /*AllowBoolConversions*/ getLangOpts().ZVector,
                                  /*AllowBooleanOperation*/ LegalBoolVecOperator,
                                  /*ReportInvalid*/ true);
+    return InvalidOperands(Loc, LHS, RHS);
+  }
+
+  if (LHS.get()->getType()->isVLSTBuiltinType() ||
+      RHS.get()->getType()->isVLSTBuiltinType()) {
+    if (LHS.get()->getType()->hasIntegerRepresentation() &&
+        RHS.get()->getType()->hasIntegerRepresentation())
+      return CheckSizelessVectorOperands(LHS, RHS, Loc, ACK_BitwiseOp);
     return InvalidOperands(Loc, LHS, RHS);
   }
 
