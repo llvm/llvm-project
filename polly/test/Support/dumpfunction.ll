@@ -1,9 +1,9 @@
 ; New pass manager
-; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-before --disable-output %s
+; RUN: opt %loadNPMPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-before --disable-output %s
 ; RUN: FileCheck --input-file=dumpfunction-callee-before.ll --check-prefix=CHECK --check-prefix=CALLEE %s
 ; RUN: FileCheck --input-file=dumpfunction-caller-before.ll --check-prefix=CHECK --check-prefix=CALLER %s
 ;
-; RUN: opt %loadPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-after --disable-output %s
+; RUN: opt %loadNPMPolly -enable-new-pm=1 -O3 -polly -polly-position=before-vectorizer -polly-dump-after --disable-output %s
 ; RUN: FileCheck --input-file=dumpfunction-callee-after.ll --check-prefix=CHECK --check-prefix=CALLEE %s
 ; RUN: FileCheck --input-file=dumpfunction-caller-after.ll --check-prefix=CHECK --check-prefix=CALLER %s
 
