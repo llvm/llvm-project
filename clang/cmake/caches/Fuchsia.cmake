@@ -22,11 +22,8 @@ if(WIN32)
 endif()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
-if(NOT APPLE)
-  # TODO: Remove this once we switch to ld64.lld.
-  set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
-  set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
-endif()
+set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
+set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB compiler-rt CACHE STRING "")
 set(CLANG_ENABLE_ARCMT OFF CACHE BOOL "")
 set(CLANG_ENABLE_STATIC_ANALYZER OFF CACHE BOOL "")
@@ -112,11 +109,8 @@ if(UNIX)
   set(BOOTSTRAP_CMAKE_EXE_LINKER_FLAGS "-ldl -lpthread" CACHE STRING "")
 endif()
 
+set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(BOOTSTRAP_LLVM_ENABLE_LTO ON CACHE BOOL "")
-if(NOT APPLE)
-  # TODO: Remove this once we switch to ld64.lld.
-  set(BOOTSTRAP_LLVM_ENABLE_LLD ON CACHE BOOL "")
-endif()
 
 set(CLANG_BOOTSTRAP_TARGETS
   check-all
