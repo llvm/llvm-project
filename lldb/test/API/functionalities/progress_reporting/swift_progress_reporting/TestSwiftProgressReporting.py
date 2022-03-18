@@ -16,6 +16,7 @@ class TestSwiftProgressReporting(EventListenerTestBase):
     event_data_extractor = lldb.SBDebugger.GetProgressFromEvent
 
     @swiftTest
+    @skipIf(oslist=no_match(["macosx"]))
     def test_swift_progress_report(self):
         """Test that we are able to fetch swift type-system progress events"""
         self.build()
@@ -28,7 +29,7 @@ class TestSwiftProgressReporting(EventListenerTestBase):
         self.assertTrue(frame, "Invalid frame.")
 
         # Resolve variable to exercise the type-system
-        self.runCmd("expr numbers")
+        self.runCmd("expr boo")
 
         self.assertGreater(len(self.events), 0)
 
