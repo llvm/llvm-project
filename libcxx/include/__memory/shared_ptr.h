@@ -457,7 +457,7 @@ public:
     explicit shared_ptr(_Yp* __p) : __ptr_(__p) {
         unique_ptr<_Yp> __hold(__p);
         typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-        typedef __shared_ptr_pointer<_Yp*, __shared_ptr_default_delete<_Tp, _Yp>, _AllocT > _CntrlBlk;
+        typedef __shared_ptr_pointer<_Yp*, __shared_ptr_default_delete<_Tp, _Yp>, _AllocT> _CntrlBlk;
         __cntrl_ = new _CntrlBlk(__p, __shared_ptr_default_delete<_Tp, _Yp>(), _AllocT());
         __hold.release();
         __enable_weak_this(__p, __p);
@@ -473,7 +473,7 @@ public:
         {
 #endif // _LIBCPP_NO_EXCEPTIONS
             typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-            typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT > _CntrlBlk;
+            typedef __shared_ptr_pointer<_Yp*, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
             __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
 #else
@@ -532,7 +532,7 @@ public:
         {
 #endif // _LIBCPP_NO_EXCEPTIONS
             typedef typename __shared_ptr_default_allocator<_Tp>::type _AllocT;
-            typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT > _CntrlBlk;
+            typedef __shared_ptr_pointer<nullptr_t, _Dp, _AllocT> _CntrlBlk;
 #ifndef _LIBCPP_CXX03_LANG
             __cntrl_ = new _CntrlBlk(__p, _VSTD::move(__d), _AllocT());
 #else
@@ -665,8 +665,8 @@ public:
 #endif
         {
             typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
-            typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer, _Dp, _AllocT > _CntrlBlk;
-            __cntrl_ = new _CntrlBlk(__r.get(), __r.get_deleter(), _AllocT());
+            typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer, _Dp, _AllocT> _CntrlBlk;
+            __cntrl_ = new _CntrlBlk(__r.get(), std::move(__r.get_deleter()), _AllocT());
             __enable_weak_this(__r.get(), __r.get());
         }
         __r.release();
@@ -689,7 +689,7 @@ public:
             typedef typename __shared_ptr_default_allocator<_Yp>::type _AllocT;
             typedef __shared_ptr_pointer<typename unique_ptr<_Yp, _Dp>::pointer,
                                         reference_wrapper<typename remove_reference<_Dp>::type>,
-                                        _AllocT > _CntrlBlk;
+                                        _AllocT> _CntrlBlk;
             __cntrl_ = new _CntrlBlk(__r.get(), _VSTD::ref(__r.get_deleter()), _AllocT());
             __enable_weak_this(__r.get(), __r.get());
         }

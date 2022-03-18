@@ -90,7 +90,7 @@
 `3543 <https://wg21.link/LWG3543>`__,"Definition of when ``counted_iterators`` refer to the same sequence isn't quite right","June 2021","|Nothing To Do|","","|ranges|"
 `3544 <https://wg21.link/LWG3544>`__,"``format-arg-store::args`` is unintentionally not exposition-only","June 2021","|Complete|","14.0","|format|"
 `3546 <https://wg21.link/LWG3546>`__,"``common_iterator``'s postfix-proxy is not quite right","June 2021","","","|ranges|"
-`3548 <https://wg21.link/LWG3548>`__,"``shared_ptr`` construction from ``unique_ptr`` should move (not copy) the deleter","June 2021","",""
+`3548 <https://wg21.link/LWG3548>`__,"``shared_ptr`` construction from ``unique_ptr`` should move (not copy) the deleter","June 2021","|Complete|","15.0"
 `3549 <https://wg21.link/LWG3549>`__,"``view_interface`` is overspecified to derive from ``view_base``","June 2021","|Complete|","14.0","|ranges|"
 `3551 <https://wg21.link/LWG3551>`__,"``borrowed_{iterator,subrange}_t`` are overspecified","June 2021","|Nothing To Do|","","|ranges|"
 `3552 <https://wg21.link/LWG3552>`__,"Parallel specialized memory algorithms should require forward iterators","June 2021","",""
