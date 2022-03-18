@@ -644,6 +644,32 @@ func @scopeMerge4() {
 // CHECK:     return
 // CHECK:   }
 
+func @scopeMerge5() {
+  "test.region"() ({
+    memref.alloca_scope {
+      affine.parallel (%arg) = (0) to (64) {
+        %a = memref.alloca(%arg) : memref<?xi64>
+        "test.use"(%a) : (memref<?xi64>) -> ()
+      }
+    }
+    "test.op"() : () -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// CHECK:   func @scopeMerge5() {
+// CHECK:     "test.region"() ({
+// CHECK:       affine.parallel (%[[cnt:.+]]) = (0) to (64) {
+// CHECK:         %[[alloc:.+]] = memref.alloca(%[[cnt]]) : memref<?xi64>
+// CHECK:         "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
+// CHECK:       }
+// CHECK:       "test.op"() : () -> ()
+// CHECK:       "test.terminator"() : () -> ()
+// CHECK:     }) : () -> ()
+// CHECK:     return
+// CHECK:   }
+
 func @scopeInline(%arg : memref<index>) {
   %cnt = "test.count"() : () -> index
   "test.region"() ({

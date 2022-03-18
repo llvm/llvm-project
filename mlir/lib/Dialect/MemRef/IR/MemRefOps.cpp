@@ -311,24 +311,27 @@ struct AllocaScopeInliner : public OpRewritePattern<AllocaScopeOp> {
 
   LogicalResult matchAndRewrite(AllocaScopeOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op->getParentOp()->hasTrait<OpTrait::AutomaticAllocationScope>()) {
-      bool hasPotentialAlloca =
-          op->walk([&](Operation *alloc) {
-              if (alloc == op)
-                return WalkResult::advance();
-              if (isOpItselfPotentialAutomaticAllocation(alloc))
-                return WalkResult::interrupt();
+    bool hasPotentialAlloca =
+        op->walk<WalkOrder::PreOrder>([&](Operation *alloc) {
+            if (alloc == op)
               return WalkResult::advance();
-            }).wasInterrupted();
-      if (hasPotentialAlloca)
+            if (isOpItselfPotentialAutomaticAllocation(alloc))
+              return WalkResult::interrupt();
+            if (alloc->hasTrait<OpTrait::AutomaticAllocationScope>())
+              return WalkResult::skip();
+            return WalkResult::advance();
+          }).wasInterrupted();
+
+    // If this contains no potential allocation, it is always legal to
+    // inline. Otherwise, consider two conditions:
+    if (hasPotentialAlloca) {
+      // If the parent isn't an allocation scope, or we are not the last
+      // non-terminator op in the parent, we will extend the lifetime.
+      if (!op->getParentOp()->hasTrait<OpTrait::AutomaticAllocationScope>())
+        return failure();
+      if (!lastNonTerminatorInRegion(op))
         return failure();
     }
-
-    // Only apply to if this is this last non-terminator
-    // op in the block (lest lifetime be extended) of a one
-    // block region
-    if (!lastNonTerminatorInRegion(op))
-      return failure();
 
     Block *block = &op.getRegion().front();
     Operation *terminator = block->getTerminator();
