@@ -4506,14 +4506,34 @@ public:
     TODO(getLoc(), "genarr ComplexConstructor<KIND>");
   }
 
+  /// Fortran's concatenation operator `//`.
   template <int KIND>
   CC genarr(const Fortran::evaluate::Concat<KIND> &x) {
-    TODO(getLoc(), "genarr Concat<KIND>");
+    mlir::Location loc = getLoc();
+    auto lf = genarr(x.left());
+    auto rf = genarr(x.right());
+    return [=](IterSpace iters) -> ExtValue {
+      auto lhs = lf(iters);
+      auto rhs = rf(iters);
+      const fir::CharBoxValue *lchr = lhs.getCharBox();
+      const fir::CharBoxValue *rchr = rhs.getCharBox();
+      if (lchr && rchr) {
+        return fir::factory::CharacterExprHelper{builder, loc}
+            .createConcatenate(*lchr, *rchr);
+      }
+      TODO(loc, "concat on unexpected extended values");
+      return mlir::Value{};
+    };
   }
 
   template <int KIND>
   CC genarr(const Fortran::evaluate::SetLength<KIND> &x) {
-    TODO(getLoc(), "genarr SetLength<KIND>");
+    auto lf = genarr(x.left());
+    mlir::Value rhs = fir::getBase(asScalar(x.right()));
+    return [=](IterSpace iters) -> ExtValue {
+      mlir::Value lhs = fir::getBase(lf(iters));
+      return fir::CharBoxValue{lhs, rhs};
+    };
   }
 
   template <typename A>
@@ -5707,8 +5727,32 @@ public:
     };
   }
 
+  /// Lower a component path with or without rank.
+  /// Example: <code>array%baz%qux%waldo</code>
   CC genarr(const Fortran::evaluate::Component &x, ComponentPath &components) {
-    TODO(getLoc(), "genarr Component");
+    if (explicitSpaceIsActive()) {
+      if (x.base().Rank() == 0 && x.Rank() > 0)
+        components.reversePath.push_back(ImplicitSubscripts{});
+      if (fir::ArrayLoadOp load = explicitSpace->findBinding(&x))
+        return applyPathToArrayLoad(load, components);
+    } else {
+      if (x.base().Rank() == 0)
+        return genImplicitArrayAccess(x, components);
+    }
+    bool atEnd = pathIsEmpty(components);
+    if (!getLastSym(x).test(Fortran::semantics::Symbol::Flag::ParentComp))
+      // Skip parent components; their components are placed directly in the
+      // object.
+      components.reversePath.push_back(&x);
+    auto result = genarr(x.base(), components);
+    if (components.applied)
+      return result;
+    if (atEnd)
+      return genAsScalar(x);
+    mlir::Location loc = getLoc();
+    return [=](IterSpace) -> ExtValue {
+      fir::emitFatalError(loc, "reached component with path");
+    };
   }
 
   /// Array reference with subscripts. If this has rank > 0, this is a form
@@ -5910,7 +5954,8 @@ public:
 
   CC genarr(const Fortran::evaluate::ComplexPart &x,
             ComponentPath &components) {
-    TODO(getLoc(), "genarr ComplexPart");
+    components.reversePath.push_back(&x);
+    return genarr(x.complex(), components);
   }
 
   CC genarr(const Fortran::evaluate::StaticDataObject::Pointer &,
@@ -5920,7 +5965,9 @@ public:
 
   /// Substrings (see 9.4.1)
   CC genarr(const Fortran::evaluate::Substring &x, ComponentPath &components) {
-    TODO(getLoc(), "genarr Substring");
+    components.substring = &x;
+    return std::visit([&](const auto &v) { return genarr(v, components); },
+                      x.parent());
   }
 
   /// Base case of generating an array reference,
