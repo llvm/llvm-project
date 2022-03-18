@@ -43,7 +43,11 @@ cc_library(
 cc_library(
     name = "__support_cpp_array_ref",
     hdrs = ["src/__support/CPP/ArrayRef.h",],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_cpp_array",
+        ":__support_cpp_type_traits",
+        ":libc_root",
+    ],
 )
 
 cc_library(
@@ -87,7 +91,10 @@ cc_library(
 cc_library(
     name = "__support_cpp_utility",
     hdrs = ["src/__support/CPP/Utility.h",],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":libc_root",
+    ],
 )
 
 cc_library(
@@ -99,7 +106,10 @@ cc_library(
 cc_library(
     name = "__support_cpp_atomic",
     hdrs = ["src/__support/CPP/atomic.h",],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_cpp_type_traits",
+        ":libc_root",
+    ],
 )
 
 cc_library(
@@ -179,6 +189,8 @@ cc_library(
     hdrs = sqrt_hdrs,
     deps = [
         ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_cpp_type_traits",
         ":__support_fputil",
         ":libc_root",
     ],
