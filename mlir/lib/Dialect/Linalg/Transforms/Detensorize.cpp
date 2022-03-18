@@ -256,15 +256,11 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       SmallVector<Value> workList;
 
       func->walk([&](cf::CondBranchOp condBr) {
-        for (auto operand : condBr.getOperands()) {
-          workList.push_back(operand);
-        }
+        llvm::append_range(workList, condBr.getOperands());
       });
 
       func->walk([&](cf::BranchOp br) {
-        for (auto operand : br.getOperands()) {
-          workList.push_back(operand);
-        }
+        llvm::append_range(workList, br.getOperands());
       });
 
       DenseSet<Value> visitedValues;
@@ -310,8 +306,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
         // detensorable and if so, their operands will be added to workList to
         // potentially discover other parts of the detensorable component.
         for (auto *user : currentItem.getUsers())
-          for (Value result : user->getResults())
-            workList.push_back(result);
+          llvm::append_range(workList, user->getResults());
 
         // 2   - Look backward:
         // 2.1 - The current item is defined by a block argument. If the owner
@@ -383,10 +378,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
           }
 
           opsToDetensor.insert(genericOp);
-
-          for (Value genericOpOperand : genericOp.inputs())
-            workList.push_back(genericOpOperand);
-
+          llvm::append_range(workList, genericOp.inputs());
           continue;
         }
 
@@ -405,8 +397,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
         if (llvm::all_of(
                 currentItemDefiningOp->getResultTypes(),
                 [&](Type resultType) { return resultType.isIntOrFloat(); }))
-          for (Value scalarOpOperand : currentItemDefiningOp->getOperands())
-            workList.push_back(scalarOpOperand);
+          llvm::append_range(workList, currentItemDefiningOp->getOperands());
       }
 
       // Since the cost model gives up on some ops (see the details of step 2.2

@@ -727,19 +727,16 @@ AffineMap mlir::getProjectedMap(AffineMap map,
 //===----------------------------------------------------------------------===//
 
 MutableAffineMap::MutableAffineMap(AffineMap map)
-    : numDims(map.getNumDims()), numSymbols(map.getNumSymbols()),
-      context(map.getContext()) {
-  for (auto result : map.getResults())
-    results.push_back(result);
-}
+    : results(map.getResults().begin(), map.getResults().end()),
+      numDims(map.getNumDims()), numSymbols(map.getNumSymbols()),
+      context(map.getContext()) {}
 
 void MutableAffineMap::reset(AffineMap map) {
   results.clear();
   numDims = map.getNumDims();
   numSymbols = map.getNumSymbols();
   context = map.getContext();
-  for (auto result : map.getResults())
-    results.push_back(result);
+  llvm::append_range(results, map.getResults());
 }
 
 bool MutableAffineMap::isMultipleOf(unsigned idx, int64_t factor) const {

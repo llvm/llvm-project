@@ -220,11 +220,6 @@ Type LLVMTypeConverter::convertFunctionSignature(
     result.addInputs(en.index(), converted);
   }
 
-  SmallVector<Type, 8> argTypes;
-  argTypes.reserve(llvm::size(result.getConvertedTypes()));
-  for (Type type : result.getConvertedTypes())
-    argTypes.push_back(type);
-
   // If function does not return anything, create the void result type,
   // if it returns on element, convert it, otherwise pack the result types into
   // a struct.
@@ -233,7 +228,8 @@ Type LLVMTypeConverter::convertFunctionSignature(
                         : packFunctionResults(funcTy.getResults());
   if (!resultType)
     return {};
-  return LLVM::LLVMFunctionType::get(resultType, argTypes, isVariadic);
+  return LLVM::LLVMFunctionType::get(resultType, result.getConvertedTypes(),
+                                     isVariadic);
 }
 
 /// Converts the function type to a C-compatible format, in particular using
