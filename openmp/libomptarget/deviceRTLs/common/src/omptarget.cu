@@ -23,6 +23,63 @@ extern omptarget_nvptx_Queue<omptarget_nvptx_ThreadPrivateContext,
                              OMP_STATE_COUNT>
     omptarget_nvptx_device_State[MAX_SM];
 
+/// Support for late runtime initialization, when schedule
+/// type is known.
+void initRuntime() {
+  int threadId = __kmpc_get_hardware_thread_id_in_block();
+
+  //
+  // Team Context Initialization.
+  //
+  // In SPMD mode there is no master thread so use any cuda thread for team
+  // context initialization.
+  if (threadId == 0) {
+    // Get a state object from the queue.
+    omptarget_nvptx_threadPrivateContext =
+        omptarget_nvptx_device_State[usedSlotIdx].Dequeue();
+
+    omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
+    omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
+    // init team context
+    currTeamDescr.InitTeamDescr();
+#ifdef OMPD_SUPPORT
+    ompd_init();
+    ompd_bp_parallel_begin(); // This should be placed later, but the parallel
+                              // handle is ready from here on.
+#endif /*OMPD_SUPPORT*/
+  }
+  __kmpc_impl_syncthreads();
+  __kmpc_impl_threadfence();
+
+  omptarget_nvptx_TeamDescr &currTeamDescr = getMyTeamDescriptor();
+  omptarget_nvptx_WorkDescr &workDescr = getMyWorkDescriptor();
+
+  //
+  // Initialize task descr for each thread.
+  //
+  omptarget_nvptx_TaskDescr *newTaskDescr =
+      omptarget_nvptx_threadPrivateContext->Level1TaskDescr(threadId);
+  ASSERT0(LT_FUSSY, newTaskDescr, "expected a task descr");
+  newTaskDescr->InitLevelOneTaskDescr(currTeamDescr.LevelZeroTaskDescr());
+  // install new top descriptor
+  omptarget_nvptx_threadPrivateContext->SetTopLevelTaskDescr(threadId,
+                                                             newTaskDescr);
+
+  // init thread private from init value
+  int ThreadLimit = GetNumberOfProcsInTeam(/* IsSPMD */ true);
+  PRINT(LD_PAR,
+        "thread will execute parallel region with id %d in a team of "
+        "%d threads\n",
+        (int)newTaskDescr->ThreadId(), (int)ThreadLimit);
+
+#ifdef OMPD_SUPPORT
+  ompd_init_thread_parallel(); // __kmpc_kernel_parallel() is not called in
+                               // spmd mode
+  ompd_bp_thread_begin();
+#endif
+}
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // init entry points
 ////////////////////////////////////////////////////////////////////////////////

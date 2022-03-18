@@ -309,6 +309,8 @@ INLINE uint32_t __kmpc_impl_popc(uint32_t x) { return __builtin_popcount(x); }
 INLINE uint32_t __kmpc_impl_ffs(uint64_t x) { return __builtin_ffsl(x); }
 INLINE uint32_t __kmpc_impl_popc(uint64_t x) { return __builtin_popcountl(x); }
 
+void initRuntime();
+
 #include "common/omptargeti.h"
 
 #endif

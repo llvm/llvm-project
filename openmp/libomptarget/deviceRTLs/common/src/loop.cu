@@ -215,6 +215,25 @@ public:
   INLINE static void dispatch_init(kmp_Ident *loc, int32_t threadId,
                                    kmp_sched_t schedule, T lb, T ub, ST st,
                                    ST chunk) {
+    /* Currently just ignore the monotonic and non-monotonic modifiers
+     * (the compiler isn't producing them * yet anyway).
+     * When it is we'll want to look at them somewhere here and use that
+     * information to add to our schedule choice. We shouldn't need to pass
+     * them on, they merely affect which schedule we can legally choose for
+     * various dynamic cases. (In particular, whether or not a stealing scheme
+     * is legal).
+     */
+
+    // check if we need to initialize the runtime, in case OpenMPOpt
+    // disabled it
+    schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
+    if (OrderedSchedule(schedule)) {
+      initRuntime();
+      // ordered schedules only supported in SPMD mode
+      setExecutionParameters(OMP_TGT_EXEC_MODE_SPMD,
+                          OMP_TGT_RUNTIME_INITIALIZED);
+    }
+
     if (isRuntimeUninitialized()) {
       // In SPMD mode no need to check parallelism level - dynamic scheduling
       // may appear only in L2 parallel regions with lightweight runtime.
@@ -228,16 +247,6 @@ public:
     ASSERT(LT_FUSSY, threadId < tnum,
             "dispatch_init: current thread %d (%d) is not needed here; error",
             threadId, tnum);
-
-    /* Currently just ignore the monotonic and non-monotonic modifiers
-     * (the compiler isn't producing them * yet anyway).
-     * When it is we'll want to look at them somewhere here and use that
-     * information to add to our schedule choice. We shouldn't need to pass
-     * them on, they merely affect which schedule we can legally choose for
-     * various dynamic cases. (In particular, whether or not a stealing scheme
-     * is legal).
-     */
-    schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
 
     // Process schedule.
     if (tnum == 1 || tripCount <= 1 || OrderedSchedule(schedule)) {
