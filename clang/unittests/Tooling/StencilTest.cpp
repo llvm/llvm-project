@@ -627,7 +627,7 @@ TEST_F(StencilTest, CatOfInvalidRangeFails) {
   ASSERT_TRUE(StmtMatch);
   Stencil S = cat(node("arg"));
   Expected<std::string> Result = S->eval(StmtMatch->Result);
-  ASSERT_THAT_EXPECTED(Result, Failed<StringError>());
+  ASSERT_FALSE(Result);
   llvm::handleAllErrors(Result.takeError(), [](const llvm::StringError &E) {
     EXPECT_THAT(E.getMessage(), AllOf(HasSubstr("selected range"),
                                       HasSubstr("macro expansion")));
