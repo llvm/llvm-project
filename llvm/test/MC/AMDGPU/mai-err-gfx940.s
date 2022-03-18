@@ -41,3 +41,6 @@ v_mfma_i32_32x32x8i8 a[0:15], v0, v1, a[0:15]
 
 v_mfma_i32_16x16x16i8 a[0:3], v0, v1, a[0:3]
 // GFX940: error: instruction not supported on this GPU
+
+v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[2:9]
+// GFX940: error: source 2 operand must not partially overlap with dst
