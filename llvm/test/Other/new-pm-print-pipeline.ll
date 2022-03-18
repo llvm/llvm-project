@@ -69,9 +69,13 @@
 
 ;; Test that the loop-nest-pass lnicm is printed with the other loop-passes in the pipeline.
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-mssa(licm,loop-rotate,loop-deletion,lnicm,loop-rotate))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-23
-; CHECK-23: function(loop-mssa(licm,loop-rotate,loop-deletion,lnicm,loop-rotate))
+; CHECK-23: function(loop-mssa(licm<allowspeculation>,loop-rotate,loop-deletion,lnicm<allowspeculation>,loop-rotate))
 
 ;; Test that -debugify and -check-debugify is printed correctly.
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='debugify,no-op-function,check-debugify' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-24
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -enable-debugify -passes='no-op-function' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-24
 ; CHECK-24: debugify,function(no-op-function),check-debugify
+
+;; Test that LICM & LNICM with options.
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(loop-mssa(licm<allowspeculation>,licm<no-allowspeculation>,lnicm<allowspeculation>,lnicm<no-allowspeculation>))' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-25
+; CHECK-25: function(loop-mssa(licm<allowspeculation>,licm<no-allowspeculation>,lnicm<allowspeculation>,lnicm<no-allowspeculation>))
