@@ -691,7 +691,7 @@ public:
                        __is_cpp17_input_iterator<_InputIterator>::value
                      >::type* = nullptr);
     forward_list(const forward_list& __x);
-    forward_list(const forward_list& __x, const __identity_t<allocator_type>& __a);
+    forward_list(const forward_list& __x, const __type_identity_t<allocator_type>& __a);
 
     forward_list& operator=(const forward_list& __x);
 
@@ -700,7 +700,7 @@ public:
     forward_list(forward_list&& __x)
         _NOEXCEPT_(is_nothrow_move_constructible<base>::value)
         : base(_VSTD::move(__x)) {}
-    forward_list(forward_list&& __x, const __identity_t<allocator_type>& __a);
+    forward_list(forward_list&& __x, const __type_identity_t<allocator_type>& __a);
 
     forward_list(initializer_list<value_type> __il);
     forward_list(initializer_list<value_type> __il, const allocator_type& __a);
@@ -983,7 +983,7 @@ forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x)
 
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x,
-                                        const __identity_t<allocator_type>& __a)
+                                        const __type_identity_t<allocator_type>& __a)
     : base(__a)
 {
     insert_after(cbefore_begin(), __x.begin(), __x.end());
@@ -1004,7 +1004,7 @@ forward_list<_Tp, _Alloc>::operator=(const forward_list& __x)
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(forward_list&& __x,
-                                        const __identity_t<allocator_type>& __a)
+                                        const __type_identity_t<allocator_type>& __a)
     : base(_VSTD::move(__x), __a)
 {
     if (base::__alloc() != __x.__alloc())

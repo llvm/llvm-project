@@ -1014,9 +1014,9 @@ public:
     // types
     typedef _Key                                           key_type;
     typedef _Tp                                            mapped_type;
-    typedef __identity_t<_Hash>                            hasher;
-    typedef __identity_t<_Pred>                            key_equal;
-    typedef __identity_t<_Alloc>                           allocator_type;
+    typedef __type_identity_t<_Hash>                       hasher;
+    typedef __type_identity_t<_Pred>                       key_equal;
+    typedef __type_identity_t<_Alloc>                      allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
@@ -1908,9 +1908,9 @@ public:
     // types
     typedef _Key                                           key_type;
     typedef _Tp                                            mapped_type;
-    typedef __identity_t<_Hash>                            hasher;
-    typedef __identity_t<_Pred>                            key_equal;
-    typedef __identity_t<_Alloc>                           allocator_type;
+    typedef __type_identity_t<_Hash>                       hasher;
+    typedef __type_identity_t<_Pred>                       key_equal;
+    typedef __type_identity_t<_Alloc>                      allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;

@@ -138,7 +138,7 @@ private:
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__bad_rval_ref_type;
 
   template <bool _Dummy, class _Deleter = typename __dependent_type<
-                             __identity<deleter_type>, _Dummy>::type>
+                             __type_identity<deleter_type>, _Dummy>::type>
   using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
       typename enable_if<is_default_constructible<_Deleter>::value &&
                          !is_pointer<_Deleter>::value>::type;
@@ -352,7 +352,7 @@ private:
       typename __dependent_type<_DeleterSFINAE, _Dummy>::__bad_rval_ref_type;
 
   template <bool _Dummy, class _Deleter = typename __dependent_type<
-                             __identity<deleter_type>, _Dummy>::type>
+                             __type_identity<deleter_type>, _Dummy>::type>
   using _EnableIfDeleterDefaultConstructible _LIBCPP_NODEBUG =
       typename enable_if<is_default_constructible<_Deleter>::value &&
                          !is_pointer<_Deleter>::value>::type;

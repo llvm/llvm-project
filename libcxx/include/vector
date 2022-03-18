@@ -423,7 +423,7 @@ public:
     }
 
     vector(const vector& __x);
-    vector(const vector& __x, const __identity_t<allocator_type>& __a);
+    vector(const vector& __x, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(const vector& __x);
 
@@ -443,7 +443,7 @@ public:
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
-    vector(vector&& __x, const __identity_t<allocator_type>& __a);
+    vector(vector&& __x, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(vector&& __x)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
@@ -1179,7 +1179,7 @@ vector<_Tp, _Allocator>::vector(const vector& __x)
 }
 
 template <class _Tp, class _Allocator>
-vector<_Tp, _Allocator>::vector(const vector& __x, const __identity_t<allocator_type>& __a)
+vector<_Tp, _Allocator>::vector(const vector& __x, const __type_identity_t<allocator_type>& __a)
     : __end_cap_(nullptr, __a)
 {
     _VSTD::__debug_db_insert_c(this);
@@ -1215,7 +1215,7 @@ vector<_Tp, _Allocator>::vector(vector&& __x)
 
 template <class _Tp, class _Allocator>
 inline _LIBCPP_INLINE_VISIBILITY
-vector<_Tp, _Allocator>::vector(vector&& __x, const __identity_t<allocator_type>& __a)
+vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_type>& __a)
     : __end_cap_(nullptr, __a)
 {
     _VSTD::__debug_db_insert_c(this);
@@ -2148,7 +2148,7 @@ public:
 #else
         _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 #endif
-    vector(vector&& __v, const __identity_t<allocator_type>& __a);
+    vector(vector&& __v, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_INLINE_VISIBILITY
     vector& operator=(vector&& __v)
         _NOEXCEPT_((__noexcept_move_assign_container<_Allocator, __alloc_traits>::value));
@@ -2784,7 +2784,7 @@ inline _LIBCPP_INLINE_VISIBILITY vector<bool, _Allocator>::vector(vector&& __v)
 }
 
 template <class _Allocator>
-vector<bool, _Allocator>::vector(vector&& __v, const __identity_t<allocator_type>& __a)
+vector<bool, _Allocator>::vector(vector&& __v, const __type_identity_t<allocator_type>& __a)
     : __begin_(nullptr),
       __size_(0),
       __cap_alloc_(0, __a)
