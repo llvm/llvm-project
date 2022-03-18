@@ -132,10 +132,7 @@ struct VariadicFunction {
   // We also allow calls with an already created array, in case the caller
   // already had it.
   ResultT operator()(ArrayRef<ArgT> Args) const {
-    SmallVector<const ArgT*, 8> InnerArgs;
-    for (const ArgT &Arg : Args)
-      InnerArgs.push_back(&Arg);
-    return Func(InnerArgs);
+    return Func(llvm::to_vector<8>(llvm::make_pointer_range(Args)));
   }
 
 private:

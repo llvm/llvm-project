@@ -551,8 +551,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
   // -L Args
   //----------------------------------------------------------------------------
   for (Arg *A : Args.filtered(options::OPT_L))
-    for (const char *Value : A->getValues())
-      LibPaths.push_back(Value);
+    llvm::append_range(LibPaths, A->getValues());
 
   //----------------------------------------------------------------------------
   // Other standard paths

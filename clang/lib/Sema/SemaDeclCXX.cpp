@@ -14751,8 +14751,7 @@ static void checkMoveAssignmentForRepeatedMove(Sema &S, CXXRecordDecl *Class,
           continue;
 
         // We're going to move the base classes of Base. Add them to the list.
-        for (auto &BI : Base->bases())
-          Worklist.push_back(&BI);
+        llvm::append_range(Worklist, llvm::make_pointer_range(Base->bases()));
       }
     }
   }
@@ -18295,8 +18294,7 @@ void Sema::ActOnStartFunctionDeclarationDeclarator(
   }
   if (ExplicitParams) {
     Info.AutoTemplateParameterDepth = ExplicitParams->getDepth();
-    for (NamedDecl *Param : *ExplicitParams)
-      Info.TemplateParams.push_back(Param);
+    llvm::append_range(Info.TemplateParams, *ExplicitParams);
     Info.NumExplicitTemplateParams = ExplicitParams->size();
   } else {
     Info.AutoTemplateParameterDepth = TemplateParameterDepth;

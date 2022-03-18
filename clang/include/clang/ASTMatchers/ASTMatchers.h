@@ -7928,8 +7928,7 @@ AST_MATCHER_P(Stmt, forFunction, internal::Matcher<FunctionDecl>,
         return true;
       }
     } else {
-      for (const auto &Parent : Finder->getASTContext().getParents(CurNode))
-        Stack.push_back(Parent);
+      llvm::append_range(Stack, Finder->getASTContext().getParents(CurNode));
     }
   }
   return false;
@@ -7987,8 +7986,7 @@ AST_MATCHER_P(Stmt, forCallable, internal::Matcher<Decl>, InnerMatcher) {
         return true;
       }
     } else {
-      for (const auto &Parent : Finder->getASTContext().getParents(CurNode))
-        Stack.push_back(Parent);
+      llvm::append_range(Stack, Finder->getASTContext().getParents(CurNode));
     }
   }
   return false;

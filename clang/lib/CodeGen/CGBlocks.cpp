@@ -1160,8 +1160,7 @@ llvm::Type *CodeGenModule::getGenericBlockLiteralType() {
     SmallVector<llvm::Type *, 8> StructFields(
         {IntTy, IntTy, getOpenCLRuntime().getGenericVoidPointerType()});
     if (auto *Helper = getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
-      for (auto I : Helper->getCustomFieldTypes())
-        StructFields.push_back(I);
+      llvm::append_range(StructFields, Helper->getCustomFieldTypes());
     }
     GenericBlockLiteralType = llvm::StructType::create(
         StructFields, "struct.__opencl_block_literal_generic");

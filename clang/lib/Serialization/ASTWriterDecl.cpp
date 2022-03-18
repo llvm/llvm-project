@@ -962,8 +962,7 @@ void ASTDeclWriter::VisitMSGuidDecl(MSGuidDecl *D) {
   Record.push_back(Parts.Part1);
   Record.push_back(Parts.Part2);
   Record.push_back(Parts.Part3);
-  for (auto C : Parts.Part4And5)
-    Record.push_back(C);
+  Record.append(std::begin(Parts.Part4And5), std::end(Parts.Part4And5));
   Code = serialization::DECL_MS_GUID;
 }
 

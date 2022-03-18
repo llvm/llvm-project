@@ -152,13 +152,9 @@ public:
   using iterator = typename VectorTy::iterator;
 
   AllocGroupSmallMap() = default;
-  AllocGroupSmallMap(std::initializer_list<std::pair<AllocGroup, T>> Inits) {
-    Elems.reserve(Inits.size());
-    for (const auto &E : Inits)
-      Elems.push_back(E);
-    llvm::sort(Elems, [](const ElemT &LHS, const ElemT &RHS) {
-      return LHS.first < RHS.first;
-    });
+  AllocGroupSmallMap(std::initializer_list<std::pair<AllocGroup, T>> Inits)
+      : Elems(Inits) {
+    llvm::sort(Elems, llvm::less_first());
   }
 
   iterator begin() { return Elems.begin(); }

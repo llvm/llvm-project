@@ -3279,8 +3279,7 @@ void Sema::ActOnOpenMPAssumesDirective(SourceLocation Loc,
         continue;
       if (auto *CTD = dyn_cast<ClassTemplateDecl>(SubDC)) {
         DeclContexts.push_back(CTD->getTemplatedDecl());
-        for (auto *S : CTD->specializations())
-          DeclContexts.push_back(S);
+        llvm::append_range(DeclContexts, CTD->specializations());
         continue;
       }
       if (auto *DC = dyn_cast<DeclContext>(SubDC))
@@ -13829,8 +13828,8 @@ bool Sema::checkTransformableLoopNest(
           llvm_unreachable("Unhandled loop transformation");
         if (!DependentPreInits)
           return;
-        for (Decl *C : cast<DeclStmt>(DependentPreInits)->getDeclGroup())
-          OriginalInits.back().push_back(C);
+        llvm::append_range(OriginalInits.back(),
+                           cast<DeclStmt>(DependentPreInits)->getDeclGroup());
       });
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
