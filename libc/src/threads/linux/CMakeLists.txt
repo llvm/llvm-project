@@ -34,7 +34,7 @@ add_header_library(
     libc.include.threads
     libc.src.__support.CPP.atomic
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.threads.thread
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
@@ -105,7 +105,7 @@ add_entrypoint_object(
   DEPENDS
     .threads_utils
     libc.include.threads
-    libc.src.__support.threads.thread
+    libc.src.__support.threads.mutex
 )
 
 add_entrypoint_object(
