@@ -108,6 +108,7 @@ class ReportDesc {
   Vector<Tid> unique_tids;
   ReportStack *sleep;
   int count;
+  int signum = 0;
 
   ReportDesc();
   ~ReportDesc();

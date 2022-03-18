@@ -340,6 +340,8 @@ void ScopedReportBase::AddSleep(StackID stack_id) {
 
 void ScopedReportBase::SetCount(int count) { rep_->count = count; }
 
+void ScopedReportBase::SetSigNum(int sig) { rep_->signum = sig; }
+
 const ReportDesc *ScopedReportBase::GetReport() const { return rep_; }
 
 ScopedReport::ScopedReport(ReportType typ, uptr tag)

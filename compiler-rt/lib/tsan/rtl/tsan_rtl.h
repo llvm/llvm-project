@@ -376,6 +376,7 @@ class ScopedReportBase {
   void AddLocation(uptr addr, uptr size);
   void AddSleep(StackID stack_id);
   void SetCount(int count);
+  void SetSigNum(int sig);
 
   const ReportDesc *GetReport() const;
 
