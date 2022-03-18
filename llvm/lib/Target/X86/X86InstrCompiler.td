@@ -670,7 +670,7 @@ def OR32mi8Locked  : Ii8<0x83, MRM1m, (outs), (ins i32mem:$dst, i32i8imm:$zero),
                          Requires<[Not64BitMode]>, OpSize32, LOCK,
                          Sched<[WriteALURMW]>;
 
-let hasSideEffects = 1 in
+let hasSideEffects = 1, isMeta = 1 in
 def Int_MemBarrier : I<0, Pseudo, (outs), (ins),
                      "#MEMBARRIER",
                      [(X86MemBarrier)]>, Sched<[WriteLoad]>;
