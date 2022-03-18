@@ -227,10 +227,18 @@ LLDBMemoryReader::resolvePointer(swift::remote::RemoteAddress address,
 
 bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
                                  uint8_t *dest, uint64_t size) {
+  Log *log = GetLog(LLDBLog::Types);
   if (m_local_buffer) {
+    bool overflow = false;
     auto addr = address.getAddressData();
+    auto end = llvm::SaturatingAdd(addr, size, &overflow);
+    if (overflow) {
+      LLDB_LOGV(log, "[MemoryReader] address {0:x} + size {1} overflows", addr,
+                size);
+      return false;
+    }
     if (addr >= *m_local_buffer &&
-        addr + size <= *m_local_buffer + m_local_buffer_size) {
+        end <= *m_local_buffer + m_local_buffer_size) {
       // If this crashes, the assumptions stated in
       // GetDynamicTypeAndAddress_Protocol() most likely no longer
       // hold.
@@ -238,8 +246,6 @@ bool LLDBMemoryReader::readBytes(swift::remote::RemoteAddress address,
       return true;
     }
   }
-
-  Log *log = GetLog(LLDBLog::Types);
 
   LLDB_LOGV(log, "[MemoryReader] asked to read {0} bytes at address {1:x}",
             size, address.getAddressData());
