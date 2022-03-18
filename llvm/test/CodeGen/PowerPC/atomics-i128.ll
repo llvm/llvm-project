@@ -473,8 +473,9 @@ define i1 @cas_acqrel_acquire_check_succ(i128* %a, i128 %cmp, i128 %new) {
 ; CHECK-NEXT:    stqcx. r8, 0, r3
 ; CHECK-NEXT:  .LBB11_4: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    xor r3, r5, r9
-; CHECK-NEXT:    or r3, r3, r4
+; CHECK-NEXT:    xor r3, r4, r8
+; CHECK-NEXT:    xor r4, r5, r9
+; CHECK-NEXT:    or r3, r4, r3
 ; CHECK-NEXT:    cntlzd r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-NEXT:    blr
