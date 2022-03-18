@@ -2405,7 +2405,9 @@ public:
       Word("!$OMP SECTION");
       Put("\n");
       EndOpenMP();
-      Walk(y, ""); // y is Block
+      // y.u is an OpenMPSectionConstruct
+      // (y.u).v is Block
+      Walk(std::get<OpenMPSectionConstruct>(y.u).v, "");
     }
   }
   void Unparse(const OpenMPSectionsConstruct &x) {

@@ -562,6 +562,7 @@ public:
   NODE(parser, OpenMPExecutableAllocate)
   NODE(parser, OpenMPSimpleStandaloneConstruct)
   NODE(parser, OpenMPStandaloneConstruct)
+  NODE(parser, OpenMPSectionConstruct)
   NODE(parser, OpenMPSectionsConstruct)
   NODE(parser, OpenMPThreadprivate)
   NODE(parser, OpenStmt)
