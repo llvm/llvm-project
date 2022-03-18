@@ -21,12 +21,12 @@ define i32 @foo(i32* noalias nocapture %B, i32* noalias nocapture %A, i32 %n, i3
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[TMP4]], align 4
 ; CHECK-NEXT:    ret i32 0
@@ -72,12 +72,12 @@ define i32 @extr_user(i32* noalias nocapture %B, i32* noalias nocapture %A, i32 
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
@@ -116,12 +116,12 @@ define i32 @extr_user1(i32* noalias nocapture %B, i32* noalias nocapture %A, i32
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
 ; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[MUL238]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i32* [[B]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], <4 x i32>* [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
