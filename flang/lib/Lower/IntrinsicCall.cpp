@@ -493,6 +493,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genMatmul(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMaxval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genMerge(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinloc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -764,6 +765,7 @@ static constexpr IntrinsicHandler handlers[]{
        {"dim", asValue},
        {"mask", asBox, handleDynamicOptional}}},
      /*isElemental=*/false},
+    {"merge", &I::genMerge},
     {"min", &I::genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>},
     {"minloc",
      &I::genMinloc,
@@ -2741,6 +2743,27 @@ IntrinsicLibrary::genMaxval(mlir::Type resultType,
   return genExtremumVal(fir::runtime::genMaxval, fir::runtime::genMaxvalDim,
                         fir::runtime::genMaxvalChar, resultType, builder, loc,
                         stmtCtx, "unexpected result for Maxval", args);
+}
+
+// MERGE
+fir::ExtendedValue
+IntrinsicLibrary::genMerge(mlir::Type,
+                           llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  mlir::Value arg2 = fir::getBase(args[2]);
+  mlir::Type type0 = fir::unwrapRefType(arg0.getType());
+  bool isCharRslt = fir::isa_char(type0); // result is same as first argument
+  mlir::Value mask = builder.createConvert(loc, builder.getI1Type(), arg2);
+  auto rslt = builder.create<mlir::arith::SelectOp>(loc, mask, arg0, arg1);
+  if (isCharRslt) {
+    // Need a CharBoxValue for character results
+    const fir::CharBoxValue *charBox = args[0].getCharBox();
+    fir::CharBoxValue charRslt(rslt, charBox->getLen());
+    return charRslt;
+  }
+  return rslt;
 }
 
 // MINLOC
