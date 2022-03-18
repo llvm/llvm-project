@@ -954,8 +954,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
       (Current.MatchingParen &&
        Current.MatchingParen->is(TT_RequiresExpressionLBrace));
   if (!NestedBlockSpecialCase)
-    for (unsigned i = 0, e = State.Stack.size() - 1; i != e; ++i)
-      State.Stack[i].BreakBeforeParameter = true;
+    for (ParenState &PState : llvm::drop_end(State.Stack))
+      PState.BreakBeforeParameter = true;
 
   if (PreviousNonComment &&
       !PreviousNonComment->isOneOf(tok::comma, tok::colon, tok::semi) &&
@@ -1340,8 +1340,8 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
       !Previous->is(TT_DictLiteral) && State.Stack.size() > 1 &&
       !CurrentState.HasMultipleNestedBlocks) {
     if (State.Stack[State.Stack.size() - 2].NestedBlockInlined && Newline)
-      for (unsigned i = 0, e = State.Stack.size() - 1; i != e; ++i)
-        State.Stack[i].NoLineBreak = true;
+      for (ParenState &PState : llvm::drop_end(State.Stack))
+        PState.NoLineBreak = true;
     State.Stack[State.Stack.size() - 2].NestedBlockInlined = false;
   }
   if (Previous && (Previous->isOneOf(TT_BinaryOperator, TT_ConditionalExpr) ||
