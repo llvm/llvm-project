@@ -18,8 +18,6 @@ template<class I1>
 constexpr bool common_reverse_iterator_checks() {
   static_assert(std::indirectly_writable<I1, int>);
   static_assert(std::sentinel_for<I1, I1>);
-  static_assert(std::sentinel_for<I1, std::reverse_iterator<float*>>);
-  static_assert(!std::sized_sentinel_for<I1, std::reverse_iterator<float*>>);
   return true;
 }
 
@@ -55,3 +53,10 @@ static_assert( std::indirectly_movable_storable<reverse_contiguous_iterator, rev
 static_assert( std::indirectly_copyable<reverse_contiguous_iterator, reverse_contiguous_iterator>);
 static_assert( std::indirectly_copyable_storable<reverse_contiguous_iterator, reverse_contiguous_iterator>);
 static_assert( std::indirectly_swappable<reverse_contiguous_iterator, reverse_contiguous_iterator>);
+
+static_assert( std::equality_comparable_with<std::reverse_iterator<int*>, std::reverse_iterator<const int*>>);
+static_assert(!std::equality_comparable_with<std::reverse_iterator<int*>, std::reverse_iterator<char*>>);
+static_assert( std::totally_ordered_with<std::reverse_iterator<int*>, std::reverse_iterator<const int*>>);
+static_assert(!std::totally_ordered_with<std::reverse_iterator<int*>, std::reverse_iterator<char*>>);
+static_assert( std::three_way_comparable_with<std::reverse_iterator<int*>, std::reverse_iterator<const int*>>);
+static_assert(!std::three_way_comparable_with<std::reverse_iterator<int*>, std::reverse_iterator<char*>>);

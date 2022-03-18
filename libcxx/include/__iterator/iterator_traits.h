@@ -141,8 +141,9 @@ public:
 
 #if _LIBCPP_STD_VER > 17
 
-// The `cpp17-*-iterator` exposition-only concepts are easily confused with the Cpp17*Iterator tables,
-// so they've been banished to a namespace that makes it obvious they have a niche use-case.
+// The `cpp17-*-iterator` exposition-only concepts have very similar names to the `Cpp17*Iterator` named requirements
+// from `[iterator.cpp17]`. To avoid confusion between the two, the exposition-only concepts have been banished to
+// a "detail" namespace indicating they have a niche use-case.
 namespace __iterator_traits_detail {
 template<class _Ip>
 concept __cpp17_iterator =

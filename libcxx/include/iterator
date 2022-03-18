@@ -225,10 +225,17 @@ class reverse_iterator
 protected:
     Iterator current;
 public:
-    typedef Iterator                                            iterator_type;
-    typedef typename iterator_traits<Iterator>::difference_type difference_type;
-    typedef typename iterator_traits<Iterator>::reference       reference;
-    typedef typename iterator_traits<Iterator>::pointer         pointer;
+    using iterator_type     = Iterator;
+    using iterator_concept  = see below; // since C++20
+    using iterator_category = typename iterator_traits<Iterator>::iterator_category; // since C++17, until C++20
+    using iterator_category = see below; // since C++20
+    using value_type        = typename iterator_traits<Iterator>::value_type; // since C++17, until C++20
+    using value_type        = iter_value_t<Iterator>; // since C++20
+    using difference_type   = typename iterator_traits<Iterator>::difference_type; // until C++20
+    using difference_type   = iter_difference_t<Iterator>; // since C++20
+    using pointer           = typename iterator_traits<Iterator>::pointer;
+    using reference         = typename iterator_traits<Iterator>::reference; // until C++20
+    using reference         = iter_reference_t<Iterator>; // since C++20
 
     constexpr reverse_iterator();
     constexpr explicit reverse_iterator(Iterator x);
@@ -236,7 +243,8 @@ public:
     template <class U> constexpr reverse_iterator& operator=(const reverse_iterator<U>& u);
     constexpr Iterator base() const;
     constexpr reference operator*() const;
-    constexpr pointer   operator->() const;
+    constexpr pointer   operator->() const; // until C++20
+    constexpr pointer   operator->() const requires see below; // since C++20
     constexpr reverse_iterator& operator++();
     constexpr reverse_iterator  operator++(int);
     constexpr reverse_iterator& operator--();
@@ -245,7 +253,14 @@ public:
     constexpr reverse_iterator& operator+=(difference_type n);
     constexpr reverse_iterator  operator- (difference_type n) const;
     constexpr reverse_iterator& operator-=(difference_type n);
-    constexpr reference         operator[](difference_type n) const;
+    constexpr unspecified       operator[](difference_type n) const;
+
+    friend constexpr iter_rvalue_reference_t<Iterator>
+      iter_move(const reverse_iterator& i) noexcept(see below);
+    template<indirectly_swappable<Iterator> Iterator2>
+      friend constexpr void
+        iter_swap(const reverse_iterator& x,
+                  const reverse_iterator<Iterator2>& y) noexcept(see below);
 };
 
 template <class Iterator1, class Iterator2>
@@ -254,11 +269,11 @@ operator==(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator
 
 template <class Iterator1, class Iterator2>
 constexpr bool                          // constexpr in C++17
-operator<(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
+operator!=(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
 
 template <class Iterator1, class Iterator2>
 constexpr bool                          // constexpr in C++17
-operator!=(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
+operator<(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
 
 template <class Iterator1, class Iterator2>
 constexpr bool                          // constexpr in C++17
@@ -266,11 +281,16 @@ operator>(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2
 
 template <class Iterator1, class Iterator2>
 constexpr bool                          // constexpr in C++17
-operator>=(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
+operator<=(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
 
 template <class Iterator1, class Iterator2>
 constexpr bool                          // constexpr in C++17
-operator<=(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
+operator>=(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
+
+template<class Iterator1, three_way_comparable_with<Iterator1> Iterator2>
+  constexpr compare_three_way_result_t<Iterator1, Iterator2>
+    operator<=>(const reverse_iterator<Iterator1>& x,
+                const reverse_iterator<Iterator2>& y);
 
 template <class Iterator1, class Iterator2>
 constexpr auto
@@ -284,6 +304,11 @@ operator+(typename reverse_iterator<Iterator>::difference_type n,
 
 template <class Iterator>
 constexpr reverse_iterator<Iterator> make_reverse_iterator(Iterator i); // C++14, constexpr in C++17
+
+template<class Iterator1, class Iterator2>
+    requires (!sized_sentinel_for<Iterator1, Iterator2>)
+  inline constexpr bool disable_sized_sentinel_for<reverse_iterator<Iterator1>,
+                                                   reverse_iterator<Iterator2>> = true;
 
 template <class Container>
 class back_insert_iterator
