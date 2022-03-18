@@ -86,7 +86,7 @@ bool X86_MC::is16BitMemOperand(const MCInst &MI, unsigned Op,
   const MCOperand &Base = MI.getOperand(Op + X86::AddrBaseReg);
   const MCOperand &Index = MI.getOperand(Op + X86::AddrIndexReg);
 
-  if (STI.hasFeature(X86::Mode16Bit) && Base.isReg() && Base.getReg() == 0 &&
+  if (STI.hasFeature(X86::Is16Bit) && Base.isReg() && Base.getReg() == 0 &&
       Index.isReg() && Index.getReg() == 0)
     return true;
   return isMemOperand(MI, Op, X86::GR16RegClassID);
@@ -114,9 +114,9 @@ bool X86_MC::needsAddressSizeOverride(const MCInst &MI,
                                       const MCSubtargetInfo &STI,
                                       int MemoryOperand, uint64_t TSFlags) {
   uint64_t AdSize = TSFlags & X86II::AdSizeMask;
-  bool Is16BitMode = STI.hasFeature(X86::Mode16Bit);
-  bool Is32BitMode = STI.hasFeature(X86::Mode32Bit);
-  bool Is64BitMode = STI.hasFeature(X86::Mode64Bit);
+  bool Is16BitMode = STI.hasFeature(X86::Is16Bit);
+  bool Is32BitMode = STI.hasFeature(X86::Is32Bit);
+  bool Is64BitMode = STI.hasFeature(X86::Is64Bit);
   if ((Is16BitMode && AdSize == X86II::AdSize32) ||
       (Is32BitMode && AdSize == X86II::AdSize16) ||
       (Is64BitMode && AdSize == X86II::AdSize32))
@@ -150,15 +150,15 @@ bool X86_MC::needsAddressSizeOverride(const MCInst &MI,
   if (MemoryOperand < 0)
     return false;
 
-  if (STI.hasFeature(X86::Mode64Bit)) {
+  if (STI.hasFeature(X86::Is64Bit)) {
     assert(!is16BitMemOperand(MI, MemoryOperand, STI));
     return is32BitMemOperand(MI, MemoryOperand);
   }
-  if (STI.hasFeature(X86::Mode32Bit)) {
+  if (STI.hasFeature(X86::Is32Bit)) {
     assert(!is64BitMemOperand(MI, MemoryOperand));
     return is16BitMemOperand(MI, MemoryOperand, STI);
   }
-  assert(STI.hasFeature(X86::Mode16Bit));
+  assert(STI.hasFeature(X86::Is16Bit));
   assert(!is64BitMemOperand(MI, MemoryOperand));
   return !is16BitMemOperand(MI, MemoryOperand, STI);
 }

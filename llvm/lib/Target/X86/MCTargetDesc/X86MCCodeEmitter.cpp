@@ -333,7 +333,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
   // Handle %rip relative addressing.
   if (BaseReg == X86::RIP ||
       BaseReg == X86::EIP) { // [disp32+rIP] in X86-64 mode
-    assert(STI.hasFeature(X86::Mode64Bit) &&
+    assert(STI.hasFeature(X86::Is64Bit) &&
            "Rip-relative addressing requires 64-bit mode");
     assert(IndexReg.getReg() == 0 && !ForceSIB &&
            "Invalid rip-relative address");
@@ -482,7 +482,7 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
       BaseRegNo != N86::ESP &&
       // If there is no base register and we're in 64-bit mode, we need a SIB
       // byte to emit an addr that is just 'disp32' (the non-RIP relative form).
-      (!STI.hasFeature(X86::Mode64Bit) || BaseReg != 0)) {
+      (!STI.hasFeature(X86::Is64Bit) || BaseReg != 0)) {
 
     if (BaseReg == 0) { // [disp32]     in X86-32 mode
       emitByte(modRMByte(0, RegOpcodeField, 5), OS);
@@ -1252,7 +1252,7 @@ bool X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
 
   // Emit the operand size opcode prefix as needed.
   if ((TSFlags & X86II::OpSizeMask) ==
-      (STI.hasFeature(X86::Mode16Bit) ? X86II::OpSize32 : X86II::OpSize16))
+      (STI.hasFeature(X86::Is16Bit) ? X86II::OpSize32 : X86II::OpSize16))
     emitByte(0x66, OS);
 
   // Emit the LOCK opcode prefix.
@@ -1276,9 +1276,9 @@ bool X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
   }
 
   // Handle REX prefix.
-  assert((STI.hasFeature(X86::Mode64Bit) || !(TSFlags & X86II::REX_W)) &&
+  assert((STI.hasFeature(X86::Is64Bit) || !(TSFlags & X86II::REX_W)) &&
          "REX.W requires 64bit mode.");
-  bool HasREX = STI.hasFeature(X86::Mode64Bit)
+  bool HasREX = STI.hasFeature(X86::Is64Bit)
                     ? emitREXPrefix(MemOperand, MI, STI, OS)
                     : false;
 
@@ -1377,7 +1377,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case X86II::RawFrm:
     emitByte(BaseOpcode + OpcodeOffset, OS);
 
-    if (!STI.hasFeature(X86::Mode64Bit) || !isPCRel32Branch(MI, MCII))
+    if (!STI.hasFeature(X86::Is64Bit) || !isPCRel32Branch(MI, MCII))
       break;
 
     const MCOperand &Op = MI.getOperand(CurOp++);

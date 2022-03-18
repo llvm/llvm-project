@@ -390,9 +390,9 @@ void X86InstPrinterCommon::printInstFlags(const MCInst *MI, raw_ostream &O,
   // Address-Size override prefix
   if (Flags & X86::IP_HAS_AD_SIZE &&
       !X86_MC::needsAddressSizeOverride(*MI, STI, MemoryOperand, TSFlags)) {
-    if (STI.hasFeature(X86::Mode16Bit) || STI.hasFeature(X86::Mode64Bit))
+    if (STI.hasFeature(X86::Is16Bit) || STI.hasFeature(X86::Is64Bit))
       O << "\taddr32\t";
-    else if (STI.hasFeature(X86::Mode32Bit))
+    else if (STI.hasFeature(X86::Is32Bit))
       O << "\taddr16\t";
   }
 }

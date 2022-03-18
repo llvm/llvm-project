@@ -76,7 +76,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   bool HasX87 = false;
 
   /// True if the processor supports CMPXCHG8B.
-  bool HasCmpxchg8b = false;
+  bool HasCMPXCHG8B = false;
 
   /// True if this processor has NOPL instruction
   /// (generally pentium pro+).
@@ -84,7 +84,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 
   /// True if this processor has conditional move instructions
   /// (generally pentium pro+).
-  bool HasCMov = false;
+  bool HasCMOV = false;
 
   /// True if the processor supports X86-64 instructions.
   bool HasX86_64 = false;
@@ -227,7 +227,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 
   /// True if this processor has the CMPXCHG16B instruction;
   /// this is true for most x86-64 chips, but not the first AMD chips.
-  bool HasCmpxchg16b = false;
+  bool HasCMPXCHG16B = false;
 
   /// True if the LEA instruction should be used for adjusting
   /// the stack pointer. This is an optimization for Intel Atom processors.
@@ -632,11 +632,11 @@ public:
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
 
   bool hasX87() const { return HasX87; }
-  bool hasCmpxchg8b() const { return HasCmpxchg8b; }
+  bool hasCMPXCHG8B() const { return HasCMPXCHG8B; }
   bool hasNOPL() const { return HasNOPL; }
   // SSE codegen depends on cmovs, and all SSE1+ processors support them.
   // All 64-bit processors support cmov.
-  bool hasCMov() const { return HasCMov || X86SSELevel >= SSE1 || is64Bit(); }
+  bool hasCMov() const { return HasCMOV || X86SSELevel >= SSE1 || is64Bit(); }
   bool hasSSE1() const { return X86SSELevel >= SSE1; }
   bool hasSSE2() const { return X86SSELevel >= SSE2; }
   bool hasSSE3() const { return X86SSELevel >= SSE3; }
@@ -712,7 +712,7 @@ public:
   bool isUnalignedMem16Slow() const { return IsUnalignedMem16Slow; }
   bool isUnalignedMem32Slow() const { return IsUnalignedMem32Slow; }
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
-  bool hasCmpxchg16b() const { return HasCmpxchg16b && is64Bit(); }
+  bool hasCMPXCHG16B() const { return HasCMPXCHG16B && is64Bit(); }
   bool useLeaForSP() const { return UseLeaForSP; }
   bool hasPOPCNTFalseDeps() const { return HasPOPCNTFalseDeps; }
   bool hasLZCNTFalseDeps() const { return HasLZCNTFalseDeps; }

@@ -19,12 +19,12 @@ include "llvm/Target/Target.td"
 // X86 Subtarget state
 //
 
-def Mode64Bit : SubtargetFeature<"64bit-mode", "Is64Bit", "true",
-                                  "64-bit mode (x86_64)">;
-def Mode32Bit : SubtargetFeature<"32bit-mode", "Is32Bit", "true",
-                                  "32-bit mode (80386)">;
-def Mode16Bit : SubtargetFeature<"16bit-mode", "Is16Bit", "true",
-                                  "16-bit mode (i8086)">;
+def Is64Bit : SubtargetFeature<"64bit-mode", "Is64Bit", "true",
+                               "64-bit mode (x86_64)">;
+def Is32Bit : SubtargetFeature<"32bit-mode", "Is32Bit", "true",
+                               "32-bit mode (80386)">;
+def Is16Bit : SubtargetFeature<"16bit-mode", "Is16Bit", "true",
+                               "16-bit mode (i8086)">;
 
 //===----------------------------------------------------------------------===//
 // X86 Subtarget ISA features
@@ -36,10 +36,10 @@ def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
 def FeatureNOPL    : SubtargetFeature<"nopl", "HasNOPL", "true",
                                       "Enable NOPL instruction">;
 
-def FeatureCMOV    : SubtargetFeature<"cmov","HasCMov", "true",
+def FeatureCMOV    : SubtargetFeature<"cmov","HasCMOV", "true",
                                       "Enable conditional move instructions">;
 
-def FeatureCMPXCHG8B : SubtargetFeature<"cx8", "HasCmpxchg8b", "true",
+def FeatureCMPXCHG8B : SubtargetFeature<"cx8", "HasCMPXCHG8B", "true",
                                         "Support CMPXCHG8B instructions">;
 
 def FeatureCRC32   : SubtargetFeature<"crc32", "HasCRC32", "true",
@@ -98,9 +98,9 @@ def Feature3DNowA  : SubtargetFeature<"3dnowa", "X863DNowLevel", "ThreeDNowA",
 // feature, because SSE2 can be disabled (e.g. for compiling OS kernels)
 // without disabling 64-bit mode. Nothing should imply this feature bit. It
 // is used to enforce that only 64-bit capable CPUs are used in 64-bit mode.
-def Feature64Bit   : SubtargetFeature<"64bit", "HasX86_64", "true",
+def FeatureX86_64   : SubtargetFeature<"64bit", "HasX86_64", "true",
                                       "Support 64-bit instructions">;
-def FeatureCMPXCHG16B : SubtargetFeature<"cx16", "HasCmpxchg16b", "true",
+def FeatureCMPXCHG16B : SubtargetFeature<"cx16", "HasCMPXCHG16B", "true",
                                       "64-bit with cmpxchg16b",
                                       [FeatureCMPXCHG8B]>;
 def FeatureSSE4A   : SubtargetFeature<"sse4a", "HasSSE4A", "true",
@@ -234,7 +234,7 @@ def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
                                       "Support PRFCHW instructions">;
 def FeatureRDSEED  : SubtargetFeature<"rdseed", "HasRDSEED", "true",
                                       "Support RDSEED instruction">;
-def FeatureLAHFSAHF : SubtargetFeature<"sahf", "HasLAHFSAHF64", "true",
+def FeatureLAHFSAHF64 : SubtargetFeature<"sahf", "HasLAHFSAHF64", "true",
                            "Support LAHF and SAHF instructions in 64-bit mode">;
 def FeatureMWAITX  : SubtargetFeature<"mwaitx", "HasMWAITX", "true",
                                       "Enable MONITORX/MWAITX timer functionality">;
@@ -637,10 +637,10 @@ def ProcessorFeatures {
   // x86-64 and x86-64-v[234]
   list<SubtargetFeature> X86_64V1Features = [
     FeatureX87, FeatureCMPXCHG8B, FeatureCMOV, FeatureMMX, FeatureSSE2,
-    FeatureFXSR, FeatureNOPL, Feature64Bit
+    FeatureFXSR, FeatureNOPL, FeatureX86_64,
   ];
   list<SubtargetFeature> X86_64V2Features = !listconcat(X86_64V1Features, [
-    FeatureCMPXCHG16B, FeatureLAHFSAHF, FeatureCRC32, FeaturePOPCNT,
+    FeatureCMPXCHG16B, FeatureLAHFSAHF64, FeatureCRC32, FeaturePOPCNT,
     FeatureSSE42
   ]);
   list<SubtargetFeature> X86_64V3Features = !listconcat(X86_64V2Features, [
@@ -878,10 +878,10 @@ def ProcessorFeatures {
                                          FeatureSSSE3,
                                          FeatureFXSR,
                                          FeatureNOPL,
-                                         Feature64Bit,
+                                         FeatureX86_64,
                                          FeatureCMPXCHG16B,
                                          FeatureMOVBE,
-                                         FeatureLAHFSAHF];
+                                         FeatureLAHFSAHF64];
   list<SubtargetFeature> AtomTuning = [ProcIntelAtom,
                                        TuningSlowUAMem16,
                                        TuningLEAForSP,
@@ -983,14 +983,14 @@ def ProcessorFeatures {
                                         FeatureMMX,
                                         FeatureFXSR,
                                         FeatureNOPL,
-                                        Feature64Bit,
+                                        FeatureX86_64,
                                         FeatureCMPXCHG16B,
                                         FeatureCRC32,
                                         FeaturePOPCNT,
                                         FeaturePCLMUL,
                                         FeatureXSAVE,
                                         FeatureXSAVEOPT,
-                                        FeatureLAHFSAHF,
+                                        FeatureLAHFSAHF64,
                                         FeatureAES,
                                         FeatureRDRAND,
                                         FeatureF16C,
@@ -1031,9 +1031,9 @@ def ProcessorFeatures {
                                               FeaturePRFCHW,
                                               FeatureLZCNT,
                                               FeaturePOPCNT,
-                                              FeatureLAHFSAHF,
+                                              FeatureLAHFSAHF64,
                                               FeatureCMOV,
-                                              Feature64Bit];
+                                              FeatureX86_64];
   list<SubtargetFeature> BarcelonaTuning = [TuningFastScalarShiftMasks,
                                             TuningSlowSHLD,
                                             TuningSBBDepBreaking,
@@ -1048,12 +1048,12 @@ def ProcessorFeatures {
                                            FeatureSSE4A,
                                            FeatureFXSR,
                                            FeatureNOPL,
-                                           Feature64Bit,
+                                           FeatureX86_64,
                                            FeatureCMPXCHG16B,
                                            FeaturePRFCHW,
                                            FeatureLZCNT,
                                            FeaturePOPCNT,
-                                           FeatureLAHFSAHF];
+                                           FeatureLAHFSAHF64];
   list<SubtargetFeature> BtVer1Tuning = [TuningFast15ByteNOP,
                                          TuningFastScalarShiftMasks,
                                          TuningFastVectorShiftMasks,
@@ -1088,7 +1088,7 @@ def ProcessorFeatures {
                                            FeatureCMPXCHG8B,
                                            FeatureCMOV,
                                            FeatureXOP,
-                                           Feature64Bit,
+                                           FeatureX86_64,
                                            FeatureCMPXCHG16B,
                                            FeatureAES,
                                            FeatureCRC32,
@@ -1101,7 +1101,7 @@ def ProcessorFeatures {
                                            FeaturePOPCNT,
                                            FeatureXSAVE,
                                            FeatureLWP,
-                                           FeatureLAHFSAHF];
+                                           FeatureLAHFSAHF64];
   list<SubtargetFeature> BdVer1Tuning = [TuningSlowSHLD,
                                          TuningFast11ByteNOP,
                                          TuningFastScalarShiftMasks,
@@ -1148,7 +1148,7 @@ def ProcessorFeatures {
                                        FeatureCLFLUSHOPT,
                                        FeatureCLZERO,
                                        FeatureCMOV,
-                                       Feature64Bit,
+                                       FeatureX86_64,
                                        FeatureCMPXCHG16B,
                                        FeatureCRC32,
                                        FeatureF16C,
@@ -1156,7 +1156,7 @@ def ProcessorFeatures {
                                        FeatureFSGSBase,
                                        FeatureFXSR,
                                        FeatureNOPL,
-                                       FeatureLAHFSAHF,
+                                       FeatureLAHFSAHF64,
                                        FeatureLZCNT,
                                        FeatureMMX,
                                        FeatureMOVBE,
@@ -1220,13 +1220,13 @@ class ProcModel<string Name, SchedMachineModel Model,
 // NOTE: CMPXCHG8B is here for legacy compatibility so that it is only disabled
 // if i386/i486 is specifically requested.
 // NOTE: 64Bit is here as "generic" is the default llc CPU. The X86Subtarget
-// constructor checks that any CPU used in 64-bit mode has Feature64Bit enabled.
-// It has no effect on code generation.
+// constructor checks that any CPU used in 64-bit mode has FeatureX86_64
+// enabled. It has no effect on code generation.
 // NOTE: As a default tuning, "generic" aims to produce code optimized for the
 // most common X86 processors. The tunings might be changed over time. It is
 // recommended to use "x86-64" in lit tests for consistency.
 def : ProcModel<"generic", SandyBridgeModel,
-                [FeatureX87, FeatureCMPXCHG8B, Feature64Bit],
+                [FeatureX87, FeatureCMPXCHG8B, FeatureX86_64],
                 [TuningSlow3OpsLEA,
                  TuningSlowDivide64,
                  TuningMacroFusion,
@@ -1306,7 +1306,7 @@ def : ProcModel<"nocona", GenericPostRAModel, [
   FeatureSSE3,
   FeatureFXSR,
   FeatureNOPL,
-  Feature64Bit,
+  FeatureX86_64,
   FeatureCMPXCHG16B,
 ],
 [
@@ -1323,9 +1323,9 @@ def : ProcModel<"core2", SandyBridgeModel, [
   FeatureSSSE3,
   FeatureFXSR,
   FeatureNOPL,
-  Feature64Bit,
+  FeatureX86_64,
   FeatureCMPXCHG16B,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF64
 ],
 [
   TuningMacroFusion,
@@ -1340,9 +1340,9 @@ def : ProcModel<"penryn", SandyBridgeModel, [
   FeatureSSE41,
   FeatureFXSR,
   FeatureNOPL,
-  Feature64Bit,
+  FeatureX86_64,
   FeatureCMPXCHG16B,
-  FeatureLAHFSAHF
+  FeatureLAHFSAHF64
 ],
 [
   TuningMacroFusion,
@@ -1452,7 +1452,7 @@ foreach P = ["athlon-4", "athlon-xp", "athlon-mp"] in {
 
 foreach P = ["k8", "opteron", "athlon64", "athlon-fx"] in {
   def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureSSE2, Feature3DNowA,
-                 FeatureFXSR, FeatureNOPL, Feature64Bit, FeatureCMOV],
+                 FeatureFXSR, FeatureNOPL, FeatureX86_64, FeatureCMOV],
                 [TuningFastScalarShiftMasks, TuningSlowSHLD, TuningSlowUAMem16,
                  TuningSBBDepBreaking, TuningInsertVZEROUPPER]>;
 }
@@ -1460,7 +1460,7 @@ foreach P = ["k8", "opteron", "athlon64", "athlon-fx"] in {
 foreach P = ["k8-sse3", "opteron-sse3", "athlon64-sse3"] in {
   def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureSSE3, Feature3DNowA,
                  FeatureFXSR, FeatureNOPL, FeatureCMPXCHG16B, FeatureCMOV,
-                 Feature64Bit],
+                 FeatureX86_64],
                 [TuningFastScalarShiftMasks, TuningSlowSHLD, TuningSlowUAMem16,
                  TuningSBBDepBreaking, TuningInsertVZEROUPPER]>;
 }

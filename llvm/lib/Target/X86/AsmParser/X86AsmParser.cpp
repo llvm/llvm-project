@@ -124,12 +124,12 @@ private:
                             bool matchingInlineAsm, unsigned VariantID = 0) {
     // In Code16GCC mode, match as 32-bit.
     if (Code16GCC)
-      SwitchMode(X86::Mode32Bit);
+      SwitchMode(X86::Is32Bit);
     unsigned rv = MatchInstructionImpl(Operands, Inst, ErrorInfo,
                                        MissingFeatures, matchingInlineAsm,
                                        VariantID);
     if (Code16GCC)
-      SwitchMode(X86::Mode16Bit);
+      SwitchMode(X86::Is16Bit);
     return rv;
   }
 
@@ -1193,19 +1193,19 @@ private:
 
   bool is64BitMode() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[X86::Mode64Bit];
+    return getSTI().getFeatureBits()[X86::Is64Bit];
   }
   bool is32BitMode() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[X86::Mode32Bit];
+    return getSTI().getFeatureBits()[X86::Is32Bit];
   }
   bool is16BitMode() const {
     // FIXME: Can tablegen auto-generate this?
-    return getSTI().getFeatureBits()[X86::Mode16Bit];
+    return getSTI().getFeatureBits()[X86::Is16Bit];
   }
   void SwitchMode(unsigned mode) {
     MCSubtargetInfo &STI = copySTI();
-    FeatureBitset AllModes({X86::Mode64Bit, X86::Mode32Bit, X86::Mode16Bit});
+    FeatureBitset AllModes({X86::Is64Bit, X86::Is32Bit, X86::Is16Bit});
     FeatureBitset OldMode = STI.getFeatureBits() & AllModes;
     FeatureBitset FB = ComputeAvailableFeatures(
       STI.ToggleFeature(OldMode.flip(mode)));
@@ -3346,7 +3346,7 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
 
       Name = Next;
       PatchedName = Name;
-      ForcedDataPrefix = X86::Mode32Bit;
+      ForcedDataPrefix = X86::Is32Bit;
       IsPrefix = false;
     }
   }
@@ -4313,15 +4313,15 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
 
   // In 16-bit mode, if data32 is specified, temporarily switch to 32-bit mode
   // when matching the instruction.
-  if (ForcedDataPrefix == X86::Mode32Bit)
-    SwitchMode(X86::Mode32Bit);
+  if (ForcedDataPrefix == X86::Is32Bit)
+    SwitchMode(X86::Is32Bit);
   // First, try a direct match.
   FeatureBitset MissingFeatures;
   unsigned OriginalError = MatchInstruction(Operands, Inst, ErrorInfo,
                                             MissingFeatures, MatchingInlineAsm,
                                             isParsingIntelSyntax());
-  if (ForcedDataPrefix == X86::Mode32Bit) {
-    SwitchMode(X86::Mode16Bit);
+  if (ForcedDataPrefix == X86::Is32Bit) {
+    SwitchMode(X86::Is16Bit);
     ForcedDataPrefix = 0;
   }
   switch (OriginalError) {
@@ -4886,7 +4886,7 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
   if (IDVal == ".code16") {
     Parser.Lex();
     if (!is16BitMode()) {
-      SwitchMode(X86::Mode16Bit);
+      SwitchMode(X86::Is16Bit);
       getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
     }
   } else if (IDVal == ".code16gcc") {
@@ -4894,19 +4894,19 @@ bool X86AsmParser::ParseDirectiveCode(StringRef IDVal, SMLoc L) {
     Parser.Lex();
     Code16GCC = true;
     if (!is16BitMode()) {
-      SwitchMode(X86::Mode16Bit);
+      SwitchMode(X86::Is16Bit);
       getParser().getStreamer().emitAssemblerFlag(MCAF_Code16);
     }
   } else if (IDVal == ".code32") {
     Parser.Lex();
     if (!is32BitMode()) {
-      SwitchMode(X86::Mode32Bit);
+      SwitchMode(X86::Is32Bit);
       getParser().getStreamer().emitAssemblerFlag(MCAF_Code32);
     }
   } else if (IDVal == ".code64") {
     Parser.Lex();
     if (!is64BitMode()) {
-      SwitchMode(X86::Mode64Bit);
+      SwitchMode(X86::Is64Bit);
       getParser().getStreamer().emitAssemblerFlag(MCAF_Code64);
     }
   } else {
