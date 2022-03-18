@@ -106,8 +106,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     const MachineOperand &Op0 = Comp.MI.getOperand(1);
     if (Op0.isReg()) {
       if (!TRI->isVectorRegister(MRI, Op0.getReg())) {
-          if(!is_contained(UniqueScalarRegs, Comp.Reg0))
-            UniqueScalarRegs.push_back(Comp.Reg0);
+        if (!is_contained(UniqueScalarRegs, Op0.getReg()))
+          UniqueScalarRegs.push_back(Op0.getReg());
       } else
         Comp.Reg0 = Op0.getReg();
     } else {
