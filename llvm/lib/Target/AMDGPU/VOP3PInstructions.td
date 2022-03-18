@@ -412,6 +412,10 @@ def VOPProfileMAI_F32_V4I16_X16 : VOPProfileMAI<VOP_V16F32_V4I16_V4I16_V16F32, A
 def VOPProfileMAI_F32_V4I16_X32 : VOPProfileMAI<VOP_V32F32_V4I16_V4I16_V32F32, AISrc_1024_b32, ADst_1024, AVSrc_64>;
 def VOPProfileMAI_F64_16X16X4F64 : VOPProfileMAI<VOP_V4F64_F64_F64_V4F64,      AISrc_256_f64,  ADst_256,  AVSrc_64>;
 def VOPProfileMAI_F64_4X4X4F64   : VOPProfileMAI<VOP_F64_F64_F64_F64,          AISrc_64_f64,   ADst_64,   AVSrc_64>;
+def VOPProfileMAI_I32_I64_X16   : VOPProfileMAI<VOP_V4I32_I64_I64_V4I32,       AISrc_128_b32,  ADst_128,  AVSrc_64>;
+def VOPProfileMAI_I32_I64_X32   : VOPProfileMAI<VOP_V16I32_I64_I64_V16I32,     AISrc_512_b32,  ADst_512,  AVSrc_64>;
+def VOPProfileMAI_F32_V2F32_X16 : VOPProfileMAI<VOP_V4F32_V2F32_V2F32_V4F32,   AISrc_128_b32,  ADst_128,  AVSrc_64>;
+def VOPProfileMAI_F32_V2F32_X32 : VOPProfileMAI<VOP_V16F32_V2F32_V2F32_V16F32, AISrc_512_b32,  ADst_512,  AVSrc_64>;
 
 def VOPProfileMAI_F32_F32_X4_VCD     : VOPProfileMAI<VOP_V4F32_F32_F32_V4F32,       VISrc_128_f32,  VDst_128>;
 def VOPProfileMAI_F32_F32_X16_VCD    : VOPProfileMAI<VOP_V16F32_F32_F32_V16F32,     VISrc_512_f32,  VDst_512>;
@@ -430,6 +434,10 @@ def VOPProfileMAI_F32_V4I16_X16_VCD  : VOPProfileMAI<VOP_V16F32_V4I16_V4I16_V16F
 def VOPProfileMAI_F32_V4I16_X32_VCD  : VOPProfileMAI<VOP_V32F32_V4I16_V4I16_V32F32, VISrc_1024_b32, VDst_1024, AVSrc_64>;
 def VOPProfileMAI_F64_16X16X4F64_VCD : VOPProfileMAI<VOP_V4F64_F64_F64_V4F64,       VISrc_256_f64,  VDst_256,  AVSrc_64>;
 def VOPProfileMAI_F64_4X4X4F64_VCD   : VOPProfileMAI<VOP_F64_F64_F64_F64,           VISrc_64_f64,   VDst_64,   AVSrc_64>;
+def VOPProfileMAI_I32_I64_X16_VCD    : VOPProfileMAI<VOP_V4I32_I64_I64_V4I32,       VISrc_128_b32,  VDst_128,  AVSrc_64>;
+def VOPProfileMAI_I32_I64_X32_VCD    : VOPProfileMAI<VOP_V16I32_I64_I64_V16I32,     VISrc_512_b32,  VDst_512,  AVSrc_64>;
+def VOPProfileMAI_F32_V2F32_X16_VCD  : VOPProfileMAI<VOP_V4F32_V2F32_V2F32_V4F32,   VISrc_128_b32,  VDst_128,  AVSrc_64>;
+def VOPProfileMAI_F32_V2F32_X32_VCD  : VOPProfileMAI<VOP_V16F32_V2F32_V2F32_V16F32, VISrc_512_b32,  VDst_512,  AVSrc_64>;
 
 class MFMATable <bit is_mac, string Name> {
   bit IsMac = is_mac;
@@ -526,6 +534,13 @@ let Predicates = [isGFX90APlus] in {
   defm V_MFMA_F64_16X16X4F64      : MAIInst<"v_mfma_f64_16x16x4f64",      "F64_16X16X4F64", int_amdgcn_mfma_f64_16x16x4f64>;
   defm V_MFMA_F64_4X4X4F64        : MAIInst<"v_mfma_f64_4x4x4f64",        "F64_4X4X4F64",   int_amdgcn_mfma_f64_4x4x4f64>;
 } // End Predicates = [isGFX90APlus]
+
+let Predicates = [isGFX940Plus] in {
+  defm V_MFMA_I32_32X32X16I8       : MAIInst<"v_mfma_i32_32x32x16i8",       "I32_I64_X32",    int_amdgcn_mfma_i32_32x32x16_i8>;
+  defm V_MFMA_I32_16X16X32I8       : MAIInst<"v_mfma_i32_16x16x32i8",       "I32_I64_X16",    int_amdgcn_mfma_i32_16x16x32_i8>;
+  defm V_MFMA_F32_16X16X8XF32      : MAIInst<"v_mfma_f32_16x16x8xf32",      "F32_V2F32_X16",  int_amdgcn_mfma_f32_16x16x8_xf32>;
+  defm V_MFMA_F32_32X32X4XF32      : MAIInst<"v_mfma_f32_32x32x4xf32",      "F32_V2F32_X32",  int_amdgcn_mfma_f32_32x32x4_xf32>;
+} // End Predicates = [isGFX940Plus]
 
 let SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1 in {
   defm V_PK_FMA_F32 : VOP3PInst<"v_pk_fma_f32", VOP3_Profile<VOP_V2F32_V2F32_V2F32_V2F32, VOP3_PACKED>, any_fma>;
@@ -726,6 +741,11 @@ defm V_MFMA_F32_32X32X8BF16_1K  : VOP3P_Real_MFMA_gfx90a <0x66>;
 defm V_MFMA_F32_16X16X16BF16_1K : VOP3P_Real_MFMA_gfx90a <0x67>;
 defm V_MFMA_F64_16X16X4F64      : VOP3P_Real_MFMA_gfx90a <0x6e>;
 defm V_MFMA_F64_4X4X4F64        : VOP3P_Real_MFMA_gfx90a <0x6f>;
+
+defm V_MFMA_I32_32X32X16I8       : VOP3P_Real_MFMA_gfx940 <0x56, "v_mfma_i32_32x32x16_i8">;
+defm V_MFMA_I32_16X16X32I8       : VOP3P_Real_MFMA_gfx940 <0x57, "v_mfma_i32_16x16x32_i8">;
+defm V_MFMA_F32_16X16X8XF32      : VOP3P_Real_MFMA_gfx940 <0x3e, "v_mfma_f32_16x16x8_xf32">;
+defm V_MFMA_F32_32X32X4XF32      : VOP3P_Real_MFMA_gfx940 <0x3f, "v_mfma_f32_32x32x4_xf32">;
 
 defm V_MFMA_F32_32X32X4BF16_1K   : VOP3P_Real_MFMA_gfx940 <0x5d, "v_mfma_f32_32x32x4_2b_bf16">;
 defm V_MFMA_F32_16X16X4BF16_1K   : VOP3P_Real_MFMA_gfx940 <0x5e, "v_mfma_f32_16x16x4_4b_bf16">;
