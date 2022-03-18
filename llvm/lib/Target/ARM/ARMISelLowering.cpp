@@ -20976,8 +20976,16 @@ Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // things go wrong. Cortex M doesn't have ldrexd/strexd though, so don't emit
 // anything for those.
 bool ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  bool has64BitAtomicStore;
+  if (Subtarget->isMClass())
+    has64BitAtomicStore = false;
+  else if (Subtarget->isThumb())
+    has64BitAtomicStore = Subtarget->hasV7Ops();
+  else
+    has64BitAtomicStore = Subtarget->hasV6Ops();
+
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
-  return (Size == 64) && !Subtarget->isMClass();
+  return Size == 64 && has64BitAtomicStore;
 }
 
 // Loads and stores less than 64-bits are already atomic; ones above that
@@ -20989,9 +20997,17 @@ bool ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // sections A8.8.72-74 LDRD)
 TargetLowering::AtomicExpansionKind
 ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  bool has64BitAtomicLoad;
+  if (Subtarget->isMClass())
+    has64BitAtomicLoad = false;
+  else if (Subtarget->isThumb())
+    has64BitAtomicLoad = Subtarget->hasV7Ops();
+  else
+    has64BitAtomicLoad = Subtarget->hasV6Ops();
+
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
-  return ((Size == 64) && !Subtarget->isMClass()) ? AtomicExpansionKind::LLOnly
-                                                  : AtomicExpansionKind::None;
+  return (Size == 64 && has64BitAtomicLoad) ? AtomicExpansionKind::LLOnly
+                                            : AtomicExpansionKind::None;
 }
 
 // For the real atomic operations, we have ldrex/strex up to 32 bits,

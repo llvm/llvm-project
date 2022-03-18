@@ -270,8 +270,15 @@ define i64 @test_old_load_64bit(i64* %p) {
 ;
 ; THUMBONE-LABEL: test_old_load_64bit:
 ; THUMBONE:       @ %bb.0:
-; THUMBONE-NEXT:    ldaexd r0, r1, [r0]
-; THUMBONE-NEXT:    bx lr
+; THUMBONE-NEXT:    push {r7, lr}
+; THUMBONE-NEXT:    sub sp, #8
+; THUMBONE-NEXT:    movs r2, #0
+; THUMBONE-NEXT:    str r2, [sp]
+; THUMBONE-NEXT:    str r2, [sp, #4]
+; THUMBONE-NEXT:    mov r3, r2
+; THUMBONE-NEXT:    bl __sync_val_compare_and_swap_8
+; THUMBONE-NEXT:    add sp, #8
+; THUMBONE-NEXT:    pop {r7, pc}
 ;
 ; ARMV4-LABEL: test_old_load_64bit:
 ; ARMV4:       @ %bb.0:
