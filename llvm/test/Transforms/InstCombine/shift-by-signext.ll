@@ -69,11 +69,11 @@ define <2 x i32> @t5_vec_ashr(<2 x i32> %x, <2 x i8> %shamt) {
 define i32 @t6_twoshifts(i32 %x, i8 %shamt) {
 ; CHECK-LABEL: @t6_twoshifts(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[SHAMT_WIDE:%.*]] = sext i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    br label [[WORK:%.*]]
 ; CHECK:       work:
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
+; CHECK-NEXT:    [[SHAMT_WIDE:%.*]] = sext i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    [[N0:%.*]] = shl i32 [[X:%.*]], [[SHAMT_WIDE]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[N0]], [[SHAMT_WIDE]]
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -151,11 +151,11 @@ define i32 @n11_extrause(i32 %x, i8 %shamt) {
 }
 define i32 @n12_twoshifts_and_extrause(i32 %x, i8 %shamt) {
 ; CHECK-LABEL: @n12_twoshifts_and_extrause(
-; CHECK-NEXT:    [[SHAMT_WIDE:%.*]] = sext i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    br label [[WORK:%.*]]
 ; CHECK:       work:
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       end:
+; CHECK-NEXT:    [[SHAMT_WIDE:%.*]] = sext i8 [[SHAMT:%.*]] to i32
 ; CHECK-NEXT:    [[N0:%.*]] = shl i32 [[X:%.*]], [[SHAMT_WIDE]]
 ; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[N0]], [[SHAMT_WIDE]]
 ; CHECK-NEXT:    call void @use32(i32 [[SHAMT_WIDE]])

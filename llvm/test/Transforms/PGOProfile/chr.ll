@@ -1381,10 +1381,6 @@ define i32 @test_chr_15(i32* %i, i32* %j, i32 %sum0, i1 %pred, i32 %z) !prof !14
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[J0:%.*]] = load i32, i32* [[J:%.*]], align 4
-; CHECK-NEXT:    [[V6:%.*]] = and i32 [[I0]], 2
-; CHECK-NEXT:    [[V4:%.*]] = icmp eq i32 [[V6]], [[J0]]
-; CHECK-NEXT:    [[V8:%.*]] = add i32 [[SUM0:%.*]], 43
-; CHECK-NEXT:    [[SUM2:%.*]] = select i1 [[V4]], i32 [[SUM0]], i32 [[V8]], !prof [[PROF16]]
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    [[V9:%.*]] = and i32 [[I0]], 4
 ; CHECK-NEXT:    [[V10:%.*]] = icmp eq i32 [[V9]], 0
@@ -1393,6 +1389,10 @@ define i32 @test_chr_15(i32* %i, i32* %j, i32 %sum0, i1 %pred, i32 %z) !prof !14
 ; CHECK-NEXT:    call void @foo()
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
+; CHECK-NEXT:    [[V6:%.*]] = and i32 [[I0]], 2
+; CHECK-NEXT:    [[V4:%.*]] = icmp eq i32 [[V6]], [[J0]]
+; CHECK-NEXT:    [[V8:%.*]] = add i32 [[SUM0:%.*]], 43
+; CHECK-NEXT:    [[SUM2:%.*]] = select i1 [[V4]], i32 [[SUM0]], i32 [[V8]], !prof [[PROF16]]
 ; CHECK-NEXT:    [[V5:%.*]] = icmp eq i32 [[I0]], [[SUM2]]
 ; CHECK-NEXT:    [[SUM3:%.*]] = select i1 [[V5]], i32 [[SUM2]], i32 [[V8]], !prof [[PROF16]]
 ; CHECK-NEXT:    [[V11:%.*]] = add i32 [[I0]], [[SUM3]]

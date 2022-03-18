@@ -11,17 +11,17 @@ define void @bar(i1 %flag) #0 !dbg !4 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TEXT:%.*]] = alloca [1 x i8], align 1
 ; CHECK-NEXT:    [[BUFF:%.*]] = alloca [1 x i8], align 1
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x i8], [1 x i8]* [[TEXT]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8], [1 x i8]* [[BUFF]], i64 0, i64 0
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    call void @llvm.dbg.declare(metadata [1 x i8]* [[TEXT]], [[META16:metadata !.*]], metadata !DIExpression()), [[DBG24:!dbg !.*]]
+; CHECK-NEXT:    call void @llvm.dbg.declare(metadata [1 x i8]* [[TEXT]], metadata [[META16:![0-9]+]], metadata !DIExpression()), !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    br label [[FIN:%.*]]
 ; CHECK:       else:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [1 x i8], [1 x i8]* [[TEXT]], i64 0, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8], [1 x i8]* [[BUFF]], i64 0, i64 0
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TMP0]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* [[TMP1]])
 ; CHECK-NEXT:    call void @foo(i8* [[TMP1]], i8* [[TMP0]])
