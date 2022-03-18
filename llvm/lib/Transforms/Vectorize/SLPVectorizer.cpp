@@ -8146,6 +8146,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
        I = I->getNextNode()) {
     BS->doForAllOpcodes(I, [this, &Idx, &NumToSchedule, BS](ScheduleData *SD) {
       TreeEntry *SDTE = getTreeEntry(SD->Inst);
+      (void)SDTE;
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() ==
                   (SDTE && !doesNotNeedToSchedule(SDTE->Scalars))) &&
