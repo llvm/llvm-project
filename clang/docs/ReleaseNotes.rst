@@ -68,6 +68,9 @@ Improvements to Clang's diagnostics
   constants that are not representable in a casted value. For example,
   ``(float) f == 0.1`` is always false.
 
+- ``-Wmisexpect`` warns when the branch weights collected during profiling
+  conflict with those added by ``llvm.expect``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
