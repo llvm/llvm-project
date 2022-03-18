@@ -529,11 +529,15 @@ TYPE_PARSER(
                         Parser<OmpClauseList>{})))
 
 // OMP SECTION-BLOCK
-TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
-    construct<OmpSectionBlocks>(
-        nonemptySeparated(block, startOmpLine >> "SECTION"_tok / endOmpLine)))
 
-// OMP SECTIONS (2.7.2), PARALLEL SECTIONS (2.11.2)
+TYPE_PARSER(construct<OpenMPSectionConstruct>(block))
+
+TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
+    construct<OmpSectionBlocks>(nonemptySeparated(
+        construct<OpenMPConstruct>(sourced(Parser<OpenMPSectionConstruct>{})),
+        startOmpLine >> "SECTION"_tok / endOmpLine)))
+
+// OMP SECTIONS (OpenMP 5.0 - 2.8.1), PARALLEL SECTIONS (OpenMP 5.0 - 2.13.3)
 TYPE_PARSER(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
     Parser<OmpSectionBlocks>{}, Parser<OmpEndSectionsDirective>{} / endOmpLine))
