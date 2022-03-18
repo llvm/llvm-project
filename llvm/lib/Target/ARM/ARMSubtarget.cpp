@@ -411,8 +411,6 @@ bool ARMSubtarget::enablePostRAMachineScheduler() const {
   return !isThumb1Only();
 }
 
-bool ARMSubtarget::enableAtomicExpand() const { return hasAnyDataBarrier(); }
-
 bool ARMSubtarget::useStride4VFPs() const {
   // For general targets, the prologue can grow when VFPs are allocated with
   // stride 4 (more vpush instructions). But WatchOS uses a compact unwind
