@@ -4,12 +4,12 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.8.0"
 
-declare double @sin(double)
-declare double @cos(double)
-declare double @pow(double, double)
-declare double @exp2(double)
-declare double @sqrt(double)
-declare i64 @round(i64)
+declare double @sin(double) nounwind willreturn
+declare double @cos(double) nounwind willreturn
+declare double @pow(double, double) nounwind willreturn
+declare double @exp2(double) nounwind willreturn
+declare double @sqrt(double) nounwind willreturn
+declare i64 @round(i64) nounwind willreturn
 
 
 define void @sin_libm(double* %a, double* %b) {
@@ -125,8 +125,8 @@ define void @sqrt_libm_errno(double* %a, double* %b) {
 ; CHECK-NEXT:    [[A0:%.*]] = load double, double* [[A:%.*]], align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, double* [[A]], i64 1
 ; CHECK-NEXT:    [[A1:%.*]] = load double, double* [[IDX1]], align 8
-; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[A0]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[SQRT1:%.*]] = tail call nnan double @sqrt(double [[A0]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[SQRT2:%.*]] = tail call nnan double @sqrt(double [[A1]]) #[[ATTR3]]
 ; CHECK-NEXT:    store double [[SQRT1]], double* [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, double* [[B]], i64 1
 ; CHECK-NEXT:    store double [[SQRT2]], double* [[IDX2]], align 8
@@ -149,8 +149,8 @@ define void @round_custom(i64* %a, i64* %b) {
 ; CHECK-NEXT:    [[A0:%.*]] = load i64, i64* [[A:%.*]], align 8
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 1
 ; CHECK-NEXT:    [[A1:%.*]] = load i64, i64* [[IDX1]], align 8
-; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[ROUND1:%.*]] = tail call i64 @round(i64 [[A0]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[ROUND2:%.*]] = tail call i64 @round(i64 [[A1]]) #[[ATTR4]]
 ; CHECK-NEXT:    store i64 [[ROUND1]], i64* [[B:%.*]], align 8
 ; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds i64, i64* [[B]], i64 1
 ; CHECK-NEXT:    store i64 [[ROUND2]], i64* [[IDX2]], align 8

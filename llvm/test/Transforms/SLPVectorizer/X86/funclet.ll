@@ -67,4 +67,4 @@ declare i32 @__CxxFrameHandler3(...)
 declare double @floor(double) #1
 
 attributes #0 = { "target-features"="+sse2" }
-attributes #1 = { nounwind readnone }
+attributes #1 = { nounwind readnone willreturn }

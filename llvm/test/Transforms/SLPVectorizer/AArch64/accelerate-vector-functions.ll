@@ -50,7 +50,7 @@ entry:
   ret <4 x float> %vecins.3
 }
 
-declare float @ceilf(float) readonly
+declare float @ceilf(float) readonly nounwind willreturn
 
 define <4 x float> @ceil_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @ceil_4x(
@@ -82,7 +82,7 @@ entry:
   ret <4 x float> %vecins.3
 }
 
-declare float @fabsf(float) readonly
+declare float @fabsf(float) readonly nounwind willreturn
 
 define <4 x float> @fabs_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @fabs_4x(
@@ -143,7 +143,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @floorf(float) readonly
+declare float @floorf(float) readonly nounwind willreturn
 define <4 x float> @floor_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @floor_4x(
 ; CHECK-NEXT:  entry:
@@ -173,7 +173,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @sqrtf(float) readonly
+declare float @sqrtf(float) readonly nounwind willreturn
 define <4 x float> @sqrt_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @sqrt_4x(
 ; CHECK-NEXT:  entry:
@@ -203,7 +203,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @expf(float) readonly
+declare float @expf(float) readonly nounwind willreturn
 define <4 x float> @exp_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @exp_4x(
 ; CHECK-NEXT:  entry:
@@ -245,7 +245,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @expm1f(float) readonly
+declare float @expm1f(float) readonly nounwind willreturn
 define <4 x float> @expm1_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @expm1_4x(
 ; CHECK-NEXT:  entry:
@@ -286,7 +286,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @logf(float) readonly
+declare float @logf(float) readonly nounwind willreturn
 define <4 x float> @log_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @log_4x(
 ; CHECK-NEXT:  entry:
@@ -328,7 +328,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @log1pf(float) readonly
+declare float @log1pf(float) readonly nounwind willreturn
 define <4 x float> @log1p_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @log1p_4x(
 ; CHECK-NEXT:  entry:
@@ -369,7 +369,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @log10pf(float) readonly
+declare float @log10pf(float) readonly nounwind willreturn
 define <4 x float> @log10p_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @log10p_4x(
 ; CHECK-NEXT:  entry:
@@ -421,7 +421,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @logbf(float) readonly
+declare float @logbf(float) readonly nounwind willreturn
 define <4 x float> @logb_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @logb_4x(
 ; CHECK-NEXT:  entry:
@@ -462,7 +462,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @sinf(float) readonly
+declare float @sinf(float) readonly nounwind willreturn
 define <4 x float> @sin_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @sin_4x(
 ; CHECK-NEXT:  entry:
@@ -504,7 +504,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @cosf(float) readonly
+declare float @cosf(float) readonly nounwind willreturn
 define <4 x float> @cos_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @cos_4x(
 ; CHECK-NEXT:  entry:
@@ -546,7 +546,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @tanf(float) readonly
+declare float @tanf(float) readonly nounwind willreturn
 define <4 x float> @tan_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @tan_4x(
 ; CHECK-NEXT:  entry:
@@ -587,7 +587,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @asinf(float) readonly
+declare float @asinf(float) readonly nounwind willreturn
 define <4 x float> @asin_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @asin_4x(
 ; CHECK-NEXT:  entry:
@@ -628,7 +628,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @acosf(float) readonly
+declare float @acosf(float) readonly nounwind willreturn
 define <4 x float> @acos_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @acos_4x(
 ; CHECK-NEXT:  entry:
@@ -669,7 +669,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @atanf(float) readonly
+declare float @atanf(float) readonly nounwind willreturn
 define <4 x float> @atan_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @atan_4x(
 ; CHECK-NEXT:  entry:
@@ -710,7 +710,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @sinhf(float) readonly
+declare float @sinhf(float) readonly nounwind willreturn
 define <4 x float> @sinh_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @sinh_4x(
 ; CHECK-NEXT:  entry:
@@ -751,7 +751,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @coshf(float) readonly
+declare float @coshf(float) readonly nounwind willreturn
 define <4 x float> @cosh_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @cosh_4x(
 ; CHECK-NEXT:  entry:
@@ -792,7 +792,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @tanhf(float) readonly
+declare float @tanhf(float) readonly nounwind willreturn
 define <4 x float> @tanh_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @tanh_4x(
 ; CHECK-NEXT:  entry:
@@ -833,7 +833,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @asinhf(float) readonly
+declare float @asinhf(float) readonly nounwind willreturn
 define <4 x float> @asinh_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @asinh_4x(
 ; CHECK-NEXT:  entry:
@@ -874,7 +874,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @acoshf(float) readonly
+declare float @acoshf(float) readonly nounwind willreturn
 define <4 x float> @acosh_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @acosh_4x(
 ; CHECK-NEXT:  entry:
@@ -915,7 +915,7 @@ entry:
   %vecins.3 = insertelement <4 x float> %vecins.2, float %4, i32 3
   ret <4 x float> %vecins.3
 }
-declare float @atanhf(float) readonly
+declare float @atanhf(float) readonly nounwind willreturn
 define <4 x float> @atanh_4x(<4 x float>* %a) {
 ; CHECK-LABEL: @atanh_4x(
 ; CHECK-NEXT:  entry:
