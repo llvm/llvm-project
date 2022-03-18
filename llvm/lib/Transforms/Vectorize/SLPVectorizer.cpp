@@ -3914,6 +3914,7 @@ static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
 
 /// \return true if the specified list of values has only one instruction that
 /// requires scheduling, false otherwise.
+#ifndef NDEBUG
 static bool needToScheduleSingleInstruction(ArrayRef<Value *> VL) {
   Value *NeedsScheduling = nullptr;
   for (Value *V : VL) {
@@ -3927,6 +3928,7 @@ static bool needToScheduleSingleInstruction(ArrayRef<Value *> VL) {
   }
   return NeedsScheduling;
 }
+#endif
 
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx) {
