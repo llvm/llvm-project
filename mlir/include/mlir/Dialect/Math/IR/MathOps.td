@@ -724,6 +724,7 @@ def Math_SqrtOp : Math_FloatUnaryOp<"sqrt"> {
     %x = math.sqrt %y : tensor<4x?xf32>
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

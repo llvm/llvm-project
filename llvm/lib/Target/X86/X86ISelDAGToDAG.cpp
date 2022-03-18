@@ -5514,7 +5514,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     MVT CmpVT = N0.getSimpleValueType();
 
     // Floating point needs special handling if we don't have FCOMI.
-    if (Subtarget->hasCMov())
+    if (Subtarget->hasCMOV())
       break;
 
     bool IsSignaling = Node->getOpcode() == X86ISD::STRICT_FCMPS;

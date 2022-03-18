@@ -812,6 +812,12 @@ public:
     return hasProperty(MCID::Pseudo, Type);
   }
 
+  /// Return true if this instruction doesn't produce any output in the form of
+  /// executable instructions.
+  bool isMetaInstruction(QueryType Type = AnyInBundle) const {
+    return hasProperty(MCID::Meta, Type);
+  }
+
   bool isReturn(QueryType Type = AnyInBundle) const {
     return hasProperty(MCID::Return, Type);
   }
@@ -1306,30 +1312,6 @@ public:
   bool isIdentityCopy() const {
     return isCopy() && getOperand(0).getReg() == getOperand(1).getReg() &&
       getOperand(0).getSubReg() == getOperand(1).getSubReg();
-  }
-
-  /// Return true if this instruction doesn't produce any output in the form of
-  /// executable instructions.
-  bool isMetaInstruction() const {
-    switch (getOpcode()) {
-    default:
-      return false;
-    case TargetOpcode::IMPLICIT_DEF:
-    case TargetOpcode::KILL:
-    case TargetOpcode::CFI_INSTRUCTION:
-    case TargetOpcode::EH_LABEL:
-    case TargetOpcode::GC_LABEL:
-    case TargetOpcode::DBG_VALUE:
-    case TargetOpcode::DBG_VALUE_LIST:
-    case TargetOpcode::DBG_INSTR_REF:
-    case TargetOpcode::DBG_PHI:
-    case TargetOpcode::DBG_LABEL:
-    case TargetOpcode::LIFETIME_START:
-    case TargetOpcode::LIFETIME_END:
-    case TargetOpcode::PSEUDO_PROBE:
-    case TargetOpcode::ARITH_FENCE:
-      return true;
-    }
   }
 
   /// Return true if this is a transient instruction that is either very likely

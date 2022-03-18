@@ -15,7 +15,7 @@ class TestCase(PExpectTest):
 
     def test(self):
         self.build(dictionary={"CXX_SOURCES":"cat.cpp"})
-        self.launch(executable=self.getBuildArtifact(), timeout=5)
+        self.launch(executable=self.getBuildArtifact())
 
         self.child.sendline("process launch")
         self.child.expect("Process .* launched")

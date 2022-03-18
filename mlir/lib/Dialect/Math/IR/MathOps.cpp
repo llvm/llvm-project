@@ -101,6 +101,31 @@ OpFoldResult math::PowFOp::fold(ArrayRef<Attribute> operands) {
   return {};
 }
 
+OpFoldResult math::SqrtOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand)
+    return {};
+
+  auto attr = constOperand.dyn_cast<FloatAttr>();
+  if (!attr)
+    return {};
+
+  auto ft = getType().cast<FloatType>();
+
+  APFloat apf = attr.getValue();
+
+  if (apf.isNegative())
+    return {};
+
+  if (ft.getWidth() == 64)
+    return FloatAttr::get(getType(), sqrt(apf.convertToDouble()));
+
+  if (ft.getWidth() == 32)
+    return FloatAttr::get(getType(), sqrtf(apf.convertToFloat()));
+
+  return {};
+}
+
 /// Materialize an integer or floating point constant.
 Operation *math::MathDialect::materializeConstant(OpBuilder &builder,
                                                   Attribute value, Type type,
