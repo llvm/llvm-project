@@ -35,12 +35,12 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to i8*
 ; X86-SCOPE-NEXT:    br label [[TMP8:%.*]]
 ; X86-SCOPE:       8:
-; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP2]])
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP4]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP9]], i64 16)
 ; X86-SCOPE-NEXT:    [[TMP10:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 0, i64 16)
-; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[TMP2]])
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP8]]
 ; X86-SCOPE:       11:
 ; X86-SCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -99,7 +99,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP25]] to i8*
 ; AARCH64-SCOPE-NEXT:    br label [[TMP26:%.*]]
 ; AARCH64-SCOPE:       26:
-; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP22]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint i8* [[TMP20]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP29:%.*]] = lshr i64 [[TMP28]], 4
@@ -110,7 +110,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SCOPE-NEXT:    [[TMP33:%.*]] = lshr i64 [[TMP32]], 4
 ; AARCH64-SCOPE-NEXT:    [[TMP34:%.*]] = getelementptr i8, i8* [[TMP18]], i64 [[TMP33]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP34]], i8 0, i64 1, i1 false)
-; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP31]], label [[TMP35:%.*]], label [[TMP26]]
 ; AARCH64-SCOPE:       35:
 ; AARCH64-SCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -195,7 +195,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP25]] to i8*
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP26:%.*]]
 ; AARCH64-SHORT-SCOPE:       26:
-; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP22]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint i8* [[TMP20]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP29:%.*]] = lshr i64 [[TMP28]], 4
@@ -209,7 +209,7 @@ define dso_local i32 @standard_lifetime() local_unnamed_addr sanitize_hwaddress 
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP35:%.*]] = lshr i64 [[TMP34]], 4
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP36:%.*]] = getelementptr i8, i8* [[TMP18]], i64 [[TMP35]]
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP36]], i8 0, i64 1, i1 false)
-; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP33]], label [[TMP37:%.*]], label [[TMP26]]
 ; AARCH64-SHORT-SCOPE:       37:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -294,12 +294,12 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to i8*
 ; X86-SCOPE-NEXT:    br label [[TMP8:%.*]]
 ; X86-SCOPE:       8:
-; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP2]])
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP4]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP9]], i64 16)
 ; X86-SCOPE-NEXT:    [[TMP10:%.*]] = tail call i1 (...) @cond()
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 0, i64 16)
-; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[TMP2]])
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP8]]
 ; X86-SCOPE:       11:
 ; X86-SCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -358,7 +358,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP25]] to i8*
 ; AARCH64-SCOPE-NEXT:    br label [[TMP26:%.*]]
 ; AARCH64-SCOPE:       26:
-; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP22]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint i8* [[TMP20]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP29:%.*]] = lshr i64 [[TMP28]], 4
@@ -369,7 +369,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SCOPE-NEXT:    [[TMP33:%.*]] = lshr i64 [[TMP32]], 4
 ; AARCH64-SCOPE-NEXT:    [[TMP34:%.*]] = getelementptr i8, i8* [[TMP18]], i64 [[TMP33]]
 ; AARCH64-SCOPE-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP34]], i8 0, i64 1, i1 false)
-; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    br i1 [[TMP31]], label [[TMP35:%.*]], label [[TMP26]]
 ; AARCH64-SCOPE:       35:
 ; AARCH64-SCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -454,7 +454,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP25]] to i8*
 ; AARCH64-SHORT-SCOPE-NEXT:    br label [[TMP26:%.*]]
 ; AARCH64-SHORT-SCOPE:       26:
-; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP22]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP28:%.*]] = ptrtoint i8* [[TMP20]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP29:%.*]] = lshr i64 [[TMP28]], 4
@@ -468,7 +468,7 @@ define dso_local i32 @standard_lifetime_optnone() local_unnamed_addr optnone noi
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP35:%.*]] = lshr i64 [[TMP34]], 4
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP36:%.*]] = getelementptr i8, i8* [[TMP18]], i64 [[TMP35]]
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[TMP36]], i8 0, i64 1, i1 false)
-; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.end.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    br i1 [[TMP33]], label [[TMP37:%.*]], label [[TMP26]]
 ; AARCH64-SHORT-SCOPE:       37:
 ; AARCH64-SHORT-SCOPE-NEXT:    call void @use(i8* nonnull [[ALLOCA_0_HWASAN]])
@@ -776,7 +776,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP4]], 57
 ; X86-SCOPE-NEXT:    [[TMP7:%.*]] = or i64 [[TMP5]], [[TMP6]]
 ; X86-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP7]] to i8*
-; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP2]])
+; X86-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; X86-SCOPE-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP4]] to i8
 ; X86-SCOPE-NEXT:    call void @__hwasan_tag_memory(i8* [[TMP2]], i8 [[TMP8]], i64 16)
 ; X86-SCOPE-NEXT:    [[TMP9:%.*]] = tail call i1 (...) @cond()
@@ -841,7 +841,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SCOPE-NEXT:    [[TMP24:%.*]] = shl i64 [[TMP22]], 56
 ; AARCH64-SCOPE-NEXT:    [[TMP25:%.*]] = or i64 [[TMP23]], [[TMP24]]
 ; AARCH64-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP25]] to i8*
-; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SCOPE-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP22]] to i8
 ; AARCH64-SCOPE-NEXT:    [[TMP27:%.*]] = ptrtoint i8* [[TMP20]] to i64
 ; AARCH64-SCOPE-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
@@ -944,7 +944,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP24:%.*]] = shl i64 [[TMP22]], 56
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP25:%.*]] = or i64 [[TMP23]], [[TMP24]]
 ; AARCH64-SHORT-SCOPE-NEXT:    [[ALLOCA_0_HWASAN:%.*]] = inttoptr i64 [[TMP25]] to i8*
-; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull [[TMP20]])
+; AARCH64-SHORT-SCOPE-NEXT:    call void @llvm.lifetime.start.p0i8(i64 1, i8* nonnull [[ALLOCA_0_HWASAN]])
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP26:%.*]] = trunc i64 [[TMP22]] to i8
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP27:%.*]] = ptrtoint i8* [[TMP20]] to i64
 ; AARCH64-SHORT-SCOPE-NEXT:    [[TMP28:%.*]] = lshr i64 [[TMP27]], 4
