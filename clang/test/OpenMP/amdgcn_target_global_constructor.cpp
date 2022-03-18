@@ -87,19 +87,19 @@ S A;
 // CHECK-NEXT:    ret void
 //
 //.
-// CHECK: attributes #0 = { convergent noinline nounwind "frame-pointer"="none" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #1 = { convergent noinline nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #2 = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #3 = { convergent }
-// CHECK: attributes #4 = { convergent nounwind }
+// CHECK: attributes #0 = { convergent
+// CHECK: attributes #1 = { convergent
+// CHECK: attributes #2 = { convergent
+// CHECK: attributes #3 = { convergent
+// CHECK: attributes #4 = { convergent
 //.
-// CHECK: !0 = !{i32 0, i32 42, i32 18149483, !"__omp_offloading_{{.*}}_ctor", i32 19, i32 1}
-// CHECK: !1 = !{i32 0, i32 42, i32 18149483, !"__omp_offloading_{{.*}}_dtor", i32 19, i32 2}
+// CHECK: !0 = !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_ctor", i32 19, i32 1}
+// CHECK: !1 = !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_dtor", i32 19, i32 2}
 // CHECK: !2 = !{i32 1, !"A", i32 0, i32 0}
 // CHECK: !3 = !{void ()* @__omp_offloading_{{.*}}_ctor, !"kernel", i32 1}
 // CHECK: !4 = !{void ()* @__omp_offloading_{{.*}}_dtor, !"kernel", i32 1}
 // CHECK: !5 = !{i32 1, !"wchar_size", i32 4}
 // CHECK: !6 = !{i32 7, !"openmp", i32 50}
 // CHECK: !7 = !{i32 7, !"openmp-device", i32 50}
-// CHECK: !8 = !{!"clang version 15.0.0"}
+// CHECK: !8 = !{!"clang version
 //.

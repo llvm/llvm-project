@@ -4367,11 +4367,11 @@ define i32 @sink_into_replication_region(i32 %y) {
 ;
 ; CHECK-LABEL: @sink_into_replication_region(
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[TMP1]], -1
@@ -4441,11 +4441,11 @@ define i32 @sink_into_replication_region(i32 %y) {
 ;
 ; UNROLL-LABEL: @sink_into_replication_region(
 ; UNROLL-NEXT:  bb:
+; UNROLL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
 ; UNROLL-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
 ; UNROLL-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
-; UNROLL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 7
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; UNROLL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[TMP1]], -1
@@ -4864,11 +4864,11 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ;
 ; CHECK-LABEL: @sink_into_replication_region_multiple(
 ; CHECK-NEXT:  bb:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -4
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[TMP1]], -1
@@ -4972,11 +4972,11 @@ define i32 @sink_into_replication_region_multiple(i32 *%x, i32 %y) {
 ;
 ; UNROLL-LABEL: @sink_into_replication_region_multiple(
 ; UNROLL-NEXT:  bb:
+; UNROLL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[TMP0:%.*]] = add i32 [[Y:%.*]], 1
 ; UNROLL-NEXT:    [[SMIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y]], i32 1)
 ; UNROLL-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[SMIN]]
-; UNROLL-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; UNROLL:       vector.ph:
 ; UNROLL-NEXT:    [[N_RND_UP:%.*]] = add i32 [[TMP1]], 7
 ; UNROLL-NEXT:    [[N_VEC:%.*]] = and i32 [[N_RND_UP]], -8
 ; UNROLL-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i32 [[TMP1]], -1

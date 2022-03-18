@@ -735,10 +735,10 @@ int main()
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
 // CHECK1-NEXT:    [[TMP2:%.*]] = load i64, i64* @{{reduction_size[.].+[.]}}, align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to double*
-// CHECK1-NEXT:    [[TMP5:%.*]] = load i8*, i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP5]] to double*
+// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8** [[DOTADDR]] to double**
+// CHECK1-NEXT:    [[TMP4:%.*]] = load double*, double** [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i8** [[DOTADDR1]] to double**
+// CHECK1-NEXT:    [[TMP6:%.*]] = load double*, double** [[TMP5]], align 8
 // CHECK1-NEXT:    [[TMP7:%.*]] = getelementptr double, double* [[TMP4]], i64 [[TMP2]]
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq double* [[TMP4]], [[TMP7]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE2:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]

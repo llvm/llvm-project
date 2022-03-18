@@ -91,7 +91,7 @@ static bool isSignExtendingOpW(const MachineInstr &MI) {
   case RISCV::FCVT_WU_D:
   case RISCV::FMV_X_W:
   // The following aren't W instructions, but are either sign extended from a
-  // smaller size or put zeros in bits 63:31.
+  // smaller size, always outputs a small integer, or put zeros in bits 63:31.
   case RISCV::LBU:
   case RISCV::LHU:
   case RISCV::LB:
@@ -104,6 +104,11 @@ static bool isSignExtendingOpW(const MachineInstr &MI) {
   case RISCV::SEXT_H:
   case RISCV::ZEXT_H_RV64:
   case RISCV::FMV_X_H:
+  case RISCV::BEXT:
+  case RISCV::BEXTI:
+  case RISCV::CLZ:
+  case RISCV::CPOP:
+  case RISCV::CTZ:
     return true;
   // shifting right sufficiently makes the value 32-bit sign-extended
   case RISCV::SRAI:
@@ -167,14 +172,21 @@ static bool isSignExtendedW(const MachineInstr &OrigMI,
       Worklist.push_back(SrcMI);
       break;
     }
+
+    // For these, we just need to check if the 1st operand is sign extended.
+    case RISCV::BCLRI:
+    case RISCV::BINVI:
+    case RISCV::BSETI:
+      if (MI->getOperand(2).getImm() >= 31)
+        return false;
+      LLVM_FALLTHROUGH;
     case RISCV::REM:
     case RISCV::ANDI:
     case RISCV::ORI:
     case RISCV::XORI: {
       // |Remainder| is always <= |Dividend|. If D is 32-bit, then so is R.
       // DIV doesn't work because of the edge case 0xf..f 8000 0000 / (long)-1
-      // Logical operations use a sign extended 12-bit immediate. We just need
-      // to check if the other operand is sign extended.
+      // Logical operations use a sign extended 12-bit immediate.
       Register SrcReg = MI->getOperand(1).getReg();
       if (!SrcReg.isVirtual())
         return false;
