@@ -1,5 +1,5 @@
-; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=core2 -passes='print<cost-model>' 2>&1 -disable-output < %s | FileCheck %s -check-prefix=CORE2
-; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=corei7 -passes='print<cost-model>' 2>&1 -disable-output < %s | FileCheck %s -check-prefix=COREI7
+; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=core2 -passes="print<cost-model>" 2>&1 -disable-output < %s | FileCheck %s -check-prefix=CORE2
+; RUN: opt -S -mtriple=x86_64-apple-darwin -mcpu=corei7 -passes="print<cost-model>" 2>&1 -disable-output < %s | FileCheck %s -check-prefix=COREI7
 
 ; If SSE4.1 roundps instruction is available it is cheap to lower, otherwise
 ; it'll be scalarized into calls which are expensive.

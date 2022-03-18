@@ -1,4 +1,4 @@
-; RUN: opt < %s  -passes='print<cost-model>' 2>&1 -disable-output -mtriple=x86_64-linux-unknown-unknown -mattr=+avx512f | FileCheck %s
+; RUN: opt < %s  -passes="print<cost-model>" 2>&1 -disable-output -mtriple=x86_64-linux-unknown-unknown -mattr=+avx512f | FileCheck %s
 
 %struct.S = type { [1000 x i32] }
 
