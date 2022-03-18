@@ -1872,6 +1872,36 @@ OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// ShRUIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ShRUIOp::fold(ArrayRef<Attribute> operands) {
+  // Don't fold if shifting more than the bit width.
+  bool bounded = false;
+  auto result = constFoldBinaryOp<IntegerAttr>(
+      operands, [&](const APInt &a, const APInt &b) {
+        bounded = b.ule(b.getBitWidth());
+        return std::move(a).lshr(b);
+      });
+  return bounded ? result : Attribute();
+}
+
+//===----------------------------------------------------------------------===//
+// ShRSIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ShRSIOp::fold(ArrayRef<Attribute> operands) {
+  // Don't fold if shifting more than the bit width.
+  bool bounded = false;
+  auto result = constFoldBinaryOp<IntegerAttr>(
+      operands, [&](const APInt &a, const APInt &b) {
+        bounded = b.ule(b.getBitWidth());
+        return std::move(a).ashr(b);
+      });
+  return bounded ? result : Attribute();
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic Enum
 //===----------------------------------------------------------------------===//
 
