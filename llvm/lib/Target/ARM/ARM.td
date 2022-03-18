@@ -19,9 +19,11 @@ include "llvm/Target/Target.td"
 // ARM Subtarget state.
 //
 
-def ModeThumb             : SubtargetFeature<"thumb-mode", "InThumbMode",
+// True if compiling for Thumb, false for ARM.
+def ModeThumb             : SubtargetFeature<"thumb-mode", "IsThumb",
                                              "true", "Thumb mode">;
 
+// True if we're using software floating point features.
 def ModeSoftFloat         : SubtargetFeature<"soft-float","UseSoftFloat",
                                              "true", "Use software floating "
                                              "point features.">;
@@ -48,14 +50,18 @@ def FeatureFPRegs64       : SubtargetFeature<"fpregs64", "HasFPRegs64", "true",
                                              "Enable 64-bit FP registers",
                                              [FeatureFPRegs]>;
 
+// True if the floating point unit supports double precision.
 def FeatureFP64           : SubtargetFeature<"fp64", "HasFP64", "true",
                                              "Floating point unit supports "
                                              "double precision",
                                              [FeatureFPRegs64]>;
 
+// True if subtarget has the full 32 double precision FP registers for VFPv3.
 def FeatureD32            : SubtargetFeature<"d32", "HasD32", "true",
                                              "Extend FP to 32 double registers">;
 
+/// Versions of the VFP flags restricted to single precision, or to
+/// 16 d-registers, or both.
 multiclass VFPver<string name, string query, string description,
                   list<SubtargetFeature> prev,
                   list<SubtargetFeature> otherimplies,
@@ -100,6 +106,7 @@ def FeatureNEON           : SubtargetFeature<"neon", "HasNEON", "true",
                                              "Enable NEON instructions",
                                              [FeatureVFP3]>;
 
+// True if subtarget supports half-precision FP conversions.
 def FeatureFP16           : SubtargetFeature<"fp16", "HasFP16", "true",
                                              "Enable half-precision "
                                              "floating point">;
@@ -110,169 +117,211 @@ defm FeatureVFP4: VFPver<"vfp4", "HasVFPv4", "Enable VFP4 instructions",
 defm FeatureFPARMv8: VFPver<"fp-armv8", "HasFPARMv8", "Enable ARMv8 FP",
                          [FeatureVFP4], []>;
 
+// True if subtarget supports half-precision FP operations.
 def FeatureFullFP16       : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
                                              "Enable full half-precision "
                                              "floating point",
                                              [FeatureFPARMv8_D16_SP, FeatureFPRegs16]>;
 
+// True if subtarget supports half-precision FP fml operations.
 def FeatureFP16FML        : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
                                              "Enable full half-precision "
                                              "floating point fml instructions",
                                              [FeatureFullFP16]>;
 
+// True if subtarget supports [su]div in Thumb mode.
 def FeatureHWDivThumb     : SubtargetFeature<"hwdiv",
-                                             "HasHardwareDivideInThumb", "true",
+                                             "HasDivideInThumbMode", "true",
                                              "Enable divide instructions in Thumb">;
 
+// True if subtarget supports [su]div in ARM mode.
 def FeatureHWDivARM       : SubtargetFeature<"hwdiv-arm",
-                                             "HasHardwareDivideInARM", "true",
+                                             "HasDivideInARMMode", "true",
                                              "Enable divide instructions in ARM mode">;
 
 // Atomic Support
+
+// True if the subtarget supports DMB / DSB data barrier instructions.
 def FeatureDB             : SubtargetFeature<"db", "HasDataBarrier", "true",
                                              "Has data barrier (dmb/dsb) instructions">;
 
+// True if the subtarget supports CLREX instructions.
 def FeatureV7Clrex        : SubtargetFeature<"v7clrex", "HasV7Clrex", "true",
                                              "Has v7 clrex instruction">;
 
+// True if the subtarget supports DFB data barrier instruction.
 def FeatureDFB  : SubtargetFeature<"dfb", "HasFullDataBarrier", "true",
                                    "Has full data barrier (dfb) instruction">;
 
+// True if the subtarget supports v8 atomics (LDA/LDAEX etc) instructions.
 def FeatureAcquireRelease : SubtargetFeature<"acquire-release",
                                              "HasAcquireRelease", "true",
                                              "Has v8 acquire/release (lda/ldaex "
                                              " etc) instructions">;
 
 
-def FeatureSlowFPBrcc     : SubtargetFeature<"slow-fp-brcc", "SlowFPBrcc", "true",
+// True if floating point compare + branch is slow.
+def FeatureSlowFPBrcc     : SubtargetFeature<"slow-fp-brcc", "IsFPBrccSlow", "true",
                                              "FP compare + branch is slow">;
 
+// True if the processor supports the Performance Monitor Extensions. These
+// include a generic cycle-counter as well as more fine-grained (often
+// implementation-specific) events.
 def FeaturePerfMon        : SubtargetFeature<"perfmon", "HasPerfMon", "true",
                                              "Enable support for Performance "
                                              "Monitor extensions">;
 
 
 // TrustZone Security Extensions
+
+// True if processor supports TrustZone security extensions.
 def FeatureTrustZone      : SubtargetFeature<"trustzone", "HasTrustZone", "true",
                                              "Enable support for TrustZone "
                                              "security extensions">;
 
+// True if processor supports ARMv8-M Security Extensions.
 def Feature8MSecExt       : SubtargetFeature<"8msecext", "Has8MSecExt", "true",
                                              "Enable support for ARMv8-M "
                                              "Security Extensions">;
 
+// True if processor supports SHA1 and SHA256.
 def FeatureSHA2           : SubtargetFeature<"sha2", "HasSHA2", "true",
                                              "Enable SHA1 and SHA256 support", [FeatureNEON]>;
 
 def FeatureAES            : SubtargetFeature<"aes", "HasAES", "true",
                                              "Enable AES support", [FeatureNEON]>;
 
+// True if processor supports Cryptography extensions.
 def FeatureCrypto         : SubtargetFeature<"crypto", "HasCrypto", "true",
                                              "Enable support for "
                                              "Cryptography extensions",
                                              [FeatureNEON, FeatureSHA2, FeatureAES]>;
 
+// True if processor supports CRC instructions.
 def FeatureCRC            : SubtargetFeature<"crc", "HasCRC", "true",
                                              "Enable support for CRC instructions">;
 
+// True if the ARMv8.2A dot product instructions are supported.
 def FeatureDotProd        : SubtargetFeature<"dotprod", "HasDotProd", "true",
                                              "Enable support for dot product instructions",
                                              [FeatureNEON]>;
 
-// Not to be confused with FeatureHasRetAddrStack (return address stack)
+// True if the processor supports RAS extensions.
+// Not to be confused with FeatureHasRetAddrStack (return address stack).
 def FeatureRAS            : SubtargetFeature<"ras", "HasRAS", "true",
                                              "Enable Reliability, Availability "
                                              "and Serviceability extensions">;
 
-// Fast computation of non-negative address offsets
+// Fast computation of non-negative address offsets.
+// True if processor does positive address offset computation faster.
 def FeatureFPAO           : SubtargetFeature<"fpao", "HasFPAO", "true",
                                              "Enable fast computation of "
                                              "positive address offsets">;
 
-// Fast execution of AES crypto operations
+// Fast execution of AES crypto operations.
+// True if processor executes back to back AES instruction pairs faster.
 def FeatureFuseAES        : SubtargetFeature<"fuse-aes", "HasFuseAES", "true",
                                              "CPU fuses AES crypto operations">;
 
-// Fast execution of bottom and top halves of literal generation
+// Fast execution of bottom and top halves of literal generation.
+// True if processor executes back to back bottom and top halves of literal generation faster.
 def FeatureFuseLiterals   : SubtargetFeature<"fuse-literals", "HasFuseLiterals", "true",
                                              "CPU fuses literal generation operations">;
 
-// The way of reading thread pointer                                             
-def FeatureReadTp :  SubtargetFeature<"read-tp-hard", "ReadTPHard", "true",
+// The way of reading thread pointer.
+// True if read thread pointer from coprocessor register.
+def FeatureReadTp :  SubtargetFeature<"read-tp-hard", "IsReadTPHard", "true",
                                       "Reading thread pointer from register">;
 
 // Cyclone can zero VFP registers in 0 cycles.
+// True if the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
+// particularly effective at zeroing a VFP register.
 def FeatureZCZeroing      : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
                                              "Has zero-cycle zeroing instructions">;
 
-// Whether it is profitable to unpredicate certain instructions during if-conversion
+// Whether it is profitable to unpredicate certain instructions during if-conversion.
+// True if if conversion may decide to leave some instructions unpredicated.
 def FeatureProfUnpredicate : SubtargetFeature<"prof-unpr",
                                               "IsProfitableToUnpredicate", "true",
                                               "Is profitable to unpredicate">;
 
 // Some targets (e.g. Swift) have microcoded VGETLNi32.
+// True if VMOV will be favored over VGETLNi32.
 def FeatureSlowVGETLNi32  : SubtargetFeature<"slow-vgetlni32",
                                              "HasSlowVGETLNi32", "true",
                                              "Has slow VGETLNi32 - prefer VMOV">;
 
 // Some targets (e.g. Swift) have microcoded VDUP32.
+// True if VMOV will be favored over VDUP.
 def FeatureSlowVDUP32     : SubtargetFeature<"slow-vdup32", "HasSlowVDUP32",
                                              "true",
                                              "Has slow VDUP32 - prefer VMOV">;
 
 // Some targets (e.g. Cortex-A9) prefer VMOVSR to VMOVDRR even when using NEON
 // for scalar FP, as this allows more effective execution domain optimization.
+// True if VMOVSR will be favored over VMOVDRR.
 def FeaturePreferVMOVSR   : SubtargetFeature<"prefer-vmovsr", "PreferVMOVSR",
                                              "true", "Prefer VMOVSR">;
 
 // Swift has ISHST barriers compatible with Atomic Release semantics but weaker
-// than ISH
-def FeaturePrefISHSTBarrier : SubtargetFeature<"prefer-ishst", "PreferISHST",
+// than ISH.
+// True if ISHST barriers will be used for Release semantics.
+def FeaturePrefISHSTBarrier : SubtargetFeature<"prefer-ishst", "PreferISHSTBarriers",
                                                "true", "Prefer ISHST barriers">;
 
 // Some targets (e.g. Cortex-A9) have muxed AGU and NEON/FPU.
+// True if the AGU and NEON/FPU units are multiplexed.
 def FeatureMuxedUnits     : SubtargetFeature<"muxed-units", "HasMuxedUnits",
                                              "true",
                                              "Has muxed AGU and NEON/FPU">;
 
 // Whether VLDM/VSTM starting with odd register number need more microops
-// than single VLDRS
-def FeatureSlowOddRegister : SubtargetFeature<"slow-odd-reg", "SlowOddRegister",
+// than single VLDRS.
+// True if a VLDM/VSTM starting with an odd register number is considered to
+// take more microops than single VLDRS/VSTRS.
+def FeatureSlowOddRegister : SubtargetFeature<"slow-odd-reg", "HasSlowOddRegister",
                                               "true", "VLDM/VSTM starting "
                                               "with an odd register is slow">;
 
 // Some targets have a renaming dependency when loading into D subregisters.
+// True if loading into a D subregister will be penalized.
 def FeatureSlowLoadDSubreg : SubtargetFeature<"slow-load-D-subreg",
-                                              "SlowLoadDSubregister", "true",
+                                              "HasSlowLoadDSubregister", "true",
                                               "Loading into D subregs is slow">;
 
+// True if use a wider stride when allocating VFP registers.
 def FeatureUseWideStrideVFP : SubtargetFeature<"wide-stride-vfp",
                                                "UseWideStrideVFP", "true",
                                                "Use a wide stride when allocating VFP registers">;
 
 // Some targets (e.g. Cortex-A15) never want VMOVS to be widened to VMOVD.
+// True if VMOVS will never be widened to VMOVD.
 def FeatureDontWidenVMOVS : SubtargetFeature<"dont-widen-vmovs",
                                              "DontWidenVMOVS", "true",
                                              "Don't widen VMOVS to VMOVD">;
 
 // Some targets (e.g. Cortex-A15) prefer to avoid mixing operations on different
 // VFP register widths.
+// True if splat a register between VFP and NEON instructions.
 def FeatureSplatVFPToNeon : SubtargetFeature<"splat-vfp-neon",
-                                             "SplatVFPToNeon", "true",
+                                             "UseSplatVFPToNeon", "true",
                                              "Splat register from VFP to NEON",
                                              [FeatureDontWidenVMOVS]>;
 
 // Whether or not it is profitable to expand VFP/NEON MLA/MLS instructions.
+// True if run the MLx expansion pass.
 def FeatureExpandMLx      : SubtargetFeature<"expand-fp-mlx",
                                              "ExpandMLx", "true",
                                              "Expand VFP/NEON MLA/MLS instructions">;
 
 // Some targets have special RAW hazards for VFP/NEON VMLA/VMLS.
+// True if VFP/NEON VMLA/VMLS have special RAW hazards.
 def FeatureHasVMLxHazards : SubtargetFeature<"vmlx-hazards", "HasVMLxHazards",
                                              "true", "Has VMLx hazards">;
 
 // Some targets (e.g. Cortex-A9) want to convert VMOVRS, VMOVSR and VMOVS from
 // VFP to NEON, as an execution domain optimization.
+// True if VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.
 def FeatureNEONForFPMovs  : SubtargetFeature<"neon-fpmovs",
                                              "UseNEONForFPMovs", "true",
                                              "Convert VMOVSR, VMOVRS, "
@@ -281,18 +330,21 @@ def FeatureNEONForFPMovs  : SubtargetFeature<"neon-fpmovs",
 // Some processors benefit from using NEON instructions for scalar
 // single-precision FP operations. This affects instruction selection and should
 // only be enabled if the handling of denormals is not important.
+// Use the method useNEONForSinglePrecisionFP() to determine if NEON should actually be used.
 def FeatureNEONForFP      : SubtargetFeature<"neonfp",
-                                             "UseNEONForSinglePrecisionFP",
+                                             "HasNEONForFP",
                                              "true",
                                              "Use NEON for single precision FP">;
 
 // On some processors, VLDn instructions that access unaligned data take one
 // extra cycle. Take that into account when computing operand latencies.
-def FeatureCheckVLDnAlign : SubtargetFeature<"vldn-align", "CheckVLDnAlign",
+// True if VLDn instructions take an extra cycle for unaligned accesses.
+def FeatureCheckVLDnAlign : SubtargetFeature<"vldn-align", "CheckVLDnAccessAlignment",
                                              "true",
                                              "Check for VLDn unaligned access">;
 
 // Some processors have a nonpipelined VFP coprocessor.
+// True if VFP instructions are not pipelined.
 def FeatureNonpipelinedVFP : SubtargetFeature<"nonpipelined-vfp",
                                               "NonpipelinedVFP", "true",
                                               "VFP instructions are not pipelined">;
@@ -300,20 +352,27 @@ def FeatureNonpipelinedVFP : SubtargetFeature<"nonpipelined-vfp",
 // Some processors have FP multiply-accumulate instructions that don't
 // play nicely with other VFP / NEON instructions, and it's generally better
 // to just not use them.
+// If the VFP2 / NEON instructions are available, indicates
+// whether the FP VML[AS] instructions are slow (if so, don't use them).
 def FeatureHasSlowFPVMLx  : SubtargetFeature<"slowfpvmlx", "SlowFPVMLx", "true",
                                              "Disable VFP / NEON MAC instructions">;
 
-// VFPv4 added VFMA instructions that can similar be fast or slow.
+// VFPv4 added VFMA instructions that can similarly be fast or slow.
+// If the VFP4 / NEON instructions are available, indicates
+// whether the FP VFM[AS] instructions are slow (if so, don't use them).
 def FeatureHasSlowFPVFMx  : SubtargetFeature<"slowfpvfmx", "SlowFPVFMx", "true",
                                              "Disable VFP / NEON FMA instructions">;
 
 // Cortex-A8 / A9 Advanced SIMD has multiplier accumulator forwarding.
+/// True if NEON has special multiplier accumulator
+/// forwarding to allow mul + mla being issued back to back.
 def FeatureVMLxForwarding : SubtargetFeature<"vmlx-forwarding",
                                              "HasVMLxForwarding", "true",
                                              "Has multiplier accumulator forwarding">;
 
 // Disable 32-bit to 16-bit narrowing for experimentation.
-def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Pref32BitThumb", "true",
+// True if codegen would prefer 32-bit Thumb instructions over 16-bit ones.
+def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true",
                                              "Prefer 32-bit Thumb instrs">;
 
 def FeaturePrefLoopAlign32 : SubtargetFeature<"loop-align", "PrefLoopLogAlignment","2",
@@ -332,17 +391,22 @@ def FeatureMVEVectorCostFactor4 : SubtargetFeature<"mve4beat", "MVEVectorCostFac
 /// out-of-order implementation, e.g. Cortex-A9, unless each individual bit is
 /// mapped to a separate physical register. Avoid partial CPSR update for these
 /// processors.
+/// True if codegen would avoid using instructions
+/// that partially update CPSR and add false dependency on the previous
+/// CPSR setting instruction.
 def FeatureAvoidPartialCPSR : SubtargetFeature<"avoid-partial-cpsr",
                                                "AvoidCPSRPartialUpdate", "true",
                                  "Avoid CPSR partial update for OOO execution">;
 
 /// Disable +1 predication cost for instructions updating CPSR.
 /// Enabled for Cortex-A57.
+/// True if disable +1 predication cost for instructions updating CPSR. Enabled for Cortex-A57.
 def FeatureCheapPredicableCPSR : SubtargetFeature<"cheap-predicable-cpsr",
                                                   "CheapPredicableCPSRDef",
                                                   "true",
                   "Disable +1 predication cost for instructions updating CPSR">;
 
+// True if codegen should avoid using flag setting movs with shifter operand (i.e. asr, lsl, lsr).
 def FeatureAvoidMOVsShOp  : SubtargetFeature<"avoid-movs-shop",
                                              "AvoidMOVsShifterOperand", "true",
                                              "Avoid movs instructions with "
@@ -357,16 +421,20 @@ def FeatureHasRetAddrStack : SubtargetFeature<"ret-addr-stack",
 // Some processors have no branch predictor, which changes the expected cost of
 // taking a branch which affects the choice of whether to use predicated
 // instructions.
+// True if the subtarget has a branch predictor. Having
+// a branch predictor or not changes the expected cost of taking a branch
+// which affects the choice of whether to use predicated instructions.
 def FeatureHasNoBranchPredictor : SubtargetFeature<"no-branch-predictor",
                                                    "HasBranchPredictor", "false",
                                                    "Has no branch predictor">;
 
 /// DSP extension.
+/// True if the subtarget supports the DSP (saturating arith and such) instructions.
 def FeatureDSP            : SubtargetFeature<"dsp", "HasDSP", "true",
                                              "Supports DSP instructions in "
                                              "ARM and/or Thumb2">;
 
-// Multiprocessing extension.
+// True if the subtarget supports Multiprocessing extension (ARMv7 only).
 def FeatureMP             : SubtargetFeature<"mp", "HasMPExtension", "true",
                                         "Supports Multiprocessing extension">;
 
@@ -378,31 +446,42 @@ def FeatureVirtualization : SubtargetFeature<"virtualization",
 
 // Special TRAP encoding for NaCl, which looks like a TRAP in Thumb too.
 // See ARMInstrInfo.td for details.
+// True if NaCl TRAP instruction is generated instead of the regular TRAP.
 def FeatureNaClTrap       : SubtargetFeature<"nacl-trap", "UseNaClTrap", "true",
                                              "NaCl trap">;
 
+// True if the subtarget disallows unaligned memory
+// accesses for some types.  For details, see
+// ARMTargetLowering::allowsMisalignedMemoryAccesses().
 def FeatureStrictAlign    : SubtargetFeature<"strict-align",
                                              "StrictAlign", "true",
                                              "Disallow all unaligned memory "
                                              "access">;
 
+// Generate calls via indirect call instructions.
 def FeatureLongCalls      : SubtargetFeature<"long-calls", "GenLongCalls", "true",
                                              "Generate calls via indirect call "
                                              "instructions">;
 
+// Generate code that does not contain data access to code sections.
 def FeatureExecuteOnly    : SubtargetFeature<"execute-only",
                                              "GenExecuteOnly", "true",
                                              "Enable the generation of "
                                              "execute only code.">;
 
+// True if R9 is not available as a general purpose register.
 def FeatureReserveR9      : SubtargetFeature<"reserve-r9", "ReserveR9", "true",
                                              "Reserve R9, making it unavailable"
                                              " as GPR">;
 
+// True if MOVT / MOVW pairs are not used for materialization of
+// 32-bit imms (including global addresses).
 def FeatureNoMovt         : SubtargetFeature<"no-movt", "NoMovt", "true",
                                              "Don't use movt/movw pairs for "
                                              "32-bit imms">;
 
+/// Implicitly convert an instruction to a different one if its immediates
+/// cannot be encoded. For example, ADD r0, r1, #FFFFFFFF -> SUB r0, r1, #1.
 def FeatureNoNegativeImmediates
                           : SubtargetFeature<"no-neg-immediates",
                                              "NegativeImmediates", "false",
@@ -415,28 +494,35 @@ def FeatureNoNegativeImmediates
 def FeatureUseMISched: SubtargetFeature<"use-misched", "UseMISched", "true",
                                         "Use the MachineScheduler">;
 
+// False if scheduling should happen again after register allocation.
 def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
     "DisablePostRAScheduler", "true",
     "Don't schedule again after register allocation">;
 
 // Armv8.5-A extensions
 
+// Has speculation barrier.
 def FeatureSB       : SubtargetFeature<"sb", "HasSB", "true",
   "Enable v8.5a Speculation Barrier" >;
 
 // Armv8.6-A extensions
+
+// True if subtarget supports BFloat16 floating point operations.
 def FeatureBF16     : SubtargetFeature<"bf16", "HasBF16", "true",
   "Enable support for BFloat16 instructions",  [FeatureNEON]>;
 
+// True if subtarget supports 8-bit integer matrix multiply.
 def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
     "true", "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
 
 // Armv8.1-M extensions
 
+// True if the processor supports the Low Overhead Branch extension.
 def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
                                              "Enable Low Overhead Branch "
                                              "extensions">;
 
+// Mitigate against the cve-2021-35465 security vulnurability.
 def FeatureFixCMSE_CVE_2021_35465 : SubtargetFeature<"fix-cmse-cve-2021-35465",
                                         "FixCMSE_CVE_2021_35465", "true",
                                         "Mitigate against the cve-2021-35465 "
@@ -446,6 +532,7 @@ def FeaturePACBTI         : SubtargetFeature<"pacbti", "HasPACBTI", "true",
                                              "Enable Pointer Authentication and Branch "
                                              "Target Identification">;
 
+/// Don't place a BTI instruction after return-twice constructs (setjmp).
 def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "NoBTIAtReturnTwice", "true",
                                                  "Don't place a BTI instruction "
@@ -467,16 +554,18 @@ def FeatureRClass : SubtargetFeature<"rclass", "ARMProcClass", "RClass",
 def FeatureMClass : SubtargetFeature<"mclass", "ARMProcClass", "MClass",
                                      "Is microcontroller profile ('M' series)">;
 
-
+// True if Thumb2 instructions are supported.
 def FeatureThumb2 : SubtargetFeature<"thumb2", "HasThumb2", "true",
                                      "Enable Thumb2 instructions">;
 
+// True if subtarget does not support ARM mode execution.
 def FeatureNoARM  : SubtargetFeature<"noarm", "NoARM", "true",
                                      "Does not support ARM mode execution">;
 
 //===----------------------------------------------------------------------===//
 // ARM ISAa.
 //
+// Specify whether target support specific ARM ISA variants.
 
 def HasV4TOps   : SubtargetFeature<"v4t", "HasV4TOps", "true",
                                    "Support ARM v4T instructions">;
@@ -599,13 +688,16 @@ foreach i = {0-7} in
 // Control codegen mitigation against Straight Line Speculation vulnerability.
 //===----------------------------------------------------------------------===//
 
+/// Harden against Straight Line Speculation for Returns and Indirect Branches.
 def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
   "HardenSlsRetBr", "true",
   "Harden against straight line speculation across RETurn and BranchRegister "
   "instructions">;
+/// Harden against Straight Line Speculation for indirect calls.
 def FeatureHardenSlsBlr : SubtargetFeature<"harden-sls-blr",
   "HardenSlsBlr", "true",
   "Harden against straight line speculation across indirect calls">;
+/// Generate thunk code for SLS mitigation in the normal text section.
 def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
   "HardenSlsNoComdat", "true",
   "Generate thunk code for SLS mitigation in the normal text section">;
