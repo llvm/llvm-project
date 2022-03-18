@@ -759,6 +759,11 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
       if (attr.cast<IntegerAttr>().getInt() == 1)
         unusedDims.set(dim.index());
 
+  // Early exit for the case where the number of unused dims matches the number
+  // of ranks reduced.
+  if (unusedDims.count() + reducedType.getRank() == originalType.getRank())
+    return unusedDims;
+
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
   if (failed(
