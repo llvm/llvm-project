@@ -4,14 +4,9 @@
 ; Test case from PR54023. After SimpleLoopUnswitch, one of the loops processed
 ; by LoopSimplifyCFG will have exit blocks with predecessors outside the loop
 ; (i.e. it is not in loop-simplify/canonical form).
-; FIXME: currently %res gets incorrectly replaced with undef.
 define i32 @test(i32 %v, i1 %c.1, i1 %c.2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    switch i32 0, label [[ENTRY_SPLIT:%.*]] [
-; CHECK-NEXT:    i32 1, label [[EXIT_SPLIT:%.*]]
-; CHECK-NEXT:    ]
-; CHECK:       entry.split:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
 ; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[OUTER_LATCH:%.*]], label [[INNER_HEADER_PREHEADER:%.*]]
@@ -28,9 +23,10 @@ define i32 @test(i32 %v, i1 %c.1, i1 %c.2) {
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i32 [ [[V]], [[INNER_HEADER]] ]
-; CHECK-NEXT:    br label [[EXIT_SPLIT]]
+; CHECK-NEXT:    br label [[EXIT_SPLIT:%.*]]
 ; CHECK:       exit.split:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    [[RES_SPLIT:%.*]] = phi i32 [ [[RES]], [[EXIT]] ]
+; CHECK-NEXT:    ret i32 [[RES_SPLIT]]
 ;
 entry:
   br label %outer.header
