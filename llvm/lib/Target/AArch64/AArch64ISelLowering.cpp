@@ -1108,6 +1108,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::EXTLOAD,  MVT::v4i32, MVT::v4i8, Custom);
     setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
     setLoadExtAction(ISD::ZEXTLOAD, MVT::v4i32, MVT::v4i8, Custom);
+
+    setOperationAction(ISD::CONCAT_VECTORS, MVT::v4i8, Custom);
   }
 
   if (Subtarget->hasSVE()) {
@@ -11014,6 +11016,40 @@ SDValue AArch64TargetLowering::LowerCONCAT_VECTORS(SDValue Op,
   if (useSVEForFixedLengthVectorVT(Op.getValueType()))
     return LowerFixedLengthConcatVectorsToSVE(Op, DAG);
 
+  if (Op.getOperand(0).getValueType() == MVT::v4i8) {
+    // If we have a concat of v4i8 loads, convert them to a buildvector of f32
+    // loads to prevent having to go through the v4i8 load legalization that
+    // needs to extend each element into a larger type.
+    if (Op.getNumOperands() % 2 == 0 && all_of(Op->op_values(), [](SDValue V) {
+          return V.getValueType() == MVT::v4i8 &&
+                 (V.getOpcode() == ISD::LOAD || V.isUndef());
+        })) {
+      EVT NVT =
+          EVT::getVectorVT(*DAG.getContext(), MVT::f32, Op.getNumOperands());
+      SmallVector<SDValue> Ops;
+      SDLoc DL(Op);
+
+      for (unsigned i = 0; i < Op.getNumOperands(); i++) {
+        SDValue V = Op.getOperand(i);
+        if (V.isUndef())
+          Ops.push_back(DAG.getUNDEF(MVT::f32));
+        else {
+          LoadSDNode *LD = cast<LoadSDNode>(V);
+          if (!LD->isSimple() || LD->isIndexed() ||
+              LD->getExtensionType() != ISD::NON_EXTLOAD)
+            return SDValue();
+          Ops.push_back(DAG.getLoad(MVT::f32, DL, LD->getChain(),
+                                    LD->getBasePtr(), LD->getMemOperand()));
+        }
+      }
+      return DAG.getBitcast(Op.getValueType(),
+                            DAG.getBuildVector(NVT, DL, Ops));
+    }
+
+    // Let the default expansion happen
+    return SDValue();
+  }
+
   assert(Op.getValueType().isScalableVector() &&
          isTypeLegal(Op.getValueType()) &&
          "Expected legal scalable vector type!");
@@ -19116,8 +19152,10 @@ void AArch64TargetLowering::ReplaceNodeResults(
     ReplaceExtractSubVectorResults(N, Results, DAG);
     return;
   case ISD::INSERT_SUBVECTOR:
-    // Custom lowering has been requested for INSERT_SUBVECTOR -- but delegate
-    // to common code for result type legalisation
+  case ISD::CONCAT_VECTORS:
+    // Custom lowering has been requested for INSERT_SUBVECTOR and
+    // CONCAT_VECTORS -- but delegate to common code for result type
+    // legalisation
     return;
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);
