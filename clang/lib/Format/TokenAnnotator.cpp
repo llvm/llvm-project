@@ -4601,8 +4601,8 @@ void TokenAnnotator::printDebugInfo(const AnnotatedLine &Line) {
                  << " BK=" << Tok->getBlockKind() << " P=" << Tok->SplitPenalty
                  << " Name=" << Tok->Tok.getName() << " L=" << Tok->TotalLength
                  << " PPK=" << Tok->getPackingKind() << " FakeLParens=";
-    for (unsigned i = 0, e = Tok->FakeLParens.size(); i != e; ++i)
-      llvm::errs() << Tok->FakeLParens[i] << "/";
+    for (prec::Level LParen : Tok->FakeLParens)
+      llvm::errs() << LParen << "/";
     llvm::errs() << " FakeRParens=" << Tok->FakeRParens;
     llvm::errs() << " II=" << Tok->Tok.getIdentifierInfo();
     llvm::errs() << " Text='" << Tok->TokenText << "'\n";
