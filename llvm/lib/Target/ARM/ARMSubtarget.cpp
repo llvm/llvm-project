@@ -245,7 +245,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   const FeatureBitset &Bits = getFeatureBits();
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
       (Options.UnsafeFPMath || isTargetDarwin()))
-    HasNEONForFP = true;
+    UseNEONForSinglePrecisionFP = true;
 
   if (isRWPI())
     ReserveR9 = true;

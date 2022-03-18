@@ -57,7 +57,6 @@ namespace ranges {
   constexpr mismatch_result<borrowed_iterator_t<R1>, borrowed_iterator_t<R2>>
   mismatch(R1&& r1, R2&& r2, Pred pred = {}, Proj1 proj1 = {}, Proj2 proj2 = {})                           // since C++20
 
-  template<input_iterator I, sentinel_for<I> S, class T, class Proj = identity>
     requires indirect_binary_predicate<ranges::equal_to, projected<I, Proj>, const T*>
     constexpr I find(I first, S last, const T& value, Proj proj = {});              // since C++20
 
@@ -83,9 +82,22 @@ namespace ranges {
            indirect_unary_predicate<projected<iterator_t<R>, Proj>> Pred>
     constexpr borrowed_iterator_t<R>
       find_if_not(R&& r, Pred pred, Proj proj = {});                                // since C++20
+
+ template<class T, class Proj = identity,
+          indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+   constexpr const T& min(const T& a, const T& b, Comp comp = {}, Proj proj = {});  // since C++20
+
+ template<copyable T, class Proj = identity,
+          indirect_strict_weak_order<projected<const T*, Proj>> Comp = ranges::less>
+   constexpr T min(initializer_list<T> r, Comp comp = {}, Proj proj = {});          // since C++20
+
+ template<input_range R, class Proj = identity,
+          indirect_strict_weak_order<projected<iterator_t<R>, Proj>> Comp = ranges::less>
+   requires indirectly_copyable_storable<iterator_t<R>, range_value_t<R>*>
+   constexpr range_value_t<R>
+     min(R&& r, Comp comp = {}, Proj proj = {});                                    // since C++20
 }
 
-template <class InputIterator, class Predicate>
     constexpr bool     // constexpr in C++20
     all_of(InputIterator first, InputIterator last, Predicate pred);
 
@@ -804,6 +816,7 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/ranges_find_if.h>
 #include <__algorithm/ranges_find_if_not.h>
 #include <__algorithm/ranges_max_element.h>
+#include <__algorithm/ranges_min.h>
 #include <__algorithm/ranges_min_element.h>
 #include <__algorithm/ranges_mismatch.h>
 #include <__algorithm/ranges_swap_ranges.h>
