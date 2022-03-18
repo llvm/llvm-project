@@ -15,7 +15,7 @@
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Process.h"
@@ -23,10 +23,6 @@
 
 #include "Plugins/Language/ObjC/NSDictionary.h"
 
-#include "swift/AST/ASTContext.h"
-#include "swift/AST/Types.h"
-#include "swift/Remote/RemoteAddress.h"
-#include "swift/RemoteAST/RemoteAST.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <algorithm>
@@ -460,7 +456,7 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
       auto *runtime = SwiftLanguageRuntime::Get(m_process);
       if (!runtime)
         return;
-      std::vector<SwiftASTContext::TupleElement> tuple_elements{
+      std::vector<TypeSystemSwift::TupleElement> tuple_elements{
           {g_key, key_type}, {g_value, value_type}};
       m_element_type = type_system->CreateTupleType(tuple_elements);
       auto *swift_type = 
