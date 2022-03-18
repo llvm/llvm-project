@@ -873,15 +873,35 @@ static Value genAddress(CodeGen &codegen, PatternRewriter &rewriter,
 }
 
 /// Generates an index value.
-static Value genIndexValue(Merger &merger, CodeGen &codegen, unsigned exp) {
-  assert(codegen.curVecLength == 1); // TODO: implement vectorization!
+static Value genIndexValue(Merger &merger, CodeGen &codegen,
+                           PatternRewriter &rewriter, unsigned exp,
+                           unsigned ldx) {
   unsigned idx = merger.exp(exp).index;
-  return codegen.loops[idx];
+  Value ival = codegen.loops[idx];
+  Type itype = ival.getType();
+  // During vectorization, we either encounter:
+  // (1) indices already in vector form, as in ... = ind[lo:hi], good to go, or
+  // (2) single index, as in ... = i, must convert to [i, i+1, ...] for inner i.
+  unsigned vl = codegen.curVecLength;
+  if (vl > 1 && !itype.isa<VectorType>()) {
+    Location loc = ival.getLoc();
+    VectorType vtp = vectorType(codegen, itype);
+    ival = rewriter.create<vector::BroadcastOp>(loc, vtp, ival);
+    if (idx == ldx) {
+      SmallVector<APInt, 4> integers;
+      for (unsigned i = 0; i < vl; i++)
+        integers.push_back(APInt(/*width=*/64, i));
+      auto values = DenseElementsAttr::get(vtp, integers);
+      Value incr = rewriter.create<arith::ConstantOp>(loc, vtp, values);
+      ival = rewriter.create<arith::AddIOp>(loc, ival, incr);
+    }
+  }
+  return ival;
 }
 
 /// Recursively generates tensor expression.
 static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
-                    linalg::GenericOp op, unsigned exp) {
+                    linalg::GenericOp op, unsigned exp, unsigned ldx) {
   Location loc = op.getLoc();
   if (exp == -1u)
     return Value();
@@ -890,9 +910,11 @@ static Value genExp(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
   if (merger.exp(exp).kind == Kind::kInvariant)
     return genInvariantValue(merger, codegen, rewriter, exp);
   if (merger.exp(exp).kind == Kind::kIndex)
-    return genIndexValue(merger, codegen, exp);
-  Value v0 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0);
-  Value v1 = genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1);
+    return genIndexValue(merger, codegen, rewriter, exp, ldx);
+  Value v0 =
+      genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e0, ldx);
+  Value v1 =
+      genExp(merger, codegen, rewriter, op, merger.exp(exp).children.e1, ldx);
   return merger.buildExp(rewriter, loc, exp, v0, v1);
 }
 
@@ -1561,7 +1583,8 @@ static void genStmt(Merger &merger, CodeGen &codegen, PatternRewriter &rewriter,
                     unsigned exp, unsigned at) {
   // At each leaf, assign remaining tensor (sub)expression to output tensor.
   if (at == topSort.size()) {
-    Value rhs = genExp(merger, codegen, rewriter, op, exp);
+    unsigned ldx = topSort[at - 1];
+    Value rhs = genExp(merger, codegen, rewriter, op, exp, ldx);
     genTensorStore(merger, codegen, rewriter, op, rhs);
     return;
   }
@@ -1645,7 +1668,6 @@ public:
 
   LogicalResult matchAndRewrite(linalg::GenericOp op,
                                 PatternRewriter &rewriter) const override {
-
     // Detects sparse annotations and translate the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
     assert(op.getNumOutputs() == 1);
