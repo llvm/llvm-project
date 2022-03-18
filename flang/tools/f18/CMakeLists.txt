@@ -57,3 +57,6 @@ if (NOT WIN32)
   add_custom_target(flang ALL DEPENDS ${CMAKE_BINARY_DIR}/bin/flang)
   install(PROGRAMS ${CMAKE_BINARY_DIR}/bin/flang DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
+
+# TODO Move this to a more suitable location
+file(COPY ${FLANG_SOURCE_DIR}/module/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
