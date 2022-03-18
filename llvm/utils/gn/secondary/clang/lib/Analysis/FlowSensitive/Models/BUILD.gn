@@ -8,5 +8,8 @@ static_library("Models") {
     "//clang/lib/Analysis/FlowSensitive",
     "//clang/lib/Basic",
   ]
-  sources = [ "UncheckedOptionalAccessModel.cpp" ]
+  sources = [
+    "ChromiumCheckModel.cpp",
+    "UncheckedOptionalAccessModel.cpp",
+  ]
 }
