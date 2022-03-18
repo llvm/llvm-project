@@ -544,10 +544,10 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
   // i8 register pressure.
   defm _GR8 : CMOVrr_PSEUDO<GR8, i8>;
 
-  let Predicates = [NoCMov] in {
+  let Predicates = [NoCMOV] in {
     defm _GR32 : CMOVrr_PSEUDO<GR32, i32>;
     defm _GR16 : CMOVrr_PSEUDO<GR16, i16>;
-  } // Predicates = [NoCMov]
+  } // Predicates = [NoCMOV]
 
   // fcmov doesn't handle all possible EFLAGS, provide a fallback if there is no
   // SSE1/SSE2.
