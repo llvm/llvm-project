@@ -1092,7 +1092,9 @@ public:
 
   template <int KIND>
   ExtValue genval(const Fortran::evaluate::SetLength<KIND> &x) {
-    TODO(getLoc(), "genval SetLength<KIND>");
+    mlir::Value newLenValue = genunbox(x.right());
+    fir::ExtendedValue lhs = gen(x.left());
+    return replaceScalarCharacterLength(lhs, newLenValue);
   }
 
   template <int KIND>
@@ -1826,7 +1828,7 @@ public:
   template <typename A>
   ExtValue genFunctionRef(const Fortran::evaluate::FunctionRef<A> &funcRef) {
     if (!funcRef.GetType().has_value())
-      fir::emitFatalError(getLoc(), "internal: a function must have a type");
+      fir::emitFatalError(getLoc(), "a function must have a type");
     mlir::Type resTy = genType(*funcRef.GetType());
     return genProcedureRef(funcRef, {resTy});
   }
@@ -1836,12 +1838,8 @@ public:
   template <typename A>
   ExtValue gen(const Fortran::evaluate::FunctionRef<A> &funcRef) {
     ExtValue retVal = genFunctionRef(funcRef);
-    mlir::Value retValBase = fir::getBase(retVal);
-    if (fir::conformsWithPassByRef(retValBase.getType()))
-      return retVal;
-    auto mem = builder.create<fir::AllocaOp>(getLoc(), retValBase.getType());
-    builder.create<fir::StoreOp>(getLoc(), retValBase, mem);
-    return fir::substBase(retVal, mem.getResult());
+    mlir::Type resultType = converter.genType(toEvExpr(funcRef));
+    return placeScalarValueInMemory(builder, getLoc(), retVal, resultType);
   }
 
   /// helper to detect statement functions
@@ -2457,6 +2455,25 @@ public:
           caller.placeInput(arg, boxStorage);
           continue;
         }
+        if (fir::isPointerType(argTy) &&
+            !Fortran::evaluate::IsObjectPointer(
+                *expr, converter.getFoldingContext())) {
+          // Passing a non POINTER actual argument to a POINTER dummy argument.
+          // Create a pointer of the dummy argument type and assign the actual
+          // argument to it.
+          mlir::Value irBox =
+              builder.createTemporary(loc, fir::unwrapRefType(argTy));
+          // Non deferred parameters will be evaluated on the callee side.
+          fir::MutableBoxValue pointer(irBox,
+                                       /*nonDeferredParams=*/mlir::ValueRange{},
+                                       /*mutableProperties=*/{});
+          Fortran::lower::associateMutableBox(converter, loc, pointer, *expr,
+                                              /*lbounds*/ mlir::ValueRange{},
+                                              stmtCtx);
+          caller.placeInput(arg, irBox);
+          continue;
+        }
+        // Passing a POINTER to a POINTER, or an ALLOCATABLE to an ALLOCATABLE.
         fir::MutableBoxValue mutableBox = genMutableBoxValue(*expr);
         mlir::Value irBox =
             fir::factory::getMutableIRBox(builder, loc, mutableBox);

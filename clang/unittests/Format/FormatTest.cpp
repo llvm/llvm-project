@@ -2767,7 +2767,8 @@ TEST_F(FormatTest, CaseRanges) {
 
 TEST_F(FormatTest, ShortEnums) {
   FormatStyle Style = getLLVMStyle();
-  Style.AllowShortEnumsOnASingleLine = true;
+  EXPECT_TRUE(Style.AllowShortEnumsOnASingleLine);
+  EXPECT_FALSE(Style.BraceWrapping.AfterEnum);
   verifyFormat("enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
   verifyFormat("typedef enum { A, B, C } ShortEnum1, ShortEnum2;", Style);
   Style.AllowShortEnumsOnASingleLine = false;

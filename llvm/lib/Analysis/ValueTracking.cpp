@@ -3397,9 +3397,6 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
 /// NOTE: Do not check 'nsz' here because that fast-math-flag does not guarantee
 ///       that a value is not -0.0. It only guarantees that -0.0 may be treated
 ///       the same as +0.0 in floating-point ops.
-///
-/// NOTE: this function will need to be revisited when we support non-default
-/// rounding modes!
 bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
                                 unsigned Depth) {
   if (auto *CFP = dyn_cast<ConstantFP>(V))
@@ -3429,8 +3426,20 @@ bool llvm::CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
     case Intrinsic::sqrt:
     case Intrinsic::canonicalize:
       return CannotBeNegativeZero(Call->getArgOperand(0), TLI, Depth + 1);
+    case Intrinsic::experimental_constrained_sqrt: {
+      // NOTE: This rounding mode restriction may be too strict.
+      const auto *CI = cast<ConstrainedFPIntrinsic>(Call);
+      if (CI->getRoundingMode() == RoundingMode::NearestTiesToEven)
+        return CannotBeNegativeZero(Call->getArgOperand(0), TLI, Depth + 1);
+      else
+        return false;
+    }
     // fabs(x) != -0.0
     case Intrinsic::fabs:
+      return true;
+    // sitofp and uitofp turn into +0.0 for zero.
+    case Intrinsic::experimental_constrained_sitofp:
+    case Intrinsic::experimental_constrained_uitofp:
       return true;
     }
   }
