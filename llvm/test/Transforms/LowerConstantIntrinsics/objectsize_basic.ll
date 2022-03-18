@@ -144,7 +144,7 @@ declare i8* @malloc(i64)
 define i64 @test_objectsize_malloc() {
 ; CHECK-LABEL: @test_objectsize_malloc(
 ; CHECK-NEXT:    [[PTR:%.*]] = call i8* @malloc(i64 16)
-; CHECK-NEXT:    ret i64 -1
+; CHECK-NEXT:    ret i64 16
 ;
   %ptr = call i8* @malloc(i64 16)
   %objsize = call i64 @llvm.objectsize.i64(i8* %ptr, i1 false, i1 true, i1 true)

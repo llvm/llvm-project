@@ -94,7 +94,7 @@ static bool replaceConditionalBranchesOnConstant(Instruction *II,
   return HasDeadBlocks;
 }
 
-static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo *TLI,
+static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo &TLI,
                                     DominatorTree *DT) {
   Optional<DomTreeUpdater> DTU;
   if (DT)
@@ -138,7 +138,7 @@ static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo *TLI,
       IsConstantIntrinsicsHandled++;
       break;
     case Intrinsic::objectsize:
-      NewValue = lowerObjectSizeCall(II, DL, TLI, true);
+      NewValue = lowerObjectSizeCall(II, DL, &TLI, true);
       ObjectSizeIntrinsicsHandled++;
       break;
     }
@@ -152,7 +152,7 @@ static bool lowerConstantIntrinsics(Function &F, const TargetLibraryInfo *TLI,
 
 PreservedAnalyses
 LowerConstantIntrinsicsPass::run(Function &F, FunctionAnalysisManager &AM) {
-  if (lowerConstantIntrinsics(F, AM.getCachedResult<TargetLibraryAnalysis>(F),
+  if (lowerConstantIntrinsics(F, AM.getResult<TargetLibraryAnalysis>(F),
                               AM.getCachedResult<DominatorTreeAnalysis>(F))) {
     PreservedAnalyses PA;
     PA.preserve<DominatorTreeAnalysis>();
@@ -176,8 +176,8 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
-    auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-    const TargetLibraryInfo *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
+    const TargetLibraryInfo &TLI =
+        getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
     DominatorTree *DT = nullptr;
     if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
       DT = &DTWP->getDomTree();
@@ -185,6 +185,7 @@ public:
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
@@ -194,6 +195,7 @@ public:
 char LowerConstantIntrinsics::ID = 0;
 INITIALIZE_PASS_BEGIN(LowerConstantIntrinsics, "lower-constant-intrinsics",
                       "Lower constant intrinsics", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(LowerConstantIntrinsics, "lower-constant-intrinsics",
                     "Lower constant intrinsics", false, false)
