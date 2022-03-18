@@ -2,13 +2,13 @@
 
 define internal void @f() {
 ; CHECK-NOT: @f(
-; CHECK: define void @a
+; CHECK: define dso_local void @a
 	ret void
 }
 
-@a = alias void (), void ()* @f
+@a = dso_local alias void (), void ()* @f
 
-define void @g() {
+define hidden void @g() {
 	call void() @a()
 	ret void
 }

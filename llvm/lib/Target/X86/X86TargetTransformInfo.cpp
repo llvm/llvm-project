@@ -3589,6 +3589,12 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
   if (Index != -1U && (Opcode == Instruction::ExtractElement ||
                        Opcode == Instruction::InsertElement)) {
+    // Extraction of vXi1 elements are now efficiently handled by MOVMSK.
+    if (Opcode == Instruction::ExtractElement &&
+        ScalarType->getScalarSizeInBits() == 1 &&
+        cast<FixedVectorType>(Val)->getNumElements() > 1)
+      return 1;
+
     // Legalize the type.
     std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Val);
 

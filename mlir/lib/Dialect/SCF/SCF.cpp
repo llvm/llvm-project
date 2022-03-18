@@ -1326,6 +1326,8 @@ struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
   }
 };
 
+/// Hoist any yielded results whose operands are defined outside
+/// the if, to a select instruction.
 struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
   using OpRewritePattern<IfOp>::OpRewritePattern;
 
@@ -1334,30 +1336,57 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
     if (op->getNumResults() == 0)
       return failure();
 
-    if (!llvm::hasSingleElement(op.getThenRegion().front()) ||
-        !llvm::hasSingleElement(op.getElseRegion().front()))
-      return failure();
-
     auto cond = op.getCondition();
-    auto thenYieldArgs =
-        cast<scf::YieldOp>(op.getThenRegion().front().getTerminator())
-            .getOperands();
-    auto elseYieldArgs =
-        cast<scf::YieldOp>(op.getElseRegion().front().getTerminator())
-            .getOperands();
-    SmallVector<Value> results(op->getNumResults());
-    assert(thenYieldArgs.size() == results.size());
-    assert(elseYieldArgs.size() == results.size());
+    auto thenYieldArgs = op.thenYield().getOperands();
+    auto elseYieldArgs = op.elseYield().getOperands();
+
+    SmallVector<Type> nonHoistable;
     for (const auto &it :
          llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
       Value trueVal = std::get<0>(it.value());
       Value falseVal = std::get<1>(it.value());
-      if (trueVal == falseVal)
+      if (&op.getThenRegion() == trueVal.getParentRegion() ||
+          &op.getElseRegion() == falseVal.getParentRegion())
+        nonHoistable.push_back(trueVal.getType());
+    }
+    // Early exit if there aren't any yielded values we can
+    // hoist outside the if.
+    if (nonHoistable.size() == op->getNumResults())
+      return failure();
+
+    IfOp replacement = rewriter.create<IfOp>(op.getLoc(), nonHoistable, cond);
+    if (replacement.thenBlock())
+      rewriter.eraseBlock(replacement.thenBlock());
+    replacement.getThenRegion().takeBody(op.getThenRegion());
+    replacement.getElseRegion().takeBody(op.getElseRegion());
+
+    SmallVector<Value> results(op->getNumResults());
+    assert(thenYieldArgs.size() == results.size());
+    assert(elseYieldArgs.size() == results.size());
+
+    SmallVector<Value> trueYields;
+    SmallVector<Value> falseYields;
+    for (const auto &it :
+         llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
+      Value trueVal = std::get<0>(it.value());
+      Value falseVal = std::get<1>(it.value());
+      if (&replacement.getThenRegion() == trueVal.getParentRegion() ||
+          &replacement.getElseRegion() == falseVal.getParentRegion()) {
+        results[it.index()] = replacement.getResult(trueYields.size());
+        trueYields.push_back(trueVal);
+        falseYields.push_back(falseVal);
+      } else if (trueVal == falseVal)
         results[it.index()] = trueVal;
       else
         results[it.index()] = rewriter.create<arith::SelectOp>(
             op.getLoc(), cond, trueVal, falseVal);
     }
+
+    rewriter.setInsertionPointToEnd(replacement.thenBlock());
+    rewriter.replaceOpWithNewOp<YieldOp>(replacement.thenYield(), trueYields);
+
+    rewriter.setInsertionPointToEnd(replacement.elseBlock());
+    rewriter.replaceOpWithNewOp<YieldOp>(replacement.elseYield(), falseYields);
 
     rewriter.replaceOp(op, results);
     return success();
@@ -1717,27 +1746,65 @@ struct CombineNestedIfs : public OpRewritePattern<IfOp> {
 
   LogicalResult matchAndRewrite(IfOp op,
                                 PatternRewriter &rewriter) const override {
-    // Both `if` ops must not yield results and have only `then` block.
-    if (op->getNumResults() != 0 || op.elseBlock())
-      return failure();
-
     auto nestedOps = op.thenBlock()->without_terminator();
     // Nested `if` must be the only op in block.
     if (!llvm::hasSingleElement(nestedOps))
       return failure();
 
-    auto nestedIf = dyn_cast<IfOp>(*nestedOps.begin());
-    if (!nestedIf || nestedIf->getNumResults() != 0 || nestedIf.elseBlock())
+    // If there is an else block, it can only yield
+    if (op.elseBlock() && !llvm::hasSingleElement(*op.elseBlock()))
       return failure();
+
+    auto nestedIf = dyn_cast<IfOp>(*nestedOps.begin());
+    if (!nestedIf)
+      return failure();
+
+    if (nestedIf.elseBlock() && !llvm::hasSingleElement(*nestedIf.elseBlock()))
+      return failure();
+
+    SmallVector<Value> thenYield(op.thenYield().getOperands());
+    SmallVector<Value> elseYield;
+    if (op.elseBlock())
+      llvm::append_range(elseYield, op.elseYield().getOperands());
+
+    // If the outer scf.if yields a value produced by the inner scf.if,
+    // only permit combining if the value yielded when the condition
+    // is false in the outer scf.if is the same value yielded when the
+    // inner scf.if condition is false.
+    // Note that the array access to elseYield will not go out of bounds
+    // since it must have the same length as thenYield, since they both
+    // come from the same scf.if.
+    for (auto tup : llvm::enumerate(thenYield)) {
+      if (tup.value().getDefiningOp() == nestedIf) {
+        auto nestedIdx = tup.value().cast<OpResult>().getResultNumber();
+        if (nestedIf.elseYield().getOperand(nestedIdx) !=
+            elseYield[tup.index()]) {
+          return failure();
+        }
+        // If the correctness test passes, we will yield
+        // corresponding value from the inner scf.if
+        thenYield[tup.index()] = nestedIf.thenYield().getOperand(nestedIdx);
+      }
+    }
 
     Location loc = op.getLoc();
     Value newCondition = rewriter.create<arith::AndIOp>(
         loc, op.getCondition(), nestedIf.getCondition());
-    auto newIf = rewriter.create<IfOp>(loc, newCondition);
+    auto newIf = rewriter.create<IfOp>(loc, op.getResultTypes(), newCondition);
     Block *newIfBlock = newIf.thenBlock();
-    rewriter.eraseOp(newIfBlock->getTerminator());
+    if (newIfBlock)
+      rewriter.eraseOp(newIfBlock->getTerminator());
+    else
+      newIfBlock = rewriter.createBlock(&newIf.getThenRegion());
     rewriter.mergeBlocks(nestedIf.thenBlock(), newIfBlock);
-    rewriter.eraseOp(op);
+    rewriter.setInsertionPointToEnd(newIf.thenBlock());
+    rewriter.replaceOpWithNewOp<YieldOp>(newIf.thenYield(), thenYield);
+    if (!elseYield.empty()) {
+      rewriter.createBlock(&newIf.getElseRegion());
+      rewriter.setInsertionPointToEnd(newIf.elseBlock());
+      rewriter.create<YieldOp>(loc, elseYield);
+    }
+    rewriter.replaceOp(op, newIf.getResults());
     return success();
   }
 };

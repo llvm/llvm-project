@@ -1688,7 +1688,7 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) {
         NeedWaitStates = SMFMA4x4WriteVgprVALUMemExpReadWaitStates;
         break;
       case 4:
-        assert(isDGEMM(MFMA->getOpcode()));
+        assert(isDGEMM(MFMA->getOpcode()) || ST.hasGFX940Insts());
         NeedWaitStates =
             IsMemOrExport ? DMFMA4x4WriteVgprMemExpReadWaitStates
                           : DMFMA4x4WriteVgprVALUReadWaitStates;

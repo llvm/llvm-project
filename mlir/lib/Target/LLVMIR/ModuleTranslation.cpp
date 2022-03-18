@@ -836,8 +836,8 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
       if (!argTy.isa<LLVM::LLVMPointerType>())
         return func.emitError(
             "llvm.align attribute attached to LLVM non-pointer argument");
-      llvmArg.addAttrs(
-          llvm::AttrBuilder(llvmArg.getContext()).addAlignmentAttr(llvm::Align(attr.getInt())));
+      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                           .addAlignmentAttr(llvm::Align(attr.getInt())));
     }
 
     if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.sret")) {
@@ -857,6 +857,15 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
             "llvm.byval attribute attached to LLVM non-pointer argument");
       llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
                            .addByValAttr(convertType(argTy.getElementType())));
+    }
+
+    if (auto attr = func.getArgAttrOfType<UnitAttr>(argIdx, "llvm.nest")) {
+      auto argTy = mlirArg.getType();
+      if (!argTy.isa<LLVM::LLVMPointerType>())
+        return func.emitError(
+            "llvm.nest attribute attached to LLVM non-pointer argument");
+      llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                           .addAttribute(llvm::Attribute::Nest));
     }
 
     mapValue(mlirArg, &llvmArg);

@@ -272,16 +272,6 @@ struct CGSCCUpdateResult {
   /// the list and removing entries from it.
   SmallPtrSetImpl<LazyCallGraph::SCC *> &InvalidatedSCCs;
 
-  /// If non-null, the updated current \c RefSCC being processed.
-  ///
-  /// This is set when a graph refinement takes place and the "current" point
-  /// in the graph moves "down" or earlier in the post-order walk. This will
-  /// often cause the "current" RefSCC to be a newly created RefSCC object and
-  /// the old one to be added to the above worklist. When that happens, this
-  /// pointer is non-null and can be used to continue processing the "top" of
-  /// the post-order walk.
-  LazyCallGraph::RefSCC *UpdatedRC;
-
   /// If non-null, the updated current \c SCC being processed.
   ///
   /// This is set when a graph refinement takes place and the "current" point

@@ -2660,9 +2660,7 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
 
   FlatAffineValueConstraints cst;
   SmallVector<Operation *, 8> ops;
-  ops.reserve(loops.size());
-  for (AffineForOp forOp : loops)
-    ops.push_back(forOp);
+  llvm::append_range(ops, loops);
   (void)getIndexSet(ops, &cst);
 
   // Remove constraints that are independent of these loop IVs.

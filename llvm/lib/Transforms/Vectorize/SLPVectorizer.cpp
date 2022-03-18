@@ -41,8 +41,6 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/MemorySSA.h"
-#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -167,10 +165,6 @@ static cl::opt<int> LookAheadMaxDepth(
 static cl::opt<bool>
     ViewSLPTree("view-slp-tree", cl::Hidden,
                 cl::desc("Display the SLP trees with Graphviz"));
-
-static cl::opt<bool> EnableMSSAInSLPVectorizer(
-    "enable-mssa-in-slp-vectorizer", cl::Hidden, cl::init(false),
-    cl::desc("Enable MemorySSA for SLPVectorizer in new pass manager"));
 
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
@@ -846,10 +840,9 @@ public:
   BoUpSLP(Function *Func, ScalarEvolution *Se, TargetTransformInfo *Tti,
           TargetLibraryInfo *TLi, AAResults *Aa, LoopInfo *Li,
           DominatorTree *Dt, AssumptionCache *AC, DemandedBits *DB,
-          MemorySSA *MSSA, const DataLayout *DL, OptimizationRemarkEmitter *ORE)
+          const DataLayout *DL, OptimizationRemarkEmitter *ORE)
       : BatchAA(*Aa), F(Func), SE(Se), TTI(Tti), TLI(TLi), LI(Li),
-        DT(Dt), AC(AC), DB(DB), MSSA(MSSA), DL(DL), ORE(ORE),
-        Builder(Se->getContext()) {
+        DT(Dt), AC(AC), DB(DB), DL(DL), ORE(ORE), Builder(Se->getContext()) {
     CodeMetrics::collectEphemeralValues(F, AC, EphValues);
     // Use the vector register size specified by the target unless overridden
     // by a command-line option.
@@ -2956,7 +2949,11 @@ private:
                           ScheduleData *NextLoadStore);
 
     /// Updates the dependency information of a bundle and of all instructions/
-    /// bundles which depend on the original bundle.
+    /// bundles which depend on the original bundle.  Note that only
+    /// def-use and memory dependencies are explicitly modeled.  We do not
+    /// track control dependencies (e.g. a potentially faulting load following
+    /// a potentially infinte looping readnone call), and as such the resulting
+    /// graph is a subgraph of the full dependency graph.
     void calculateDependencies(ScheduleData *SD, bool InsertInReadyList,
                                BoUpSLP *SLP);
 
@@ -3057,7 +3054,6 @@ private:
   DominatorTree *DT;
   AssumptionCache *AC;
   DemandedBits *DB;
-  MemorySSA *MSSA;
   const DataLayout *DL;
   OptimizationRemarkEmitter *ORE;
 
@@ -3170,13 +3166,6 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
 } // end namespace llvm
 
 BoUpSLP::~BoUpSLP() {
-  if (MSSA) {
-    MemorySSAUpdater MSSAU(MSSA);
-    for (const auto &Pair : DeletedInstructions) {
-      if (auto *Access = MSSA->getMemoryAccess(Pair.first))
-        MSSAU.removeMemoryAccess(Access);
-    }
-  }
   for (const auto &Pair : DeletedInstructions) {
     // Replace operands of ignored instructions with Undefs in case if they were
     // marked for deletion.
@@ -3929,6 +3918,7 @@ static LoadsState canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
 
 /// \return true if the specified list of values has only one instruction that
 /// requires scheduling, false otherwise.
+#ifndef NDEBUG
 static bool needToScheduleSingleInstruction(ArrayRef<Value *> VL) {
   Value *NeedsScheduling = nullptr;
   for (Value *V : VL) {
@@ -3942,6 +3932,7 @@ static bool needToScheduleSingleInstruction(ArrayRef<Value *> VL) {
   }
   return NeedsScheduling;
 }
+#endif
 
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx) {
@@ -6919,15 +6910,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       auto *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
       Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
       LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
-      if (MSSA) {
-        MemorySSAUpdater MSSAU(MSSA);
-        auto *Access = MSSA->getMemoryAccess(LI);
-        assert(Access);
-        MemoryUseOrDef *NewAccess =
-          MSSAU.createMemoryAccessBefore(V, Access->getDefiningAccess(),
-                                         Access);
-        MSSAU.insertUse(cast<MemoryUse>(NewAccess), true);
-      }
       Value *NewV = propagateMetadata(V, E->Scalars);
       ShuffleBuilder.addInversedMask(E->ReorderIndices);
       ShuffleBuilder.addMask(E->ReuseShuffleIndices);
@@ -7177,17 +7159,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               commonAlignment(CommonAlignment, cast<LoadInst>(V)->getAlign());
         NewLI = Builder.CreateMaskedGather(VecTy, VecPtr, CommonAlignment);
       }
-
-      if (MSSA) {
-        MemorySSAUpdater MSSAU(MSSA);
-        auto *Access = MSSA->getMemoryAccess(LI);
-        assert(Access);
-        MemoryUseOrDef *NewAccess =
-          MSSAU.createMemoryAccessAfter(NewLI, Access->getDefiningAccess(),
-                                        Access);
-        MSSAU.insertUse(cast<MemoryUse>(NewAccess), true);
-      }
-
       Value *V = propagateMetadata(NewLI, E->Scalars);
 
       ShuffleBuilder.addInversedMask(E->ReorderIndices);
@@ -7212,16 +7183,6 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           ScalarPtr, VecValue->getType()->getPointerTo(AS));
       StoreInst *ST =
           Builder.CreateAlignedStore(VecValue, VecPtr, SI->getAlign());
-
-      if (MSSA) {
-        MemorySSAUpdater MSSAU(MSSA);
-        auto *Access = MSSA->getMemoryAccess(SI);
-        assert(Access);
-        MemoryUseOrDef *NewAccess =
-          MSSAU.createMemoryAccessAfter(ST, Access->getDefiningAccess(),
-                                        Access);
-        MSSAU.insertDef(cast<MemoryDef>(NewAccess), true);
-      }
 
       // The pointer operand uses an in-tree scalar, so add the new BitCast or
       // StoreInst to ExternalUses to make sure that an extract will be
@@ -8176,6 +8137,12 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   // For the real scheduling we use a more sophisticated ready-list: it is
   // sorted by the original instruction location. This lets the final schedule
   // be as  close as possible to the original instruction order.
+  // WARNING: This required for correctness in several cases:
+  // * We must prevent reordering of potentially infinte loops inside
+  //   readnone calls with following potentially faulting instructions.
+  // * We must prevent reordering of allocas with stacksave intrinsic calls.
+  // In both cases, we rely on two instructions which are both ready (per the
+  // def-use and memory dependency subgraph) not to be reordered.
   struct ScheduleDataCompare {
     bool operator()(ScheduleData *SD1, ScheduleData *SD2) const {
       return SD2->SchedulingPriority < SD1->SchedulingPriority;
@@ -8191,6 +8158,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
        I = I->getNextNode()) {
     BS->doForAllOpcodes(I, [this, &Idx, &NumToSchedule, BS](ScheduleData *SD) {
       TreeEntry *SDTE = getTreeEntry(SD->Inst);
+      (void)SDTE;
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
               SD->isPartOfBundle() ==
                   (SDTE && !doesNotNeedToSchedule(SDTE->Scalars))) &&
@@ -8205,15 +8173,6 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   BS->initialFillReadyList(ReadyInsts);
 
   Instruction *LastScheduledInst = BS->ScheduleEnd;
-  MemoryAccess *MemInsertPt = nullptr;
-  if (MSSA) {
-    for (auto I = LastScheduledInst->getIterator(); I != BS->BB->end(); I++) {
-      if (auto *Access = MSSA->getMemoryAccess(&*I)) {
-        MemInsertPt = Access;
-        break;
-      }
-    }
-  }
 
   // Do the "real" scheduling.
   while (!ReadyInsts.empty()) {
@@ -8225,24 +8184,9 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     for (ScheduleData *BundleMember = picked; BundleMember;
          BundleMember = BundleMember->NextInBundle) {
       Instruction *pickedInst = BundleMember->Inst;
-      if (pickedInst->getNextNode() != LastScheduledInst) {
+      if (pickedInst->getNextNode() != LastScheduledInst)
         pickedInst->moveBefore(LastScheduledInst);
-        if (MSSA) {
-          MemorySSAUpdater MSSAU(MSSA);
-          if (auto *Access = MSSA->getMemoryAccess(pickedInst)) {
-            if (MemInsertPt)
-              MSSAU.moveBefore(Access, cast<MemoryUseOrDef>(MemInsertPt));
-            else
-              MSSAU.moveToPlace(Access, BS->BB,
-                                MemorySSA::InsertionPlace::End);
-          }
-        }
-      }
-
       LastScheduledInst = pickedInst;
-      if (MSSA)
-        if (auto *Access = MSSA->getMemoryAccess(LastScheduledInst))
-          MemInsertPt = Access;
     }
 
     BS->schedule(picked, ReadyInsts);
@@ -8588,7 +8532,7 @@ struct SLPVectorizer : public FunctionPass {
     auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
     auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-    return Impl.runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, /*MSSA*/nullptr, ORE);
+    return Impl.runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, ORE);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -8622,21 +8566,13 @@ PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &A
   auto *AC = &AM.getResult<AssumptionAnalysis>(F);
   auto *DB = &AM.getResult<DemandedBitsAnalysis>(F);
   auto *ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  auto *MSSA = EnableMSSAInSLPVectorizer ?
-    &AM.getResult<MemorySSAAnalysis>(F).getMSSA() : (MemorySSA*)nullptr;
 
-  bool Changed = runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, MSSA, ORE);
+  bool Changed = runImpl(F, SE, TTI, TLI, AA, LI, DT, AC, DB, ORE);
   if (!Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  if (MSSA) {
-#ifdef EXPENSIVE_CHECKS
-    MSSA->verifyMemorySSA();
-#endif
-    PA.preserve<MemorySSAAnalysis>();
-  }
   return PA;
 }
 
@@ -8645,7 +8581,6 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                                 TargetLibraryInfo *TLI_, AAResults *AA_,
                                 LoopInfo *LI_, DominatorTree *DT_,
                                 AssumptionCache *AC_, DemandedBits *DB_,
-                                MemorySSA *MSSA,
                                 OptimizationRemarkEmitter *ORE_) {
   if (!RunSLPVectorization)
     return false;
@@ -8679,7 +8614,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   // Use the bottom up slp vectorizer to construct chains that start with
   // store instructions.
-  BoUpSLP R(&F, SE, TTI, TLI, AA, LI, DT, AC, DB, MSSA, DL, ORE_);
+  BoUpSLP R(&F, SE, TTI, TLI, AA, LI, DT, AC, DB, DL, ORE_);
 
   // A general note: the vectorizer must use BoUpSLP::eraseInstruction() to
   // delete instructions.

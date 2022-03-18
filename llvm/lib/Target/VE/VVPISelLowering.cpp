@@ -183,8 +183,8 @@ SDValue VETargetLowering::splitPackedLoadStore(SDValue Op,
          "Can only split packed load/store");
   MVT SplitDataVT = splitVectorType(DataVT);
 
-  SDValue PassThru = getNodePassthru(Op);
-  assert(!PassThru && "Should have been folded in lowering to VVP layer");
+  assert(!getNodePassthru(Op) &&
+         "Should have been folded in lowering to VVP layer");
 
   // Analyze the operation
   SDValue PackedMask = getNodeMask(Op);
