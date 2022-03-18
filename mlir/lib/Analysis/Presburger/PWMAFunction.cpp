@@ -181,3 +181,5 @@ void PWMAFunction::print(raw_ostream &os) const {
   for (const MultiAffineFunction &piece : pieces)
     piece.print(os);
 }
+
+void PWMAFunction::dump() const { print(llvm::errs()); }

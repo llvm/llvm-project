@@ -119,7 +119,6 @@ public:
   Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
 
   void print(raw_ostream &os) const;
-
   void dump() const;
 
 private:
