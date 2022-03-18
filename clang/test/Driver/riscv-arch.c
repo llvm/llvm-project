@@ -224,6 +224,31 @@
 // RV32-ORDER: error: invalid arch name 'rv32imcq',
 // RV32-ORDER: standard user-level extension not given in canonical order 'q'
 
+// RUN: %clang -target riscv32-unknown-elf -march=rv64e -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-EER %s
+// RV64-EER: error: invalid arch name 'rv64e',
+// RV64-EER: standard user-level extension 'e' requires 'rv32'
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32id -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-DER %s
+// RV32-DER: error: invalid arch name 'rv32id',
+// RV32-DER: d requires f extension to also be specified
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izve32f -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVE32F-ER %s
+// RV32-ZVE32F-ER: error: invalid arch name 'rv32izve32f',
+// RV32-ZVE32F-ER: zve32f requires f or zfinx extension to also be specified
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32ifzve64d -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVE64D-ER %s
+// RV32-ZVE64D-ER: error: invalid arch name 'rv32ifzve64d',
+// RV32-ZVE64D-ER: zve64d requires d or zdinx extension to also be specified
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32izvl64b -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZVL64B-ER %s
+// RV32-ZVL64B-ER: error: invalid arch name 'rv32izvl64b',
+// RV32-ZVL64B-ER: zvl*b requires v or zve* extension to also be specified
+
 // RUN: %clang -target riscv32-unknown-elf -march=rv32imw -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-STD-INVAL %s
 // RV32-STD-INVAL: error: invalid arch name 'rv32imw',
@@ -375,6 +400,18 @@
 // RUN: %clang -target riscv64-unknown-elf -march=rv64i -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV64-TARGET %s
 // RV64-TARGET: "-triple" "riscv64-unknown-unknown-elf"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32ifzfh01p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFH %s
+// RUN: %clang -target riscv32-unknown-elf -march=rv32ifzfh -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFH %s
+// RV32-ZFH: "-target-feature" "+zfh"
+
+// RUN: %clang -target riscv32-unknown-elf -march=rv32ifzfhmin01p0 -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFHMIN %s
+// RUN: %clang -target riscv32-unknown-elf -march=rv32ifzfhmin -### %s \
+// RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZFHMIN %s
+// RV32-ZFHMIN: "-target-feature" "+zfhmin"
 
 // RUN: %clang -target riscv32-unknown-elf -march=rv32izbb1p0 -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck -check-prefix=RV32-ZBB %s
