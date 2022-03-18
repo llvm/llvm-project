@@ -191,6 +191,10 @@ inline bool singleIndirectionLevel(mlir::Type ty) {
 }
 #endif
 
+/// Return true iff `ty` is the type of a POINTER entity or value.
+/// `isa_ref_type()` can be used to distinguish.
+bool isPointerType(mlir::Type ty);
+
 /// Return true iff `ty` is the type of an ALLOCATABLE entity or value.
 bool isAllocatableType(mlir::Type ty);
 
