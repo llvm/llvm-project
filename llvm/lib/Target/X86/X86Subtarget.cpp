@@ -359,7 +359,7 @@ const RegisterBankInfo *X86Subtarget::getRegBankInfo() const {
 }
 
 bool X86Subtarget::enableEarlyIfConversion() const {
-  return hasCMov() && X86EarlyIfConv;
+  return hasCMOV() && X86EarlyIfConv;
 }
 
 void X86Subtarget::getPostRAMutations(
