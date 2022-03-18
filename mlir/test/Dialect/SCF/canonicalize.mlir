@@ -491,6 +491,113 @@ func @merge_nested_if(%arg0: i1, %arg1: i1) {
 
 // -----
 
+// CHECK-LABEL: @merge_yielding_nested_if
+// CHECK-SAME: (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+func @merge_yielding_nested_if(%arg0: i1, %arg1: i1) -> (i32, f32, i32, i8) {
+// CHECK: %[[PRE0:.*]] = "test.op"() : () -> i32
+// CHECK: %[[PRE1:.*]] = "test.op1"() : () -> f32
+// CHECK: %[[PRE2:.*]] = "test.op2"() : () -> i32
+// CHECK: %[[PRE3:.*]] = "test.op3"() : () -> i8
+// CHECK: %[[COND:.*]] = arith.andi %[[ARG0]], %[[ARG1]]
+// CHECK: %[[RES:.*]]:2 = scf.if %[[COND]] -> (f32, i32)
+// CHECK:   %[[IN0:.*]] = "test.inop"() : () -> i32
+// CHECK:   %[[IN1:.*]] = "test.inop1"() : () -> f32
+// CHECK:   scf.yield %[[IN1]], %[[IN0]] : f32, i32
+// CHECK: } else {
+// CHECK:   scf.yield %[[PRE1]], %[[PRE2]] : f32, i32
+// CHECK: }
+// CHECK: return %[[PRE0]], %[[RES]]#0, %[[RES]]#1, %[[PRE3]] : i32, f32, i32, i8
+  %0 = "test.op"() : () -> (i32)
+  %1 = "test.op1"() : () -> (f32)
+  %2 = "test.op2"() : () -> (i32)
+  %3 = "test.op3"() : () -> (i8)
+  %r:4 = scf.if %arg0 -> (i32, f32, i32, i8) {
+    %a:2 = scf.if %arg1 -> (i32, f32) {
+      %i = "test.inop"() : () -> (i32)
+      %i1 = "test.inop1"() : () -> (f32)
+      scf.yield %i, %i1 : i32, f32
+    } else {
+      scf.yield %2, %1 : i32, f32
+    }
+    scf.yield %0, %a#1, %a#0, %3 : i32, f32, i32, i8
+  } else {
+    scf.yield %0, %1, %2, %3 : i32, f32, i32, i8
+  }
+  return %r#0, %r#1, %r#2, %r#3 : i32, f32, i32, i8
+}
+
+// CHECK-LABEL: @merge_yielding_nested_if_nv1
+// CHECK-SAME: (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+func @merge_yielding_nested_if_nv1(%arg0: i1, %arg1: i1) {
+// CHECK: %[[PRE0:.*]] = "test.op"() : () -> i32
+// CHECK: %[[PRE1:.*]] = "test.op1"() : () -> f32
+// CHECK: %[[COND:.*]] = arith.andi %[[ARG0]], %[[ARG1]]
+// CHECK: scf.if %[[COND]]
+// CHECK:   %[[IN0:.*]] = "test.inop"() : () -> i32
+// CHECK:   %[[IN1:.*]] = "test.inop1"() : () -> f32
+// CHECK: }
+  %0 = "test.op"() : () -> (i32)
+  %1 = "test.op1"() : () -> (f32)
+  scf.if %arg0 {
+    %a:2 = scf.if %arg1 -> (i32, f32) {
+      %i = "test.inop"() : () -> (i32)
+      %i1 = "test.inop1"() : () -> (f32)
+      scf.yield %i, %i1 : i32, f32
+    } else {
+      scf.yield %0, %1 : i32, f32
+    }
+  }
+  return 
+}
+
+// CHECK-LABEL: @merge_yielding_nested_if_nv2
+// CHECK-SAME: (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+func @merge_yielding_nested_if_nv2(%arg0: i1, %arg1: i1) -> i32 {
+// CHECK: %[[PRE0:.*]] = "test.op"() : () -> i32
+// CHECK: %[[PRE1:.*]] = "test.op1"() : () -> i32
+// CHECK: %[[COND:.*]] = arith.andi %[[ARG0]], %[[ARG1]]
+// CHECK: scf.if %[[COND]] 
+// CHECK:   "test.run"() : () -> ()
+// CHECK: }
+// CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[PRE0]], %[[PRE1]]
+// CHECK: return %[[RES]]
+  %0 = "test.op"() : () -> (i32)
+  %1 = "test.op1"() : () -> (i32)
+  %r = scf.if %arg0 -> i32 {
+    scf.if %arg1 {
+      "test.run"() : () -> ()
+    }
+    scf.yield %0 : i32
+  } else {
+    scf.yield %1 : i32
+  }
+  return %r : i32
+}
+
+// CHECK-LABEL: @merge_fail_yielding_nested_if
+// CHECK-SAME: (%[[ARG0:.*]]: i1, %[[ARG1:.*]]: i1)
+func @merge_fail_yielding_nested_if(%arg0: i1, %arg1: i1) -> (i32, f32, i32, i8) {
+// CHECK-NOT: andi
+  %0 = "test.op"() : () -> (i32)
+  %1 = "test.op1"() : () -> (f32)
+  %2 = "test.op2"() : () -> (i32)
+  %3 = "test.op3"() : () -> (i8)
+  %r:4 = scf.if %arg0 -> (i32, f32, i32, i8) {
+    %a:2 = scf.if %arg1 -> (i32, f32) {
+      %i = "test.inop"() : () -> (i32)
+      %i1 = "test.inop1"() : () -> (f32)
+      scf.yield %i, %i1 : i32, f32
+    } else {
+      scf.yield %0, %1 : i32, f32
+    }
+    scf.yield %0, %a#1, %a#0, %3 : i32, f32, i32, i8
+  } else {
+    scf.yield %0, %1, %2, %3 : i32, f32, i32, i8
+  }
+  return %r#0, %r#1, %r#2, %r#3 : i32, f32, i32, i8
+}
+// -----
+
 // CHECK-LABEL:   func @if_condition_swap
 // CHECK-NEXT:     %{{.*}} = scf.if %arg0 -> (index) {
 // CHECK-NEXT:       %[[i1:.+]] = "test.origFalse"() : () -> index
