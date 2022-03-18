@@ -299,22 +299,22 @@ entry:
 define void @multiply_dont_hoist_phi(<4 x double>* noalias %A, <4 x double> * %B, [4 x double]* %C) {
 ; CHECK-LABEL: @multiply_dont_hoist_phi(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr <4 x double>, <4 x double>* [[A]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
-; CHECK-NEXT:    [[VEC_CAST3:%.*]] = bitcast <4 x double>* [[B:%.*]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST3]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr <4 x double>, <4 x double>* [[B]], i64 0, i64 2
-; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
-; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST6]], align 8
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
 ; CHECK:       next:
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr <4 x double>, <4 x double>* [[A:%.*]], i64 0, i64 2
+; CHECK-NEXT:    [[VEC_CAST1:%.*]] = bitcast double* [[VEC_GEP]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST1]], align 8
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr <4 x double>, <4 x double>* [[B:%.*]], i64 0, i64 2
+; CHECK-NEXT:    [[VEC_CAST6:%.*]] = bitcast double* [[VEC_GEP5]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD7:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST6]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT16:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[VEC_CAST:%.*]] = bitcast <4 x double>* [[A]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT13:%.*]] = shufflevector <2 x double> [[COL_LOAD7]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT13]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call contract <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[COL_LOAD2]], <2 x double> [[SPLAT_SPLAT16]], <2 x double> [[TMP0]])
+; CHECK-NEXT:    [[VEC_CAST3:%.*]] = bitcast <4 x double>* [[B]] to <2 x double>*
+; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, <2 x double>* [[VEC_CAST3]], align 8
 ; CHECK-NEXT:    [[SPLAT_SPLAT10:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> undef, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[SPLAT_SPLAT:%.*]] = shufflevector <2 x double> [[COL_LOAD4]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul contract <2 x double> [[COL_LOAD]], [[SPLAT_SPLAT]]

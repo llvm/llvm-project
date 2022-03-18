@@ -241,16 +241,15 @@ else:
 declare void @abort()
 declare { i64, i1 } @llvm.umul.with.overflow.i64(i64, i64)
 declare void @dummy(i64)
-; Todo: Two uses in two different users of a single successor block. We can sink.
+; Two uses in two different users of a single successor block. We can sink.
 define i64 @test8(i64 %c) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  bb1:
 ; CHECK-NEXT:    [[OVERFLOW:%.*]] = icmp ugt i64 [[C:%.*]], 2305843009213693951
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[OVERFLOW]], i64 0, i64 8
 ; CHECK-NEXT:    br i1 [[OVERFLOW]], label [[ABORT:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    call void @dummy(i64 [[SELECT]])
-; CHECK-NEXT:    ret i64 [[SELECT]]
+; CHECK-NEXT:    call void @dummy(i64 8)
+; CHECK-NEXT:    ret i64 8
 ; CHECK:       abort:
 ; CHECK-NEXT:    call void @abort()
 ; CHECK-NEXT:    unreachable
