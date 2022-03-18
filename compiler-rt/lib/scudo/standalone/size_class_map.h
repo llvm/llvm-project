@@ -345,7 +345,7 @@ template <typename SCMap> inline void printMap() {
   Buffer.output();
 }
 
-template <typename SCMap> static void validateMap() {
+template <typename SCMap> static UNUSED void validateMap() {
   for (uptr C = 0; C < SCMap::NumClasses; C++) {
     if (C == SCMap::BatchClassId)
       continue;
