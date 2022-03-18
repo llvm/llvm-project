@@ -287,6 +287,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-size
   llvm-strip
   llvm-symbolizer
+  llvm-undname
   llvm-xray
   sancov
   scan-build-py
