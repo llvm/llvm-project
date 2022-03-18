@@ -3,4 +3,4 @@
 // rules that are not applicable in the current language mode.
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))))
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:60}:", apply_to = any(record(unless(is_union)), variable, function)"
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:60-[[@LINE-1]]:60}:", apply_to = any(function, record(unless(is_union)), variable)"

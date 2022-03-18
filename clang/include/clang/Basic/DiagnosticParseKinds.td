@@ -1237,8 +1237,6 @@ def err_pragma_attribute_extra_tokens_after_attribute : Error<
   "extra tokens after attribute in a '#pragma clang attribute push'">;
 def err_pragma_attribute_unsupported_attribute : Error<
   "attribute %0 is not supported by '#pragma clang attribute'">;
-def err_pragma_attribute_multiple_attributes : Error<
-  "more than one attribute specified in '#pragma clang attribute push'">;
 def err_pragma_attribute_expected_attribute_syntax : Error<
   "expected an attribute that is specified using the GNU, C++11 or '__declspec'"
   " syntax">;
