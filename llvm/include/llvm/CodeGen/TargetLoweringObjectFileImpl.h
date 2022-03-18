@@ -119,6 +119,9 @@ public:
 
   void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
 
+  MCSection *getStaticDtorSection(unsigned Priority,
+                                  const MCSymbol *KeySym) const override;
+
   /// Emit the module flags that specify the garbage collection information.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 

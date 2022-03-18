@@ -351,9 +351,11 @@ static unsigned segmentLoadCommandSize(bool Is64Bit, unsigned NumSections) {
 // Stream a dSYM companion binary file corresponding to the binary referenced
 // by \a DM to \a OutFile. The passed \a MS MCStreamer is setup to write to
 // \a OutFile and it must be using a MachObjectWriter object to do so.
-bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-                           const DebugMap &DM, SymbolMapTranslator &Translator,
-                           MCStreamer &MS, raw_fd_ostream &OutFile) {
+bool generateDsymCompanion(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
+    SymbolMapTranslator &Translator, MCStreamer &MS, raw_fd_ostream &OutFile,
+    const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
+        &RelocationsToApply) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
@@ -617,6 +619,25 @@ bool generateDsymCompanion(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
     uint64_t Pos = OutFile.tell();
     OutFile.write_zeros(alignTo(Pos, Sec.getAlignment()) - Pos);
     MCAsm.writeSectionData(OutFile, &Sec, Layout);
+  }
+
+  // Apply relocations to the contents of the DWARF segment.
+  // We do this here because the final value written depend on the DWARF vm
+  // addr, which is only calculated in this function.
+  if (!RelocationsToApply.empty()) {
+    if (!OutFile.supportsSeeking())
+      report_fatal_error(
+          "Cannot apply relocations to file that doesn't support seeking!");
+
+    uint64_t Pos = OutFile.tell();
+    for (auto &RelocationToApply : RelocationsToApply) {
+      OutFile.seek(DwarfSegmentStart + RelocationToApply.AddressFromDwarfStart);
+      int32_t Value = RelocationToApply.Value;
+      if (RelocationToApply.ShouldSubtractDwarfVM)
+        Value -= DwarfVMAddr;
+      OutFile.write((char *)&Value, sizeof(int32_t));
+    }
+    OutFile.seek(Pos);
   }
 
   return true;

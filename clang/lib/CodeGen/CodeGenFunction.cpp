@@ -1108,7 +1108,7 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     llvm::Function::arg_iterator EI = CurFn->arg_end();
     --EI;
     llvm::Value *Addr = Builder.CreateStructGEP(
-        EI->getType()->getPointerElementType(), &*EI, Idx);
+        CurFnInfo->getArgStruct(), &*EI, Idx);
     llvm::Type *Ty =
         cast<llvm::GetElementPtrInst>(Addr)->getResultElementType();
     ReturnValuePointer = Address(Addr, Ty, getPointerAlign());
@@ -1413,8 +1413,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
 
   // Save parameters for coroutine function.
   if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
-    for (const auto *ParamDecl : FD->parameters())
-      FnArgs.push_back(ParamDecl);
+    llvm::append_range(FnArgs, FD->parameters());
 
   // Generate the body of the function.
   PGO.assignRegionCounters(GD, CurFn);
@@ -2630,9 +2629,8 @@ static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
     return;
   }
 
-  llvm::SmallVector<llvm::Value *, 10> Args;
-  llvm::for_each(Resolver->args(),
-                 [&](llvm::Argument &Arg) { Args.push_back(&Arg); });
+  llvm::SmallVector<llvm::Value *, 10> Args(
+      llvm::make_pointer_range(Resolver->args()));
 
   llvm::CallInst *Result = Builder.CreateCall(FuncToReturn, Args);
   Result->setTailCallKind(llvm::CallInst::TCK_MustTail);

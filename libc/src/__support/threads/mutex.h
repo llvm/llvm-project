@@ -9,18 +9,6 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_THREAD_MUTEX_H
 #define LLVM_LIBC_SRC_SUPPORT_THREAD_MUTEX_H
 
-namespace __llvm_libc {
-
-enum class MutexError : int {
-  NONE,
-  BUSY,
-  TIMEOUT,
-  UNLOCK_WITHOUT_LOCK,
-  BAD_LOCK_STATE,
-};
-
-} // namespace __llvm_libc
-
 // Platform independent code will include this header file which pulls
 // the platfrom specific specializations using platform macros.
 //

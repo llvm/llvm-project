@@ -68,25 +68,31 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
       for (CallBase *CB : Calls) {
         Function *Caller = CB->getCaller();
         OptimizationRemarkEmitter ORE(Caller);
-        auto OIC = shouldInline(
-            *CB,
-            [&](CallBase &CB) {
-              return InlineCost::getAlways("always inline attribute");
-            },
-            ORE);
-        assert(OIC);
-        emitInlinedIntoBasedOnCost(ORE, CB->getDebugLoc(), CB->getParent(), F,
-                                   *Caller, *OIC, false, DEBUG_TYPE);
+        DebugLoc DLoc = CB->getDebugLoc();
+        BasicBlock *Block = CB->getParent();
 
         InlineFunctionInfo IFI(
             /*cg=*/nullptr, GetAssumptionCache, &PSI,
-            &FAM.getResult<BlockFrequencyAnalysis>(*(CB->getCaller())),
+            &FAM.getResult<BlockFrequencyAnalysis>(*Caller),
             &FAM.getResult<BlockFrequencyAnalysis>(F));
 
         InlineResult Res = InlineFunction(
             *CB, IFI, &FAM.getResult<AAManager>(F), InsertLifetime);
-        assert(Res.isSuccess() && "unexpected failure to inline");
-        (void)Res;
+        if (!Res.isSuccess()) {
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "NotInlined", DLoc,
+                                            Block)
+                   << "'" << ore::NV("Callee", &F) << "' is not inlined into '"
+                   << ore::NV("Caller", Caller)
+                   << "': " << ore::NV("Reason", Res.getFailureReason());
+          });
+          continue;
+        }
+
+        emitInlinedIntoBasedOnCost(
+            ORE, DLoc, Block, F, *Caller,
+            InlineCost::getAlways("always inline attribute"),
+            /*ForProfileContext=*/false, DEBUG_TYPE);
 
         // Merge the attributes based on the inlining.
         AttributeFuncs::mergeAttributesForInlining(*Caller, F);

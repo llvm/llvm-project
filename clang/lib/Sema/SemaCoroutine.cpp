@@ -1390,8 +1390,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return false;
 
   SmallVector<Expr *, 2> NewArgs(1, FrameSize);
-  for (auto Arg : PlacementArgs)
-    NewArgs.push_back(Arg);
+  llvm::append_range(NewArgs, PlacementArgs);
 
   ExprResult NewExpr =
       S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);

@@ -508,6 +508,13 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
   case PFC_Precise:
     NewFPFeatures.setFPPreciseEnabled(true);
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
+    if (PP.getCurrentFPEvalMethod() ==
+            LangOptions::FPEvalMethodKind::FEM_Indeterminable &&
+        PP.getLastFPEvalPragmaLocation().isValid())
+      // A preceding `pragma float_control(precise,off)` has changed
+      // the value of the evaluation method.
+      // Set it back to its old value.
+      PP.setCurrentFPEvalMethod(SourceLocation(), PP.getLastFPEvalMethod());
     break;
   case PFC_NoPrecise:
     if (CurFPFeatures.getFPExceptionMode() == LangOptions::FPE_Strict)
@@ -517,6 +524,10 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
     else
       NewFPFeatures.setFPPreciseEnabled(false);
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
+    PP.setLastFPEvalMethod(PP.getCurrentFPEvalMethod());
+    // `AllowFPReassoc` or `AllowReciprocal` option is enabled.
+    PP.setCurrentFPEvalMethod(
+        Loc, LangOptions::FPEvalMethodKind::FEM_Indeterminable);
     break;
   case PFC_Except:
     if (!isPreciseFPEnabled())
@@ -540,6 +551,12 @@ void Sema::ActOnPragmaFloatControl(SourceLocation Loc,
     }
     FpPragmaStack.Act(Loc, Action, StringRef(), NewFPFeatures);
     NewFPFeatures = FpPragmaStack.CurrentValue;
+    if (CurFPFeatures.getAllowFPReassociate() ||
+        CurFPFeatures.getAllowReciprocal())
+      // Since we are popping the pragma, we don't want to be passing
+      // a location here.
+      PP.setCurrentFPEvalMethod(SourceLocation(),
+                                CurFPFeatures.getFPEvalMethod());
     break;
   }
   CurFPFeatures = NewFPFeatures.applyOverrides(getLangOpts());

@@ -1271,8 +1271,8 @@ private:
   }
 
   static const size_t NumErrorReports =
-      sizeof(((scudo_error_info *)0)->reports) /
-      sizeof(((scudo_error_info *)0)->reports[0]);
+      sizeof(((scudo_error_info *)nullptr)->reports) /
+      sizeof(((scudo_error_info *)nullptr)->reports[0]);
 
   static void getInlineErrorInfo(struct scudo_error_info *ErrorInfo,
                                  size_t &NextErrorReport, uintptr_t FaultAddr,

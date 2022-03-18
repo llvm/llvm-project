@@ -15,7 +15,7 @@ namespace scudo {
 
 struct ThreadState {
   bool DisableMemInit : 1;
-  enum {
+  enum : unsigned {
     NotInitialized = 0,
     Initialized,
     TornDown,

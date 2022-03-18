@@ -20,6 +20,7 @@
 #include <__format/formatter_integral.h>
 #include <__format/parser_std_format_spec.h>
 #include <__iterator/access.h>
+#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
