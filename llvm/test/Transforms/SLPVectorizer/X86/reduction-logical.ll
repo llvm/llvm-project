@@ -186,16 +186,30 @@ define i1 @mixed_logical_icmp(<4 x i32> %x) {
 }
 
 define i1 @logical_and_icmp_subvec(<4 x i32> %x) {
-; CHECK-LABEL: @logical_and_icmp_subvec(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[X]], i32 1
-; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X]], i32 2
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 [[X0]], 0
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[X1]], 0
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[X2]], 0
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[S1]], i1 [[C2]], i1 false
-; CHECK-NEXT:    ret i1 [[S2]]
+; SSE-LABEL: @logical_and_icmp_subvec(
+; SSE-NEXT:    [[X0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 0
+; SSE-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[X]], i32 1
+; SSE-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X]], i32 2
+; SSE-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[X1]], i32 0
+; SSE-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[X0]], i32 1
+; SSE-NEXT:    [[TMP3:%.*]] = icmp slt <2 x i32> [[TMP2]], zeroinitializer
+; SSE-NEXT:    [[C2:%.*]] = icmp slt i32 [[X2]], 0
+; SSE-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i32 0
+; SSE-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP3]], i32 1
+; SSE-NEXT:    [[S1:%.*]] = select i1 [[TMP5]], i1 [[TMP4]], i1 false
+; SSE-NEXT:    [[S2:%.*]] = select i1 [[S1]], i1 [[C2]], i1 false
+; SSE-NEXT:    ret i1 [[S2]]
+;
+; AVX-LABEL: @logical_and_icmp_subvec(
+; AVX-NEXT:    [[X0:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 0
+; AVX-NEXT:    [[X1:%.*]] = extractelement <4 x i32> [[X]], i32 1
+; AVX-NEXT:    [[X2:%.*]] = extractelement <4 x i32> [[X]], i32 2
+; AVX-NEXT:    [[C0:%.*]] = icmp slt i32 [[X0]], 0
+; AVX-NEXT:    [[C1:%.*]] = icmp slt i32 [[X1]], 0
+; AVX-NEXT:    [[C2:%.*]] = icmp slt i32 [[X2]], 0
+; AVX-NEXT:    [[S1:%.*]] = select i1 [[C0]], i1 [[C1]], i1 false
+; AVX-NEXT:    [[S2:%.*]] = select i1 [[S1]], i1 [[C2]], i1 false
+; AVX-NEXT:    ret i1 [[S2]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
   %x1 = extractelement <4 x i32> %x, i32 1
