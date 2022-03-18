@@ -1366,6 +1366,7 @@ struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
 
     SmallVector<Value> trueYields;
     SmallVector<Value> falseYields;
+    rewriter.setInsertionPoint(replacement);
     for (const auto &it :
          llvm::enumerate(llvm::zip(thenYieldArgs, elseYieldArgs))) {
       Value trueVal = std::get<0>(it.value());
