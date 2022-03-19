@@ -47,10 +47,10 @@ int main(int argc, char *argv[]) {
       DataSetLinked, DataSetAsm, DataSetReloc, DataSetExec;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
-  const char *CodeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all"};
+  const char *CodeGenOptions[] = {"-mllvm", "-amdgpu-early-inline-all", "-mcode-object-version=5"};
   size_t CodeGenOptionsCount =
       sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
-  const char *DevLibsOptions[] = {"finite_only", "unsafe_math"};
+  const char *DevLibsOptions[] = {"finite_only", "unsafe_math", "code_object_v5"};
   size_t DevLibsOptionsCount =
       sizeof(DevLibsOptions) / sizeof(DevLibsOptions[0]);
 
@@ -152,11 +152,11 @@ int main(int argc, char *argv[]) {
                                        &Count);
   checkError(Status, "amd_comgr_action_data_count");
 
-  // Our 2 sources, plus 3 language libraries, plus 1 device library, plus 5
+  // Our 2 sources, plus 3 language libraries, plus 2 device libraries, plus 5
   // features libraries.
-  if (Count != 11) {
+  if (Count != 12) {
     printf("AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES Failed: "
-           "produced %zu BC objects (expected 11)\n",
+           "produced %zu BC objects (expected 12)\n",
            Count);
     exit(1);
   }
