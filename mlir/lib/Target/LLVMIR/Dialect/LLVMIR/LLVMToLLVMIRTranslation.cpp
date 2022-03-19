@@ -303,9 +303,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     // TODO: refactor function type creation which usually occurs in std-LLVM
     // conversion.
     SmallVector<Type, 8> operandTypes;
-    operandTypes.reserve(inlineAsmOp.getOperands().size());
-    for (auto t : inlineAsmOp.getOperands().getTypes())
-      operandTypes.push_back(t);
+    llvm::append_range(operandTypes, inlineAsmOp.getOperands().getTypes());
 
     Type resultType;
     if (inlineAsmOp.getNumResults() == 0) {

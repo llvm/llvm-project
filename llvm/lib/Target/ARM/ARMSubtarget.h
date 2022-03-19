@@ -478,9 +478,6 @@ public:
   /// scheduling, DAGCombine, etc.).
   bool useAA() const override { return true; }
 
-  // enableAtomicExpand- True if we need to expand our atomics.
-  bool enableAtomicExpand() const override;
-
   /// getInstrItins - Return the instruction itineraries based on subtarget
   /// selection.
   const InstrItineraryData *getInstrItineraryData() const override {

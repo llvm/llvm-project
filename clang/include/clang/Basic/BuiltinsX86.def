@@ -2071,6 +2071,9 @@ TARGET_HEADER_BUILTIN(_ReadWriteBarrier, "v", "nh", "intrin.h", ALL_MS_LANGUAGES
 TARGET_HEADER_BUILTIN(_ReadBarrier,      "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_WriteBarrier,     "v", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 
+TARGET_HEADER_BUILTIN(__cpuid,   "vi*i",  "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+TARGET_HEADER_BUILTIN(__cpuidex, "vi*ii", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
+
 TARGET_HEADER_BUILTIN(__emul,  "LLiii",    "nch", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__emulu, "ULLiUiUi", "nch", "intrin.h", ALL_MS_LANGUAGES, "")
 

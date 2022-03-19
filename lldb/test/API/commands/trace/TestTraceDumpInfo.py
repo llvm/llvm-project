@@ -18,7 +18,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
             os.path.join(self.getSourceDir(), "intelpt-trace", "a.out"))
 
         self.expect("thread trace dump info",
-            substrs=["error: invalid process"],
+            substrs=["error: Command requires a current process."],
             error=True)
 
         # Now we check the output when there's a running target without a trace

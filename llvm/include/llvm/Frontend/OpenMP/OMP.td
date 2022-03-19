@@ -1782,6 +1782,32 @@ def OMP_teams_loop : Directive<"teams loop"> {
     VersionedClause<OMPC_ThreadLimit>,
   ];
 }
+def OMP_target_teams_loop : Directive<"target teams loop"> {
+  let allowedClauses = [
+    VersionedClause<OMPC_Allocate>,
+    VersionedClause<OMPC_Depend>,
+    VersionedClause<OMPC_DefaultMap>,
+    VersionedClause<OMPC_Device>,
+    VersionedClause<OMPC_FirstPrivate>,
+    VersionedClause<OMPC_IsDevicePtr>,
+    VersionedClause<OMPC_LastPrivate>,
+    VersionedClause<OMPC_Map>,
+    VersionedClause<OMPC_Private>,
+    VersionedClause<OMPC_Reduction>,
+    VersionedClause<OMPC_Shared>,
+    VersionedClause<OMPC_UsesAllocators, 50>
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Bind, 50>,
+    VersionedClause<OMPC_Collapse>,
+    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_If>,
+    VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_NumTeams>,
+    VersionedClause<OMPC_Order>,
+    VersionedClause<OMPC_ThreadLimit>,
+  ];
+}
 def OMP_Metadirective : Directive<"metadirective"> {
   let allowedClauses = [VersionedClause<OMPC_When>];
   let allowedOnceClauses = [VersionedClause<OMPC_Default>];

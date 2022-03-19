@@ -550,6 +550,18 @@ void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
   if (!Imm)
     return;
 
+  if (AMDGPU::isGFX940(STI)) {
+    switch (MI->getOpcode()) {
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_vcd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_vcd:
+      O << " neg:[" << (Imm & 1) << ',' << ((Imm >> 1) & 1) << ','
+        << ((Imm >> 2) & 1) << ']';
+      return;
+    }
+  }
+
   O << " blgp:" << Imm;
 }
 

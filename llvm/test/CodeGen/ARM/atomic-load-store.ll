@@ -94,14 +94,14 @@ define void @test4(i8* %ptr1, i8* %ptr2) {
 
 define i64 @test_old_load_64bit(i64* %p) {
 ; ARMV4-LABEL: test_old_load_64bit
-; ARMV4: ___sync_val_compare_and_swap_8
+; ARMV4: ___atomic_load_8
   %1 = load atomic i64, i64* %p seq_cst, align 8
   ret i64 %1
 }
 
 define void @test_old_store_64bit(i64* %p, i64 %v) {
 ; ARMV4-LABEL: test_old_store_64bit
-; ARMV4: ___sync_lock_test_and_set_8
+; ARMV4: ___atomic_store_8
   store atomic i64 %v, i64* %p seq_cst, align 8
   ret void
 }
