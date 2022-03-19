@@ -42,6 +42,12 @@ static lsp::URIForFile getURIFromLoc(llvm::SourceMgr &mgr, SMRange loc,
   return mainFileURI;
 }
 
+/// Returns true if the given location is in the main file of the source
+/// manager.
+static bool isMainFileLoc(llvm::SourceMgr &mgr, SMRange loc) {
+  return mgr.FindBufferContainingLoc(loc.Start) == mgr.getMainFileID();
+}
+
 /// Returns a language server location from the given source range.
 static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange range,
                                         const lsp::URIForFile &uri) {
@@ -264,6 +270,12 @@ struct PDLDocument {
   lsp::Hover buildHoverForUserConstraintOrRewrite(StringRef typeName,
                                                   const T *decl,
                                                   const SMRange &hoverRange);
+
+  //===--------------------------------------------------------------------===//
+  // Document Symbols
+  //===--------------------------------------------------------------------===//
+
+  void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
 
   //===--------------------------------------------------------------------===//
   // Fields
@@ -493,6 +505,48 @@ lsp::Hover PDLDocument::buildHoverForUserConstraintOrRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// PDLDocument: Document Symbols
+//===----------------------------------------------------------------------===//
+
+void PDLDocument::findDocumentSymbols(
+    std::vector<lsp::DocumentSymbol> &symbols) {
+  if (failed(astModule))
+    return;
+
+  for (const ast::Decl *decl : (*astModule)->getChildren()) {
+    if (!isMainFileLoc(sourceMgr, decl->getLoc()))
+      continue;
+
+    if (const auto *patternDecl = dyn_cast<ast::PatternDecl>(decl)) {
+      const ast::Name *name = patternDecl->getName();
+
+      SMRange nameLoc = name ? name->getLoc() : patternDecl->getLoc();
+      SMRange bodyLoc(nameLoc.Start, patternDecl->getBody()->getLoc().End);
+
+      symbols.emplace_back(
+          name ? name->getName() : "<pattern>", lsp::SymbolKind::Class,
+          lsp::Range(sourceMgr, bodyLoc), lsp::Range(sourceMgr, nameLoc));
+    } else if (const auto *cDecl = dyn_cast<ast::UserConstraintDecl>(decl)) {
+      // TODO: Add source information for the code block body.
+      SMRange nameLoc = cDecl->getName().getLoc();
+      SMRange bodyLoc = nameLoc;
+
+      symbols.emplace_back(
+          cDecl->getName().getName(), lsp::SymbolKind::Function,
+          lsp::Range(sourceMgr, bodyLoc), lsp::Range(sourceMgr, nameLoc));
+    } else if (const auto *cDecl = dyn_cast<ast::UserRewriteDecl>(decl)) {
+      // TODO: Add source information for the code block body.
+      SMRange nameLoc = cDecl->getName().getLoc();
+      SMRange bodyLoc = nameLoc;
+
+      symbols.emplace_back(
+          cDecl->getName().getName(), lsp::SymbolKind::Function,
+          lsp::Range(sourceMgr, bodyLoc), lsp::Range(sourceMgr, nameLoc));
+    }
+  }
+}
+
+//===----------------------------------------------------------------------===//
 // PDLTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -545,6 +599,7 @@ public:
                         std::vector<lsp::Location> &references);
   Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
                                  lsp::Position hoverPos);
+  void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
 
 private:
   /// Find the PDL document that contains the given position, and update the
@@ -643,6 +698,45 @@ Optional<lsp::Hover> PDLTextFile::findHover(const lsp::URIForFile &uri,
   return hoverInfo;
 }
 
+void PDLTextFile::findDocumentSymbols(
+    std::vector<lsp::DocumentSymbol> &symbols) {
+  if (chunks.size() == 1)
+    return chunks.front()->document.findDocumentSymbols(symbols);
+
+  // If there are multiple chunks in this file, we create top-level symbols for
+  // each chunk.
+  for (unsigned i = 0, e = chunks.size(); i < e; ++i) {
+    PDLTextFileChunk &chunk = *chunks[i];
+    lsp::Position startPos(chunk.lineOffset);
+    lsp::Position endPos((i == e - 1) ? totalNumLines - 1
+                                      : chunks[i + 1]->lineOffset);
+    lsp::DocumentSymbol symbol("<file-split-" + Twine(i) + ">",
+                               lsp::SymbolKind::Namespace,
+                               /*range=*/lsp::Range(startPos, endPos),
+                               /*selectionRange=*/lsp::Range(startPos));
+    chunk.document.findDocumentSymbols(symbol.children);
+
+    // Fixup the locations of document symbols within this chunk.
+    if (i != 0) {
+      SmallVector<lsp::DocumentSymbol *> symbolsToFix;
+      for (lsp::DocumentSymbol &childSymbol : symbol.children)
+        symbolsToFix.push_back(&childSymbol);
+
+      while (!symbolsToFix.empty()) {
+        lsp::DocumentSymbol *symbol = symbolsToFix.pop_back_val();
+        chunk.adjustLocForChunkOffset(symbol->range);
+        chunk.adjustLocForChunkOffset(symbol->selectionRange);
+
+        for (lsp::DocumentSymbol &childSymbol : symbol->children)
+          symbolsToFix.push_back(&childSymbol);
+      }
+    }
+
+    // Push the symbol for this chunk.
+    symbols.emplace_back(std::move(symbol));
+  }
+}
+
 PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
   if (chunks.size() == 1)
     return *chunks.front();
@@ -713,4 +807,11 @@ Optional<lsp::Hover> lsp::PDLLServer::findHover(const URIForFile &uri,
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
   return llvm::None;
+}
+
+void lsp::PDLLServer::findDocumentSymbols(
+    const URIForFile &uri, std::vector<DocumentSymbol> &symbols) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->findDocumentSymbols(symbols);
 }
