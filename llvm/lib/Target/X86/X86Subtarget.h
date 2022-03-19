@@ -76,7 +76,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   bool HasX87 = false;
 
   /// True if the processor supports CMPXCHG8B.
-  bool HasCMPXCHG8B = false;
+  bool HasCX8 = false;
 
   /// True if this processor has NOPL instruction
   /// (generally pentium pro+).
@@ -227,7 +227,7 @@ class X86Subtarget final : public X86GenSubtargetInfo {
 
   /// True if this processor has the CMPXCHG16B instruction;
   /// this is true for most x86-64 chips, but not the first AMD chips.
-  bool HasCMPXCHG16B = false;
+  bool HasCX16 = false;
 
   /// True if the LEA instruction should be used for adjusting
   /// the stack pointer. This is an optimization for Intel Atom processors.
@@ -632,7 +632,13 @@ public:
   void setPICStyle(PICStyles::Style Style)  { PICStyle = Style; }
 
   bool hasX87() const { return HasX87; }
-  bool hasCMPXCHG8B() const { return HasCMPXCHG8B; }
+  bool hasCX8() const { return HasCX8; }
+  bool hasCX16() const { return HasCX16; }
+  bool canUseCMPXCHG8B() const { return hasCX8(); }
+  bool canUseCMPXCHG16B() const {
+    // CX16 is just the CPUID bit, instruction requires 64-bit mode too.
+    return hasCX16() && is64Bit();
+  }
   bool hasNOPL() const { return HasNOPL; }
   // SSE codegen depends on cmovs, and all SSE1+ processors support them.
   // All 64-bit processors support cmov.
@@ -712,7 +718,6 @@ public:
   bool isUnalignedMem16Slow() const { return IsUnalignedMem16Slow; }
   bool isUnalignedMem32Slow() const { return IsUnalignedMem32Slow; }
   bool hasSSEUnalignedMem() const { return HasSSEUnalignedMem; }
-  bool hasCMPXCHG16B() const { return HasCMPXCHG16B && is64Bit(); }
   bool useLeaForSP() const { return UseLeaForSP; }
   bool hasPOPCNTFalseDeps() const { return HasPOPCNTFalseDeps; }
   bool hasLZCNTFalseDeps() const { return HasLZCNTFalseDeps; }
