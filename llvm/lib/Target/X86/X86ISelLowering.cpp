@@ -43904,7 +43904,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return V;
 
   // Convert vselects with constant condition into shuffles.
-  if (CondConstantVector && DCI.isBeforeLegalizeOps()) {
+  if (CondConstantVector && DCI.isBeforeLegalizeOps() &&
+      N->getOpcode() == ISD::VSELECT) {
     SmallVector<int, 64> Mask;
     if (createShuffleMaskFromVSELECT(Mask, Cond))
       return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
