@@ -1043,17 +1043,15 @@ define zeroext i1 @invert(i32 %flags, i32 %flag) nounwind {
 ; X86-LABEL: invert:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    notl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    btl %ecx, %eax
-; X86-NEXT:    setb %al
+; X86-NEXT:    setae %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: invert:
 ; X64:       # %bb.0:
-; X64-NEXT:    notl %edi
 ; X64-NEXT:    btl %esi, %edi
-; X64-NEXT:    setb %al
+; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
   %neg = xor i32 %flags, -1
   %shl = shl i32 1, %flag

@@ -23565,6 +23565,12 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
   if (!Src.getNode())
     return SDValue();
 
+  // Remove any bit flip.
+  if (isBitwiseNot(Src)) {
+    Src = Src.getOperand(0);
+    CC = CC == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ;
+  }
+
   // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
   // instruction.  Since the shift amount is in-range-or-undefined, we know
   // that doing a bittest on the i32 value is ok.  We extend to i32 because
