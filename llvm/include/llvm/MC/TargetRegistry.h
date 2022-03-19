@@ -530,6 +530,8 @@ public:
     switch (T.getObjectFormat()) {
     case Triple::UnknownObjectFormat:
       llvm_unreachable("Unknown object format");
+    case Triple::DXContainer:
+      llvm_unreachable("DXContainer is unsupported through MC");
     case Triple::COFF:
       assert(T.isOSWindows() && "only Windows COFF is supported");
       S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),

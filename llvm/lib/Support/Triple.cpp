@@ -743,6 +743,7 @@ static StringRef getObjectFormatTypeName(Triple::ObjectFormatType Kind) {
   case Triple::MachO: return "macho";
   case Triple::Wasm:  return "wasm";
   case Triple::XCOFF: return "xcoff";
+  case Triple::DXContainer:  return "dxcontainer";
   }
   llvm_unreachable("unknown object format type");
 }
@@ -830,7 +831,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
     return Triple::UnknownObjectFormat;
 
   case Triple::dxil:
-    return Triple::UnknownObjectFormat;
+    return Triple::DXContainer;
   }
   llvm_unreachable("unknown architecture");
 }

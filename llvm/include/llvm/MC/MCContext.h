@@ -76,7 +76,15 @@ public:
   using DiagHandlerTy =
       std::function<void(const SMDiagnostic &, bool, const SourceMgr &,
                          std::vector<const MDNode *> &)>;
-  enum Environment { IsMachO, IsELF, IsGOFF, IsCOFF, IsWasm, IsXCOFF };
+  enum Environment {
+    IsMachO,
+    IsELF,
+    IsGOFF,
+    IsCOFF,
+    IsWasm,
+    IsXCOFF,
+    IsDXContainer
+  };
 
 private:
   Environment Env;
