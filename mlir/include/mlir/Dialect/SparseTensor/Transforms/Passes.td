@@ -114,6 +114,10 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
     "sparse_tensor::SparseTensorDialect",
     "vector::VectorDialect",
   ];
+  let options = [
+    Option<"sparseToSparse", "s2s-strategy", "int32_t", "0",
+           "Set the strategy for sparse-to-sparse conversion">,
+  ];
 }
 
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES
