@@ -50,9 +50,10 @@ enum class Action : uint32_t {
   kEmpty = 0,
   kFromFile = 1,
   kFromCOO = 2,
-  kEmptyCOO = 3,
-  kToCOO = 4,
-  kToIterator = 5
+  kSparseToSparse = 3,
+  kEmptyCOO = 4,
+  kToCOO = 5,
+  kToIterator = 6
 };
 
 /// This enum mimics `SparseTensorEncodingAttr::DimLevelType` for
