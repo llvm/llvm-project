@@ -1007,15 +1007,13 @@ the C++ PDL API. For example, the constraints above may be registered as:
 
 ```c++
 // TODO: Cleanup when we allow more accessible wrappers around PDL functions.
-static LogicalResult hasOneUseImpl(PDLValue pdlValue, ArrayAttr constantParams,
-                                   PatternRewriter &rewriter) {
+static LogicalResult hasOneUseImpl(PDLValue pdlValue, PatternRewriter &rewriter) {
   Value value = pdlValue.cast<Value>();
   
   return success(value.hasOneUse());
 }
-static LogicalResult hasSameElementTypeImpl(
-    ArrayRef<PDLValue> pdlValues, ArrayAttr constantParams,
-    PatternRewriter &rewriter) {
+static LogicalResult hasSameElementTypeImpl(ArrayRef<PDLValue> pdlValues,
+                                            PatternRewriter &rewriter) {
   Value value1 = pdlValues[0].cast<Value>();
   Value value2 = pdlValues[1].cast<Value>();
       
@@ -1310,8 +1308,8 @@ the C++ PDL API. For example, the rewrite above may be registered as:
 
 ```c++
 // TODO: Cleanup when we allow more accessible wrappers around PDL functions.
-static void buildOpImpl(ArrayRef<PDLValue> args, ArrayAttr constantParams,
-                        PatternRewriter &rewriter, PDLResultList &results) {
+static void buildOpImpl(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
+                        PDLResultList &results) {
   Value value = args[0].cast<Value>();
 
   // insert special rewrite logic here.

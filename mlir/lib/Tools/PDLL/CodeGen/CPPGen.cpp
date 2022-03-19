@@ -190,7 +190,7 @@ void CodeGen::generateConstraintOrRewrite(StringRef name, bool isConstraint,
   // what we need as a frontend.
   os << "static " << (isConstraint ? "::mlir::LogicalResult " : "void ") << name
      << "PDLFn(::llvm::ArrayRef<::mlir::PDLValue> values, "
-        "::mlir::ArrayAttr constParams, ::mlir::PatternRewriter &rewriter"
+        "::mlir::PatternRewriter &rewriter"
      << (isConstraint ? "" : ", ::mlir::PDLResultList &results") << ") {\n";
 
   const char *argumentInitStr = R"(
