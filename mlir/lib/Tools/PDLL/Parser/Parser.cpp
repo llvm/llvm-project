@@ -425,6 +425,12 @@ private:
   LogicalResult codeCompleteOperationName(StringRef dialectName);
   LogicalResult codeCompletePatternMetadata();
 
+  void codeCompleteCallSignature(ast::Node *parent, unsigned currentNumArgs);
+  void codeCompleteOperationOperandsSignature(Optional<StringRef> opName,
+                                              unsigned currentNumOperands);
+  void codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+                                             unsigned currentNumResults);
+
   //===--------------------------------------------------------------------===//
   // Lexer Utilities
   //===--------------------------------------------------------------------===//
@@ -1762,6 +1768,12 @@ FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
   SmallVector<ast::Expr *> arguments;
   if (curToken.isNot(Token::r_paren)) {
     do {
+      // Handle code completion for the call arguments.
+      if (curToken.is(Token::code_complete)) {
+        codeCompleteCallSignature(parentExpr, arguments.size());
+        return failure();
+      }
+
       FailureOr<ast::Expr *> argument = parseExpr();
       if (failed(argument))
         return failure();
@@ -1933,6 +1945,12 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
           ast::ValueRangeConstraintDecl::create(ctx, loc), valueRangeTy));
     }
   } else if (!consumeIf(Token::r_paren)) {
+    // Check for operand signature code completion.
+    if (curToken.is(Token::code_complete)) {
+      codeCompleteOperationOperandsSignature(opName, operands.size());
+      return failure();
+    }
+
     // If the operand list was specified and non-empty, parse the operands.
     do {
       FailureOr<ast::Expr *> operand = parseExpr();
@@ -1972,6 +1990,12 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
     // Handle the case of an empty result list.
     if (!consumeIf(Token::r_paren)) {
       do {
+        // Check for result signature code completion.
+        if (curToken.is(Token::code_complete)) {
+          codeCompleteOperationResultsSignature(opName, resultTypes.size());
+          return failure();
+        }
+
         FailureOr<ast::Expr *> resultTypeExpr = parseExpr();
         if (failed(resultTypeExpr))
           return failure();
@@ -2897,6 +2921,27 @@ LogicalResult Parser::codeCompleteOperationName(StringRef dialectName) {
 LogicalResult Parser::codeCompletePatternMetadata() {
   codeCompleteContext->codeCompletePatternMetadata();
   return failure();
+}
+
+void Parser::codeCompleteCallSignature(ast::Node *parent,
+                                       unsigned currentNumArgs) {
+  ast::CallableDecl *callableDecl = tryExtractCallableDecl(parent);
+  if (!callableDecl)
+    return;
+
+  codeCompleteContext->codeCompleteCallSignature(callableDecl, currentNumArgs);
+}
+
+void Parser::codeCompleteOperationOperandsSignature(
+    Optional<StringRef> opName, unsigned currentNumOperands) {
+  codeCompleteContext->codeCompleteOperationOperandsSignature(
+      opName, currentNumOperands);
+}
+
+void Parser::codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+                                                   unsigned currentNumResults) {
+  codeCompleteContext->codeCompleteOperationResultsSignature(opName,
+                                                             currentNumResults);
 }
 
 //===----------------------------------------------------------------------===//

@@ -871,6 +871,65 @@ struct CompletionParams : TextDocumentPositionParams {
 bool fromJSON(const llvm::json::Value &value, CompletionParams &result,
               llvm::json::Path path);
 
+//===----------------------------------------------------------------------===//
+// ParameterInformation
+//===----------------------------------------------------------------------===//
+
+/// A single parameter of a particular signature.
+struct ParameterInformation {
+  /// The label of this parameter. Ignored when labelOffsets is set.
+  std::string labelString;
+
+  /// Inclusive start and exclusive end offsets withing the containing signature
+  /// label.
+  Optional<std::pair<unsigned, unsigned>> labelOffsets;
+
+  /// The documentation of this parameter. Optional.
+  std::string documentation;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const ParameterInformation &value);
+
+//===----------------------------------------------------------------------===//
+// SignatureInformation
+//===----------------------------------------------------------------------===//
+
+/// Represents the signature of something callable.
+struct SignatureInformation {
+  /// The label of this signature. Mandatory.
+  std::string label;
+
+  /// The documentation of this signature. Optional.
+  std::string documentation;
+
+  /// The parameters of this signature.
+  std::vector<ParameterInformation> parameters;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const SignatureInformation &value);
+raw_ostream &operator<<(raw_ostream &os, const SignatureInformation &value);
+
+//===----------------------------------------------------------------------===//
+// SignatureHelp
+//===----------------------------------------------------------------------===//
+
+/// Represents the signature of a callable.
+struct SignatureHelp {
+  /// The resulting signatures.
+  std::vector<SignatureInformation> signatures;
+
+  /// The active signature.
+  int activeSignature = 0;
+
+  /// The active parameter of the active signature.
+  int activeParameter = 0;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const SignatureHelp &value);
+
 } // namespace lsp
 } // namespace mlir
 

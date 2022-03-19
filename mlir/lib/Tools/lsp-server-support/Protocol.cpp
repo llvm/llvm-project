@@ -742,3 +742,57 @@ bool mlir::lsp::fromJSON(const llvm::json::Value &value,
     return fromJSON(*context, result.context, path.field("context"));
   return true;
 }
+
+//===----------------------------------------------------------------------===//
+// ParameterInformation
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const ParameterInformation &value) {
+  assert((value.labelOffsets.hasValue() || !value.labelString.empty()) &&
+         "parameter information label is required");
+  llvm::json::Object result;
+  if (value.labelOffsets)
+    result["label"] = llvm::json::Array(
+        {value.labelOffsets->first, value.labelOffsets->second});
+  else
+    result["label"] = value.labelString;
+  if (!value.documentation.empty())
+    result["documentation"] = value.documentation;
+  return std::move(result);
+}
+
+//===----------------------------------------------------------------------===//
+// SignatureInformation
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const SignatureInformation &value) {
+  assert(!value.label.empty() && "signature information label is required");
+  llvm::json::Object result{
+      {"label", value.label},
+      {"parameters", llvm::json::Array(value.parameters)},
+  };
+  if (!value.documentation.empty())
+    result["documentation"] = value.documentation;
+  return std::move(result);
+}
+
+raw_ostream &mlir::lsp::operator<<(raw_ostream &os,
+                                   const SignatureInformation &value) {
+  return os << value.label << " - " << toJSON(value);
+}
+
+//===----------------------------------------------------------------------===//
+// SignatureHelp
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const SignatureHelp &value) {
+  assert(value.activeSignature >= 0 &&
+         "Unexpected negative value for number of active signatures.");
+  assert(value.activeParameter >= 0 &&
+         "Unexpected negative value for active parameter index");
+  return llvm::json::Object{
+      {"activeSignature", value.activeSignature},
+      {"activeParameter", value.activeParameter},
+      {"signatures", llvm::json::Array(value.signatures)},
+  };
+}

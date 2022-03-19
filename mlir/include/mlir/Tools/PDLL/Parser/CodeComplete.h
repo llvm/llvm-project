@@ -66,6 +66,24 @@ public:
   /// Signal code completion for Pattern metadata.
   virtual void codeCompletePatternMetadata() {}
 
+  //===--------------------------------------------------------------------===//
+  // Signature Hooks
+  //===--------------------------------------------------------------------===//
+
+  /// Signal code completion for the signature of a callable.
+  virtual void codeCompleteCallSignature(const ast::CallableDecl *callable,
+                                         unsigned currentNumArgs) {}
+
+  /// Signal code completion for the signature of an operation's operands.
+  virtual void
+  codeCompleteOperationOperandsSignature(Optional<StringRef> opName,
+                                         unsigned currentNumOperands) {}
+
+  /// Signal code completion for the signature of an operation's results.
+  virtual void
+  codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+                                        unsigned currentNumResults) {}
+
 protected:
   /// Create a new code completion context with the given code complete
   /// location.

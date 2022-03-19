@@ -71,6 +71,12 @@ struct LSPServer {
                     Callback<CompletionList> reply);
 
   //===--------------------------------------------------------------------===//
+  // Signature Help
+
+  void onSignatureHelp(const TextDocumentPositionParams &params,
+                       Callback<SignatureHelp> reply);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -108,6 +114,10 @@ void LSPServer::onInitialize(const InitializeParams &params,
              "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
            {"resolveProvider", false},
            {"triggerCharacters", {".", ">", "(", "{", ",", "<", ":", "[", " "}},
+       }},
+      {"signatureHelpProvider",
+       llvm::json::Object{
+           {"triggerCharacters", {"(", ","}},
        }},
       {"definitionProvider", true},
       {"referencesProvider", true},
@@ -210,6 +220,14 @@ void LSPServer::onCompletion(const CompletionParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// Signature Help
+
+void LSPServer::onSignatureHelp(const TextDocumentPositionParams &params,
+                                Callback<SignatureHelp> reply) {
+  reply(server.getSignatureHelp(params.textDocument.uri, params.position));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry Point
 //===----------------------------------------------------------------------===//
 
@@ -248,6 +266,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
   // Code Completion
   messageHandler.method("textDocument/completion", &lspServer,
                         &LSPServer::onCompletion);
+
+  // Signature Help
+  messageHandler.method("textDocument/signatureHelp", &lspServer,
+                        &LSPServer::onSignatureHelp);
 
   // Diagnostics
   lspServer.publishDiagnostics =

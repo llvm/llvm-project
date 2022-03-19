@@ -20,6 +20,7 @@ struct DocumentSymbol;
 struct Hover;
 struct Location;
 struct Position;
+struct SignatureHelp;
 class URIForFile;
 
 /// This class implements all of the PDLL related functionality necessary for a
@@ -61,6 +62,10 @@ public:
   /// Get the code completion list for the position within the given file.
   CompletionList getCodeCompletion(const URIForFile &uri,
                                    const Position &completePos);
+
+  /// Get the signature help for the position within the given file.
+  SignatureHelp getSignatureHelp(const URIForFile &uri,
+                                 const Position &helpPos);
 
 private:
   struct Impl;
