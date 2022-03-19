@@ -52283,36 +52283,16 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
-static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
-  bool IsSub = N->getOpcode() == ISD::SUB;
-  SDValue X = N->getOperand(0);
-  SDValue Y = N->getOperand(1);
-
-  // If this is an add, canonicalize a zext operand to the RHS.
-  // TODO: Incomplete? What if both sides are zexts?
-  if (!IsSub && X.getOpcode() == ISD::ZERO_EXTEND &&
-      Y.getOpcode() != ISD::ZERO_EXTEND)
-    std::swap(X, Y);
-
+static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
+                                         SDValue X, SDValue Y,
+                                         SelectionDAG &DAG) {
   // Look through a one-use zext.
-  bool PeekedThroughZext = false;
-  if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse()) {
+  if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
     Y = Y.getOperand(0);
-    PeekedThroughZext = true;
-  }
-
-  // If this is an add, canonicalize a setcc operand to the RHS.
-  // TODO: Incomplete? What if both sides are setcc?
-  // TODO: Should we allow peeking through a zext of the other operand?
-  if (!IsSub && !PeekedThroughZext && X.getOpcode() == X86ISD::SETCC &&
-      Y.getOpcode() != X86ISD::SETCC)
-    std::swap(X, Y);
 
   if (Y.getOpcode() != X86ISD::SETCC || !Y.hasOneUse())
     return SDValue();
 
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
   X86::CondCode CC = (X86::CondCode)Y.getConstantOperandVal(0);
   SDValue EFLAGS = Y.getOperand(1);
 
@@ -52468,6 +52448,26 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
   return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VTs, X,
                      DAG.getConstant(0, DL, VT), Cmp1.getValue(1));
+}
+
+/// If this is an add or subtract where one operand is produced by a cmp+setcc,
+/// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
+/// with CMP+{ADC, SBB}.
+static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
+  bool IsSub = N->getOpcode() == ISD::SUB;
+  SDValue X = N->getOperand(0);
+  SDValue Y = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
+    return ADCOrSBB;
+
+  // If this is an add, commute and try again.
+  if (!IsSub)
+    return combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG);
+
+  return SDValue();
 }
 
 static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,
