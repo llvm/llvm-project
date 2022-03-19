@@ -4769,12 +4769,13 @@ Sema::DeduceAutoType(TypeLoc Type, Expr *&Init, QualType &Result,
       return DAR_FailedAlreadyDiagnosed;
   }
 
-  if (const auto *AT = Type.getType()->getAs<AutoType>()) {
+  QualType MaybeAuto = Type.getType().getNonReferenceType();
+  while (MaybeAuto->isPointerType())
+    MaybeAuto = MaybeAuto->getPointeeType();
+  if (const auto *AT = MaybeAuto->getAs<AutoType>()) {
     if (AT->isConstrained() && !IgnoreConstraints) {
-      auto ConstraintsResult =
-          CheckDeducedPlaceholderConstraints(*this, *AT,
-                                             Type.getContainedAutoTypeLoc(),
-                                             DeducedType);
+      auto ConstraintsResult = CheckDeducedPlaceholderConstraints(
+          *this, *AT, Type.getContainedAutoTypeLoc(), DeducedType);
       if (ConstraintsResult != DAR_Succeeded)
         return ConstraintsResult;
     }
