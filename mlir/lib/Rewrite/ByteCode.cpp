@@ -1340,7 +1340,7 @@ void ByteCodeExecutor::executeApplyConstraint(PatternRewriter &rewriter) {
   });
 
   // Invoke the constraint and jump to the proper destination.
-  selectJump(succeeded(constraintFn(args, rewriter)));
+  selectJump(succeeded(constraintFn(rewriter, args)));
 }
 
 void ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
@@ -1357,7 +1357,7 @@ void ByteCodeExecutor::executeApplyRewrite(PatternRewriter &rewriter) {
   // Execute the rewrite function.
   ByteCodeField numResults = read();
   ByteCodeRewriteResultList results(numResults);
-  rewriteFn(args, rewriter, results);
+  rewriteFn(rewriter, results, args);
 
   assert(results.getResults().size() == numResults &&
          "native PDL rewrite function returned unexpected number of results");

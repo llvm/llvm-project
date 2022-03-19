@@ -409,7 +409,8 @@ public:
 
   /// Creates an operation with the given fields.
   Operation *create(Location loc, StringAttr opName, ValueRange operands,
-                    TypeRange types, ArrayRef<NamedAttribute> attributes = {},
+                    TypeRange types = {},
+                    ArrayRef<NamedAttribute> attributes = {},
                     BlockRange successors = {},
                     MutableArrayRef<std::unique_ptr<Region>> regions = {});
 

@@ -68,18 +68,14 @@ def PDL_ApplyNativeRewriteOp
 
     ```mlir
     // Apply a native rewrite method that returns an attribute.
-    %ret = pdl.apply_native_rewrite "myNativeFunc"(%arg0, %arg1) : !pdl.attribute
+    %ret = pdl.apply_native_rewrite "myNativeFunc"(%arg0, %attr1) : !pdl.attribute
     ```
 
     ```c++
     // The native rewrite as defined in C++:
-    static void myNativeFunc(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
-                             PDLResultList &results) {
-      Value arg0 = args[0].cast<Value>();
-      Value arg1 = args[1].cast<Value>();
-
-      // Just push back the first param attribute.
-      results.push_back(param0);
+    static Attribute myNativeFunc(PatternRewriter &rewriter, Value arg0, Attribute arg1) {
+      // Just return the second arg.
+      return arg1;
     }
 
     void registerNativeRewrite(PDLPatternModule &pdlModule) {

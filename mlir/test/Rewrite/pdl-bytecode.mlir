@@ -181,8 +181,9 @@ module @patterns {
 
   module @rewriters {
     pdl_interp.func @success(%root : !pdl.operation) {
+      %attr = pdl_interp.apply_rewrite "str_creator" : !pdl.attribute
       %type = pdl_interp.apply_rewrite "type_creator" : !pdl.type
-      %newOp = pdl_interp.create_operation "test.success" -> (%type : !pdl.type)
+      %newOp = pdl_interp.create_operation "test.success" {"attr" = %attr} -> (%type : !pdl.type)
       pdl_interp.erase %root
       pdl_interp.finalize
     }
@@ -190,7 +191,7 @@ module @patterns {
 }
 
 // CHECK-LABEL: test.apply_rewrite_4
-// CHECK: "test.success"() : () -> f32
+// CHECK: "test.success"() {attr = "test.str"} : () -> f32
 module @ir attributes { test.apply_rewrite_4 } {
   "test.op"() : () -> ()
 }

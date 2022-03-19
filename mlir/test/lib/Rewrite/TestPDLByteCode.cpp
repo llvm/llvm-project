@@ -14,53 +14,42 @@
 using namespace mlir;
 
 /// Custom constraint invoked from PDL.
-static LogicalResult customSingleEntityConstraint(PDLValue value,
-                                                  PatternRewriter &rewriter) {
-  Operation *rootOp = value.cast<Operation *>();
+static LogicalResult customSingleEntityConstraint(PatternRewriter &rewriter,
+                                                  Operation *rootOp) {
   return success(rootOp->getName().getStringRef() == "test.op");
 }
-static LogicalResult customMultiEntityConstraint(ArrayRef<PDLValue> values,
-                                                 PatternRewriter &rewriter) {
-  return customSingleEntityConstraint(values[1], rewriter);
+static LogicalResult customMultiEntityConstraint(PatternRewriter &rewriter,
+                                                 Operation *root,
+                                                 Operation *rootCopy) {
+  return customSingleEntityConstraint(rewriter, rootCopy);
 }
-static LogicalResult
-customMultiEntityVariadicConstraint(ArrayRef<PDLValue> values,
-                                    PatternRewriter &rewriter) {
-  if (llvm::any_of(values, [](const PDLValue &value) { return !value; }))
-    return failure();
-  ValueRange operandValues = values[0].cast<ValueRange>();
-  TypeRange typeValues = values[1].cast<TypeRange>();
+static LogicalResult customMultiEntityVariadicConstraint(
+    PatternRewriter &rewriter, ValueRange operandValues, TypeRange typeValues) {
   if (operandValues.size() != 2 || typeValues.size() != 2)
     return failure();
   return success();
 }
 
 // Custom creator invoked from PDL.
-static void customCreate(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
-                         PDLResultList &results) {
-  results.push_back(rewriter.create(
-      OperationState(args[0].cast<Operation *>()->getLoc(), "test.success")));
+static Operation *customCreate(PatternRewriter &rewriter, Operation *op) {
+  return rewriter.create(OperationState(op->getLoc(), "test.success"));
 }
-
-static void customVariadicResultCreate(ArrayRef<PDLValue> args,
-                                       PatternRewriter &rewriter,
-                                       PDLResultList &results) {
-  Operation *root = args[0].cast<Operation *>();
-  results.push_back(root->getOperands());
-  results.push_back(root->getOperands().getTypes());
+static auto customVariadicResultCreate(PatternRewriter &rewriter,
+                                       Operation *root) {
+  return std::make_pair(root->getOperands(), root->getOperands().getTypes());
 }
-static void customCreateType(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
-                             PDLResultList &results) {
-  results.push_back(rewriter.getF32Type());
+static Type customCreateType(PatternRewriter &rewriter) {
+  return rewriter.getF32Type();
+}
+static std::string customCreateStrAttr(PatternRewriter &rewriter) {
+  return "test.str";
 }
 
 /// Custom rewriter invoked from PDL.
-static void customRewriter(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
-                           PDLResultList &results) {
-  Operation *root = args[0].cast<Operation *>();
-  OperationState successOpState(root->getLoc(), "test.success");
-  successOpState.addOperands(args[1].cast<Value>());
-  rewriter.create(successOpState);
+static void customRewriter(PatternRewriter &rewriter, Operation *root,
+                           Value input) {
+  rewriter.create(root->getLoc(), rewriter.getStringAttr("test.success"),
+                  input);
   rewriter.eraseOp(root);
 }
 
@@ -117,6 +106,7 @@ struct TestPDLByteCodePass
     pdlPattern.registerRewriteFunction("var_creator",
                                        customVariadicResultCreate);
     pdlPattern.registerRewriteFunction("type_creator", customCreateType);
+    pdlPattern.registerRewriteFunction("str_creator", customCreateStrAttr);
     pdlPattern.registerRewriteFunction("rewriter", customRewriter);
     patternList.add(std::move(pdlPattern));
 
