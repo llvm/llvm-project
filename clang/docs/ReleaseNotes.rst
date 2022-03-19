@@ -105,6 +105,9 @@ Improvements to Clang's diagnostics
 - ``-Wunused-but-set-variable`` now also warns if the variable is only used
   by unary operators.
 
+- ``-Wmisexpect`` warns when the branch weights collected during profiling
+  conflict with those added by ``llvm.expect``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 - The builtin function __builtin_dump_struct would crash clang when the target 
