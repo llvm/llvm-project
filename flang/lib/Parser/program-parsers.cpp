@@ -54,11 +54,13 @@ static constexpr auto globalCompilerDirective{
 // Consequently, a program unit END statement should be the last statement
 // on its line.  We parse those END statements via unterminatedStatement()
 // and then skip over the end of the line here.
-TYPE_PARSER(construct<Program>(
-    extension<LanguageFeature::EmptySourceFile>(skipStuffBeforeStatement >>
-        !nextCh >> pure<std::list<ProgramUnit>>()) ||
-    some(globalCompilerDirective || normalProgramUnit) /
-        skipStuffBeforeStatement))
+TYPE_PARSER(
+    construct<Program>(extension<LanguageFeature::EmptySourceFile>(
+                           "nonstandard usage: empty source file"_port_en_US,
+                           skipStuffBeforeStatement >> !nextCh >>
+                               pure<std::list<ProgramUnit>>()) ||
+        some(globalCompilerDirective || normalProgramUnit) /
+            skipStuffBeforeStatement))
 
 // R504 specification-part ->
 //         [use-stmt]... [import-stmt]... [implicit-part]
@@ -204,6 +206,7 @@ TYPE_CONTEXT_PARSER("main program"_en_US,
 TYPE_CONTEXT_PARSER("PROGRAM statement"_en_US,
     construct<ProgramStmt>("PROGRAM" >> name /
             maybe(extension<LanguageFeature::ProgramParentheses>(
+                "nonstandard usage: parentheses in PROGRAM statement"_port_en_US,
                 parenthesized(ok)))))
 
 // R1403 end-program-stmt -> END [PROGRAM [program-name]]
@@ -449,10 +452,14 @@ TYPE_PARSER(construct<ActualArgSpec>(
 // Semantics sorts it all out later.
 TYPE_PARSER(construct<ActualArg>(expr) ||
     construct<ActualArg>(Parser<AltReturnSpec>{}) ||
-    extension<LanguageFeature::PercentRefAndVal>(construct<ActualArg>(
-        construct<ActualArg::PercentRef>("%REF" >> parenthesized(variable)))) ||
-    extension<LanguageFeature::PercentRefAndVal>(construct<ActualArg>(
-        construct<ActualArg::PercentVal>("%VAL" >> parenthesized(expr)))))
+    extension<LanguageFeature::PercentRefAndVal>(
+        "nonstandard usage: %REF"_port_en_US,
+        construct<ActualArg>(construct<ActualArg::PercentRef>(
+            "%REF" >> parenthesized(variable)))) ||
+    extension<LanguageFeature::PercentRefAndVal>(
+        "nonstandard usage: %VAL"_port_en_US,
+        construct<ActualArg>(
+            construct<ActualArg::PercentVal>("%VAL" >> parenthesized(expr)))))
 
 // R1525 alt-return-spec -> * label
 TYPE_PARSER(construct<AltReturnSpec>(star >> label))
@@ -485,6 +492,7 @@ TYPE_CONTEXT_PARSER("FUNCTION statement"_en_US,
     construct<FunctionStmt>(many(prefixSpec), "FUNCTION" >> name,
         parenthesized(optionalList(name)), maybe(suffix)) ||
         extension<LanguageFeature::OmitFunctionDummies>(
+            "nonstandard usage: FUNCTION statement without dummy argument list"_port_en_US,
             construct<FunctionStmt>( // PGI & Intel accept "FUNCTION F"
                 many(prefixSpec), "FUNCTION" >> name,
                 construct<std::list<Name>>(),
