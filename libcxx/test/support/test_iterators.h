@@ -515,6 +515,32 @@ struct iter_value_or_void<I> {
     using type = std::iter_value_t<I>;
 };
 
+template <class It>
+class cpp20_output_iterator {
+  It it_;
+
+public:
+  using difference_type = std::iter_difference_t<It>;
+
+  constexpr explicit cpp20_output_iterator(It it) : it_(it) {}
+  cpp20_output_iterator(cpp20_output_iterator&&) = default;
+  cpp20_output_iterator& operator=(cpp20_output_iterator&&) = default;
+
+  constexpr decltype(auto) operator*() const { return *it_; }
+  constexpr cpp20_output_iterator& operator++() {
+    ++it_;
+    return *this;
+  }
+  constexpr cpp20_output_iterator operator++(int) { return cpp20_output_iterator(it_++); }
+
+  friend constexpr It base(const cpp20_output_iterator& i) { return i.it_; }
+
+  template <class T>
+  void operator,(T const&) = delete;
+};
+
+static_assert(std::output_iterator<cpp20_output_iterator<int*>, int>);
+
 // Iterator adaptor that counts the number of times the iterator has had a successor/predecessor
 // operation called. Has two recorders:
 // * `stride_count`, which records the total number of calls to an op++, op--, op+=, or op-=.
