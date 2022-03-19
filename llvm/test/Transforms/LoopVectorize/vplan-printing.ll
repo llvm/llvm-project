@@ -276,7 +276,7 @@ define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
 ; CHECK-NEXT:   WIDEN ir<%l.a> = load ir<%arrayidx>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%l.b> = load ir<%arrayidx2>
-; CHECK-NEXT:   EMIT vp<[[FMUL:%.]]> = fmul nnan ninf nsz ir<%l.a> ir<%l.b>
+; CHECK-NEXT:   EMIT vp<[[FMUL:%.+]]> = fmul nnan ninf nsz ir<%l.a> ir<%l.b>
 ; CHECK-NEXT:   REDUCE ir<[[MULADD:%.+]]> = ir<%sum.07> + nnan ninf nsz reduce.fadd (vp<[[FMUL]]>)
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
