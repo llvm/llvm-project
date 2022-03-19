@@ -37,6 +37,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case bpfeb:          return "bpfeb";
   case bpfel:          return "bpfel";
   case csky:           return "csky";
+  case dxil:           return "dxil";
   case hexagon:        return "hexagon";
   case hsail64:        return "hsail64";
   case hsail:          return "hsail";
@@ -169,6 +170,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
 
   case loongarch32:
   case loongarch64: return "loongarch";
+  
+  case dxil:        return "dx";
   }
 }
 
@@ -235,6 +238,7 @@ StringRef Triple::getOSTypeName(OSType Kind) {
   case WatchOS: return "watchos";
   case Win32: return "windows";
   case ZOS: return "zos";
+  case ShaderModel: return "shadermodel";
   }
 
   llvm_unreachable("Invalid OSType");
@@ -264,6 +268,15 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case MuslEABIHF: return "musleabihf";
   case MuslX32: return "muslx32";
   case Simulator: return "simulator";
+  case Pixel: return "pixel";
+  case Vertex: return "vertex";
+  case Geometry: return "geometry";
+  case Hull: return "hull";
+  case Domain: return "domain";
+  case Compute: return "compute";
+  case Library: return "library";
+  case Mesh: return "mesh";
+  case Amplification: return "amplification";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -348,6 +361,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("csky", csky)
     .Case("loongarch32", loongarch32)
     .Case("loongarch64", loongarch64)
+    .Case("dxil", dxil)
     .Default(UnknownArch);
 }
 
@@ -485,6 +499,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("csky", Triple::csky)
     .Case("loongarch32", Triple::loongarch32)
     .Case("loongarch64", Triple::loongarch64)
+    .Case("dxil", Triple::dxil)
     .Default(Triple::UnknownArch);
 
   // Some architectures require special parsing logic just to compute the
@@ -559,6 +574,7 @@ static Triple::OSType parseOS(StringRef OSName) {
     .StartsWith("hurd", Triple::Hurd)
     .StartsWith("wasi", Triple::WASI)
     .StartsWith("emscripten", Triple::Emscripten)
+    .StartsWith("shadermodel", Triple::ShaderModel)
     .Default(Triple::UnknownOS);
 }
 
@@ -585,6 +601,15 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("coreclr", Triple::CoreCLR)
       .StartsWith("simulator", Triple::Simulator)
       .StartsWith("macabi", Triple::MacABI)
+      .StartsWith("pixel", Triple::Pixel)
+      .StartsWith("vertex", Triple::Vertex)
+      .StartsWith("geometry", Triple::Geometry)
+      .StartsWith("hull", Triple::Hull)
+      .StartsWith("domain", Triple::Domain)
+      .StartsWith("compute", Triple::Compute)
+      .StartsWith("library", Triple::Library)
+      .StartsWith("mesh", Triple::Mesh)
+      .StartsWith("amplification", Triple::Amplification)
       .Default(Triple::UnknownEnvironment);
 }
 
@@ -790,6 +815,9 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::spirv32:
   case Triple::spirv64:
     // TODO: In future this will be Triple::SPIRV.
+    return Triple::UnknownObjectFormat;
+
+  case Triple::dxil:
     return Triple::UnknownObjectFormat;
   }
   llvm_unreachable("unknown architecture");
@@ -1316,6 +1344,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::arm:
   case llvm::Triple::armeb:
   case llvm::Triple::csky:
+  case llvm::Triple::dxil:
   case llvm::Triple::hexagon:
   case llvm::Triple::hsail:
   case llvm::Triple::kalimba:
@@ -1405,6 +1434,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::arm:
   case Triple::armeb:
   case Triple::csky:
+  case Triple::dxil:
   case Triple::hexagon:
   case Triple::hsail:
   case Triple::kalimba:
@@ -1468,6 +1498,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::arc:
   case Triple::avr:
   case Triple::csky:
+  case Triple::dxil:
   case Triple::hexagon:
   case Triple::kalimba:
   case Triple::lanai:
@@ -1548,6 +1579,7 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::amdil64:
   case Triple::amdil:
   case Triple::avr:
+  case Triple::dxil:
   case Triple::hexagon:
   case Triple::hsail64:
   case Triple::hsail:
@@ -1650,6 +1682,7 @@ bool Triple::isLittleEndian() const {
   case Triple::avr:
   case Triple::bpfel:
   case Triple::csky:
+  case Triple::dxil:
   case Triple::hexagon:
   case Triple::hsail64:
   case Triple::hsail:
