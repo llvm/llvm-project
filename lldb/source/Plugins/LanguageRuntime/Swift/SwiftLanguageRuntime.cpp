@@ -21,6 +21,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/JITSection.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/StringPrinter.h"
@@ -461,36 +462,52 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
     return;
 
   auto &target = m_process.GetTarget();
-  if (auto exe_module = target.GetExecutableModule()) {
-    bool objc_interop = (bool)findRuntime(m_process, RuntimeKind::ObjC);
-    const char *objc_interop_msg =
-        objc_interop ? "with Objective-C interopability" : "Swift only";
+  auto exe_module = target.GetExecutableModule();
 
-    auto &triple = exe_module->GetArchitecture().GetTriple();
-    if (triple.isArch64Bit()) {
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Initializing a 64-bit reflection context (%s) for \"%s\"",
-                triple.str().c_str(), objc_interop_msg);
-      m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
-          this->GetMemoryReader(), objc_interop);
-    } else if (triple.isArch32Bit()) {
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Initializing a 32-bit reflection context (%s) for \"%s\"",
-                triple.str().c_str(), objc_interop_msg);
-      m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
-          this->GetMemoryReader(), objc_interop);
-    } else {
-      LLDB_LOGF(GetLog(LLDBLog::Types),
-                "Could not initialize reflection context for \"%s\"",
-                triple.str().c_str());
-    }
+  if (!exe_module) {
+    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: Failed to get executable module",
+              LLVM_PRETTY_FUNCTION);
+    m_initialized_reflection_ctx = false;
+    return;
   }
+
+  bool objc_interop = (bool)findRuntime(m_process, RuntimeKind::ObjC);
+  const char *objc_interop_msg =
+      objc_interop ? "with Objective-C interopability" : "Swift only";
+
+  auto &triple = exe_module->GetArchitecture().GetTriple();
+  if (triple.isArch64Bit()) {
+    LLDB_LOGF(GetLog(LLDBLog::Types),
+              "Initializing a 64-bit reflection context (%s) for \"%s\"",
+              triple.str().c_str(), objc_interop_msg);
+    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
+        this->GetMemoryReader(), objc_interop);
+  } else if (triple.isArch32Bit()) {
+    LLDB_LOGF(GetLog(LLDBLog::Types),
+              "Initializing a 32-bit reflection context (%s) for \"%s\"",
+              triple.str().c_str(), objc_interop_msg);
+    m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
+        this->GetMemoryReader(), objc_interop);
+  } else {
+    LLDB_LOGF(GetLog(LLDBLog::Types),
+              "Could not initialize reflection context for \"%s\"",
+              triple.str().c_str());
+  }
+
   m_initialized_reflection_ctx = true;
+
+  Progress progress(
+      llvm::formatv("Setting up Swift reflection for '{0}'",
+                    exe_module->GetFileSpec().GetFilename().AsCString()),
+      m_modules_to_add.GetSize());
+
+  size_t completion = 0;
 
   // Add all defered modules to reflection context that were added to
   // the target since this SwiftLanguageRuntime was created.
   m_modules_to_add.ForEach([&](const ModuleSP &module_sp) -> bool {
     AddModuleToReflectionContext(module_sp);
+    progress.Increment(++completion);
     return true;
   });
   m_modules_to_add.Clear();

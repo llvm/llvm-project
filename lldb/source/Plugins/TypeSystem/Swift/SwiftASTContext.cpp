@@ -96,6 +96,7 @@
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
@@ -4034,9 +4035,20 @@ void SwiftASTContext::ValidateSectionModules(
 
   Status error;
 
+  Progress progress(
+      llvm::formatv("Loading Swift module {0}",
+                    module.GetFileSpec().GetFilename().AsCString()),
+      module_names.size());
+
+  size_t completion = 0;
+
   for (const std::string &module_name : module_names) {
     SourceModule module_info;
     module_info.path.push_back(ConstString(module_name));
+
+    // We have to increment the completion value even if we can't get the module
+    // object to stay in-sync with the total progress reporting.
+    progress.Increment(++completion);
     if (!GetModule(module_info, error))
       module.ReportWarning("unable to load swift module \"%s\" (%s)",
                            module_name.c_str(), error.AsCString());
@@ -8322,7 +8334,7 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
   UserImportFinder import_finder;
   source_file.walk(import_finder);
   
-  for (const auto &attributed_import : source_file.getImports()) {
+  for (const auto &attributed_import : src_file_imports) {
     progress.Increment(++completion);
     swift::ModuleDecl *module = attributed_import.module.importedModule;
     if (module && import_finder.imports.count(module)) {
@@ -8401,7 +8413,16 @@ bool SwiftASTContext::GetCompileUnitImportsImpl(
   if (!compile_unit || compile_unit->GetLanguage() != lldb::eLanguageTypeSwift)
     return true;
 
-  for (const SourceModule &module : compile_unit->GetImportedModules()) {
+  auto cu_imports = compile_unit->GetImportedModules();
+
+  Progress progress(
+      llvm::formatv("Getting Swift compile unit imports for '{0}'",
+                    compile_unit->GetPrimaryFile().GetFilename()),
+      cu_imports.size());
+
+  size_t completion = 0;
+  for (const SourceModule &module : cu_imports) {
+    progress.Increment(++completion);
     // When building the Swift stdlib with debug info these will
     // show up in "Swift.o", but we already imported them and
     // manually importing them will fail.
