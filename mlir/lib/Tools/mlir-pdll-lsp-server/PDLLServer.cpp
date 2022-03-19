@@ -1,0 +1,523 @@
+//===- PDLLServer.cpp - PDLL Language Server ------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "PDLLServer.h"
+
+#include "../lsp-server-support/Logging.h"
+#include "../lsp-server-support/Protocol.h"
+#include "mlir/Tools/PDLL/AST/Context.h"
+#include "mlir/Tools/PDLL/AST/Nodes.h"
+#include "mlir/Tools/PDLL/AST/Types.h"
+#include "mlir/Tools/PDLL/ODS/Constraint.h"
+#include "mlir/Tools/PDLL/ODS/Context.h"
+#include "mlir/Tools/PDLL/ODS/Dialect.h"
+#include "mlir/Tools/PDLL/ODS/Operation.h"
+#include "mlir/Tools/PDLL/Parser/Parser.h"
+#include "llvm/ADT/IntervalMap.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Path.h"
+
+using namespace mlir;
+using namespace mlir::pdll;
+
+/// Returns a language server uri for the given source location. `mainFileURI`
+/// corresponds to the uri for the main file of the source manager.
+static lsp::URIForFile getURIFromLoc(llvm::SourceMgr &mgr, SMRange loc,
+                                     const lsp::URIForFile &mainFileURI) {
+  int bufferId = mgr.FindBufferContainingLoc(loc.Start);
+  if (bufferId == 0 || bufferId == static_cast<int>(mgr.getMainFileID()))
+    return mainFileURI;
+  llvm::Expected<lsp::URIForFile> fileForLoc = lsp::URIForFile::fromFile(
+      mgr.getBufferInfo(bufferId).Buffer->getBufferIdentifier());
+  if (fileForLoc)
+    return *fileForLoc;
+  lsp::Logger::error("Failed to create URI for include file: {0}",
+                     llvm::toString(fileForLoc.takeError()));
+  return mainFileURI;
+}
+
+/// Returns a language server location from the given source range.
+static lsp::Location getLocationFromLoc(llvm::SourceMgr &mgr, SMRange range,
+                                        const lsp::URIForFile &uri) {
+  return lsp::Location(getURIFromLoc(mgr, range, uri), lsp::Range(mgr, range));
+}
+
+/// Convert the given MLIR diagnostic to the LSP form.
+static Optional<lsp::Diagnostic>
+getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr, const ast::Diagnostic &diag,
+                        const lsp::URIForFile &uri) {
+  lsp::Diagnostic lspDiag;
+  lspDiag.source = "pdll";
+
+  // FIXME: Right now all of the diagnostics are treated as parser issues, but
+  // some are parser and some are verifier.
+  lspDiag.category = "Parse Error";
+
+  // Try to grab a file location for this diagnostic.
+  lsp::Location loc = getLocationFromLoc(sourceMgr, diag.getLocation(), uri);
+  lspDiag.range = loc.range;
+
+  // Skip diagnostics that weren't emitted within the main file.
+  if (loc.uri != uri)
+    return llvm::None;
+
+  // Convert the severity for the diagnostic.
+  switch (diag.getSeverity()) {
+  case ast::Diagnostic::Severity::DK_Note:
+    llvm_unreachable("expected notes to be handled separately");
+  case ast::Diagnostic::Severity::DK_Warning:
+    lspDiag.severity = lsp::DiagnosticSeverity::Warning;
+    break;
+  case ast::Diagnostic::Severity::DK_Error:
+    lspDiag.severity = lsp::DiagnosticSeverity::Error;
+    break;
+  case ast::Diagnostic::Severity::DK_Remark:
+    lspDiag.severity = lsp::DiagnosticSeverity::Information;
+    break;
+  }
+  lspDiag.message = diag.getMessage().str();
+
+  // Attach any notes to the main diagnostic as related information.
+  std::vector<lsp::DiagnosticRelatedInformation> relatedDiags;
+  for (const ast::Diagnostic &note : diag.getNotes()) {
+    relatedDiags.emplace_back(
+        getLocationFromLoc(sourceMgr, note.getLocation(), uri),
+        note.getMessage().str());
+  }
+  if (!relatedDiags.empty())
+    lspDiag.relatedInformation = std::move(relatedDiags);
+
+  return lspDiag;
+}
+
+//===----------------------------------------------------------------------===//
+// PDLIndex
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct PDLIndexSymbol {
+  explicit PDLIndexSymbol(const ast::Decl *definition)
+      : definition(definition) {}
+  explicit PDLIndexSymbol(const ods::Operation *definition)
+      : definition(definition) {}
+
+  /// Return the location of the definition of this symbol.
+  SMRange getDefLoc() const {
+    if (const ast::Decl *decl = definition.dyn_cast<const ast::Decl *>()) {
+      const ast::Name *declName = decl->getName();
+      return declName ? declName->getLoc() : decl->getLoc();
+    }
+    return definition.get<const ods::Operation *>()->getLoc();
+  }
+
+  /// The main definition of the symbol.
+  PointerUnion<const ast::Decl *, const ods::Operation *> definition;
+  /// The set of references to the symbol.
+  std::vector<SMRange> references;
+};
+
+/// This class provides an index for definitions/uses within a PDL document.
+/// It provides efficient lookup of a definition given an input source range.
+class PDLIndex {
+public:
+  PDLIndex() : intervalMap(allocator) {}
+
+  /// Initialize the index with the given ast::Module.
+  void initialize(const ast::Module &module, const ods::Context &odsContext);
+
+  /// Lookup a symbol for the given location. Returns nullptr if no symbol could
+  /// be found. If provided, `overlappedRange` is set to the range that the
+  /// provided `loc` overlapped with.
+  const PDLIndexSymbol *lookup(SMLoc loc,
+                               SMRange *overlappedRange = nullptr) const;
+
+private:
+  /// The type of interval map used to store source references. SMRange is
+  /// half-open, so we also need to use a half-open interval map.
+  using MapT =
+      llvm::IntervalMap<const char *, const PDLIndexSymbol *,
+                        llvm::IntervalMapImpl::NodeSizer<
+                            const char *, const PDLIndexSymbol *>::LeafSize,
+                        llvm::IntervalMapHalfOpenInfo<const char *>>;
+
+  /// An allocator for the interval map.
+  MapT::Allocator allocator;
+
+  /// An interval map containing a corresponding definition mapped to a source
+  /// interval.
+  MapT intervalMap;
+
+  /// A mapping between definitions and their corresponding symbol.
+  DenseMap<const void *, std::unique_ptr<PDLIndexSymbol>> defToSymbol;
+};
+} // namespace
+
+void PDLIndex::initialize(const ast::Module &module,
+                          const ods::Context &odsContext) {
+  auto getOrInsertDef = [&](const auto *def) -> PDLIndexSymbol * {
+    auto it = defToSymbol.try_emplace(def, nullptr);
+    if (it.second)
+      it.first->second = std::make_unique<PDLIndexSymbol>(def);
+    return &*it.first->second;
+  };
+  auto insertDeclRef = [&](PDLIndexSymbol *sym, SMRange refLoc,
+                           bool isDef = false) {
+    const char *startLoc = refLoc.Start.getPointer();
+    const char *endLoc = refLoc.End.getPointer();
+    if (!intervalMap.overlaps(startLoc, endLoc)) {
+      intervalMap.insert(startLoc, endLoc, sym);
+      if (!isDef)
+        sym->references.push_back(refLoc);
+    }
+  };
+  auto insertODSOpRef = [&](StringRef opName, SMRange refLoc) {
+    const ods::Operation *odsOp = odsContext.lookupOperation(opName);
+    if (!odsOp)
+      return;
+
+    PDLIndexSymbol *symbol = getOrInsertDef(odsOp);
+    insertDeclRef(symbol, odsOp->getLoc(), /*isDef=*/true);
+    insertDeclRef(symbol, refLoc);
+  };
+
+  module.walk([&](const ast::Node *node) {
+    // Handle references to PDL decls.
+    if (const auto *decl = dyn_cast<ast::OpNameDecl>(node)) {
+      if (Optional<StringRef> name = decl->getName())
+        insertODSOpRef(*name, decl->getLoc());
+    } else if (const ast::Decl *decl = dyn_cast<ast::Decl>(node)) {
+      const ast::Name *name = decl->getName();
+      if (!name)
+        return;
+      PDLIndexSymbol *declSym = getOrInsertDef(decl);
+      insertDeclRef(declSym, name->getLoc(), /*isDef=*/true);
+
+      if (const auto *varDecl = dyn_cast<ast::VariableDecl>(decl)) {
+        // Record references to any constraints.
+        for (const auto &it : varDecl->getConstraints())
+          insertDeclRef(getOrInsertDef(it.constraint), it.referenceLoc);
+      }
+    } else if (const auto *expr = dyn_cast<ast::DeclRefExpr>(node)) {
+      insertDeclRef(getOrInsertDef(expr->getDecl()), expr->getLoc());
+    }
+  });
+}
+
+const PDLIndexSymbol *PDLIndex::lookup(SMLoc loc,
+                                       SMRange *overlappedRange) const {
+  auto it = intervalMap.find(loc.getPointer());
+  if (!it.valid() || loc.getPointer() < it.start())
+    return nullptr;
+
+  if (overlappedRange) {
+    *overlappedRange = SMRange(SMLoc::getFromPointer(it.start()),
+                               SMLoc::getFromPointer(it.stop()));
+  }
+  return it.value();
+}
+
+//===----------------------------------------------------------------------===//
+// PDLDocument
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class represents all of the information pertaining to a specific PDL
+/// document.
+struct PDLDocument {
+  PDLDocument(const lsp::URIForFile &uri, StringRef contents,
+              std::vector<lsp::Diagnostic> &diagnostics);
+  PDLDocument(const PDLDocument &) = delete;
+  PDLDocument &operator=(const PDLDocument &) = delete;
+
+  //===--------------------------------------------------------------------===//
+  // Definitions and References
+  //===--------------------------------------------------------------------===//
+
+  void getLocationsOf(const lsp::URIForFile &uri, const lsp::Position &defPos,
+                      std::vector<lsp::Location> &locations);
+  void findReferencesOf(const lsp::URIForFile &uri, const lsp::Position &pos,
+                        std::vector<lsp::Location> &references);
+
+  //===--------------------------------------------------------------------===//
+  // Fields
+  //===--------------------------------------------------------------------===//
+
+  /// The include directories for this file.
+  std::vector<std::string> includeDirs;
+
+  /// The source manager containing the contents of the input file.
+  llvm::SourceMgr sourceMgr;
+
+  /// The ODS and AST contexts.
+  ods::Context odsContext;
+  ast::Context astContext;
+
+  /// The parsed AST module, or failure if the file wasn't valid.
+  FailureOr<ast::Module *> astModule;
+
+  /// The index of the parsed module.
+  PDLIndex index;
+};
+} // namespace
+
+PDLDocument::PDLDocument(const lsp::URIForFile &uri, StringRef contents,
+                         std::vector<lsp::Diagnostic> &diagnostics)
+    : astContext(odsContext) {
+  auto memBuffer = llvm::MemoryBuffer::getMemBufferCopy(contents, uri.file());
+  if (!memBuffer) {
+    lsp::Logger::error("Failed to create memory buffer for file", uri.file());
+    return;
+  }
+
+  // TODO: Properly provide include directories from the client.
+  llvm::SmallString<32> uriDirectory(uri.file());
+  llvm::sys::path::remove_filename(uriDirectory);
+  includeDirs.push_back(uriDirectory.str().str());
+
+  sourceMgr.setIncludeDirs(includeDirs);
+  sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
+
+  astContext.getDiagEngine().setHandlerFn([&](const ast::Diagnostic &diag) {
+    if (auto lspDiag = getLspDiagnoticFromDiag(sourceMgr, diag, uri))
+      diagnostics.push_back(std::move(*lspDiag));
+  });
+  astModule = parsePDLAST(astContext, sourceMgr);
+  if (succeeded(astModule))
+    index.initialize(**astModule, odsContext);
+}
+
+//===----------------------------------------------------------------------===//
+// PDLDocument: Definitions and References
+//===----------------------------------------------------------------------===//
+
+void PDLDocument::getLocationsOf(const lsp::URIForFile &uri,
+                                 const lsp::Position &defPos,
+                                 std::vector<lsp::Location> &locations) {
+  SMLoc posLoc = defPos.getAsSMLoc(sourceMgr);
+  const PDLIndexSymbol *symbol = index.lookup(posLoc);
+  if (!symbol)
+    return;
+
+  locations.push_back(getLocationFromLoc(sourceMgr, symbol->getDefLoc(), uri));
+}
+
+void PDLDocument::findReferencesOf(const lsp::URIForFile &uri,
+                                   const lsp::Position &pos,
+                                   std::vector<lsp::Location> &references) {
+  SMLoc posLoc = pos.getAsSMLoc(sourceMgr);
+  const PDLIndexSymbol *symbol = index.lookup(posLoc);
+  if (!symbol)
+    return;
+
+  references.push_back(getLocationFromLoc(sourceMgr, symbol->getDefLoc(), uri));
+  for (SMRange refLoc : symbol->references)
+    references.push_back(getLocationFromLoc(sourceMgr, refLoc, uri));
+}
+
+//===----------------------------------------------------------------------===//
+// PDLTextFileChunk
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class represents a single chunk of an PDL text file.
+struct PDLTextFileChunk {
+  PDLTextFileChunk(uint64_t lineOffset, const lsp::URIForFile &uri,
+                   StringRef contents,
+                   std::vector<lsp::Diagnostic> &diagnostics)
+      : lineOffset(lineOffset), document(uri, contents, diagnostics) {}
+
+  /// Adjust the line number of the given range to anchor at the beginning of
+  /// the file, instead of the beginning of this chunk.
+  void adjustLocForChunkOffset(lsp::Range &range) {
+    adjustLocForChunkOffset(range.start);
+    adjustLocForChunkOffset(range.end);
+  }
+  /// Adjust the line number of the given position to anchor at the beginning of
+  /// the file, instead of the beginning of this chunk.
+  void adjustLocForChunkOffset(lsp::Position &pos) { pos.line += lineOffset; }
+
+  /// The line offset of this chunk from the beginning of the file.
+  uint64_t lineOffset;
+  /// The document referred to by this chunk.
+  PDLDocument document;
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// PDLTextFile
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// This class represents a text file containing one or more PDL documents.
+class PDLTextFile {
+public:
+  PDLTextFile(const lsp::URIForFile &uri, StringRef fileContents,
+              int64_t version, std::vector<lsp::Diagnostic> &diagnostics);
+
+  /// Return the current version of this text file.
+  int64_t getVersion() const { return version; }
+
+  //===--------------------------------------------------------------------===//
+  // LSP Queries
+  //===--------------------------------------------------------------------===//
+
+  void getLocationsOf(const lsp::URIForFile &uri, lsp::Position defPos,
+                      std::vector<lsp::Location> &locations);
+  void findReferencesOf(const lsp::URIForFile &uri, lsp::Position pos,
+                        std::vector<lsp::Location> &references);
+
+private:
+  /// Find the PDL document that contains the given position, and update the
+  /// position to be anchored at the start of the found chunk instead of the
+  /// beginning of the file.
+  PDLTextFileChunk &getChunkFor(lsp::Position &pos);
+
+  /// The full string contents of the file.
+  std::string contents;
+
+  /// The version of this file.
+  int64_t version;
+
+  /// The number of lines in the file.
+  int64_t totalNumLines;
+
+  /// The chunks of this file. The order of these chunks is the order in which
+  /// they appear in the text file.
+  std::vector<std::unique_ptr<PDLTextFileChunk>> chunks;
+};
+} // namespace
+
+PDLTextFile::PDLTextFile(const lsp::URIForFile &uri, StringRef fileContents,
+                         int64_t version,
+                         std::vector<lsp::Diagnostic> &diagnostics)
+    : contents(fileContents.str()), version(version), totalNumLines(0) {
+  // Split the file into separate PDL documents.
+  // TODO: Find a way to share the split file marker with other tools. We don't
+  // want to use `splitAndProcessBuffer` here, but we do want to make sure this
+  // marker doesn't go out of sync.
+  SmallVector<StringRef, 8> subContents;
+  StringRef(contents).split(subContents, "// -----");
+  chunks.emplace_back(std::make_unique<PDLTextFileChunk>(
+      /*lineOffset=*/0, uri, subContents.front(), diagnostics));
+
+  uint64_t lineOffset = subContents.front().count('\n');
+  for (StringRef docContents : llvm::drop_begin(subContents)) {
+    unsigned currentNumDiags = diagnostics.size();
+    auto chunk = std::make_unique<PDLTextFileChunk>(lineOffset, uri,
+                                                    docContents, diagnostics);
+    lineOffset += docContents.count('\n');
+
+    // Adjust locations used in diagnostics to account for the offset from the
+    // beginning of the file.
+    for (lsp::Diagnostic &diag :
+         llvm::drop_begin(diagnostics, currentNumDiags)) {
+      chunk->adjustLocForChunkOffset(diag.range);
+
+      if (!diag.relatedInformation)
+        continue;
+      for (auto &it : *diag.relatedInformation)
+        if (it.location.uri == uri)
+          chunk->adjustLocForChunkOffset(it.location.range);
+    }
+    chunks.emplace_back(std::move(chunk));
+  }
+  totalNumLines = lineOffset;
+}
+
+void PDLTextFile::getLocationsOf(const lsp::URIForFile &uri,
+                                 lsp::Position defPos,
+                                 std::vector<lsp::Location> &locations) {
+  PDLTextFileChunk &chunk = getChunkFor(defPos);
+  chunk.document.getLocationsOf(uri, defPos, locations);
+
+  // Adjust any locations within this file for the offset of this chunk.
+  if (chunk.lineOffset == 0)
+    return;
+  for (lsp::Location &loc : locations)
+    if (loc.uri == uri)
+      chunk.adjustLocForChunkOffset(loc.range);
+}
+
+void PDLTextFile::findReferencesOf(const lsp::URIForFile &uri,
+                                   lsp::Position pos,
+                                   std::vector<lsp::Location> &references) {
+  PDLTextFileChunk &chunk = getChunkFor(pos);
+  chunk.document.findReferencesOf(uri, pos, references);
+
+  // Adjust any locations within this file for the offset of this chunk.
+  if (chunk.lineOffset == 0)
+    return;
+  for (lsp::Location &loc : references)
+    if (loc.uri == uri)
+      chunk.adjustLocForChunkOffset(loc.range);
+}
+
+PDLTextFileChunk &PDLTextFile::getChunkFor(lsp::Position &pos) {
+  if (chunks.size() == 1)
+    return *chunks.front();
+
+  // Search for the first chunk with a greater line offset, the previous chunk
+  // is the one that contains `pos`.
+  auto it = llvm::upper_bound(
+      chunks, pos, [](const lsp::Position &pos, const auto &chunk) {
+        return static_cast<uint64_t>(pos.line) < chunk->lineOffset;
+      });
+  PDLTextFileChunk &chunk = it == chunks.end() ? *chunks.back() : **(--it);
+  pos.line -= chunk.lineOffset;
+  return chunk;
+}
+
+//===----------------------------------------------------------------------===//
+// PDLLServer::Impl
+//===----------------------------------------------------------------------===//
+
+struct lsp::PDLLServer::Impl {
+  /// The files held by the server, mapped by their URI file name.
+  llvm::StringMap<std::unique_ptr<PDLTextFile>> files;
+};
+
+//===----------------------------------------------------------------------===//
+// PDLLServer
+//===----------------------------------------------------------------------===//
+
+lsp::PDLLServer::PDLLServer() : impl(std::make_unique<Impl>()) {}
+lsp::PDLLServer::~PDLLServer() = default;
+
+void lsp::PDLLServer::addOrUpdateDocument(
+    const URIForFile &uri, StringRef contents, int64_t version,
+    std::vector<Diagnostic> &diagnostics) {
+  impl->files[uri.file()] =
+      std::make_unique<PDLTextFile>(uri, contents, version, diagnostics);
+}
+
+Optional<int64_t> lsp::PDLLServer::removeDocument(const URIForFile &uri) {
+  auto it = impl->files.find(uri.file());
+  if (it == impl->files.end())
+    return llvm::None;
+
+  int64_t version = it->second->getVersion();
+  impl->files.erase(it);
+  return version;
+}
+
+void lsp::PDLLServer::getLocationsOf(const URIForFile &uri,
+                                     const Position &defPos,
+                                     std::vector<Location> &locations) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->getLocationsOf(uri, defPos, locations);
+}
+
+void lsp::PDLLServer::findReferencesOf(const URIForFile &uri,
+                                       const Position &pos,
+                                       std::vector<Location> &references) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->findReferencesOf(uri, pos, references);
+}
