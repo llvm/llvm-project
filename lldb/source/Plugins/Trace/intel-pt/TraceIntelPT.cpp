@@ -110,7 +110,10 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
     s.Printf(", not traced\n");
     return;
   }
-  s.Printf("\n  Raw trace size: %zu bytes\n", *raw_size);
+  s.Printf("\n");
+  s.Printf("  Raw trace size: %zu bytes\n", *raw_size);
+  s.Printf("  Total number of instructions: %zu\n", 
+    Decode(thread)->GetInstructions().size());
   return;
 }
 
