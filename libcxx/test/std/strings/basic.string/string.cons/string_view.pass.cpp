@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class charT>
-void
+TEST_CONSTEXPR_CXX20 void
 test(std::basic_string_view<charT> sv)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, test_allocator<charT> > S;
@@ -47,7 +47,7 @@ test(std::basic_string_view<charT> sv)
 }
 
 template <class charT, class A>
-void
+TEST_CONSTEXPR_CXX20 void
 test(std::basic_string_view<charT> sv, const A& a)
 {
     typedef std::basic_string<charT, std::char_traits<charT>, A> S;

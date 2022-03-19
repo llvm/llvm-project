@@ -43,7 +43,7 @@ test(SV sv, std::size_t pos, std::size_t n)
         assert(s2.capacity() >= s2.size());
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
@@ -76,7 +76,7 @@ test(SV sv, std::size_t pos, std::size_t n, const typename S::allocator_type& a)
         assert(s2.capacity() >= s2.size());
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {
