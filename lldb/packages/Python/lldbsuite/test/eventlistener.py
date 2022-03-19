@@ -35,7 +35,7 @@ class EventListenerTestBase(TestBase):
         self.listener_thread.start()
 
     def tearDown(self):
-        # Broadcast a eBroadcastBitStopListenerThread` event so the background
+        # Broadcast a `eBroadcastBitStopListenerThread` event so the background
         # thread stops listening to events, then join the background thread.
         self.broadcaster.BroadcastEventByType(self.eBroadcastBitStopListenerThread)
         self.listener_thread.join()
@@ -65,7 +65,7 @@ class EventListenerTestBase(TestBase):
 
                     # This is why we unwrap the function from the instance
                     # method object calling `__func__` instead.
-                    ret_args = self.event_data_extractor.__func__(event);
+                    ret_args = self.event_data_extractor.__func__(event)
                     if not ret_args:
                         continue
 
