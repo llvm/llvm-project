@@ -4264,33 +4264,26 @@ define i1 @movmsk_or_v2f64(<2 x double> %x, <2 x double> %y) {
 define i1 @movmsk_v16i8_var(<16 x i8> %x, <16 x i8> %y, i32 %z) {
 ; SSE-LABEL: movmsk_v16i8_var:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $15, %edi
-; SSE-NEXT:    movb -24(%rsp,%rdi), %al
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    btl %edi, %eax
+; SSE-NEXT:    setb %al
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: movmsk_v16i8_var:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1OR2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $15, %edi
-; AVX1OR2-NEXT:    movb -24(%rsp,%rdi), %al
+; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1OR2-NEXT:    btl %edi, %eax
+; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v16i8_var:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    # kill: def $edi killed $edi def $rdi
 ; KNL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
-; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k1
-; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
-; KNL-NEXT:    vpmovdb %zmm0, -{{[0-9]+}}(%rsp)
-; KNL-NEXT:    andl $15, %edi
-; KNL-NEXT:    movb -24(%rsp,%rdi), %al
-; KNL-NEXT:    vzeroupper
+; KNL-NEXT:    vpmovmskb %xmm0, %eax
+; KNL-NEXT:    btl %edi, %eax
+; KNL-NEXT:    setb %al
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: movmsk_v16i8_var:
@@ -4310,20 +4303,20 @@ define i1 @movmsk_v16i8_var(<16 x i8> %x, <16 x i8> %y, i32 %z) {
 define i1 @movmsk_v8i16_var(<8 x i16> %x, <8 x i16> %y, i32 %z) {
 ; SSE-LABEL: movmsk_v8i16_var:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    pcmpgtw %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $7, %edi
-; SSE-NEXT:    movb -24(%rsp,%rdi,2), %al
+; SSE-NEXT:    packsswb %xmm0, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    btl %edi, %eax
+; SSE-NEXT:    setb %al
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: movmsk_v8i16_var:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1OR2-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $7, %edi
-; AVX1OR2-NEXT:    movb -24(%rsp,%rdi,2), %al
+; AVX1OR2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1OR2-NEXT:    btl %edi, %eax
+; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v8i16_var:
@@ -4357,20 +4350,18 @@ define i1 @movmsk_v8i16_var(<8 x i16> %x, <8 x i16> %y, i32 %z) {
 define i1 @movmsk_v4i32_var(<4 x i32> %x, <4 x i32> %y, i32 %z) {
 ; SSE-LABEL: movmsk_v4i32_var:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $3, %edi
-; SSE-NEXT:    movb -24(%rsp,%rdi,4), %al
+; SSE-NEXT:    movmskps %xmm1, %eax
+; SSE-NEXT:    btl %edi, %eax
+; SSE-NEXT:    setb %al
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: movmsk_v4i32_var:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1OR2-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
-; AVX1OR2-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $3, %edi
-; AVX1OR2-NEXT:    movb -24(%rsp,%rdi,4), %al
+; AVX1OR2-NEXT:    vmovmskps %xmm0, %eax
+; AVX1OR2-NEXT:    btl %edi, %eax
+; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v4i32_var:
@@ -4403,37 +4394,31 @@ define i1 @movmsk_v4i32_var(<4 x i32> %x, <4 x i32> %y, i32 %z) {
 define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 ; SSE2-LABEL: movmsk_v2i64_var:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm0, %xmm1
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
-; SSE2-NEXT:    pxor %xmm1, %xmm0
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    andl $1, %edi
-; SSE2-NEXT:    movb -24(%rsp,%rdi,8), %al
+; SSE2-NEXT:    movmskpd %xmm1, %eax
+; SSE2-NEXT:    xorl $3, %eax
+; SSE2-NEXT:    btl %edi, %eax
+; SSE2-NEXT:    setb %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: movmsk_v2i64_var:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE41-NEXT:    pcmpeqq %xmm1, %xmm0
-; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE41-NEXT:    pxor %xmm0, %xmm1
-; SSE41-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    andl $1, %edi
-; SSE41-NEXT:    movb -24(%rsp,%rdi,8), %al
+; SSE41-NEXT:    movmskpd %xmm0, %eax
+; SSE41-NEXT:    xorl $3, %eax
+; SSE41-NEXT:    btl %edi, %eax
+; SSE41-NEXT:    setb %al
 ; SSE41-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: movmsk_v2i64_var:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1OR2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovdqa %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $1, %edi
-; AVX1OR2-NEXT:    movb -24(%rsp,%rdi,8), %al
+; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
+; AVX1OR2-NEXT:    xorl $3, %eax
+; AVX1OR2-NEXT:    btl %edi, %eax
+; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v2i64_var:
@@ -4466,23 +4451,21 @@ define i1 @movmsk_v2i64_var(<2 x i64> %x, <2 x i64> %y, i32 %z) {
 define i1 @movmsk_v4f32_var(<4 x float> %x, <4 x float> %y, i32 %z) {
 ; SSE-LABEL: movmsk_v4f32_var:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    cmpeqps %xmm1, %xmm2
 ; SSE-NEXT:    cmpunordps %xmm1, %xmm0
 ; SSE-NEXT:    orps %xmm2, %xmm0
-; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $3, %edi
-; SSE-NEXT:    movb -24(%rsp,%rdi,4), %al
+; SSE-NEXT:    movmskps %xmm0, %eax
+; SSE-NEXT:    btl %edi, %eax
+; SSE-NEXT:    setb %al
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: movmsk_v4f32_var:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1OR2-NEXT:    vcmpeq_uqps %xmm1, %xmm0, %xmm0
-; AVX1OR2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $3, %edi
-; AVX1OR2-NEXT:    movb -24(%rsp,%rdi,4), %al
+; AVX1OR2-NEXT:    vmovmskps %xmm0, %eax
+; AVX1OR2-NEXT:    btl %edi, %eax
+; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v4f32_var:
@@ -4515,20 +4498,18 @@ define i1 @movmsk_v4f32_var(<4 x float> %x, <4 x float> %y, i32 %z) {
 define i1 @movmsk_v2f64_var(<2 x double> %x, <2 x double> %y, i32 %z) {
 ; SSE-LABEL: movmsk_v2f64_var:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    # kill: def $edi killed $edi def $rdi
 ; SSE-NEXT:    cmplepd %xmm0, %xmm1
-; SSE-NEXT:    movapd %xmm1, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    andl $1, %edi
-; SSE-NEXT:    movb -24(%rsp,%rdi,8), %al
+; SSE-NEXT:    movmskpd %xmm1, %eax
+; SSE-NEXT:    btl %edi, %eax
+; SSE-NEXT:    setb %al
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: movmsk_v2f64_var:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    # kill: def $edi killed $edi def $rdi
 ; AVX1OR2-NEXT:    vcmplepd %xmm0, %xmm1, %xmm0
-; AVX1OR2-NEXT:    vmovapd %xmm0, -{{[0-9]+}}(%rsp)
-; AVX1OR2-NEXT:    andl $1, %edi
-; AVX1OR2-NEXT:    movb -24(%rsp,%rdi,8), %al
+; AVX1OR2-NEXT:    vmovmskpd %xmm0, %eax
+; AVX1OR2-NEXT:    btl %edi, %eax
+; AVX1OR2-NEXT:    setb %al
 ; AVX1OR2-NEXT:    retq
 ;
 ; KNL-LABEL: movmsk_v2f64_var:
