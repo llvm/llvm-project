@@ -1,5 +1,6 @@
 ; RUN: llc -march=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx906 -stop-after=amdgpu-isel < %s | FileCheck -check-prefix=GFX906 %s
 
 ; GCN-LABEL: name:            uniform_vec_0_i16
 ; GCN: S_LSHL_B32
@@ -212,4 +213,26 @@ define float @divergent_vec_f16_LL(half %a, half %b) {
   %vec = insertelement <2 x half> %tmp, half %b, i32 1
   %val = bitcast <2 x half> %vec to float
   ret float %val
+}
+
+; GFX906-LABEL: name:            build_vec_v2i16_undeflo_divergent
+; GFX906: %[[LOAD:[0-9]+]]:vgpr_32 = DS_READ_U16
+; GFX906: %{{[0-9]+}}:vgpr_32 = COPY %[[LOAD]]
+define <2 x i16> @build_vec_v2i16_undeflo_divergent(i16 addrspace(3)* %in) #0 {
+entry:
+  %load = load i16, i16 addrspace(3)* %in
+  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  ret <2 x i16> %build
+}
+
+; GFX906-LABEL: name:            build_vec_v2i16_undeflo_uniform
+; GFX906: %[[LOAD:[0-9]+]]:vgpr_32 = DS_READ_U16
+; GFX906: %{{[0-9]+}}:sreg_32 = COPY %[[LOAD]]
+define amdgpu_kernel void @build_vec_v2i16_undeflo_uniform(i16 addrspace(3)* %in, i32 addrspace(1)* %out) #0 {
+entry:
+  %load = load i16, i16 addrspace(3)* %in
+  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  %result = bitcast <2 x i16> %build to i32
+  store i32 %result, i32 addrspace(1)* %out
+  ret void
 }
