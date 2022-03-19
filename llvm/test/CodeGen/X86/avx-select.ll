@@ -58,20 +58,26 @@ define <4 x i64> @select01(i32 %a, <4 x i64> %b) nounwind {
   ret <4 x i64> %res
 }
 
-; FIXME: If a X86ISD::BLENDV node appears before legalization, its been constant folded like a vselect (mask != 0) instead of (mask < 0)
+; FIXME: If a X86ISD::BLENDV node appears before legalization, constant fold using (mask < 0) instead of like a vselect (mask != 0).
 define void @fold_blendv_mask(<4 x i32> %a0) {
 ; X86-LABEL: fold_blendv_mask:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    vmovaps {{.*#+}} ymm0 = [26146,4294966039,4294967294,4294964244,29361,4294951202,4294964216,4294941010]
-; X86-NEXT:    vmovaps %ymm0, (%eax)
-; X86-NEXT:    vzeroupper
+; X86-NEXT:    vmovaps {{.*#+}} xmm0 = [44158,54560,45291,18686]
+; X86-NEXT:    vmovaps {{.*#+}} xmm1 = [4294942349,7802,29242,15858]
+; X86-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm0
+; X86-NEXT:    vmovaps {{.*#+}} xmm1 = [29361,4294951202,4294964216,4294941010]
+; X86-NEXT:    vmovaps %xmm1, (%eax)
+; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: fold_blendv_mask:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    vmovaps {{.*#+}} ymm0 = [26146,4294966039,4294967294,4294964244,29361,4294951202,4294964216,4294941010]
-; X64-NEXT:    vmovaps %ymm0, (%rax)
-; X64-NEXT:    vzeroupper
+; X64-NEXT:    vmovaps {{.*#+}} xmm0 = [44158,54560,45291,18686]
+; X64-NEXT:    vmovaps {{.*#+}} xmm1 = [4294942349,7802,29242,15858]
+; X64-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; X64-NEXT:    vmovaps {{.*#+}} xmm1 = [29361,4294951202,4294964216,4294941010]
+; X64-NEXT:    vmovaps %xmm1, (%rax)
+; X64-NEXT:    vmovaps %xmm0, (%rax)
 ; X64-NEXT:    retq
 entry:
   br label %head
