@@ -1847,9 +1847,8 @@ define i8 @umulo.selectboth.i8(i8 %a, i8 %b) {
 ; SDAG-NEXT:    and w8, w1, #0xff
 ; SDAG-NEXT:    and w9, w0, #0xff
 ; SDAG-NEXT:    mul w8, w9, w8
-; SDAG-NEXT:    lsr w9, w8, #8
-; SDAG-NEXT:    cmp w9, #0
 ; SDAG-NEXT:    mov w9, #10
+; SDAG-NEXT:    tst w8, #0xff00
 ; SDAG-NEXT:    csel w0, w8, w9, ne
 ; SDAG-NEXT:    ret
 ;
@@ -1858,9 +1857,8 @@ define i8 @umulo.selectboth.i8(i8 %a, i8 %b) {
 ; FAST-NEXT:    and w8, w1, #0xff
 ; FAST-NEXT:    and w9, w0, #0xff
 ; FAST-NEXT:    mul w8, w9, w8
-; FAST-NEXT:    lsr w9, w8, #8
-; FAST-NEXT:    cmp w9, #0
 ; FAST-NEXT:    mov w9, #10
+; FAST-NEXT:    tst w8, #0xff00
 ; FAST-NEXT:    csel w0, w8, w9, ne
 ; FAST-NEXT:    ret
 ;
@@ -1925,9 +1923,8 @@ define i16 @umulo.selectboth.i16(i16 %a, i16 %b) {
 ; SDAG-NEXT:    and w8, w1, #0xffff
 ; SDAG-NEXT:    and w9, w0, #0xffff
 ; SDAG-NEXT:    mul w8, w9, w8
-; SDAG-NEXT:    lsr w9, w8, #16
-; SDAG-NEXT:    cmp w9, #0
 ; SDAG-NEXT:    mov w9, #10
+; SDAG-NEXT:    tst w8, #0xffff0000
 ; SDAG-NEXT:    csel w0, w8, w9, ne
 ; SDAG-NEXT:    ret
 ;
@@ -1936,9 +1933,8 @@ define i16 @umulo.selectboth.i16(i16 %a, i16 %b) {
 ; FAST-NEXT:    and w8, w1, #0xffff
 ; FAST-NEXT:    and w9, w0, #0xffff
 ; FAST-NEXT:    mul w8, w9, w8
-; FAST-NEXT:    lsr w9, w8, #16
-; FAST-NEXT:    cmp w9, #0
 ; FAST-NEXT:    mov w9, #10
+; FAST-NEXT:    tst w8, #0xffff0000
 ; FAST-NEXT:    csel w0, w8, w9, ne
 ; FAST-NEXT:    ret
 ;

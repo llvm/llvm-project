@@ -17363,14 +17363,14 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
 
   // setcc (csel 0, 1, cond, X), 1, ne ==> csel 0, 1, !cond, X
   if (Cond == ISD::SETNE && isOneConstant(RHS) &&
       LHS->getOpcode() == AArch64ISD::CSEL &&
       isNullConstant(LHS->getOperand(0)) && isOneConstant(LHS->getOperand(1)) &&
       LHS->hasOneUse()) {
-    SDLoc DL(N);
-
     // Invert CSEL's condition.
     auto *OpCC = cast<ConstantSDNode>(LHS.getOperand(2));
     auto OldCond = static_cast<AArch64CC::CondCode>(OpCC->getZExtValue());
@@ -17381,7 +17381,21 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG) {
         DAG.getNode(AArch64ISD::CSEL, DL, LHS.getValueType(), LHS.getOperand(0),
                     LHS.getOperand(1), DAG.getConstant(NewCond, DL, MVT::i32),
                     LHS.getOperand(3));
-    return DAG.getZExtOrTrunc(CSEL, DL, N->getValueType(0));
+    return DAG.getZExtOrTrunc(CSEL, DL, VT);
+  }
+
+  // setcc (srl x, imm), 0, ne ==> setcc (and x, (-1 << imm)), 0, ne
+  if (Cond == ISD::SETNE && isNullConstant(RHS) &&
+      LHS->getOpcode() == ISD::SRL && isa<ConstantSDNode>(LHS->getOperand(1)) &&
+      LHS->hasOneUse()) {
+    EVT TstVT = LHS->getValueType(0);
+    if (TstVT.isScalarInteger() && TstVT.getFixedSizeInBits() <= 64) {
+      // this pattern will get better opt in emitComparison
+      uint64_t TstImm = -1ULL << LHS->getConstantOperandVal(1);
+      SDValue TST = DAG.getNode(ISD::AND, DL, TstVT, LHS->getOperand(0),
+                                DAG.getConstant(TstImm, DL, TstVT));
+      return DAG.getNode(ISD::SETCC, DL, VT, TST, RHS, N->getOperand(2));
+    }
   }
 
   return SDValue();
