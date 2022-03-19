@@ -56,6 +56,7 @@ public:
     bpfel,          // eBPF or extended BPF or 64-bit BPF (little endian)
     bpfeb,          // eBPF or extended BPF or 64-bit BPF (big endian)
     csky,           // CSKY: csky
+    dxil,           // DXIL 32-bit DirectX bytecode
     hexagon,        // Hexagon: hexagon
     loongarch32,    // LoongArch (32-bit): loongarch32
     loongarch64,    // LoongArch (64-bit): loongarch64
@@ -208,7 +209,8 @@ public:
     Hurd,       // GNU/Hurd
     WASI,       // Experimental WebAssembly OS
     Emscripten,
-    LastOSType = Emscripten
+    ShaderModel, // DirectX ShaderModel
+    LastOSType = ShaderModel
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -235,7 +237,19 @@ public:
     CoreCLR,
     Simulator, // Simulator variants of other systems, e.g., Apple's iOS
     MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
-    LastEnvironmentType = MacABI
+    
+    // Shader Stages
+    Pixel,
+    Vertex,
+    Geometry,
+    Hull,
+    Domain,
+    Compute,
+    Library,
+    Mesh,
+    Amplification,
+
+    LastEnvironmentType = Amplification
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -677,6 +691,11 @@ public:
            getEnvironment() == Triple::MuslEABI ||
            getEnvironment() == Triple::MuslEABIHF ||
            getEnvironment() == Triple::MuslX32;
+  }
+
+  /// Tests whether the target is DXIL.
+  bool isDXIL() const {
+    return getArch() == Triple::dxil;
   }
 
   /// Tests whether the target is SPIR (32- or 64-bit).
