@@ -123,8 +123,7 @@ class SubtargetEmitter {
 
   void EmitSchedModel(raw_ostream &OS);
   void EmitHwModeCheck(const std::string &ClassName, raw_ostream &OS);
-  void ParseFeaturesFunction(raw_ostream &OS, unsigned NumFeatures,
-                             unsigned NumProcs);
+  void ParseFeaturesFunction(raw_ostream &OS);
 
 public:
   SubtargetEmitter(RecordKeeper &R, CodeGenTarget &TGT)
@@ -1718,13 +1717,9 @@ void SubtargetEmitter::EmitHwModeCheck(const std::string &ClassName,
   OS << "  return 0;\n}\n";
 }
 
-//
-// ParseFeaturesFunction - Produces a subtarget specific function for parsing
+// Produces a subtarget specific function for parsing
 // the subtarget features string.
-//
-void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS,
-                                             unsigned NumFeatures,
-                                             unsigned NumProcs) {
+void SubtargetEmitter::ParseFeaturesFunction(raw_ostream &OS) {
   std::vector<Record*> Features =
                        Records.getAllDerivedDefinitions("SubtargetFeature");
   llvm::sort(Features, LessRecord());
@@ -1894,7 +1889,7 @@ void SubtargetEmitter::run(raw_ostream &OS) {
 
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
-  ParseFeaturesFunction(OS, NumFeatures, NumProcs);
+  ParseFeaturesFunction(OS);
 
   OS << "#endif // GET_SUBTARGETINFO_TARGET_DESC\n\n";
 
