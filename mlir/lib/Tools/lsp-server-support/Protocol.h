@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains structs based on the LSP specification at
-// https://github.com/Microsoft/language-server-protocol/blob/main/protocol.md
+// https://microsoft.github.io/language-server-protocol/specification
 //
 // This is not meant to be a complete implementation, new interfaces are added
 // when they're needed.
@@ -665,6 +665,211 @@ struct PublishDiagnosticsParams {
 
 /// Add support for JSON serialization.
 llvm::json::Value toJSON(const PublishDiagnosticsParams &params);
+
+//===----------------------------------------------------------------------===//
+// TextEdit
+//===----------------------------------------------------------------------===//
+
+struct TextEdit {
+  /// The range of the text document to be manipulated. To insert
+  /// text into a document create a range where start === end.
+  Range range;
+
+  /// The string to be inserted. For delete operations use an
+  /// empty string.
+  std::string newText;
+};
+
+inline bool operator==(const TextEdit &lhs, const TextEdit &rhs) {
+  return std::tie(lhs.newText, lhs.range) == std::tie(rhs.newText, rhs.range);
+}
+
+bool fromJSON(const llvm::json::Value &value, TextEdit &result,
+              llvm::json::Path path);
+llvm::json::Value toJSON(const TextEdit &value);
+raw_ostream &operator<<(raw_ostream &os, const TextEdit &value);
+
+//===----------------------------------------------------------------------===//
+// CompletionItemKind
+//===----------------------------------------------------------------------===//
+
+/// The kind of a completion entry.
+enum class CompletionItemKind {
+  Missing = 0,
+  Text = 1,
+  Method = 2,
+  Function = 3,
+  Constructor = 4,
+  Field = 5,
+  Variable = 6,
+  Class = 7,
+  Interface = 8,
+  Module = 9,
+  Property = 10,
+  Unit = 11,
+  Value = 12,
+  Enum = 13,
+  Keyword = 14,
+  Snippet = 15,
+  Color = 16,
+  File = 17,
+  Reference = 18,
+  Folder = 19,
+  EnumMember = 20,
+  Constant = 21,
+  Struct = 22,
+  Event = 23,
+  Operator = 24,
+  TypeParameter = 25,
+};
+bool fromJSON(const llvm::json::Value &value, CompletionItemKind &result,
+              llvm::json::Path path);
+
+constexpr auto kCompletionItemKindMin =
+    static_cast<size_t>(CompletionItemKind::Text);
+constexpr auto kCompletionItemKindMax =
+    static_cast<size_t>(CompletionItemKind::TypeParameter);
+using CompletionItemKindBitset = std::bitset<kCompletionItemKindMax + 1>;
+bool fromJSON(const llvm::json::Value &value, CompletionItemKindBitset &result,
+              llvm::json::Path path);
+
+CompletionItemKind
+adjustKindToCapability(CompletionItemKind kind,
+                       CompletionItemKindBitset &supportedCompletionItemKinds);
+
+//===----------------------------------------------------------------------===//
+// CompletionItem
+//===----------------------------------------------------------------------===//
+
+/// Defines whether the insert text in a completion item should be interpreted
+/// as plain text or a snippet.
+enum class InsertTextFormat {
+  Missing = 0,
+  /// The primary text to be inserted is treated as a plain string.
+  PlainText = 1,
+  /// The primary text to be inserted is treated as a snippet.
+  ///
+  /// A snippet can define tab stops and placeholders with `$1`, `$2`
+  /// and `${3:foo}`. `$0` defines the final tab stop, it defaults to the end
+  /// of the snippet. Placeholders with equal identifiers are linked, that is
+  /// typing in one will update others too.
+  ///
+  /// See also:
+  /// https//github.com/Microsoft/vscode/blob/master/src/vs/editor/contrib/snippet/common/snippet.md
+  Snippet = 2,
+};
+
+struct CompletionItem {
+  /// The label of this completion item. By default also the text that is
+  /// inserted when selecting this completion.
+  std::string label;
+
+  /// The kind of this completion item. Based of the kind an icon is chosen by
+  /// the editor.
+  CompletionItemKind kind = CompletionItemKind::Missing;
+
+  /// A human-readable string with additional information about this item, like
+  /// type or symbol information.
+  std::string detail;
+
+  /// A human-readable string that represents a doc-comment.
+  Optional<MarkupContent> documentation;
+
+  /// A string that should be used when comparing this item with other items.
+  /// When `falsy` the label is used.
+  std::string sortText;
+
+  /// A string that should be used when filtering a set of completion items.
+  /// When `falsy` the label is used.
+  std::string filterText;
+
+  /// A string that should be inserted to a document when selecting this
+  /// completion. When `falsy` the label is used.
+  std::string insertText;
+
+  /// The format of the insert text. The format applies to both the `insertText`
+  /// property and the `newText` property of a provided `textEdit`.
+  InsertTextFormat insertTextFormat = InsertTextFormat::Missing;
+
+  /// An edit which is applied to a document when selecting this completion.
+  /// When an edit is provided `insertText` is ignored.
+  ///
+  /// Note: The range of the edit must be a single line range and it must
+  /// contain the position at which completion has been requested.
+  Optional<TextEdit> textEdit;
+
+  /// An optional array of additional text edits that are applied when selecting
+  /// this completion. Edits must not overlap with the main edit nor with
+  /// themselves.
+  std::vector<TextEdit> additionalTextEdits;
+
+  /// Indicates if this item is deprecated.
+  bool deprecated = false;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const CompletionItem &value);
+raw_ostream &operator<<(raw_ostream &os, const CompletionItem &value);
+bool operator<(const CompletionItem &lhs, const CompletionItem &rhs);
+
+//===----------------------------------------------------------------------===//
+// CompletionList
+//===----------------------------------------------------------------------===//
+
+/// Represents a collection of completion items to be presented in the editor.
+struct CompletionList {
+  /// The list is not complete. Further typing should result in recomputing the
+  /// list.
+  bool isIncomplete = false;
+
+  /// The completion items.
+  std::vector<CompletionItem> items;
+};
+
+/// Add support for JSON serialization.
+llvm::json::Value toJSON(const CompletionList &value);
+
+//===----------------------------------------------------------------------===//
+// CompletionContext
+//===----------------------------------------------------------------------===//
+
+enum class CompletionTriggerKind {
+  /// Completion was triggered by typing an identifier (24x7 code
+  /// complete), manual invocation (e.g Ctrl+Space) or via API.
+  Invoked = 1,
+
+  /// Completion was triggered by a trigger character specified by
+  /// the `triggerCharacters` properties of the `CompletionRegistrationOptions`.
+  TriggerCharacter = 2,
+
+  /// Completion was re-triggered as the current completion list is incomplete.
+  TriggerTriggerForIncompleteCompletions = 3
+};
+
+struct CompletionContext {
+  /// How the completion was triggered.
+  CompletionTriggerKind triggerKind = CompletionTriggerKind::Invoked;
+
+  /// The trigger character (a single character) that has trigger code complete.
+  /// Is undefined if `triggerKind !== CompletionTriggerKind.TriggerCharacter`
+  std::string triggerCharacter;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, CompletionContext &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
+// CompletionParams
+//===----------------------------------------------------------------------===//
+
+struct CompletionParams : TextDocumentPositionParams {
+  CompletionContext context;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, CompletionParams &result,
+              llvm::json::Path path);
 
 } // namespace lsp
 } // namespace mlir

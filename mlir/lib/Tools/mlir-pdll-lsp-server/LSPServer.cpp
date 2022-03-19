@@ -65,6 +65,12 @@ struct LSPServer {
                         Callback<std::vector<DocumentSymbol>> reply);
 
   //===--------------------------------------------------------------------===//
+  // Code Completion
+
+  void onCompletion(const CompletionParams &params,
+                    Callback<CompletionList> reply);
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -93,6 +99,15 @@ void LSPServer::onInitialize(const InitializeParams &params,
            {"openClose", true},
            {"change", (int)TextDocumentSyncKind::Full},
            {"save", true},
+       }},
+      {"completionProvider",
+       llvm::json::Object{
+           {"allCommitCharacters",
+            {" ", "\t", "(", ")", "[", "]", "{",  "}", "<",
+             ">", ":",  ";", ",", "+", "-", "/",  "*", "%",
+             "^", "&",  "#", "?", ".", "=", "\"", "'", "|"}},
+           {"resolveProvider", false},
+           {"triggerCharacters", {".", ">", "(", "{", ",", "<", ":", "[", " "}},
        }},
       {"definitionProvider", true},
       {"referencesProvider", true},
@@ -187,6 +202,14 @@ void LSPServer::onDocumentSymbol(const DocumentSymbolParams &params,
 }
 
 //===----------------------------------------------------------------------===//
+// Code Completion
+
+void LSPServer::onCompletion(const CompletionParams &params,
+                             Callback<CompletionList> reply) {
+  reply(server.getCodeCompletion(params.textDocument.uri, params.position));
+}
+
+//===----------------------------------------------------------------------===//
 // Entry Point
 //===----------------------------------------------------------------------===//
 
@@ -221,6 +244,10 @@ LogicalResult mlir::lsp::runPdllLSPServer(PDLLServer &server,
   // Document Symbols
   messageHandler.method("textDocument/documentSymbol", &lspServer,
                         &LSPServer::onDocumentSymbol);
+
+  // Code Completion
+  messageHandler.method("textDocument/completion", &lspServer,
+                        &LSPServer::onCompletion);
 
   // Diagnostics
   lspServer.publishDiagnostics =

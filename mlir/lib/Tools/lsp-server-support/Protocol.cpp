@@ -585,3 +585,160 @@ llvm::json::Value mlir::lsp::toJSON(const PublishDiagnosticsParams &params) {
       {"version", params.version},
   };
 }
+
+//===----------------------------------------------------------------------===//
+// TextEdit
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value, TextEdit &result,
+                         llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  return o && o.map("range", result.range) && o.map("newText", result.newText);
+}
+
+llvm::json::Value mlir::lsp::toJSON(const TextEdit &value) {
+  return llvm::json::Object{
+      {"range", value.range},
+      {"newText", value.newText},
+  };
+}
+
+raw_ostream &mlir::lsp::operator<<(raw_ostream &os, const TextEdit &value) {
+  os << value.range << " => \"";
+  llvm::printEscapedString(value.newText, os);
+  return os << '"';
+}
+
+//===----------------------------------------------------------------------===//
+// CompletionItemKind
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         CompletionItemKind &result, llvm::json::Path path) {
+  if (Optional<int64_t> intValue = value.getAsInteger()) {
+    if (*intValue < static_cast<int>(CompletionItemKind::Text) ||
+        *intValue > static_cast<int>(CompletionItemKind::TypeParameter))
+      return false;
+    result = static_cast<CompletionItemKind>(*intValue);
+    return true;
+  }
+  return false;
+}
+
+CompletionItemKind mlir::lsp::adjustKindToCapability(
+    CompletionItemKind kind,
+    CompletionItemKindBitset &supportedCompletionItemKinds) {
+  size_t kindVal = static_cast<size_t>(kind);
+  if (kindVal >= kCompletionItemKindMin &&
+      kindVal <= supportedCompletionItemKinds.size() &&
+      supportedCompletionItemKinds[kindVal])
+    return kind;
+
+  // Provide some fall backs for common kinds that are close enough.
+  switch (kind) {
+  case CompletionItemKind::Folder:
+    return CompletionItemKind::File;
+  case CompletionItemKind::EnumMember:
+    return CompletionItemKind::Enum;
+  case CompletionItemKind::Struct:
+    return CompletionItemKind::Class;
+  default:
+    return CompletionItemKind::Text;
+  }
+}
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         CompletionItemKindBitset &result,
+                         llvm::json::Path path) {
+  if (const llvm::json::Array *arrayValue = value.getAsArray()) {
+    for (size_t i = 0, e = arrayValue->size(); i < e; ++i) {
+      CompletionItemKind kindOut;
+      if (fromJSON((*arrayValue)[i], kindOut, path.index(i)))
+        result.set(size_t(kindOut));
+    }
+    return true;
+  }
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// CompletionItem
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const CompletionItem &value) {
+  assert(!value.label.empty() && "completion item label is required");
+  llvm::json::Object result{{"label", value.label}};
+  if (value.kind != CompletionItemKind::Missing)
+    result["kind"] = static_cast<int>(value.kind);
+  if (!value.detail.empty())
+    result["detail"] = value.detail;
+  if (value.documentation)
+    result["documentation"] = value.documentation;
+  if (!value.sortText.empty())
+    result["sortText"] = value.sortText;
+  if (!value.filterText.empty())
+    result["filterText"] = value.filterText;
+  if (!value.insertText.empty())
+    result["insertText"] = value.insertText;
+  if (value.insertTextFormat != InsertTextFormat::Missing)
+    result["insertTextFormat"] = static_cast<int>(value.insertTextFormat);
+  if (value.textEdit)
+    result["textEdit"] = *value.textEdit;
+  if (!value.additionalTextEdits.empty()) {
+    result["additionalTextEdits"] =
+        llvm::json::Array(value.additionalTextEdits);
+  }
+  if (value.deprecated)
+    result["deprecated"] = value.deprecated;
+  return std::move(result);
+}
+
+raw_ostream &mlir::lsp::operator<<(raw_ostream &os,
+                                   const CompletionItem &value) {
+  return os << value.label << " - " << toJSON(value);
+}
+
+bool mlir::lsp::operator<(const CompletionItem &lhs,
+                          const CompletionItem &rhs) {
+  return (lhs.sortText.empty() ? lhs.label : lhs.sortText) <
+         (rhs.sortText.empty() ? rhs.label : rhs.sortText);
+}
+
+//===----------------------------------------------------------------------===//
+// CompletionList
+//===----------------------------------------------------------------------===//
+
+llvm::json::Value mlir::lsp::toJSON(const CompletionList &value) {
+  return llvm::json::Object{
+      {"isIncomplete", value.isIncomplete},
+      {"items", llvm::json::Array(value.items)},
+  };
+}
+
+//===----------------------------------------------------------------------===//
+// CompletionContext
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         CompletionContext &result, llvm::json::Path path) {
+  llvm::json::ObjectMapper o(value, path);
+  int triggerKind;
+  if (!o || !o.map("triggerKind", triggerKind) ||
+      !mapOptOrNull(value, "triggerCharacter", result.triggerCharacter, path))
+    return false;
+  result.triggerKind = static_cast<CompletionTriggerKind>(triggerKind);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// CompletionParams
+//===----------------------------------------------------------------------===//
+
+bool mlir::lsp::fromJSON(const llvm::json::Value &value,
+                         CompletionParams &result, llvm::json::Path path) {
+  if (!fromJSON(value, static_cast<TextDocumentPositionParams &>(result), path))
+    return false;
+  if (const llvm::json::Value *context = value.getAsObject()->get("context"))
+    return fromJSON(*context, result.context, path.field("context"));
+  return true;
+}
