@@ -895,7 +895,7 @@ let isCodeGenOnly = 1, SchedRW = [WriteCMPXCHGRMW] in {
 }
 
 let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX],
-    Predicates = [HasCmpxchg8b], SchedRW = [WriteCMPXCHGRMW],
+    Predicates = [HasCX8], SchedRW = [WriteCMPXCHGRMW],
     isCodeGenOnly = 1, usesCustomInserter = 1 in {
 def LCMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$ptr),
                    "cmpxchg8b\t$ptr",
@@ -903,7 +903,7 @@ def LCMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$ptr),
 }
 
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX],
-    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
+    Predicates = [HasCX16,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
     isCodeGenOnly = 1, mayLoad = 1, mayStore = 1, hasSideEffects = 0 in {
 def LCMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$ptr),
                      "cmpxchg16b\t$ptr",
@@ -930,7 +930,7 @@ def LCMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$ptr),
 // the instruction and we are sure we will have a valid register to restore
 // the value of RBX.
 let Defs = [RAX, RDX, RBX, EFLAGS], Uses = [RAX, RCX, RDX],
-    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
+    Predicates = [HasCX16,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
     isCodeGenOnly = 1, isPseudo = 1,
     mayLoad = 1, mayStore = 1, hasSideEffects = 0,
     Constraints = "$rbx_save = $dst" in {
@@ -942,7 +942,7 @@ def LCMPXCHG16B_SAVE_RBX :
 // Pseudo instruction that doesn't read/write RBX. Will be turned into either
 // LCMPXCHG16B_SAVE_RBX or LCMPXCHG16B via a custom inserter.
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RCX, RDX],
-    Predicates = [HasCmpxchg16b,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
+    Predicates = [HasCX16,In64BitMode], SchedRW = [WriteCMPXCHGRMW],
     isCodeGenOnly = 1, isPseudo = 1,
     mayLoad = 1, mayStore = 1, hasSideEffects = 0,
     usesCustomInserter = 1 in {

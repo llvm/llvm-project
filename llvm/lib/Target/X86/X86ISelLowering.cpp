@@ -170,7 +170,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // 32 bits so the AtomicExpandPass will expand it so we don't need cmpxchg8b.
   // FIXME: Should we be limiting the atomic size on other configs? Default is
   // 1024.
-  if (!Subtarget.hasCMPXCHG8B())
+  if (!Subtarget.canUseCMPXCHG8B())
     setMaxAtomicSizeInBitsSupported(32);
 
   // Set up the register classes.
@@ -516,9 +516,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.is64Bit())
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
 
-  if (Subtarget.hasCMPXCHG16B()) {
+  if (Subtarget.canUseCMPXCHG16B())
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
-  }
 
   // FIXME - use subtarget debug flags
   if (!Subtarget.isTargetDarwin() && !Subtarget.isTargetELF() &&
@@ -30362,9 +30361,9 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   unsigned OpWidth = MemType->getPrimitiveSizeInBits();
 
   if (OpWidth == 64)
-    return Subtarget.hasCMPXCHG8B() && !Subtarget.is64Bit();
+    return Subtarget.canUseCMPXCHG8B() && !Subtarget.is64Bit();
   if (OpWidth == 128)
-    return Subtarget.hasCMPXCHG16B();
+    return Subtarget.canUseCMPXCHG16B();
 
   return false;
 }
@@ -32607,7 +32606,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT T = N->getValueType(0);
     assert((T == MVT::i64 || T == MVT::i128) && "can only expand cmpxchg pair");
     bool Regs64bit = T == MVT::i128;
-    assert((!Regs64bit || Subtarget.hasCMPXCHG16B()) &&
+    assert((!Regs64bit || Subtarget.canUseCMPXCHG16B()) &&
            "64-bit ATOMIC_CMP_SWAP_WITH_SUCCESS requires CMPXCHG16B");
     MVT HalfT = Regs64bit ? MVT::i64 : MVT::i32;
     SDValue cpInL, cpInH;

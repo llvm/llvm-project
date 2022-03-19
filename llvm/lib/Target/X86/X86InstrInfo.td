@@ -981,8 +981,8 @@ def HasWBNOINVD  : Predicate<"Subtarget->hasWBNOINVD()">;
 def HasRDPID     : Predicate<"Subtarget->hasRDPID()">;
 def HasWAITPKG   : Predicate<"Subtarget->hasWAITPKG()">;
 def HasINVPCID   : Predicate<"Subtarget->hasINVPCID()">;
-def HasCmpxchg8b : Predicate<"Subtarget->hasCMPXCHG8B()">;
-def HasCmpxchg16b: Predicate<"Subtarget->hasCMPXCHG16B()">;
+def HasCX8       : Predicate<"Subtarget->hasCX8()">;
+def HasCX16      : Predicate<"Subtarget->hasCX16()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
 def HasKL        : Predicate<"Subtarget->hasKL()">;
@@ -2229,13 +2229,13 @@ def CMPXCHG64rm  : RI<0xB1, MRMDestMem, (outs), (ins i64mem:$dst, GR64:$src),
 
 let Defs = [EAX, EDX, EFLAGS], Uses = [EAX, EBX, ECX, EDX] in
 def CMPXCHG8B : I<0xC7, MRM1m, (outs), (ins i64mem:$dst),
-                  "cmpxchg8b\t$dst", []>, TB, Requires<[HasCmpxchg8b]>;
+                  "cmpxchg8b\t$dst", []>, TB, Requires<[HasCX8]>;
 
 let Defs = [RAX, RDX, EFLAGS], Uses = [RAX, RBX, RCX, RDX] in
 // NOTE: In64BitMode check needed for the AssemblerPredicate.
 def CMPXCHG16B : RI<0xC7, MRM1m, (outs), (ins i128mem:$dst),
                     "cmpxchg16b\t$dst", []>,
-                    TB, Requires<[HasCmpxchg16b,In64BitMode]>;
+                    TB, Requires<[HasCX16,In64BitMode]>;
 } // SchedRW, mayLoad, mayStore, hasSideEffects
 
 

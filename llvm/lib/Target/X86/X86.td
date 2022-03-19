@@ -39,8 +39,8 @@ def FeatureNOPL    : SubtargetFeature<"nopl", "HasNOPL", "true",
 def FeatureCMOV    : SubtargetFeature<"cmov","HasCMOV", "true",
                                       "Enable conditional move instructions">;
 
-def FeatureCMPXCHG8B : SubtargetFeature<"cx8", "HasCMPXCHG8B", "true",
-                                        "Support CMPXCHG8B instructions">;
+def FeatureCX8     : SubtargetFeature<"cx8", "HasCX8", "true",
+                                      "Support CMPXCHG8B instructions">;
 
 def FeatureCRC32   : SubtargetFeature<"crc32", "HasCRC32", "true",
                                       "Enable SSE 4.2 CRC32 instruction">;
@@ -100,9 +100,9 @@ def Feature3DNowA  : SubtargetFeature<"3dnowa", "X863DNowLevel", "ThreeDNowA",
 // is used to enforce that only 64-bit capable CPUs are used in 64-bit mode.
 def FeatureX86_64   : SubtargetFeature<"64bit", "HasX86_64", "true",
                                       "Support 64-bit instructions">;
-def FeatureCMPXCHG16B : SubtargetFeature<"cx16", "HasCMPXCHG16B", "true",
-                                      "64-bit with cmpxchg16b",
-                                      [FeatureCMPXCHG8B]>;
+def FeatureCX16     : SubtargetFeature<"cx16", "HasCX16", "true",
+                                       "64-bit with cmpxchg16b",
+                                       [FeatureCX8]>;
 def FeatureSSE4A   : SubtargetFeature<"sse4a", "HasSSE4A", "true",
                                       "Support SSE 4a instructions",
                                       [FeatureSSE3]>;
@@ -636,11 +636,11 @@ include "X86SchedIceLake.td"
 def ProcessorFeatures {
   // x86-64 and x86-64-v[234]
   list<SubtargetFeature> X86_64V1Features = [
-    FeatureX87, FeatureCMPXCHG8B, FeatureCMOV, FeatureMMX, FeatureSSE2,
+    FeatureX87, FeatureCX8, FeatureCMOV, FeatureMMX, FeatureSSE2,
     FeatureFXSR, FeatureNOPL, FeatureX86_64,
   ];
   list<SubtargetFeature> X86_64V2Features = !listconcat(X86_64V1Features, [
-    FeatureCMPXCHG16B, FeatureLAHFSAHF64, FeatureCRC32, FeaturePOPCNT,
+    FeatureCX16, FeatureLAHFSAHF64, FeatureCRC32, FeaturePOPCNT,
     FeatureSSE42
   ]);
   list<SubtargetFeature> X86_64V3Features = !listconcat(X86_64V2Features, [
@@ -872,14 +872,14 @@ def ProcessorFeatures {
 
   // Atom
   list<SubtargetFeature> AtomFeatures = [FeatureX87,
-                                         FeatureCMPXCHG8B,
+                                         FeatureCX8,
                                          FeatureCMOV,
                                          FeatureMMX,
                                          FeatureSSSE3,
                                          FeatureFXSR,
                                          FeatureNOPL,
                                          FeatureX86_64,
-                                         FeatureCMPXCHG16B,
+                                         FeatureCX16,
                                          FeatureMOVBE,
                                          FeatureLAHFSAHF64];
   list<SubtargetFeature> AtomTuning = [ProcIntelAtom,
@@ -978,13 +978,13 @@ def ProcessorFeatures {
 
   // Knights Landing
   list<SubtargetFeature> KNLFeatures = [FeatureX87,
-                                        FeatureCMPXCHG8B,
+                                        FeatureCX8,
                                         FeatureCMOV,
                                         FeatureMMX,
                                         FeatureFXSR,
                                         FeatureNOPL,
                                         FeatureX86_64,
-                                        FeatureCMPXCHG16B,
+                                        FeatureCX16,
                                         FeatureCRC32,
                                         FeaturePOPCNT,
                                         FeaturePCLMUL,
@@ -1022,12 +1022,12 @@ def ProcessorFeatures {
 
   // Barcelona
   list<SubtargetFeature> BarcelonaFeatures = [FeatureX87,
-                                              FeatureCMPXCHG8B,
+                                              FeatureCX8,
                                               FeatureSSE4A,
                                               Feature3DNowA,
                                               FeatureFXSR,
                                               FeatureNOPL,
-                                              FeatureCMPXCHG16B,
+                                              FeatureCX16,
                                               FeaturePRFCHW,
                                               FeatureLZCNT,
                                               FeaturePOPCNT,
@@ -1041,7 +1041,7 @@ def ProcessorFeatures {
 
   // Bobcat
   list<SubtargetFeature> BtVer1Features = [FeatureX87,
-                                           FeatureCMPXCHG8B,
+                                           FeatureCX8,
                                            FeatureCMOV,
                                            FeatureMMX,
                                            FeatureSSSE3,
@@ -1049,7 +1049,7 @@ def ProcessorFeatures {
                                            FeatureFXSR,
                                            FeatureNOPL,
                                            FeatureX86_64,
-                                           FeatureCMPXCHG16B,
+                                           FeatureCX16,
                                            FeaturePRFCHW,
                                            FeatureLZCNT,
                                            FeaturePOPCNT,
@@ -1085,11 +1085,11 @@ def ProcessorFeatures {
 
   // Bulldozer
   list<SubtargetFeature> BdVer1Features = [FeatureX87,
-                                           FeatureCMPXCHG8B,
+                                           FeatureCX8,
                                            FeatureCMOV,
                                            FeatureXOP,
                                            FeatureX86_64,
-                                           FeatureCMPXCHG16B,
+                                           FeatureCX16,
                                            FeatureAES,
                                            FeatureCRC32,
                                            FeaturePRFCHW,
@@ -1149,7 +1149,7 @@ def ProcessorFeatures {
                                        FeatureCLZERO,
                                        FeatureCMOV,
                                        FeatureX86_64,
-                                       FeatureCMPXCHG16B,
+                                       FeatureCX16,
                                        FeatureCRC32,
                                        FeatureF16C,
                                        FeatureFMA,
@@ -1226,7 +1226,7 @@ class ProcModel<string Name, SchedMachineModel Model,
 // most common X86 processors. The tunings might be changed over time. It is
 // recommended to use "x86-64" in lit tests for consistency.
 def : ProcModel<"generic", SandyBridgeModel,
-                [FeatureX87, FeatureCMPXCHG8B, FeatureX86_64],
+                [FeatureX87, FeatureCX8, FeatureX86_64],
                 [TuningSlow3OpsLEA,
                  TuningSlowDivide64,
                  TuningMacroFusion,
@@ -1238,25 +1238,25 @@ def : Proc<"i386",            [FeatureX87],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : Proc<"i486",            [FeatureX87],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"i586",            [FeatureX87, FeatureCMPXCHG8B],
+def : Proc<"i586",            [FeatureX87, FeatureCX8],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"pentium",         [FeatureX87, FeatureCMPXCHG8B],
+def : Proc<"pentium",         [FeatureX87, FeatureCX8],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"pentium-mmx",     [FeatureX87, FeatureCMPXCHG8B, FeatureMMX],
+def : Proc<"pentium-mmx",     [FeatureX87, FeatureCX8, FeatureMMX],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
-def : Proc<"i686", [FeatureX87, FeatureCMPXCHG8B, FeatureCMOV],
+def : Proc<"i686", [FeatureX87, FeatureCX8, FeatureCMOV],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"pentiumpro", [FeatureX87, FeatureCMPXCHG8B, FeatureCMOV,
+def : Proc<"pentiumpro", [FeatureX87, FeatureCX8, FeatureCMOV,
                           FeatureNOPL],
                          [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
-def : Proc<"pentium2", [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureCMOV,
+def : Proc<"pentium2", [FeatureX87, FeatureCX8, FeatureMMX, FeatureCMOV,
                         FeatureFXSR, FeatureNOPL],
                        [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 foreach P = ["pentium3", "pentium3m"] in {
-  def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureMMX,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureMMX,
                  FeatureSSE1, FeatureFXSR, FeatureNOPL, FeatureCMOV],
                 [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 }
@@ -1272,42 +1272,42 @@ foreach P = ["pentium3", "pentium3m"] in {
 // changes slightly.
 
 def : ProcModel<"pentium-m", GenericPostRAModel,
-                [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE2,
+                [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE2,
                 FeatureFXSR, FeatureNOPL, FeatureCMOV],
                 [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 foreach P = ["pentium4", "pentium4m"] in {
   def : ProcModel<P, GenericPostRAModel,
-                  [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE2,
+                  [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE2,
                    FeatureFXSR, FeatureNOPL, FeatureCMOV],
                   [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 }
 
 // Intel Quark.
-def : Proc<"lakemont", [FeatureCMPXCHG8B],
+def : Proc<"lakemont", [FeatureCX8],
                        [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 // Intel Core Duo.
 def : ProcModel<"yonah", SandyBridgeModel,
-                [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE3,
+                [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE3,
                  FeatureFXSR, FeatureNOPL, FeatureCMOV],
                 [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 // NetBurst.
 def : ProcModel<"prescott", GenericPostRAModel,
-                [FeatureX87, FeatureCMPXCHG8B, FeatureMMX, FeatureSSE3,
+                [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE3,
                  FeatureFXSR, FeatureNOPL, FeatureCMOV],
                 [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : ProcModel<"nocona", GenericPostRAModel, [
   FeatureX87,
-  FeatureCMPXCHG8B,
+  FeatureCX8,
   FeatureCMOV,
   FeatureMMX,
   FeatureSSE3,
   FeatureFXSR,
   FeatureNOPL,
   FeatureX86_64,
-  FeatureCMPXCHG16B,
+  FeatureCX16,
 ],
 [
   TuningSlowUAMem16,
@@ -1317,14 +1317,14 @@ def : ProcModel<"nocona", GenericPostRAModel, [
 // Intel Core 2 Solo/Duo.
 def : ProcModel<"core2", SandyBridgeModel, [
   FeatureX87,
-  FeatureCMPXCHG8B,
+  FeatureCX8,
   FeatureCMOV,
   FeatureMMX,
   FeatureSSSE3,
   FeatureFXSR,
   FeatureNOPL,
   FeatureX86_64,
-  FeatureCMPXCHG16B,
+  FeatureCX16,
   FeatureLAHFSAHF64
 ],
 [
@@ -1334,14 +1334,14 @@ def : ProcModel<"core2", SandyBridgeModel, [
 ]>;
 def : ProcModel<"penryn", SandyBridgeModel, [
   FeatureX87,
-  FeatureCMPXCHG8B,
+  FeatureCX8,
   FeatureCMOV,
   FeatureMMX,
   FeatureSSE41,
   FeatureFXSR,
   FeatureNOPL,
   FeatureX86_64,
-  FeatureCMPXCHG16B,
+  FeatureCX16,
   FeatureLAHFSAHF64
 ],
 [
@@ -1431,35 +1431,35 @@ def : ProcModel<"alderlake", SkylakeClientModel,
 
 // AMD CPUs.
 
-def : Proc<"k6",   [FeatureX87, FeatureCMPXCHG8B, FeatureMMX],
+def : Proc<"k6",   [FeatureX87, FeatureCX8, FeatureMMX],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"k6-2", [FeatureX87, FeatureCMPXCHG8B, Feature3DNow],
+def : Proc<"k6-2", [FeatureX87, FeatureCX8, Feature3DNow],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"k6-3", [FeatureX87, FeatureCMPXCHG8B, Feature3DNow],
+def : Proc<"k6-3", [FeatureX87, FeatureCX8, Feature3DNow],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 foreach P = ["athlon", "athlon-tbird"] in {
-  def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureCMOV, Feature3DNowA,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureCMOV, Feature3DNowA,
                  FeatureNOPL],
                 [TuningSlowSHLD, TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 }
 
 foreach P = ["athlon-4", "athlon-xp", "athlon-mp"] in {
-  def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureCMOV,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureCMOV,
                  FeatureSSE1, Feature3DNowA, FeatureFXSR, FeatureNOPL],
                 [TuningSlowSHLD, TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 }
 
 foreach P = ["k8", "opteron", "athlon64", "athlon-fx"] in {
-  def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureSSE2, Feature3DNowA,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureSSE2, Feature3DNowA,
                  FeatureFXSR, FeatureNOPL, FeatureX86_64, FeatureCMOV],
                 [TuningFastScalarShiftMasks, TuningSlowSHLD, TuningSlowUAMem16,
                  TuningSBBDepBreaking, TuningInsertVZEROUPPER]>;
 }
 
 foreach P = ["k8-sse3", "opteron-sse3", "athlon64-sse3"] in {
-  def : Proc<P, [FeatureX87, FeatureCMPXCHG8B, FeatureSSE3, Feature3DNowA,
-                 FeatureFXSR, FeatureNOPL, FeatureCMPXCHG16B, FeatureCMOV,
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureSSE3, Feature3DNowA,
+                 FeatureFXSR, FeatureNOPL, FeatureCX16, FeatureCMOV,
                  FeatureX86_64],
                 [TuningFastScalarShiftMasks, TuningSlowSHLD, TuningSlowUAMem16,
                  TuningSBBDepBreaking, TuningInsertVZEROUPPER]>;
@@ -1497,7 +1497,7 @@ def : ProcModel<"znver2", Znver2Model, ProcessorFeatures.ZN2Features,
 def : ProcModel<"znver3", Znver3Model, ProcessorFeatures.ZN3Features,
                 ProcessorFeatures.ZN3Tuning>;
 
-def : Proc<"geode",           [FeatureX87, FeatureCMPXCHG8B, Feature3DNowA],
+def : Proc<"geode",           [FeatureX87, FeatureCX8, Feature3DNowA],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 def : Proc<"winchip-c6",      [FeatureX87, FeatureMMX],
@@ -1506,7 +1506,7 @@ def : Proc<"winchip2",        [FeatureX87, Feature3DNow],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : Proc<"c3",              [FeatureX87, Feature3DNow],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"c3-2",            [FeatureX87, FeatureCMPXCHG8B, FeatureMMX,
+def : Proc<"c3-2",            [FeatureX87, FeatureCX8, FeatureMMX,
                                FeatureSSE1, FeatureFXSR, FeatureCMOV],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
