@@ -183,11 +183,6 @@ void CodeGen::generateConstraintOrRewrite(StringRef name, bool isConstraint,
         .Case([&](ast::TypeRangeType) { return "::mlir::TypeRange"; })
         .Case([&](ast::ValueRangeType) { return "::mlir::ValueRange"; });
   };
-
-  // FIXME: We currently do not have a modeling for the "constant params"
-  // support PDL provides. We should either figure out a modeling for this, or
-  // refactor the support within PDL to be something a bit more reasonable for
-  // what we need as a frontend.
   os << "static " << (isConstraint ? "::mlir::LogicalResult " : "void ") << name
      << "PDLFn(::llvm::ArrayRef<::mlir::PDLValue> values, "
         "::mlir::PatternRewriter &rewriter"
