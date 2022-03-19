@@ -43333,29 +43333,32 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // but not
   //   i1 = extract_vector_elt t0:1, Constant:i64<2>
   // since the latter would need its own MOVMSK.
-  if (CIdx && SrcVT.getScalarType() == MVT::i1) {
+  if (SrcVT.getScalarType() == MVT::i1) {
+    bool IsVar = !CIdx;
     SmallVector<SDNode *, 16> BoolExtracts;
     unsigned ResNo = InputVector.getResNo();
-    auto IsBoolExtract = [&BoolExtracts, &ResNo](SDNode *Use) {
+    auto IsBoolExtract = [&BoolExtracts, &ResNo, &IsVar](SDNode *Use) {
       if (Use->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          isa<ConstantSDNode>(Use->getOperand(1)) &&
           Use->getOperand(0).getResNo() == ResNo &&
           Use->getValueType(0) == MVT::i1) {
         BoolExtracts.push_back(Use);
+        IsVar |= !isa<ConstantSDNode>(Use->getOperand(1));
         return true;
       }
       return false;
     };
+    // TODO: Can we drop the oneuse check for constant extracts?
     if (all_of(InputVector->uses(), IsBoolExtract) &&
-        BoolExtracts.size() > 1) {
+        (IsVar || BoolExtracts.size() > 1)) {
       EVT BCVT = EVT::getIntegerVT(*DAG.getContext(), NumSrcElts);
       if (SDValue BC =
               combineBitcastvxi1(DAG, BCVT, InputVector, dl, Subtarget)) {
         for (SDNode *Use : BoolExtracts) {
           // extractelement vXi1 X, MaskIdx --> ((movmsk X) & Mask) == Mask
-          unsigned MaskIdx = Use->getConstantOperandVal(1);
-          APInt MaskBit = APInt::getOneBitSet(NumSrcElts, MaskIdx);
-          SDValue Mask = DAG.getConstant(MaskBit, dl, BCVT);
+          // Mask = 1 << MaskIdx
+          SDValue MaskIdx = DAG.getZExtOrTrunc(Use->getOperand(1), dl, MVT::i8);
+          SDValue MaskBit = DAG.getConstant(1, dl, BCVT);
+          SDValue Mask = DAG.getNode(ISD::SHL, dl, BCVT, MaskBit, MaskIdx);
           SDValue Res = DAG.getNode(ISD::AND, dl, BCVT, BC, Mask);
           Res = DAG.getSetCC(dl, MVT::i1, Res, Mask, ISD::SETEQ);
           DCI.CombineTo(Use, Res);

@@ -321,10 +321,10 @@ func @to_select_with_body(%cond: i1) -> index {
 // CHECK-LABEL:   func @to_select_with_body
 // CHECK-DAG:       [[C0:%.*]] = arith.constant 0 : index
 // CHECK-DAG:       [[C1:%.*]] = arith.constant 1 : index
+// CHECK:           [[V0:%.*]] = arith.select {{.*}}, [[C0]], [[C1]]
 // CHECK:           scf.if {{.*}} {
 // CHECK:             "test.op"() : () -> ()
 // CHECK:           } 
-// CHECK:           [[V0:%.*]] = arith.select {{.*}}, [[C0]], [[C1]]
 // CHECK:           return [[V0]] : index
 // -----
 
@@ -556,10 +556,10 @@ func @merge_yielding_nested_if_nv2(%arg0: i1, %arg1: i1) -> i32 {
 // CHECK: %[[PRE0:.*]] = "test.op"() : () -> i32
 // CHECK: %[[PRE1:.*]] = "test.op1"() : () -> i32
 // CHECK: %[[COND:.*]] = arith.andi %[[ARG0]], %[[ARG1]]
+// CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[PRE0]], %[[PRE1]]
 // CHECK: scf.if %[[COND]] 
 // CHECK:   "test.run"() : () -> ()
 // CHECK: }
-// CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[PRE0]], %[[PRE1]]
 // CHECK: return %[[RES]]
   %0 = "test.op"() : () -> (i32)
   %1 = "test.op1"() : () -> (i32)
@@ -933,6 +933,7 @@ func @replace_if_with_cond2(%arg0 : i1) -> (i32, i1) {
   return %res#0, %res#1 : i32, i1
 }
 // CHECK-NEXT:     %true = arith.constant true
+// CHECK-NEXT:     %[[toret:.+]] = arith.xori %arg0, %true : i1
 // CHECK-NEXT:     %[[if:.+]] = scf.if %arg0 -> (i32) {
 // CHECK-NEXT:       %[[sv1:.+]] = "test.get_some_value"() : () -> i32
 // CHECK-NEXT:       scf.yield %[[sv1]] : i32
@@ -940,7 +941,6 @@ func @replace_if_with_cond2(%arg0 : i1) -> (i32, i1) {
 // CHECK-NEXT:       %[[sv2:.+]] = "test.get_some_value"() : () -> i32
 // CHECK-NEXT:       scf.yield %[[sv2]] : i32
 // CHECK-NEXT:     }
-// CHECK-NEXT:     %[[toret:.+]] = arith.xori %arg0, %true : i1
 // CHECK-NEXT:     return %[[if]], %[[toret]] : i32, i1
 
 // -----

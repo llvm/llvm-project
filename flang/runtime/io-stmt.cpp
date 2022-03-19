@@ -19,8 +19,6 @@
 
 namespace Fortran::runtime::io {
 
-int IoStatementBase::EndIoStatement() { return GetIoStat(); }
-
 bool IoStatementBase::Emit(const char *, std::size_t, std::size_t) {
   return false;
 }
@@ -163,10 +161,18 @@ InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
       ioStatementState_{*this}, format_{*this, format, formatLength} {}
 
 template <Direction DIR, typename CHAR>
-int InternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
-  if constexpr (DIR == Direction::Output) {
-    format_.Finish(*this); // ignore any remaining input positioning actions
+void InternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
+  if (!this->completedOperation()) {
+    if constexpr (DIR == Direction::Output) {
+      format_.Finish(*this); // ignore any remaining input positioning actions
+    }
+    IoStatementBase::CompleteOperation();
   }
+}
+
+template <Direction DIR, typename CHAR>
+int InternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
+  CompleteOperation();
   return InternalIoStatementState<DIR, CHAR>::EndIoStatement();
 }
 
@@ -191,12 +197,19 @@ MutableModes &ExternalIoStatementBase::mutableModes() { return unit_.modes; }
 
 ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 
-int ExternalIoStatementBase::EndIoStatement() {
-  if (mutableModes().nonAdvancing) {
-    unit_.leftTabLimit = unit_.furthestPositionInRecord;
-  } else {
-    unit_.leftTabLimit.reset();
+void ExternalIoStatementBase::CompleteOperation() {
+  if (!completedOperation()) {
+    if (mutableModes().nonAdvancing) {
+      unit_.leftTabLimit = unit_.furthestPositionInRecord;
+    } else {
+      unit_.leftTabLimit.reset();
+    }
+    IoStatementBase::CompleteOperation();
   }
+}
+
+int ExternalIoStatementBase::EndIoStatement() {
+  CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
   unit_.EndIoStatement(); // annihilates *this in unit_.u_
   return result;
@@ -207,7 +220,10 @@ void OpenStatementState::set_path(const char *path, std::size_t length) {
   path_ = SaveDefaultCharacter(path, pathLength_, *this);
 }
 
-int OpenStatementState::EndIoStatement() {
+void OpenStatementState::CompleteOperation() {
+  if (completedOperation()) {
+    return;
+  }
   if (position_) {
     if (access_ && *access_ == Access::Direct) {
       SignalError("POSITION= may not be set with ACCESS='DIRECT'");
@@ -246,17 +262,33 @@ int OpenStatementState::EndIoStatement() {
     // Set default format (C.7.4 point 2).
     unit().isUnformatted = unit().access != Access::Sequential;
   }
+  if (!wasExtant_ && InError()) {
+    // Release the new unit on failure
+    unit().CloseUnit(CloseStatus::Delete, *this);
+    unit().DestroyClosed();
+  }
+  IoStatementBase::CompleteOperation();
+}
+
+int OpenStatementState::EndIoStatement() {
+  CompleteOperation();
   return ExternalIoStatementBase::EndIoStatement();
 }
 
 int CloseStatementState::EndIoStatement() {
+  CompleteOperation();
   int result{ExternalIoStatementBase::EndIoStatement()};
   unit().CloseUnit(status_, *this);
   unit().DestroyClosed();
   return result;
 }
 
+void NoUnitIoStatementState::CompleteOperation() {
+  IoStatementBase::CompleteOperation();
+}
+
 int NoUnitIoStatementState::EndIoStatement() {
+  CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
   FreeMemory(this);
   return result;
@@ -277,7 +309,11 @@ ExternalIoStatementState<DIR>::ExternalIoStatementState(
   }
 }
 
-template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
+template <Direction DIR>
+void ExternalIoStatementState<DIR>::CompleteOperation() {
+  if (completedOperation()) {
+    return;
+  }
   if constexpr (DIR == Direction::Input) {
     BeginReadingRecord(); // in case there were no I/O items
     if (!mutableModes().nonAdvancing || GetIoStat() == IostatEor) {
@@ -289,6 +325,11 @@ template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
     }
     unit().FlushIfTerminal(*this);
   }
+  return ExternalIoStatementBase::CompleteOperation();
+}
+
+template <Direction DIR> int ExternalIoStatementState<DIR>::EndIoStatement() {
+  CompleteOperation();
   return ExternalIoStatementBase::EndIoStatement();
 }
 
@@ -391,11 +432,20 @@ ExternalFormattedIoStatementState<DIR, CHAR>::ExternalFormattedIoStatementState(
       format_{*this, format, formatLength} {}
 
 template <Direction DIR, typename CHAR>
-int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
+void ExternalFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
+  if (this->completedOperation()) {
+    return;
+  }
   if constexpr (DIR == Direction::Input) {
     this->BeginReadingRecord(); // in case there were no I/O items
   }
   format_.Finish(*this);
+  return ExternalIoStatementState<DIR>::CompleteOperation();
+}
+
+template <Direction DIR, typename CHAR>
+int ExternalFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
+  CompleteOperation();
   return ExternalIoStatementState<DIR>::EndIoStatement();
 }
 
@@ -446,6 +496,10 @@ void IoStatementState::HandleRelativePosition(std::int64_t n) {
 
 void IoStatementState::HandleAbsolutePosition(std::int64_t n) {
   std::visit([=](auto &x) { x.get().HandleAbsolutePosition(n); }, u_);
+}
+
+void IoStatementState::CompleteOperation() {
+  std::visit([](auto &x) { x.get().CompleteOperation(); }, u_);
 }
 
 int IoStatementState::EndIoStatement() {
@@ -775,7 +829,12 @@ ExternalFileUnit *ChildIoStatementState<DIR>::GetExternalFileUnit() const {
   return child_.parent().GetExternalFileUnit();
 }
 
+template <Direction DIR> void ChildIoStatementState<DIR>::CompleteOperation() {
+  IoStatementBase::CompleteOperation();
+}
+
 template <Direction DIR> int ChildIoStatementState<DIR>::EndIoStatement() {
+  CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
   child_.EndIoStatement(); // annihilates *this in child_.u_
   return result;
@@ -826,8 +885,16 @@ ChildFormattedIoStatementState<DIR, CHAR>::ChildFormattedIoStatementState(
                                                         formatLength} {}
 
 template <Direction DIR, typename CHAR>
+void ChildFormattedIoStatementState<DIR, CHAR>::CompleteOperation() {
+  if (!this->completedOperation()) {
+    format_.Finish(*this);
+    ChildIoStatementState<DIR>::CompleteOperation();
+  }
+}
+
+template <Direction DIR, typename CHAR>
 int ChildFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
-  format_.Finish(*this);
+  CompleteOperation();
   return ChildIoStatementState<DIR>::EndIoStatement();
 }
 
@@ -865,7 +932,10 @@ template class ChildListIoStatementState<Direction::Input>;
 template class ChildUnformattedIoStatementState<Direction::Output>;
 template class ChildUnformattedIoStatementState<Direction::Input>;
 
-int ExternalMiscIoStatementState::EndIoStatement() {
+void ExternalMiscIoStatementState::CompleteOperation() {
+  if (completedOperation()) {
+    return;
+  }
   ExternalFileUnit &ext{unit()};
   switch (which_) {
   case Flush:
@@ -882,6 +952,11 @@ int ExternalMiscIoStatementState::EndIoStatement() {
     ext.Rewind(*this);
     break;
   }
+  return ExternalIoStatementBase::CompleteOperation();
+}
+
+int ExternalMiscIoStatementState::EndIoStatement() {
+  CompleteOperation();
   return ExternalIoStatementBase::EndIoStatement();
 }
 
@@ -1366,7 +1441,7 @@ bool InquireIOLengthState::Emit(const char32_t *p, std::size_t n) {
 }
 
 int ErroneousIoStatementState::EndIoStatement() {
-  SignalError(iostat_);
+  SignalPendingError();
   return IoStatementBase::EndIoStatement();
 }
 
