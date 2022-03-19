@@ -2508,8 +2508,8 @@ void CodeGenModule::EmitDeferred() {
   // Note we should not clear CUDADeviceVarODRUsedByHost since it is still
   // needed for further handling.
   if (getLangOpts().CUDA && getLangOpts().CUDAIsDevice)
-    for (const auto *V : getContext().CUDADeviceVarODRUsedByHost)
-      DeferredDeclsToEmit.push_back(V);
+    llvm::append_range(DeferredDeclsToEmit,
+                       getContext().CUDADeviceVarODRUsedByHost);
 
   // Stop if we're out of both deferred vtables and deferred declarations.
   if (DeferredDeclsToEmit.empty())

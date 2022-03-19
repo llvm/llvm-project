@@ -220,12 +220,7 @@ public:
   /// Create an InterfaceMap given with the implementation of the interfaces.
   /// The use of this constructor is in general discouraged in favor of
   /// 'InterfaceMap::get<InterfaceA, ...>()'.
-  InterfaceMap(MutableArrayRef<std::pair<TypeID, void *>> elements)
-      : interfaces(elements.begin(), elements.end()) {
-    llvm::sort(interfaces, [](const auto &lhs, const auto &rhs) {
-      return compare(lhs.first, rhs.first);
-    });
-  }
+  InterfaceMap(MutableArrayRef<std::pair<TypeID, void *>> elements);
 
   /// Insert the given models as implementations of the corresponding interfaces
   /// for the concrete attribute class.

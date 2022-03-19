@@ -315,8 +315,7 @@ static const CGFunctionInfo &getFunctionInfo(CodeGenModule &CGM,
         Ctx, nullptr, SourceLocation(), &Ctx.Idents.get(ValNameStr[I]), ParamTy,
         ImplicitParamDecl::Other));
 
-  for (auto &P : Params)
-    Args.push_back(P);
+  llvm::append_range(Args, Params);
 
   return CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
 }

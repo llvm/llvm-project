@@ -254,13 +254,17 @@ private:
     assert(L.getNumBlocks() == LiveLoopBlocks.size() + DeadLoopBlocks.size() &&
            "Malformed block sets?");
 
-    // Now, all exit blocks that are not marked as live are dead.
+    // Now, all exit blocks that are not marked as live are dead, if all their
+    // predecessors are in the loop. This may not be the case, as the input loop
+    // may not by in loop-simplify/canonical form.
     SmallVector<BasicBlock *, 8> ExitBlocks;
     L.getExitBlocks(ExitBlocks);
     SmallPtrSet<BasicBlock *, 8> UniqueDeadExits;
     for (auto *ExitBlock : ExitBlocks)
       if (!LiveExitBlocks.count(ExitBlock) &&
-          UniqueDeadExits.insert(ExitBlock).second)
+          UniqueDeadExits.insert(ExitBlock).second &&
+          all_of(predecessors(ExitBlock),
+                 [this](BasicBlock *Pred) { return L.contains(Pred); }))
         DeadExitBlocks.push_back(ExitBlock);
 
     // Whether or not the edge From->To will still be present in graph after the

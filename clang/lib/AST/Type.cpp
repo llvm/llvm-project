@@ -1899,8 +1899,14 @@ bool Type::hasAutoForTrailingReturnType() const {
 bool Type::hasIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isIntegerType();
-  else
-    return isIntegerType();
+  if (CanonicalType->isVLSTBuiltinType()) {
+    const auto *VT = cast<BuiltinType>(CanonicalType);
+    return VT->getKind() == BuiltinType::SveBool ||
+           (VT->getKind() >= BuiltinType::SveInt8 &&
+            VT->getKind() <= BuiltinType::SveUint64);
+  }
+
+  return isIntegerType();
 }
 
 /// Determine whether this type is an integral type.

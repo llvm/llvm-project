@@ -24,7 +24,7 @@ define i1 @test_cmpxchg_seq_cst(i128* %addr, i128 %desire, i128 %new) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i128 [[HI64]], 64
 ; CHECK-NEXT:    [[VAL64:%.*]] = or i128 [[LO64]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertvalue { i128, i1 } undef, i128 [[VAL64]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = and i128 [[VAL64]], 18446744073709551615
+; CHECK-NEXT:    [[TMP6:%.*]] = and i128 [[VAL64]], -1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = icmp eq i128 [[CMPVAL_SHIFTED]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i128, i1 } [[TMP5]], i1 [[SUCCESS]], 1
 ; CHECK-NEXT:    [[SUCC:%.*]] = extractvalue { i128, i1 } [[TMP7]], 1

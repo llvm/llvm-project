@@ -66,10 +66,6 @@ static cl::opt<DebugLogging> DebugPM(
             DebugLogging::Verbose, "verbose",
             "Print extra information about adaptors and pass managers")));
 
-static cl::list<std::string>
-    PassPlugins("load-pass-plugin",
-                cl::desc("Load passes from plugin library"));
-
 // This flag specifies a textual description of the alias analysis pipeline to
 // use when querying for aliasing information. It only works in concert with
 // the "passes" flag above.
@@ -269,6 +265,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
                            ToolOutputFile *ThinLTOLinkOut,
                            ToolOutputFile *OptRemarkFile,
                            StringRef PassPipeline, ArrayRef<StringRef> Passes,
+                           ArrayRef<PassPlugin> PassPlugins,
                            OutputKind OK, VerifierKind VK,
                            bool ShouldPreserveAssemblyUseListOrder,
                            bool ShouldPreserveBitcodeUseListOrder,
@@ -341,17 +338,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   PassBuilder PB(TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
-  // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : PassPlugins) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin) {
-      errs() << "Failed to load passes from '" << PluginFN
-             << "'. Request ignored.\n";
-      continue;
-    }
-
-    PassPlugin->registerPassBuilderCallbacks(PB);
-  }
+  // For any loaded plugins, let them register pass builder callbacks.
+  for (auto &PassPlugin : PassPlugins)
+    PassPlugin.registerPassBuilderCallbacks(PB);
 
   PB.registerPipelineParsingCallback(
       [](StringRef Name, ModulePassManager &MPM,

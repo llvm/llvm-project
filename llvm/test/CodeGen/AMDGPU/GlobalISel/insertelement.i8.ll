@@ -3744,8 +3744,8 @@ define amdgpu_ps void @insertelement_s_v8i8_v_v(<8 x i8> addrspace(4)* inreg %pt
 ; GFX11-NEXT:    s_lshl_b32 s3, s5, 24
 ; GFX11-NEXT:    s_or_b32 s0, s4, s0
 ; GFX11-NEXT:    s_or_b32 s0, s0, s3
-; GFX11-NEXT:    v_dual_cndmask_b32 v5, s0, v1 :: v_dual_and_b32 v0, s2, v0
-; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
+; GFX11-NEXT:    v_and_b32_e32 v0, s2, v0
+; GFX11-NEXT:    v_dual_cndmask_b32 v5, s0, v1 :: v_dual_lshlrev_b32 v2, 3, v2
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v4, v2, v0
 ; GFX11-NEXT:    v_lshlrev_b32_e64 v0, v2, s2
 ; GFX11-NEXT:    v_xor_b32_e32 v2, -1, v0

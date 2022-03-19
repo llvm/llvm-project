@@ -53,6 +53,9 @@ private:
                                    uint64_t Offset, Align Alignment,
                                    bool Signed,
                                    const ISD::InputArg *Arg = nullptr) const;
+  SDValue loadImplicitKernelArgument(SelectionDAG &DAG, MVT VT, const SDLoc &DL,
+                                     Align Alignment,
+                                     ImplicitParameter Param) const;
 
   SDValue lowerStackParameter(SelectionDAG &DAG, CCValAssign &VA,
                               const SDLoc &SL, SDValue Chain,

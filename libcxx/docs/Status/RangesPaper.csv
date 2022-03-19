@@ -75,7 +75,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `ranges::next <https://llvm.org/D102563>`_
 | `ranges::prev <https://llvm.org/D102564>`_",[iterator.concepts],Christopher Di Bella and Arthur O'Dwyer,✅
 `[predef.iterators] <https://wg21.link/predef.iterators>`_,"
-| Updates to reverse_iterator
+| `Updates to reverse_iterator <https://llvm.org/D120180>`_
 | `Updates to back_insert_iterator <https://llvm.org/D103273>`_
 | `Updates to front_insert_iterator <https://llvm.org/D103273>`_
 | `Updates to move_iterator <https://llvm.org/D117656>`_","| [iterator.concepts]

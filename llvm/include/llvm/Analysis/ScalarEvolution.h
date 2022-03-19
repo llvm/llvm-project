@@ -2083,6 +2083,11 @@ private:
   /// `UniqueSCEVs`.  Return if found, else nullptr.
   SCEV *findExistingSCEVInCache(SCEVTypes SCEVType, ArrayRef<const SCEV *> Ops);
 
+  /// Get reachable blocks in this function, making limited use of SCEV
+  /// reasoning about conditions.
+  void getReachableBlocks(SmallPtrSetImpl<BasicBlock *> &Reachable,
+                          Function &F);
+
   FoldingSet<SCEV> UniqueSCEVs;
   FoldingSet<SCEVPredicate> UniquePreds;
   BumpPtrAllocator SCEVAllocator;

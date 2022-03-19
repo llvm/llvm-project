@@ -423,9 +423,9 @@ def FBSTPm   : FPI<0xDF, MRM6m, (outs), (ins f80mem:$dst), "fbstp\t$dst">;
 
 // Floating point cmovs.
 class FpIf32CMov<dag outs, dag ins, FPFormat fp, list<dag> pattern> :
-  FpI_<outs, ins, fp, pattern>, Requires<[FPStackf32, HasCMov]>;
+  FpI_<outs, ins, fp, pattern>, Requires<[FPStackf32, HasCMOV]>;
 class FpIf64CMov<dag outs, dag ins, FPFormat fp, list<dag> pattern> :
-  FpI_<outs, ins, fp, pattern>, Requires<[FPStackf64, HasCMov]>;
+  FpI_<outs, ins, fp, pattern>, Requires<[FPStackf64, HasCMOV]>;
 
 multiclass FPCMov<PatLeaf cc> {
   def _Fp32  : FpIf32CMov<(outs RFP32:$dst), (ins RFP32:$src1, RFP32:$src2),
@@ -440,7 +440,7 @@ multiclass FPCMov<PatLeaf cc> {
                      CondMovFP,
                      [(set RFP80:$dst, (X86cmov RFP80:$src1, RFP80:$src2,
                                         cc, EFLAGS))]>,
-                                        Requires<[HasCMov]>;
+                                        Requires<[HasCMOV]>;
 }
 
 let SchedRW = [WriteFCMOV] in {
@@ -455,7 +455,7 @@ defm CMOVNE : FPCMov<X86_COND_NE>;
 defm CMOVNP : FPCMov<X86_COND_NP>;
 } // Uses = [EFLAGS], Constraints = "$src1 = $dst"
 
-let Predicates = [HasCMov] in {
+let Predicates = [HasCMOV] in {
 // These are not factored because there's no clean way to pass DA/DB.
 def CMOVB_F  : FPI<0xDA, MRM0r, (outs), (ins RSTi:$op),
                   "fcmovb\t{$op, %st|st, $op}">;
@@ -473,7 +473,7 @@ def CMOVNE_F : FPI<0xDB, MRM1r, (outs), (ins RSTi:$op),
                   "fcmovne\t{$op, %st|st, $op}">;
 def CMOVNP_F : FPI<0xDB, MRM3r, (outs), (ins RSTi:$op),
                   "fcmovnu\t{$op, %st|st, $op}">;
-} // Predicates = [HasCMov]
+} // Predicates = [HasCMOV]
 } // SchedRW
 
 let mayRaiseFPException = 1 in {
@@ -664,22 +664,22 @@ let SchedRW = [WriteFCom], mayRaiseFPException = 1 in {
 let Defs = [EFLAGS, FPSW], Uses = [FPCW] in {
 def UCOM_FpIr32: FpI_<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
                   [(set EFLAGS, (X86any_fcmp RFP32:$lhs, RFP32:$rhs))]>,
-                  Requires<[FPStackf32, HasCMov]>;
+                  Requires<[FPStackf32, HasCMOV]>;
 def UCOM_FpIr64: FpI_<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
                   [(set EFLAGS, (X86any_fcmp RFP64:$lhs, RFP64:$rhs))]>,
-                  Requires<[FPStackf64, HasCMov]>;
+                  Requires<[FPStackf64, HasCMOV]>;
 def UCOM_FpIr80: FpI_<(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
                   [(set EFLAGS, (X86any_fcmp RFP80:$lhs, RFP80:$rhs))]>,
-                  Requires<[HasCMov]>;
+                  Requires<[HasCMOV]>;
 def COM_FpIr32: FpI_<(outs), (ins RFP32:$lhs, RFP32:$rhs), CompareFP,
                   [(set EFLAGS, (X86strict_fcmps RFP32:$lhs, RFP32:$rhs))]>,
-                  Requires<[FPStackf32, HasCMov]>;
+                  Requires<[FPStackf32, HasCMOV]>;
 def COM_FpIr64: FpI_<(outs), (ins RFP64:$lhs, RFP64:$rhs), CompareFP,
                   [(set EFLAGS, (X86strict_fcmps RFP64:$lhs, RFP64:$rhs))]>,
-                  Requires<[FPStackf64, HasCMov]>;
+                  Requires<[FPStackf64, HasCMOV]>;
 def COM_FpIr80: FpI_<(outs), (ins RFP80:$lhs, RFP80:$rhs), CompareFP,
                   [(set EFLAGS, (X86strict_fcmps RFP80:$lhs, RFP80:$rhs))]>,
-                  Requires<[HasCMov]>;
+                  Requires<[HasCMOV]>;
 }
 
 let Uses = [ST0, FPCW] in {
