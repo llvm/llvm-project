@@ -29,6 +29,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <vector>
 
 //===----------------------------------------------------------------------===//
@@ -80,12 +81,20 @@ struct CallbackAndCookie {
   enum class Status { Empty, Initializing, Initialized, Executing };
   std::atomic<Status> Flag;
 };
+
 static constexpr size_t MaxSignalHandlerCallbacks = 8;
-static CallbackAndCookie CallBacksToRun[MaxSignalHandlerCallbacks];
+
+// A global array of CallbackAndCookie may not compile with
+// -Werror=global-constructors in c++20 and above
+static std::array<CallbackAndCookie, MaxSignalHandlerCallbacks> &
+CallBacksToRun() {
+  static std::array<CallbackAndCookie, MaxSignalHandlerCallbacks> callbacks;
+  return callbacks;
+}
 
 // Signal-safe.
 void sys::RunSignalHandlers() {
-  for (CallbackAndCookie &RunMe : CallBacksToRun) {
+  for (CallbackAndCookie &RunMe : CallBacksToRun()) {
     auto Expected = CallbackAndCookie::Status::Initialized;
     auto Desired = CallbackAndCookie::Status::Executing;
     if (!RunMe.Flag.compare_exchange_strong(Expected, Desired))
@@ -100,7 +109,7 @@ void sys::RunSignalHandlers() {
 // Signal-safe.
 static void insertSignalHandler(sys::SignalHandlerCallback FnPtr,
                                 void *Cookie) {
-  for (CallbackAndCookie &SetMe : CallBacksToRun) {
+  for (CallbackAndCookie &SetMe : CallBacksToRun()) {
     auto Expected = CallbackAndCookie::Status::Empty;
     auto Desired = CallbackAndCookie::Status::Initializing;
     if (!SetMe.Flag.compare_exchange_strong(Expected, Desired))
