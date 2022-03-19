@@ -154,8 +154,10 @@ public:
                                                 const uint64_t *perm,
                                                 uint64_t capacity = 0) {
     std::vector<uint64_t> permsz(rank);
-    for (uint64_t r = 0; r < rank; r++)
+    for (uint64_t r = 0; r < rank; r++) {
+      assert(sizes[r] > 0 && "Dimension size zero has trivial storage");
       permsz[perm[r]] = sizes[r];
+    }
     return new SparseTensorCOO<V>(permsz, capacity);
   }
 
@@ -389,20 +391,22 @@ public:
   /// In the latter case, the coordinate scheme must respect the same
   /// permutation as is desired for the new sparse tensor storage.
   static SparseTensorStorage<P, I, V> *
-  newSparseTensor(uint64_t rank, const uint64_t *sizes, const uint64_t *perm,
+  newSparseTensor(uint64_t rank, const uint64_t *shape, const uint64_t *perm,
                   const DimLevelType *sparsity, SparseTensorCOO<V> *tensor) {
     SparseTensorStorage<P, I, V> *n = nullptr;
     if (tensor) {
       assert(tensor->getRank() == rank);
       for (uint64_t r = 0; r < rank; r++)
-        assert(sizes[r] == 0 || tensor->getSizes()[perm[r]] == sizes[r]);
+        assert(shape[r] == 0 || shape[r] == tensor->getSizes()[perm[r]]);
       n = new SparseTensorStorage<P, I, V>(tensor->getSizes(), perm, sparsity,
                                            tensor);
       delete tensor;
     } else {
       std::vector<uint64_t> permsz(rank);
-      for (uint64_t r = 0; r < rank; r++)
-        permsz[perm[r]] = sizes[r];
+      for (uint64_t r = 0; r < rank; r++) {
+        assert(shape[r] > 0 && "Dimension size zero has trivial storage");
+        permsz[perm[r]] = shape[r];
+      }
       n = new SparseTensorStorage<P, I, V>(permsz, perm, sparsity);
     }
     return n;
@@ -658,7 +662,7 @@ static void readExtFROSTTHeader(FILE *file, char *filename, char *line,
 /// sparse tensor in coordinate scheme.
 template <typename V>
 static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
-                                               const uint64_t *sizes,
+                                               const uint64_t *shape,
                                                const uint64_t *perm) {
   // Open the file.
   FILE *file = fopen(filename, "r");
@@ -684,7 +688,7 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
   assert(rank == idata[0] && "rank mismatch");
   uint64_t nnz = idata[1];
   for (uint64_t r = 0; r < rank; r++)
-    assert((sizes[r] == 0 || sizes[r] == idata[2 + r]) &&
+    assert((shape[r] == 0 || shape[r] == idata[2 + r]) &&
            "dimension size mismatch");
   SparseTensorCOO<V> *tensor =
       SparseTensorCOO<V>::newSparseTensorCOO(rank, idata + 2, perm, nnz);
@@ -847,17 +851,17 @@ extern "C" {
     if (action <= Action::kFromCOO) {                                          \
       if (action == Action::kFromFile) {                                       \
         char *filename = static_cast<char *>(ptr);                             \
-        tensor = openSparseTensorCOO<V>(filename, rank, sizes, perm);          \
+        tensor = openSparseTensorCOO<V>(filename, rank, shape, perm);          \
       } else if (action == Action::kFromCOO) {                                 \
         tensor = static_cast<SparseTensorCOO<V> *>(ptr);                       \
       } else {                                                                 \
         assert(action == Action::kEmpty);                                      \
       }                                                                        \
-      return SparseTensorStorage<P, I, V>::newSparseTensor(rank, sizes, perm,  \
+      return SparseTensorStorage<P, I, V>::newSparseTensor(rank, shape, perm,  \
                                                            sparsity, tensor);  \
     }                                                                          \
     if (action == Action::kEmptyCOO)                                           \
-      return SparseTensorCOO<V>::newSparseTensorCOO(rank, sizes, perm);        \
+      return SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm);        \
     tensor = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);    \
     if (action == Action::kToIterator) {                                       \
       tensor->startIterator();                                                 \
@@ -986,7 +990,7 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
          pref->strides[0] == 1);
   assert(aref->sizes[0] == sref->sizes[0] && sref->sizes[0] == pref->sizes[0]);
   const DimLevelType *sparsity = aref->data + aref->offset;
-  const index_type *sizes = sref->data + sref->offset;
+  const index_type *shape = sref->data + sref->offset;
   const index_type *perm = pref->data + pref->offset;
   uint64_t rank = aref->sizes[0];
 
