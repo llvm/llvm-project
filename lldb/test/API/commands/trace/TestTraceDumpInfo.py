@@ -38,4 +38,5 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
             substrs=['''Trace technology: intel-pt
 
 thread #1: tid = 3842849
-  Raw trace size: 4096 bytes'''])
+  Raw trace size: 4096 bytes
+  Total number of instructions: 21'''])
