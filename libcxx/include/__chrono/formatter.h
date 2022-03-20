@@ -12,11 +12,14 @@
 
 #include <__chrono/convert_to_tm.h>
 #include <__chrono/day.h>
+#include <__chrono/month.h>
 #include <__chrono/parser_std_format_spec.h>
 #include <__chrono/statically_widen.h>
 #include <__chrono/year.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
+#include <__format/format_error.h>
 #include <__format/format_functions.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
@@ -172,6 +175,18 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
   }
 }
 
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
+  if constexpr (same_as<_Tp, chrono::day>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::month>)
+    return __value.ok();
+  else if constexpr (same_as<_Tp, chrono::year>)
+    return true;
+  else
+    static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
+}
+
 template <class _CharT, class _Tp>
 _LIBCPP_HIDE_FROM_ABI auto
 __format_chrono(const _Tp& __value,
@@ -191,8 +206,12 @@ __format_chrono(const _Tp& __value,
 
   if (__chrono_specs.empty())
     __sstr << __value;
-  else
+  else {
+    if (__specs.__chrono_.__month_name_ && !__formatter::__month_name_ok(__value))
+      std::__throw_format_error("formatting a month name from an invalid month number");
+
     __formatter::__format_chrono_using_chrono_specs(__value, __sstr, __chrono_specs);
+  }
 
   // TODO FMT Use the stringstream's view after P0408R7 has been implemented.
   basic_string<_CharT> __str = __sstr.str();
@@ -228,6 +247,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
       -> decltype(__parse_ctx.begin()) {
     return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__day);
+  }
+};
+
+template <__fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<chrono::month, _CharT>
+    : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__month);
   }
 };
 
