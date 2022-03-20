@@ -627,7 +627,7 @@ protected:
   /// Emit bypass checks to check any memory assumptions we may have made.
   /// Returns the block containing the checks or nullptr if no checks have been
   /// added.
-  BasicBlock *emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass);
+  BasicBlock *emitMemRuntimeChecks(BasicBlock *Bypass);
 
   /// Emit basic blocks (prefixed with \p Prefix) for the iteration check,
   /// vector loop preheader, middle block and scalar preheader. Also
@@ -2109,7 +2109,7 @@ public:
   /// Adds the generated MemCheckBlock before \p LoopVectorPreHeader and adjusts
   /// the branches to branch to the vector preheader or \p Bypass, depending on
   /// the generated condition.
-  BasicBlock *emitMemRuntimeChecks(Loop *L, BasicBlock *Bypass,
+  BasicBlock *emitMemRuntimeChecks(BasicBlock *Bypass,
                                    BasicBlock *LoopVectorPreHeader) {
     // Check if we generated code that checks in runtime if arrays overlap.
     if (!MemRuntimeCheckCond)
@@ -3051,14 +3051,13 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   return SCEVCheckBlock;
 }
 
-BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L,
-                                                      BasicBlock *Bypass) {
+BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
   // VPlan-native path does not do any analysis for runtime checks currently.
   if (EnableVPlanNativePath)
     return nullptr;
 
   BasicBlock *const MemCheckBlock =
-      RTChecks.emitMemRuntimeChecks(L, Bypass, LoopVectorPreHeader);
+      RTChecks.emitMemRuntimeChecks(Bypass, LoopVectorPreHeader);
 
   // Check if we generated code that checks in runtime if arrays overlap. We put
   // the checks into a separate block to make the more common case of few
@@ -3072,7 +3071,8 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(Loop *L,
            "to vectorize.");
     ORE->emit([&]() {
       return OptimizationRemarkAnalysis(DEBUG_TYPE, "VectorizationCodeSize",
-                                        L->getStartLoc(), L->getHeader())
+                                        OrigLoop->getStartLoc(),
+                                        OrigLoop->getHeader())
              << "Code-size may be reduced by not forcing "
                 "vectorization, or by source-code modifications "
                 "eliminating the need for runtime checks "
@@ -3341,7 +3341,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // Generate the code that checks in runtime if arrays overlap. We put the
   // checks into a separate block to make the more common case of few elements
   // faster.
-  emitMemRuntimeChecks(Lp, LoopScalarPreHeader);
+  emitMemRuntimeChecks(LoopScalarPreHeader);
 
   createHeaderBranch(Lp);
 
@@ -7876,7 +7876,7 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   // Generate the code that checks at runtime if arrays overlap. We put the
   // checks into a separate block to make the more common case of few elements
   // faster.
-  EPI.MemSafetyCheck = emitMemRuntimeChecks(Lp, LoopScalarPreHeader);
+  EPI.MemSafetyCheck = emitMemRuntimeChecks(LoopScalarPreHeader);
 
   // Generate the iteration count check for the main loop, *after* the check
   // for the epilogue loop, so that the path-length is shorter for the case
