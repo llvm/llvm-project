@@ -276,7 +276,7 @@ define float @print_fmuladd_strict(float* %a, float* %b, i64 %n) {
 ; CHECK-NEXT:   WIDEN ir<%l.a> = load ir<%arrayidx>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%b>, vp<[[STEPS]]>
 ; CHECK-NEXT:   WIDEN ir<%l.b> = load ir<%arrayidx2>
-; CHECK-NEXT:   EMIT vp<[[FMUL:%.]]> = fmul nnan ninf nsz ir<%l.a> ir<%l.b>
+; CHECK-NEXT:   EMIT vp<[[FMUL:%.+]]> = fmul nnan ninf nsz ir<%l.a> ir<%l.b>
 ; CHECK-NEXT:   REDUCE ir<[[MULADD:%.+]]> = ir<%sum.07> + nnan ninf nsz reduce.fadd (vp<[[FMUL]]>)
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
@@ -390,6 +390,49 @@ exit:
 
 declare float @llvm.sqrt.f32(float) nounwind readnone
 declare float @llvm.fmuladd.f32(float, float, float)
+
+define void @print_expand_scev(i64 %y, i8* %ptr) {
+; CHECK-LABEL: Checking a loop in 'print_expand_scev'
+; CHECK: VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT: Live-in vp<%0> = vector-trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT: <x1> vector loop: {
+; CHECK-NEXT:   loop:
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
+; CHECK-NEXT:     WIDEN-INDUCTION\l" +
+; CHECK-NEXT:     "  %iv = phi %iv.next, 0\l" +
+; CHECK-NEXT:     "  ir<%v2>
+; CHECK-NEXT:     EMIT vp<[[EXP_SCEV:%.+]]> = EXPAND SCEV (1 + (%y /u 492802768830814060))<nuw><nsw>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, vp<[[EXP_SCEV]]>
+; CHECK-NEXT:     WIDEN ir<%v3> = add ir<%v2>, ir<1>
+; CHECK-NEXT:     REPLICATE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEPS]]>
+; CHECK-NEXT:     REPLICATE store ir<%v3>, ir<%gep>
+; CHECK-NEXT:     EMIT vp<[[CAN_INC:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_INC]]> vp<%0>
+; CHECK-NEXT:   No successors
+; CHECK-NEXT: }
+; CHECK-NEXT: No successors
+; CHECK-NEXT: }
+;
+entry:
+  %div = udiv i64 %y, 492802768830814060
+  %inc = add i64 %div, 1
+  br label %loop
+
+loop:                                             ; preds = %loop, %entry
+  %iv = phi i64 [ %iv.next, %loop ], [ 0, %entry ]
+  %v2 = trunc i64 %iv to i8
+  %v3 = add i8 %v2, 1
+  %gep = getelementptr inbounds i8, i8* %ptr, i64 %iv
+  store i8 %v3, i8* %gep
+
+  %cmp15 = icmp slt i8 %v3, 10000
+  %iv.next = add i64 %iv, %inc
+  br i1 %cmp15, label %loop, label %loop.exit
+
+loop.exit:
+  ret void
+}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

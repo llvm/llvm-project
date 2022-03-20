@@ -9,9 +9,7 @@
 ; RUN:     --xcoff-traceback-table=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 
-; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff -filetype=obj -o %t.o 2>&1 \
-; RUN: < %s | FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 @a = external global i32, align 4
 @b = external global i64, align 8

@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class S, class It>
-void
+TEST_CONSTEXPR_CXX20 void
 test(S s, It first, It last, S expected)
 {
     s.assign(first, last);
@@ -172,7 +172,7 @@ bool test() {
   }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  { // test iterator operations that throw
+  if (!TEST_IS_CONSTANT_EVALUATED) { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;

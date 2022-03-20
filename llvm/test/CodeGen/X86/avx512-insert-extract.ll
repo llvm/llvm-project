@@ -1636,10 +1636,9 @@ define zeroext i8 @test_extractelement_varible_v32i1(<32 x i8> %a, <32 x i8> %b,
 ; KNL-NEXT:    vpminub %ymm1, %ymm0, %ymm1
 ; KNL-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; KNL-NEXT:    vpmovmskb %ymm0, %ecx
-; KNL-NEXT:    notl %ecx
 ; KNL-NEXT:    xorl %eax, %eax
 ; KNL-NEXT:    btl %edi, %ecx
-; KNL-NEXT:    setb %al
+; KNL-NEXT:    setae %al
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;

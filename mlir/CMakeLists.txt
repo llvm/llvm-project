@@ -139,6 +139,8 @@ if(MLIR_ENABLE_BINDINGS_PYTHON)
   mlir_configure_python_dev_packages()
 endif()
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+
 include_directories( "include")
 include_directories( ${MLIR_INCLUDE_DIR})
 

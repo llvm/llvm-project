@@ -2036,7 +2036,7 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
 /// the select.
 bool X86FastISel::X86FastEmitCMoveSelect(MVT RetVT, const Instruction *I) {
   // Check if the subtarget supports these instructions.
-  if (!Subtarget->hasCMOV())
+  if (!Subtarget->canUseCMOV())
     return false;
 
   // FIXME: Add support for i8.
