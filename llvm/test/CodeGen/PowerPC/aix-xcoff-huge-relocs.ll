@@ -20,13 +20,7 @@
 ; RUN:     -mcpu=pwr4 -mattr=-altivec -filetype=obj -o %t.o %t.ll
 ; RUN: llvm-readobj --section-headers %t.o | FileCheck --check-prefix=XCOFF32 %s
 
-; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:                 -mcpu=pwr4 -mattr=-altivec -filetype=obj -o %t.o %t.overflow.ll 2>&1 | \
-; RUN:   FileCheck --check-prefix=XCOFF64 %s
-; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:                 -mcpu=pwr4 -mattr=-altivec -filetype=obj -o %t.o %t.ll 2>&1 | \
-; RUN:   FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 @c = external global i8, align 1
 @arr = global [SIZE x i8*] [MACRO], align 8

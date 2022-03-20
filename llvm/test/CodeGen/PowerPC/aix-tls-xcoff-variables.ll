@@ -10,8 +10,7 @@
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefixes=SYMS,SYMS-NODATASECT %s
 ; RUN: llvm-objdump -D --symbol-description %t.o | FileCheck --check-prefixes=OBJDUMP-NODATASECT %s
 
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj < %s 2>&1 | FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 ; SECTION:      File: {{.*}}aix-tls-xcoff-variables.ll.tmp.o
 ; SECTION-NEXT: Format: aixcoff-rs6000

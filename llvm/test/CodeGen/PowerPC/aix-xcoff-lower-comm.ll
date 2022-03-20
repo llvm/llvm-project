@@ -6,10 +6,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj -r --expand-relocs --syms %t.o | FileCheck --check-prefixes=RELOC,SYM %s
 
-; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -data-sections=false -filetype=obj < %s 2>&1 | \
-; RUN:   FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 @common = common global i32 0, align 4
 @pointer = global i32* @common, align 4

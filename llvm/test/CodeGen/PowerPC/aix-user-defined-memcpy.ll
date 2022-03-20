@@ -1,20 +1,17 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN: -mattr=-altivec -filetype=obj -xcoff-traceback-table=false -o %t.o < %s
+; RUN:   -mattr=-altivec -filetype=obj -xcoff-traceback-table=false -o %t.o < %s
 
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=32-SYM %s
 
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck \
-; RUN: --check-prefix=32-REL %s
+; RUN:   --check-prefix=32-REL %s
 
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=32-DIS %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff \
-; RUN:     -mcpu=pwr4 -mattr=-altivec < %s | \
-; RUN:   FileCheck %s
+; RUN:   -mcpu=pwr4 -mattr=-altivec < %s | FileCheck %s
 
-; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN: -mcpu=pwr4 -mattr=-altivec -filetype=obj < %s 2>&1 | FileCheck \
-; RUN: --check-prefix=64-CHECK %s
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 ; Test verifies:
 ; If there exists a user-defined function whose name is the same as the
@@ -117,5 +114,3 @@ declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture r
 ; 32-DIS-NEXT:       28: 80 01 00 08                   lwz 0, 8(1)
 ; 32-DIS-NEXT:       2c: 7c 08 03 a6                   mtlr 0
 ; 32-DIS-NEXT:       30: 4e 80 00 20                   blr
-
-; 64-CHECK: LLVM ERROR: 64-bit XCOFF object files are not supported yet.

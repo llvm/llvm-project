@@ -6,12 +6,13 @@
 
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
-; RUN: FileCheck --check-prefix=OBJ %s
+; RUN:   FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYMS %s
 
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -filetype=obj < %s 2>&1 | \
-; RUN: FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
+; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -filetype=obj -o %t64.o < %s
+; RUN: llvm-readobj --section-headers --file-header %t64.o | \
+; RUN:   FileCheck --check-prefix=OBJ64 %s
 
 @ivar = local_unnamed_addr global i32 35, align 4
 @llvar = local_unnamed_addr global i64 36, align 8
@@ -681,3 +682,58 @@
 ; SYMS-NEXT:     }
 ; SYMS-NEXT:   }
 ; SYMS:      ]
+
+; OBJ64:      Format: aix5coff64-rs6000
+; OBJ64-NEXT: Arch: powerpc64
+; OBJ64-NEXT: AddressSize: 64bit
+; OBJ64-NEXT: FileHeader {
+; OBJ64-NEXT:   Magic: 0x1F7
+; OBJ64-NEXT:   NumberOfSections: 3
+; OBJ64-NEXT:   TimeStamp: None (0x0)
+; OBJ64-NEXT:   SymbolTableOffset: 0x170
+; OBJ64-NEXT:   SymbolTableEntries: 0
+; OBJ64-NEXT:   OptionalHeaderSize: 0x0
+; OBJ64-NEXT:   Flags: 0x0
+; OBJ64-NEXT: }
+
+; OBJ64:      Sections [
+; OBJ64-NEXT:   Section {
+; OBJ64-NEXT:     Index: [[#OBJ64_INDX:]]
+; OBJ64-NEXT:     Name: .text
+; OBJ64-NEXT:     PhysicalAddress: 0x0
+; OBJ64-NEXT:     VirtualAddress: 0x0
+; OBJ64-NEXT:     Size: 0x0
+; OBJ64-NEXT:     RawDataOffset: 0xF0
+; OBJ64-NEXT:     RelocationPointer: 0x0
+; OBJ64-NEXT:     LineNumberPointer: 0x0
+; OBJ64-NEXT:     NumberOfRelocations: 0
+; OBJ64-NEXT:     NumberOfLineNumbers: 0
+; OBJ64-NEXT:     Type: STYP_TEXT (0x20)
+; OBJ64-NEXT:   }
+; OBJ64-NEXT:   Section {
+; OBJ64-NEXT:     Index: [[#OBJ64_INDX+1]]
+; OBJ64-NEXT:     Name: .data
+; OBJ64-NEXT:     PhysicalAddress: 0x0
+; OBJ64-NEXT:     VirtualAddress: 0x0
+; OBJ64-NEXT:     Size: 0x80
+; OBJ64-NEXT:     RawDataOffset: 0xF0
+; OBJ64-NEXT:     RelocationPointer: 0x0
+; OBJ64-NEXT:     LineNumberPointer: 0x0
+; OBJ64-NEXT:     NumberOfRelocations: 0
+; OBJ64-NEXT:     NumberOfLineNumbers: 0
+; OBJ64-NEXT:     Type: STYP_DATA (0x40)
+; OBJ64-NEXT:   }
+; OBJ64-NEXT:   Section {
+; OBJ64-NEXT:     Index: [[#OBJ64_INDX+2]]
+; OBJ64-NEXT:     Name: .bss
+; OBJ64-NEXT:     PhysicalAddress: 0x80
+; OBJ64-NEXT:     VirtualAddress: 0x80
+; OBJ64-NEXT:     Size: 0x6C
+; OBJ64-NEXT:     RawDataOffset: 0x0
+; OBJ64-NEXT:     RelocationPointer: 0x0
+; OBJ64-NEXT:     LineNumberPointer: 0x0
+; OBJ64-NEXT:     NumberOfRelocations: 0
+; OBJ64-NEXT:     NumberOfLineNumbers: 0
+; OBJ64-NEXT:     Type: STYP_BSS (0x80)
+; OBJ64-NEXT:   }
+; OBJ64-NEXT: ]
