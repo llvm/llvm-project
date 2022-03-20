@@ -2350,7 +2350,7 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
         continue;
     }
 
-    if (BC->getDynamicRelocationAt(Rel.getOffset())) {
+    if (!IsAArch64 && BC->getDynamicRelocationAt(Rel.getOffset())) {
       LLVM_DEBUG(
           dbgs() << "BOLT-DEBUG: address 0x"
                  << Twine::utohexstr(Rel.getOffset())
