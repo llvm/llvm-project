@@ -3371,7 +3371,7 @@ void BoUpSLP::reorderTopToBottom() {
   for_each(VectorizableTree, [this, &VFToOrderedEntries, &GathersToOrders](
                                  const std::unique_ptr<TreeEntry> &TE) {
     if (Optional<OrdersType> CurrentOrder =
-            getReorderingData(*TE.get(), /*TopToBottom=*/true)) {
+            getReorderingData(*TE, /*TopToBottom=*/true)) {
       // Do not include ordering for nodes used in the alt opcode vectorization,
       // better to reorder them during bottom-to-top stage. If follow the order
       // here, it causes reordering of the whole graph though actually it is
@@ -3568,7 +3568,7 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
     if (TE->State != TreeEntry::Vectorize)
       NonVectorized.push_back(TE.get());
     if (Optional<OrdersType> CurrentOrder =
-            getReorderingData(*TE.get(), /*TopToBottom=*/false)) {
+            getReorderingData(*TE, /*TopToBottom=*/false)) {
       OrderedEntries.insert(TE.get());
       if (TE->State != TreeEntry::Vectorize)
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
@@ -4131,7 +4131,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
   if (!BSRef)
     BSRef = std::make_unique<BlockScheduling>(BB);
 
-  BlockScheduling &BS = *BSRef.get();
+  BlockScheduling &BS = *BSRef;
 
   Optional<ScheduleData *> Bundle = BS.tryScheduleBundle(VL, this, S);
 #ifdef EXPENSIVE_CHECKS
@@ -6095,7 +6095,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
   unsigned BundleWidth = VectorizableTree[0]->Scalars.size();
 
   for (unsigned I = 0, E = VectorizableTree.size(); I < E; ++I) {
-    TreeEntry &TE = *VectorizableTree[I].get();
+    TreeEntry &TE = *VectorizableTree[I];
 
     InstructionCost C = getEntryCost(&TE, VectorizedVals);
     Cost += C;
