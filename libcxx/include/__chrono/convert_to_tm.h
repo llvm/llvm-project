@@ -82,7 +82,25 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
   __result.tm_zone = "UTC";
 #  endif
 
-  if constexpr (chrono::__is_duration<_ChronoT>::value) {
+  if constexpr (__is_time_point<_ChronoT>) {
+    if constexpr (same_as<typename _ChronoT::clock, chrono::system_clock>) {
+      chrono::sys_days __days = chrono::time_point_cast<chrono::days>(__value);
+      chrono::year_month_day __ymd{__days};
+
+      __result = std::__convert_to_tm<_Tm>(chrono::year_month_day{__ymd}, chrono::weekday{__days});
+
+      // TODO FMT D138826 has improvements for this part.
+      // TODO FMT Since this is identical for duration and system time it would be good to avoid code duplication.
+      uint64_t __sec =
+          chrono::duration_cast<chrono::seconds>(__value - chrono::time_point_cast<chrono::seconds>(__days)).count();
+      __sec %= 24 * 3600;
+      __result.tm_hour = __sec / 3600;
+      __sec %= 3600;
+      __result.tm_min = __sec / 60;
+      __result.tm_sec = __sec % 60;
+    } else
+      static_assert(sizeof(_ChronoT) == 0, "TODO: Add the missing clock specialization");
+  } else if constexpr (chrono::__is_duration<_ChronoT>::value) {
     // [time.format]/6
     //   ...  However, if a flag refers to a "time of day" (e.g. %H, %I, %p,
     //   etc.), then a specialization of duration is interpreted as the time of
