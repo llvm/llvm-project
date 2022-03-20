@@ -81,6 +81,9 @@ public:
   ///     The instruction pointer address, or \a LLDB_INVALID_ADDRESS if it is
   ///     an error.
   lldb::addr_t GetLoadAddress() const;
+  
+  /// Get the size in bytes of a non-error instance of this class
+  static size_t GetNonErrorMemoryUsage();
 
   /// \return
   ///     An \a llvm::Error object if this class corresponds to an Error, or an
@@ -112,6 +115,8 @@ private:
   IntelPTInstruction(const IntelPTInstruction &other) = delete;
   const IntelPTInstruction &operator=(const IntelPTInstruction &other) = delete;
 
+  // When adding new members to this class, make sure to update 
+  // IntelPTInstruction::GetNonErrorMemoryUsage() if needed.
   pt_insn m_pt_insn;
   llvm::Optional<uint64_t> m_timestamp;
   std::unique_ptr<llvm::ErrorInfoBase> m_error;
@@ -150,7 +155,13 @@ public:
   ///   The size of the trace.
   size_t GetRawTraceSize() const;
 
+  /// The approximate size in bytes used by this instance, 
+  /// including all the already decoded instructions.
+  size_t CalculateApproximateMemoryUsage() const;
+
 private:
+  /// When adding new members to this class, make sure 
+  /// to update \a CalculateApproximateMemoryUsage() accordingly.
   lldb::ThreadSP m_thread_sp;
   std::vector<IntelPTInstruction> m_instructions;
   size_t m_raw_trace_size;
