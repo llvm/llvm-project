@@ -3040,6 +3040,28 @@ cc_library(
 )
 
 cc_library(
+    name = "MlirPdllLspServerLib",
+    srcs = glob(
+        [
+            "lib/Tools/mlir-pdll-lsp-server/*.cpp",
+            "lib/Tools/mlir-pdll-lsp-server/*.h",
+        ],
+    ),
+    hdrs = glob(
+        ["include/mlir/Tools/mlir-pdll-lsp-server/*.h"],
+    ),
+    includes = ["include"],
+    deps = [
+        ":MlirLspServerSupportLib",
+        ":PDLLAST",
+        ":PDLLODS",
+        ":PDLLParser",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "ParserTokenKinds",
     # strip_include_prefix does not apply to textual_hdrs.
     hdrs = ["lib/Parser/TokenKinds.def"],
@@ -8441,5 +8463,15 @@ cc_binary(
         ":Support",
         "//llvm:Support",
         "//llvm:config",
+    ],
+)
+
+cc_binary(
+    name = "mlir-pdll-lsp-server",
+    srcs = ["tools/mlir-pdll-lsp-server/mlir-pdll-lsp-server.cpp"],
+    includes = ["include"],
+    deps = [
+        ":MlirPdllLspServerLib",
+        ":Support",
     ],
 )
