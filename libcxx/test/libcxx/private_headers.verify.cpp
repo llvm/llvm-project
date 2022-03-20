@@ -250,6 +250,7 @@ END-SCRIPT
 #include <__charconv/to_chars_base_10.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/to_chars_base_10.h'}}
 #include <__charconv/to_chars_result.h> // expected-error@*:* {{use of private header from outside its module: '__charconv/to_chars_result.h'}}
 #include <__chrono/calendar.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/calendar.h'}}
+#include <__chrono/concepts.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/concepts.h'}}
 #include <__chrono/convert_to_timespec.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/convert_to_timespec.h'}}
 #include <__chrono/convert_to_tm.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/convert_to_tm.h'}}
 #include <__chrono/day.h> // expected-error@*:* {{use of private header from outside its module: '__chrono/day.h'}}

@@ -674,6 +674,7 @@ module std [system] {
 
     module __chrono {
       module calendar               { private header "__chrono/calendar.h" }
+      module concepts               { private header "__chrono/concepts.h" }
       module convert_to_timespec    { private header "__chrono/convert_to_timespec.h" }
       module convert_to_tm          { private header "__chrono/convert_to_tm.h" }
       module day                    { private header "__chrono/day.h" }
