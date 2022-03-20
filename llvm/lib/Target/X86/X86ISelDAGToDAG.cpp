@@ -5514,7 +5514,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     MVT CmpVT = N0.getSimpleValueType();
 
     // Floating point needs special handling if we don't have FCOMI.
-    if (Subtarget->hasCMOV())
+    if (Subtarget->canUseCMOV())
       break;
 
     bool IsSignaling = Node->getOpcode() == X86ISD::STRICT_FCMPS;
@@ -5554,7 +5554,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     // Move AH into flags.
     // Some 64-bit targets lack SAHF support, but they do support FCOMI.
-    assert(Subtarget->hasLAHFSAHF() &&
+    assert(Subtarget->canUseLAHFSAHF() &&
            "Target doesn't support SAHF or FCOMI?");
     SDValue AH = CurDAG->getCopyToReg(Chain, dl, X86::AH, Extract, SDValue());
     Chain = AH;

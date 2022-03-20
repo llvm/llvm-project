@@ -640,9 +640,10 @@ public:
     return hasCX16() && is64Bit();
   }
   bool hasNOPL() const { return HasNOPL; }
+  bool hasCMOV() const { return HasCMOV; }
   // SSE codegen depends on cmovs, and all SSE1+ processors support them.
   // All 64-bit processors support cmov.
-  bool hasCMOV() const { return HasCMOV || X86SSELevel >= SSE1 || is64Bit(); }
+  bool canUseCMOV() const { return hasCMOV() || hasSSE1() || is64Bit(); }
   bool hasSSE1() const { return X86SSELevel >= SSE1; }
   bool hasSSE2() const { return X86SSELevel >= SSE2; }
   bool hasSSE3() const { return X86SSELevel >= SSE3; }
@@ -705,7 +706,8 @@ public:
     return hasSSE1() || (hasPRFCHW() && !hasThreeDNow()) || hasPREFETCHWT1();
   }
   bool hasRDSEED() const { return HasRDSEED; }
-  bool hasLAHFSAHF() const { return HasLAHFSAHF64 || !is64Bit(); }
+  bool hasLAHFSAHF() const { return HasLAHFSAHF64; }
+  bool canUseLAHFSAHF() const { return hasLAHFSAHF() || !is64Bit(); }
   bool hasMWAITX() const { return HasMWAITX; }
   bool hasCLZERO() const { return HasCLZERO; }
   bool hasCLDEMOTE() const { return HasCLDEMOTE; }
