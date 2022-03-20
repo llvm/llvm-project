@@ -89,6 +89,17 @@ inline void *__ompt_load_return_address(int gtid) {
        ? __ompt_load_return_address(gtid)                                      \
        : __builtin_return_address(0))
 
+#define OMPT_GET_DISPATCH_CHUNK(chunk, lb, ub, incr)                           \
+  do {                                                                         \
+    if (incr > 0) {                                                            \
+      chunk.start = static_cast<uint64_t>(lb);                                 \
+      chunk.iterations = static_cast<uint64_t>(((ub) - (lb)) / (incr) + 1);    \
+    } else {                                                                   \
+      chunk.start = static_cast<uint64_t>(ub);                                 \
+      chunk.iterations = static_cast<uint64_t>(((lb) - (ub)) / -(incr) + 1);   \
+    }                                                                          \
+  } while (0)
+
 //******************************************************************************
 // inline functions
 //******************************************************************************

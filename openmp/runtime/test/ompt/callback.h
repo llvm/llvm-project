@@ -790,6 +790,12 @@ on_ompt_callback_work(
       switch(wstype)
       {
         case ompt_work_loop:
+        case ompt_work_loop_static:
+        case ompt_work_loop_dynamic:
+        case ompt_work_loop_guided:
+        case ompt_work_loop_other:
+        // TODO: add schedule attribute for the different work_loop types.
+        // e.g., ", schedule=%s", ..., ompt_schedule_values[wstype]
           printf("%" PRIu64 ":" _TOOL_PREFIX
                  " ompt_event_loop_begin: parallel_id=%" PRIu64
                  ", parent_task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64
@@ -854,6 +860,10 @@ on_ompt_callback_work(
       switch(wstype)
       {
         case ompt_work_loop:
+        case ompt_work_loop_static:
+        case ompt_work_loop_dynamic:
+        case ompt_work_loop_guided:
+        case ompt_work_loop_other:
           printf("%" PRIu64 ":" _TOOL_PREFIX
                  " ompt_event_loop_end: parallel_id=%" PRIu64
                  ", task_id=%" PRIu64 ", codeptr_ra=%p, count=%" PRIu64 "\n",
@@ -915,6 +925,43 @@ on_ompt_callback_work(
       printf("ompt_scope_beginend should never be passed to %s\n", __func__);
       exit(-1);
   }
+}
+
+static void on_ompt_callback_dispatch(
+    ompt_data_t *parallel_data,
+    ompt_data_t *task_data,
+    ompt_dispatch_t kind,
+    ompt_data_t instance) {
+  char *event_name = NULL;
+  void *codeptr_ra = NULL;
+  ompt_dispatch_chunk_t *dispatch_chunk = NULL;
+  switch (kind) {
+  case ompt_dispatch_section:
+    event_name = "ompt_event_section_begin";
+    codeptr_ra = instance.ptr;
+    break;
+  case ompt_dispatch_ws_loop_chunk:
+    event_name = "ompt_event_ws_loop_chunk_begin";
+    dispatch_chunk = (ompt_dispatch_chunk_t *)instance.ptr;
+    break;
+  case ompt_dispatch_taskloop_chunk:
+    event_name = "ompt_event_taskloop_chunk_begin";
+    dispatch_chunk = (ompt_dispatch_chunk_t *)instance.ptr;
+    break;
+  case ompt_dispatch_distribute_chunk:
+    event_name = "ompt_event_distribute_chunk_begin";
+    dispatch_chunk = (ompt_dispatch_chunk_t *)instance.ptr;
+    break;
+  default:
+    event_name = "ompt_ws_loop_iteration_begin";
+  }
+  printf("%" PRIu64 ":" _TOOL_PREFIX
+         " %s: parallel_id=%" PRIu64 ", task_id=%" PRIu64
+         ", codeptr_ra=%p, chunk_start=%" PRIu64 ", chunk_iterations=%" PRIu64
+         "\n", ompt_get_thread_data()->value, event_name, parallel_data->value,
+         task_data->value, codeptr_ra,
+         dispatch_chunk ? dispatch_chunk->start : 0,
+         dispatch_chunk ? dispatch_chunk->iterations : 0);
 }
 
 static void on_ompt_callback_masked(ompt_scope_endpoint_t endpoint,
@@ -1178,6 +1225,7 @@ int ompt_initialize(
   register_ompt_callback_t(ompt_callback_lock_init, ompt_callback_mutex_acquire_t);
   register_ompt_callback_t(ompt_callback_lock_destroy, ompt_callback_mutex_t);
   register_ompt_callback(ompt_callback_work);
+  register_ompt_callback(ompt_callback_dispatch);
   register_ompt_callback(ompt_callback_masked);
   register_ompt_callback(ompt_callback_parallel_begin);
   register_ompt_callback(ompt_callback_parallel_end);
