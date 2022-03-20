@@ -137,9 +137,9 @@ interesting areas to contribute to lldb.
    use/python-reference
    use/remote
    use/qemu-testing
+   use/intel_pt
    use/troubleshooting
    use/links
-   use/intel_pt
 
 .. toctree::
    :hidden:

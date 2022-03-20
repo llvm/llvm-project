@@ -43,7 +43,7 @@ Pattern => erase op<test.op3>;
 
 // Check the generation of native constraints and rewrites.
 
-// CHECK:      static ::mlir::LogicalResult TestCstPDLFn(::llvm::ArrayRef<::mlir::PDLValue> values, ::mlir::ArrayAttr constParams,
+// CHECK:      static ::mlir::LogicalResult TestCstPDLFn(::llvm::ArrayRef<::mlir::PDLValue> values,
 // CHECK-SAME:                                           ::mlir::PatternRewriter &rewriter) {
 // CHECK:   ::mlir::Attribute attr = {};
 // CHECK:   if (values[0])
@@ -69,7 +69,7 @@ Pattern => erase op<test.op3>;
 
 // CHECK-NOT: TestUnusedCst
 
-// CHECK: static void TestRewritePDLFn(::llvm::ArrayRef<::mlir::PDLValue> values, ::mlir::ArrayAttr constParams,
+// CHECK: static void TestRewritePDLFn(::llvm::ArrayRef<::mlir::PDLValue> values,
 // CHECK-SAME:                         ::mlir::PatternRewriter &rewriter, ::mlir::PDLResultList &results) {
 // CHECK:   ::mlir::Attribute attr = {};
 // CHECK:   ::mlir::Operation * op = {};

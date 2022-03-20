@@ -3962,7 +3962,7 @@ allowing the '``or``' to be folded to -1.
     Safe:
       %A = %X     (or %Y)
       %B = 42     (or %Y)
-      %C = %Y     (if %Y is probably not poison; unsafe otherwise)
+      %C = %Y     (if %Y is provably not poison; unsafe otherwise)
     Unsafe:
       %A = undef
       %B = undef
@@ -4088,7 +4088,7 @@ operations such as :ref:`add <i_add>` with the ``nsw`` flag can produce
 a poison value.
 
 Most instructions return '``poison``' when one of their arguments is
-'``poison``'. A notable expection is the :ref:`select instruction <i_select>`.
+'``poison``'. A notable exception is the :ref:`select instruction <i_select>`.
 Propagation of poison can be stopped with the
 :ref:`freeze instruction <i_freeze>`.
 

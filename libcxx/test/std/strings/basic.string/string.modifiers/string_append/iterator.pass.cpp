@@ -172,7 +172,7 @@ bool test() {
   }
 #endif
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  { // test iterator operations that throw
+  if (!TEST_IS_CONSTANT_EVALUATED) { // test iterator operations that throw
     typedef std::string S;
     typedef ThrowingIterator<char> TIter;
     typedef cpp17_input_iterator<TIter> IIter;
@@ -219,17 +219,20 @@ bool test() {
     std::string s_short = "hello";
     std::string s_long = "Lorem ipsum dolor sit amet, consectetur/";
     std::string s_othertype = "hello";
-    const unsigned char *first = reinterpret_cast<const unsigned char*>(s_othertype.data());
     std::string s_sneaky = "hello";
 
     test(s_short, s_short.data() + s_short.size(), s_short.data() + s_short.size() + 1,
          std::string("hello\0", 6));
     test(s_long, s_long.data() + s_long.size(), s_long.data() + s_long.size() + 1,
          std::string("Lorem ipsum dolor sit amet, consectetur/\0", 41));
-    test(s_othertype, first + 2, first + 5, std::string("hellollo"));
 
     s_sneaky.reserve(12);
     test(s_sneaky, s_sneaky.data(), s_sneaky.data() + 6, std::string("hellohello\0", 11));
+
+     if (!TEST_IS_CONSTANT_EVALUATED) {
+       const unsigned char *first = reinterpret_cast<const unsigned char*>(s_othertype.data());
+       test(s_othertype, first + 2, first + 5, std::string("hellollo"));
+     }
   }
 
   { // test with a move iterator that returns char&&

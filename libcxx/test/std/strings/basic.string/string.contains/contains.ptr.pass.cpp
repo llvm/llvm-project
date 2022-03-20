@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-void test()
+bool test()
 {
     using S = std::string;
 
@@ -61,6 +61,8 @@ void test()
     assert(!sNot.contains("abcde"));
     assert( sNot.contains("xyz"));
     assert(!sNot.contains("zyx"));
+
+    return true;
 }
 
 int main(int, char**)

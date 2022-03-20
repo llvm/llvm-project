@@ -1,5 +1,5 @@
-Tracing with Intel Processor Trace (Intel PT)
-=============================================
+Tracing with Intel Processor Trace
+==================================
 
 .. contents::
   :local:

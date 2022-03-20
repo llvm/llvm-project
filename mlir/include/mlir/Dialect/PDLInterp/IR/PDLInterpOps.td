@@ -89,25 +89,21 @@ def PDLInterp_ApplyConstraintOp : PDLInterp_PredicateOp<"apply_constraint"> {
   let description = [{
     `pdl_interp.apply_constraint` operations apply a generic constraint, that
     has been registered with the interpreter, with a given set of positional
-    values. The constraint may have any number of constant parameters. On
-    success, this operation branches to the true destination, otherwise the
-    false destination is taken.
+    values. On success, this operation branches to the true destination,
+    otherwise the false destination is taken.
 
     Example:
 
     ```mlir
     // Apply `myConstraint` to the entities defined by `input`, `attr`, and
     // `op`.
-    pdl_interp.apply_constraint "myConstraint"[42, "abc", i32](%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation) -> ^matchDest, ^failureDest
+    pdl_interp.apply_constraint "myConstraint"(%input, %attr, %op : !pdl.value, !pdl.attribute, !pdl.operation) -> ^matchDest, ^failureDest
     ```
   }];
 
-  let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_AnyType>:$args,
-                       OptionalAttr<ArrayAttr>:$constParams);
+  let arguments = (ins StrAttr:$name, Variadic<PDL_AnyType>:$args);
   let assemblyFormat = [{
-    $name ($constParams^)? `(` $args `:` type($args) `)` attr-dict `->`
-    successors
+    $name `(` $args `:` type($args) `)` attr-dict `->` successors
   }];
 }
 
@@ -120,9 +116,8 @@ def PDLInterp_ApplyRewriteOp : PDLInterp_Op<"apply_rewrite"> {
   let description = [{
     `pdl_interp.apply_rewrite` operations invoke an external rewriter that has
     been registered with the interpreter to perform the rewrite after a
-    successful match. The rewrite is passed a set of positional arguments,
-    and a set of constant parameters. The rewrite function may return any
-    number of results.
+    successful match. The rewrite is passed a set of positional arguments. The
+    rewrite function may return any number of results.
 
     Example:
 
@@ -136,19 +131,12 @@ def PDLInterp_ApplyRewriteOp : PDLInterp_Op<"apply_rewrite"> {
     // Rewriter operating on the root operation along with additional arguments
     // from the matcher.
     pdl_interp.apply_rewrite "rewriter"(%root : !pdl.operation, %value : !pdl.value)
-
-    // Rewriter operating on the root operation along with additional arguments
-    // and constant parameters.
-    pdl_interp.apply_rewrite "rewriter"[42](%root : !pdl.operation, %value : !pdl.value)
     ```
   }];
-  let arguments = (ins StrAttr:$name,
-                       Variadic<PDL_AnyType>:$args,
-                       OptionalAttr<ArrayAttr>:$constParams);
+  let arguments = (ins StrAttr:$name, Variadic<PDL_AnyType>:$args);
   let results = (outs Variadic<PDL_AnyType>:$results);
   let assemblyFormat = [{
-    $name ($constParams^)? (`(` $args^ `:` type($args) `)`)?
-    (`:` type($results)^)? attr-dict
+    $name (`(` $args^ `:` type($args) `)`)? (`:` type($results)^)? attr-dict
   }];
 }
 
