@@ -842,7 +842,6 @@ public:
   /// TODO: to be removed later and replaced with suitable properties
   bool isAtom() const { return IsAtom; }
   bool useSoftFloat() const { return UseSoftFloat; }
-  bool useAA() const override { return UseAA; }
 
   /// Use mfence if we have SSE2 or we're on x86-64 (even if we asked for
   /// no-sse2). There isn't any reason to disable it if the target processor
