@@ -479,9 +479,6 @@ class X86Subtarget final : public X86GenSubtargetInfo {
   /// Use software floating point for code generation.
   bool UseSoftFloat = false;
 
-  /// Use alias analysis during code generation.
-  bool UseAA = false;
-
   /// The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
   Align stackAlignment = Align(4);
