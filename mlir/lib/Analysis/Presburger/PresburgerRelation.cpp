@@ -437,9 +437,9 @@ private:
   /// within `a`.
   bool isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp);
 
-  /// Adds `disjunct` to `disjuncts` and removes the disjuncts at position `i`
-  /// and `j`. Updates `simplices` to reflect the changes. `i` and `j` cannot
-  /// be equal.
+  /// Removes redundant constraints from `disjunct`, adds it to `disjuncts` and
+  /// removes the disjuncts at position `i` and `j`. Updates `simplices` to
+  /// reflect the changes. `i` and `j` cannot be equal.
   void addCoalescedDisjunct(unsigned i, unsigned j,
                             const IntegerRelation &disjunct);
 
@@ -488,6 +488,7 @@ SetCoalescer::SetCoalescer(const PresburgerRelation &s) {
   simplices.reserve(s.getNumDisjuncts());
   // Note that disjuncts.size() changes during the loop.
   for (unsigned i = 0; i < disjuncts.size();) {
+    disjuncts[i].removeRedundantConstraints();
     Simplex simp(disjuncts[i]);
     if (simp.isEmpty()) {
       disjuncts[i] = disjuncts[disjuncts.size() - 1];
@@ -569,10 +570,11 @@ void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,
     disjuncts[i] = disjuncts[n - 2];
     disjuncts.pop_back();
     disjuncts[n - 2] = disjunct;
+    disjuncts[n - 2].removeRedundantConstraints();
 
     simplices[i] = simplices[n - 2];
     simplices.pop_back();
-    simplices[n - 2] = Simplex(disjunct);
+    simplices[n - 2] = Simplex(disjuncts[n - 2]);
 
   } else {
     // Other possible edge cases are correct since for `j` or `i` == `n` -
@@ -584,11 +586,12 @@ void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,
     disjuncts[j] = disjuncts[n - 2];
     disjuncts.pop_back();
     disjuncts[n - 2] = disjunct;
+    disjuncts[n - 2].removeRedundantConstraints();
 
     simplices[i] = simplices[n - 1];
     simplices[j] = simplices[n - 2];
     simplices.pop_back();
-    simplices[n - 2] = Simplex(disjunct);
+    simplices[n - 2] = Simplex(disjuncts[n - 2]);
   }
 }
 
