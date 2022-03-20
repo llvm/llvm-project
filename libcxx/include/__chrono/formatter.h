@@ -13,12 +13,17 @@
 #include <__chrono/convert_to_tm.h>
 #include <__chrono/day.h>
 #include <__chrono/parser_std_format_spec.h>
+#include <__chrono/statically_widen.h>
+#include <__chrono/year.h>
 #include <__config>
 #include <__format/concepts.h>
+#include <__format/format_functions.h>
 #include <__format/format_parse_context.h>
 #include <__format/formatter.h>
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
+#include <__memory/addressof.h>
+#include <cmath>
 #include <ctime>
 #include <sstream>
 #include <string>
@@ -52,6 +57,34 @@ namespace __formatter {
 ///
 /// When no chrono-specs are provided it uses the stream formatter.
 
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI void __format_year(int __year, basic_stringstream<_CharT>& __sstr) {
+  if (__year < 0) {
+    __sstr << _CharT('-');
+    __year = -__year;
+  }
+
+  // TODO FMT Write an issue
+  //   If the result has less than four digits it is zero-padded with 0 to two digits.
+  // is less -> has less
+  // left-padded -> zero-padded, otherwise the proper value would be 000-0.
+
+  // Note according to the wording it should be left padded, which is odd.
+  __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:04}"), __year);
+}
+
+template <class _CharT>
+_LIBCPP_HIDE_FROM_ABI void __format_century(int __year, basic_stringstream<_CharT>& __sstr) {
+  // TODO FMT Write an issue
+  // [tab:time.format.spec]
+  //   %C The year divided by 100 using floored division. If the result is a
+  //   single decimal digit, it is prefixed with 0.
+
+  bool __negative = __year < 0;
+  int __century   = (__year - (99 * __negative)) / 100; // floored division
+  __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), __century);
+}
+
 template <class _CharT, class _Tp>
 _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
     const _Tp& __value, basic_stringstream<_CharT>& __sstr, basic_string_view<_CharT> __chrono_specs) {
@@ -74,7 +107,59 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
         __sstr << *__it;
         break;
 
+      case _CharT('C'): {
+        // strftime's output is only defined in the range [00, 99].
+        int __year = __t.tm_year + 1900;
+        if (__year < 1000 || __year > 9999)
+          __formatter::__format_century(__year, __sstr);
+        else
+          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+      } break;
+
+      // Unlike time_put and strftime the formatting library requires %Y
+      //
+      // [tab:time.format.spec]
+      //   The year as a decimal number. If the result is less than four digits
+      //   it is left-padded with 0 to four digits.
+      //
+      // This means years in the range (-1000, 1000) need manual formatting.
+      // It's unclear whether %EY needs the same treatment. For example the
+      // Japanese EY contains the era name and year. This is zero-padded to 2
+      // digits in time_put (note that older glibc versions didn't do
+      // padding.) However most eras won't reach 100 years, let alone 1000.
+      // So padding to 4 digits seems unwanted for Japanese.
+      //
+      // The same applies to %Ex since that too depends on the era.
+      //
+      // %x the locale's date representation is currently doesn't handle the
+      // zero-padding too.
+      //
+      // The 4 digits can be implemented better at a later time. On POSIX
+      // systems the required information can be extracted by nl_langinfo
+      // https://man7.org/linux/man-pages/man3/nl_langinfo.3.html
+      //
+      // Note since year < -1000 is expected to be rare it uses the more
+      // expensive year routine.
+      //
+      // TODO FMT evaluate the comment above.
+
+#  if defined(__GLIBC__) || defined(_AIX)
+      case _CharT('y'):
+        // Glibc fails for negative values, AIX for positive values too.
+        __sstr << std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:02}"), (std::abs(__t.tm_year + 1900)) % 100);
+        break;
+#  endif // defined(__GLIBC__) || defined(_AIX)
+
+      case _CharT('Y'): {
+        int __year = __t.tm_year + 1900;
+        if (__year < 1000)
+          __formatter::__format_year(__year, __sstr);
+        else
+          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+      } break;
+
       case _CharT('O'):
+      case _CharT('E'):
         ++__it;
         [[fallthrough]];
       default:
@@ -146,7 +231,19 @@ public:
   }
 };
 
-#endif //if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+template <__fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<chrono::year, _CharT>
+    : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__year);
+  }
+};
+
+#endif // if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 _LIBCPP_END_NAMESPACE_STD
 

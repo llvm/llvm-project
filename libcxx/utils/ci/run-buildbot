@@ -190,7 +190,7 @@ check-generated-output)
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
            --exclude '*.dat' \
            --exclude 'format_tests.h' \
-           --exclude 'formatter.day.pass.cpp' \
+           --exclude 'formatter.*.pass.cpp' \
            --exclude 'grep.pass.cpp' \
            --exclude 'locale-specific_form.pass.cpp' \
            --exclude 'std_format_spec_string_unicode.bench.cpp' \

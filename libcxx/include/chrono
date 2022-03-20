@@ -355,6 +355,9 @@ constexpr year  operator+(const year&  x, const years& y) noexcept;
 constexpr year  operator+(const years& x, const year&  y) noexcept;
 constexpr year  operator-(const year&  x, const years& y) noexcept;
 constexpr years operator-(const year&  x, const year&  y) noexcept;
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const year& y);
 
 // 25.8.6, class weekday    // C++20
 class weekday;
@@ -620,6 +623,7 @@ bool operator>=(const time_zone& x, const time_zone& y) noexcept;
 
 namespace std {
   template<class charT> struct formatter<chrono::day, charT>;                     // C++20
+  template<class charT> struct formatter<chrono::year, charT>;                    // C++20
 } // namespace std
 
 namespace chrono {
