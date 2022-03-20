@@ -18,7 +18,7 @@ include "llvm/Target/Target.td"
 //===----------------------------------------------------------------------===//
 // X86 Subtarget state
 //
-
+// disregarding specific ABI / programming model
 def Is64Bit : SubtargetFeature<"64bit-mode", "Is64Bit", "true",
                                "64-bit mode (x86_64)">;
 def Is32Bit : SubtargetFeature<"32bit-mode", "Is32Bit", "true",
@@ -34,7 +34,7 @@ def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
                                       "Enable X87 float instructions">;
 
 def FeatureNOPL    : SubtargetFeature<"nopl", "HasNOPL", "true",
-                                      "Enable NOPL instruction">;
+                                      "Enable NOPL instruction (generally pentium pro+)">;
 
 def FeatureCMOV    : SubtargetFeature<"cmov","HasCMOV", "true",
                                       "Enable conditional move instructions">;
@@ -43,7 +43,7 @@ def FeatureCX8     : SubtargetFeature<"cx8", "HasCX8", "true",
                                       "Support CMPXCHG8B instructions">;
 
 def FeatureCRC32   : SubtargetFeature<"crc32", "HasCRC32", "true",
-                                      "Enable SSE 4.2 CRC32 instruction">;
+                                      "Enable SSE 4.2 CRC32 instruction (used when SSE4.2 is supported but function is GPR only)">;
 
 def FeaturePOPCNT   : SubtargetFeature<"popcnt", "HasPOPCNT", "true",
                                        "Support POPCNT instruction">;
@@ -101,7 +101,7 @@ def Feature3DNowA  : SubtargetFeature<"3dnowa", "X863DNowLevel", "ThreeDNowA",
 def FeatureX86_64   : SubtargetFeature<"64bit", "HasX86_64", "true",
                                       "Support 64-bit instructions">;
 def FeatureCX16     : SubtargetFeature<"cx16", "HasCX16", "true",
-                                       "64-bit with cmpxchg16b",
+                                       "64-bit with cmpxchg16b (this is true for most x86-64 chips, but not the first AMD chips)",
                                        [FeatureCX8]>;
 def FeatureSSE4A   : SubtargetFeature<"sse4a", "HasSSE4A", "true",
                                       "Support SSE 4a instructions",
@@ -198,7 +198,7 @@ def FeatureXOP     : SubtargetFeature<"xop", "HasXOP", "true",
                                       [FeatureFMA4]>;
 def FeatureSSEUnalignedMem : SubtargetFeature<"sse-unaligned-mem",
                                           "HasSSEUnalignedMem", "true",
-                      "Allow unaligned memory operands with SSE instructions">;
+                      "Allow unaligned memory operands with SSE instructions (this may require setting a configuration bit in the processor)">;
 def FeatureAES     : SubtargetFeature<"aes", "HasAES", "true",
                                       "Enable AES instructions",
                                       [FeatureSSE2]>;
@@ -228,6 +228,8 @@ def FeatureADX     : SubtargetFeature<"adx", "HasADX", "true",
 def FeatureSHA     : SubtargetFeature<"sha", "HasSHA", "true",
                                       "Enable SHA instructions",
                                       [FeatureSSE2]>;
+// Processor supports CET SHSTK - Control-Flow Enforcement Technology
+// using Shadow Stack
 def FeatureSHSTK   : SubtargetFeature<"shstk", "HasSHSTK", "true",
                        "Support CET Shadow-Stack instructions">;
 def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
@@ -241,7 +243,7 @@ def FeatureMWAITX  : SubtargetFeature<"mwaitx", "HasMWAITX", "true",
 def FeatureCLZERO  : SubtargetFeature<"clzero", "HasCLZERO", "true",
                                       "Enable Cache Line Zero">;
 def FeatureCLDEMOTE  : SubtargetFeature<"cldemote", "HasCLDEMOTE", "true",
-                                      "Enable Cache Demote">;
+                                      "Enable Cache Line Demote">;
 def FeaturePTWRITE  : SubtargetFeature<"ptwrite", "HasPTWRITE", "true",
                                       "Support ptwrite instruction">;
 def FeatureAMXTILE     : SubtargetFeature<"amx-tile", "HasAMXTILE", "true",
@@ -285,9 +287,9 @@ def FeatureUINTR : SubtargetFeature<"uintr", "HasUINTR", "true",
 def FeaturePCONFIG : SubtargetFeature<"pconfig", "HasPCONFIG", "true",
                                       "platform configuration instruction">;
 def FeatureMOVDIRI  : SubtargetFeature<"movdiri", "HasMOVDIRI", "true",
-                                       "Support movdiri instruction">;
+                                       "Support movdiri instruction (direct store integer)">;
 def FeatureMOVDIR64B : SubtargetFeature<"movdir64b", "HasMOVDIR64B", "true",
-                                        "Support movdir64b instruction">;
+                                        "Support movdir64b instruction (direct store 64 bytes)">;
 
 // Ivy Bridge and newer processors have enhanced REP MOVSB and STOSB (aka
 // "string operations"). See "REP String Enhancement" in the Intel Software
@@ -388,7 +390,7 @@ def TuningSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
                                        "SHLD instruction is slow">;
 
 def TuningSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
-                                        "PMULLD instruction is slow">;
+                                        "PMULLD instruction is slow (compared to PMULLW/PMULHW and PMULUDQ)">;
 
 def TuningSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
                                           "true",
@@ -404,19 +406,23 @@ def TuningSlowUAMem32 : SubtargetFeature<"slow-unaligned-mem-32",
                                 "Slow unaligned 32-byte memory access">;
 
 def TuningLEAForSP : SubtargetFeature<"lea-sp", "UseLeaForSP", "true",
-                                     "Use LEA for adjusting the stack pointer">;
+                                     "Use LEA for adjusting the stack pointer (this is an optimization for Intel Atom processors)">;
 
+// True if 8-bit divisions are significantly faster than
+// 32-bit divisions and should be used when possible.
 def TuningSlowDivide32 : SubtargetFeature<"idivl-to-divb",
                                      "HasSlowDivide32", "true",
                                      "Use 8-bit divide for positive values less than 256">;
 
+// True if 32-bit divides are significantly faster than
+// 64-bit divisions and should be used when possible.
 def TuningSlowDivide64 : SubtargetFeature<"idivq-to-divl",
                                      "HasSlowDivide64", "true",
                                      "Use 32-bit divide for positive values less than 2^32">;
 
 def TuningPadShortFunctions : SubtargetFeature<"pad-short-functions",
                                      "PadShortFunctions", "true",
-                                     "Pad short functions">;
+                                     "Pad short functions (to prevent a stall when returning too early)">;
 
 // On some processors, instructions that implicitly take two memory operands are
 // slow. In practice, this means that CALL, PUSH, and POP with memory operands
@@ -425,15 +431,21 @@ def TuningSlowTwoMemOps : SubtargetFeature<"slow-two-mem-ops",
                                      "SlowTwoMemOps", "true",
                                      "Two memory operand instructions are slow">;
 
+// True if the LEA instruction inputs have to be ready at address generation
+// (AG) time.
 def TuningLEAUsesAG : SubtargetFeature<"lea-uses-ag", "LeaUsesAG", "true",
                                    "LEA instruction needs inputs at AG stage">;
 
 def TuningSlowLEA : SubtargetFeature<"slow-lea", "SlowLEA", "true",
                                    "LEA instruction with certain arguments is slow">;
 
+// True if the LEA instruction has all three source operands: base, index,
+// and offset or if the LEA instruction uses base and index registers where
+// the base is EBP, RBP,or R13
 def TuningSlow3OpsLEA : SubtargetFeature<"slow-3ops-lea", "Slow3OpsLEA", "true",
                                    "LEA instruction with 3 ops or certain registers is slow">;
 
+// True if INC and DEC instructions are slow when writing to flags
 def TuningSlowIncDec : SubtargetFeature<"slow-incdec", "SlowIncDec", "true",
                                    "INC and DEC instructions are slower than ADD and SUB">;
 
@@ -474,9 +486,14 @@ def TuningInsertVZEROUPPER
 // vectorized code we should care about the throughput of SQRT operations.
 // But if the code is scalar that probably means that the code has some kind of
 // dependency and we should care more about reducing the latency.
+
+// True if hardware SQRTSS instruction is at least as fast (latency) as
+// RSQRTSS followed by a Newton-Raphson iteration.
 def TuningFastScalarFSQRT
     : SubtargetFeature<"fast-scalar-fsqrt", "HasFastScalarFSQRT",
                        "true", "Scalar SQRT is fast (disable Newton-Raphson)">;
+// True if hardware SQRTPS/VSQRTPS instructions are at least as fast
+// (throughput) as RSQRTPS/VRSQRTPS followed by a Newton-Raphson iteration.
 def TuningFastVectorFSQRT
     : SubtargetFeature<"fast-vector-fsqrt", "HasFastVectorFSQRT",
                        "true", "Vector SQRT is fast (disable Newton-Raphson)">;
@@ -533,7 +550,7 @@ def TuningMacroFusion
 // similar to Skylake Server (AVX-512).
 def TuningFastGather
     : SubtargetFeature<"fast-gather", "HasFastGather", "true",
-                       "Indicates if gather is reasonably fast">;
+                       "Indicates if gather is reasonably fast (this is true for Skylake client and all AVX-512 CPUs)">;
 
 def TuningPrefer128Bit
     : SubtargetFeature<"prefer-128-bit", "Prefer128Bit", "true",
