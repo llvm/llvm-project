@@ -11,6 +11,7 @@
 #define _LIBCPP___CHRONO_CONVERT_TO_TM_H
 
 #include <__chrono/day.h>
+#include <__chrono/month.h>
 #include <__chrono/year.h>
 #include <__concepts/same_as.h>
 #include <__config>
@@ -34,6 +35,8 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoCalendarTimePoint& __valu
 
   if constexpr (same_as<_ChronoCalendarTimePoint, chrono::day>)
     __result.tm_mday = static_cast<unsigned>(__value);
+  else if constexpr (same_as<_ChronoCalendarTimePoint, chrono::month>)
+    __result.tm_mon = static_cast<unsigned>(__value) - 1;
   else if constexpr (same_as<_ChronoCalendarTimePoint, chrono::year>)
     __result.tm_year = static_cast<int>(__value) - 1900;
   else

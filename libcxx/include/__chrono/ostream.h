@@ -11,6 +11,7 @@
 #define _LIBCPP___CHRONO_OSTREAM_H
 
 #include <__chrono/day.h>
+#include <__chrono/month.h>
 #include <__chrono/statically_widen.h>
 #include <__chrono/year.h>
 #include <__config>
@@ -39,6 +40,15 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const day& __d) {
               // omitted. Judging by the wording this is valid.
               // TODO FMT Write a paper of file an LWG issue.
               : std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:02} is not a valid day"), static_cast<unsigned>(__d)));
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const month& __m) {
+  return __os << (__m.ok() ? std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%b}"), __m)
+                           : std::format(__os.getloc(),
+                                         _LIBCPP_STATICALLY_WIDEN(_CharT, "{} is not a valid month"),
+                                         static_cast<unsigned>(__m))); // TODO FMT Standard mandated locale isn't used.
 }
 
 template <class _CharT, class _Traits>
