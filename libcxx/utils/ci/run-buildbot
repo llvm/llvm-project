@@ -187,10 +187,12 @@ check-generated-output)
     # Depends on LC_COLLATE set at the top of this script.
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
            --exclude '*.dat' \
-           --exclude 'std_format_spec_string_unicode.bench.cpp' \
+           --exclude 'format_tests.h' \
+           --exclude 'formatter.day.pass.cpp' \
            --exclude 'grep.pass.cpp' \
            --exclude 'locale-specific_form.pass.cpp' \
-           --exclude 'format_tests.h' || false
+           --exclude 'std_format_spec_string_unicode.bench.cpp' \
+           || false
 
     # Reject code with trailing whitespace
     ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false

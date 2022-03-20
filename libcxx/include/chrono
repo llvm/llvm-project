@@ -332,6 +332,9 @@ constexpr day  operator+(const day&  x, const days& y) noexcept;
 constexpr day  operator+(const days& x, const day&  y) noexcept;
 constexpr day  operator-(const day&  x, const days& y) noexcept;
 constexpr days operator-(const day&  x, const day&  y) noexcept;
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const day& d);
 
 // 25.8.4, class month    // C++20
 class month;
@@ -613,7 +616,13 @@ bool operator<(const time_zone& x, const time_zone& y) noexcept;
 bool operator>(const time_zone& x, const time_zone& y) noexcept;
 bool operator<=(const time_zone& x, const time_zone& y) noexcept;
 bool operator>=(const time_zone& x, const time_zone& y) noexcept;
+}  // chrono
 
+namespace std {
+  template<class charT> struct formatter<chrono::day, charT>;                     // C++20
+} // namespace std
+
+namespace chrono {
 // calendrical constants
 inline constexpr last_spec                              last{};       // C++20
 inline constexpr chrono::weekday                        Sunday{0};    // C++20
@@ -663,6 +672,7 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__chrono/calendar.h>
 #include <__chrono/convert_to_timespec.h>
+#include <__chrono/convert_to_tm.h>
 #include <__chrono/day.h>
 #include <__chrono/duration.h>
 #include <__chrono/file_clock.h>
@@ -685,6 +695,14 @@ constexpr chrono::year                                  operator ""y(unsigned lo
 
 // standard-mandated includes
 #include <compare>
+
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT) && _LIBCPP_STD_VER > 17
+#  include <__chrono/formatter.h>
+#  include <__chrono/ostream.h>
+#  include <__chrono/parser_std_format_spec.h>
+#  include <__chrono/statically_widen.h>
+#endif
+
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

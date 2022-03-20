@@ -175,7 +175,7 @@
 "`3253 <https://wg21.link/LWG3253>`__","``basic_syncbuf::basic_syncbuf()``\  should not be explicit","Belfast","",""
 "`3245 <https://wg21.link/LWG3245>`__","Unnecessary restriction on ``'%p'``\  parse specifier","Belfast","","","|chrono|"
 "`3244 <https://wg21.link/LWG3244>`__","Constraints for ``Source``\  in |sect|\ [fs.path.req] insufficiently constrainty","Belfast","",""
-"`3241 <https://wg21.link/LWG3241>`__","``chrono-spec``\  grammar ambiguity in |sect|\ [time.format]","Belfast","","","|chrono| |format|"
+"`3241 <https://wg21.link/LWG3241>`__","``chrono-spec``\  grammar ambiguity in |sect|\ [time.format]","Belfast","|Complete|","16.0","|chrono| |format|"
 "`3257 <https://wg21.link/LWG3257>`__","Missing feature testing macro update from P0858","Belfast","",""
 "`3256 <https://wg21.link/LWG3256>`__","Feature testing macro for ``constexpr``\  algorithms","Belfast","|Complete|","13.0"
 "`3273 <https://wg21.link/LWG3273>`__","Specify ``weekday_indexed``\  to range of ``[0, 7]``\ ","Belfast","","","|chrono|"
