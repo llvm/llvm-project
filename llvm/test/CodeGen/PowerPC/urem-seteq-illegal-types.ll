@@ -208,43 +208,46 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 define i1 @test_urem_oversized(i66 %X) nounwind {
 ; PPC-LABEL: test_urem_oversized:
 ; PPC:       # %bb.0:
-; PPC-NEXT:    mflr 0
-; PPC-NEXT:    stw 0, 4(1)
-; PPC-NEXT:    stwu 1, -16(1)
-; PPC-NEXT:    mr 6, 5
-; PPC-NEXT:    mr 5, 4
-; PPC-NEXT:    mr 4, 3
-; PPC-NEXT:    lis 3, 12057
-; PPC-NEXT:    lis 7, -12795
-; PPC-NEXT:    ori 9, 3, 37186
-; PPC-NEXT:    ori 10, 7, 40665
-; PPC-NEXT:    li 3, 0
-; PPC-NEXT:    li 7, 0
-; PPC-NEXT:    li 8, 2
-; PPC-NEXT:    bl __multi3
-; PPC-NEXT:    rotlwi 7, 6, 31
-; PPC-NEXT:    lis 3, -5526
-; PPC-NEXT:    rlwimi 7, 5, 31, 0, 0
-; PPC-NEXT:    rotlwi 5, 5, 31
-; PPC-NEXT:    rlwimi 5, 4, 31, 0, 0
-; PPC-NEXT:    ori 3, 3, 61135
-; PPC-NEXT:    cmplwi 1, 5, 13
-; PPC-NEXT:    cmplw 7, 3
-; PPC-NEXT:    rlwinm 4, 4, 31, 31, 31
+; PPC-NEXT:    lis 6, -12795
+; PPC-NEXT:    ori 6, 6, 40665
+; PPC-NEXT:    mulhwu 7, 5, 6
+; PPC-NEXT:    lis 9, 12057
+; PPC-NEXT:    ori 9, 9, 37186
+; PPC-NEXT:    mullw 11, 4, 6
+; PPC-NEXT:    addc 7, 11, 7
+; PPC-NEXT:    lis 11, -5526
+; PPC-NEXT:    ori 11, 11, 61135
+; PPC-NEXT:    mulhwu 8, 4, 6
+; PPC-NEXT:    addze 8, 8
+; PPC-NEXT:    mulhwu 10, 5, 9
+; PPC-NEXT:    mullw 4, 4, 9
+; PPC-NEXT:    mullw 9, 5, 9
+; PPC-NEXT:    addc 7, 9, 7
+; PPC-NEXT:    addze 9, 10
+; PPC-NEXT:    rotlwi 10, 7, 31
+; PPC-NEXT:    mullw 3, 3, 6
+; PPC-NEXT:    mullw 6, 5, 6
+; PPC-NEXT:    slwi 5, 5, 1
+; PPC-NEXT:    add 3, 5, 3
+; PPC-NEXT:    rotlwi 5, 6, 31
+; PPC-NEXT:    rlwimi 5, 7, 31, 0, 0
+; PPC-NEXT:    add 7, 8, 9
+; PPC-NEXT:    add 4, 4, 7
+; PPC-NEXT:    add 3, 4, 3
+; PPC-NEXT:    rlwimi 10, 3, 31, 0, 0
+; PPC-NEXT:    cmplw 5, 11
+; PPC-NEXT:    cmplwi 1, 10, 13
+; PPC-NEXT:    rlwinm 3, 3, 31, 31, 31
 ; PPC-NEXT:    crand 20, 6, 0
 ; PPC-NEXT:    crandc 21, 4, 6
-; PPC-NEXT:    rlwimi. 4, 6, 1, 30, 30
+; PPC-NEXT:    rlwimi. 3, 6, 1, 30, 30
 ; PPC-NEXT:    cror 20, 20, 21
 ; PPC-NEXT:    crnand 20, 2, 20
 ; PPC-NEXT:    li 3, 1
 ; PPC-NEXT:    bc 12, 20, .LBB5_1
-; PPC-NEXT:    b .LBB5_2
+; PPC-NEXT:    blr
 ; PPC-NEXT:  .LBB5_1:
 ; PPC-NEXT:    li 3, 0
-; PPC-NEXT:  .LBB5_2:
-; PPC-NEXT:    lwz 0, 20(1)
-; PPC-NEXT:    addi 1, 1, 16
-; PPC-NEXT:    mtlr 0
 ; PPC-NEXT:    blr
 ;
 ; PPC64LE-LABEL: test_urem_oversized:
