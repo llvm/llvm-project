@@ -19,6 +19,7 @@
 #include <__chrono/parser_std_format_spec.h>
 #include <__chrono/statically_widen.h>
 #include <__chrono/time_point.h>
+#include <__chrono/weekday.h>
 #include <__chrono/year.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
@@ -282,6 +283,22 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return __value.ok();
   else if constexpr (same_as<_Tp, chrono::year>)
     return true;
+  else if constexpr (same_as<_Tp, chrono::weekday>)
+    return true;
+  else
+    static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
+  if constexpr (same_as<_Tp, chrono::day>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::month>)
+    return __value.ok();
+  else if constexpr (same_as<_Tp, chrono::year>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::weekday>)
+    return __value.ok();
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -314,6 +331,9 @@ __format_chrono(const _Tp& __value,
       // Note that the behaviour what the precision does isn't specified.
       __specs.__precision_ = -1;
     } else {
+      if (__specs.__chrono_.__weekday_name_ && !__formatter::__weekday_name_ok(__value))
+        std::__throw_format_error("formatting a weekday name needs a valid weekday");
+
       if (__specs.__chrono_.__month_name_ && !__formatter::__month_name_ok(__value))
         std::__throw_format_error("formatting a month name from an invalid month number");
 
@@ -401,6 +421,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
       -> decltype(__parse_ctx.begin()) {
     return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__year);
+  }
+};
+
+template <__fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<chrono::weekday, _CharT>
+    : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__weekday);
   }
 };
 
