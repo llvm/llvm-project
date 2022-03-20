@@ -375,6 +375,9 @@ constexpr weekday operator+(const weekday& x, const days&    y) noexcept;
 constexpr weekday operator+(const days&    x, const weekday& y) noexcept;
 constexpr weekday operator-(const weekday& x, const days&    y) noexcept;
 constexpr days    operator-(const weekday& x, const weekday& y) noexcept;
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const weekday& wd);
 
 // 25.8.7, class weekday_indexed    // C++20
 
@@ -634,6 +637,7 @@ namespace std {
   template<class charT> struct formatter<chrono::day, charT>;                     // C++20
   template<class charT> struct formatter<chrono::month, charT>;                   // C++20
   template<class charT> struct formatter<chrono::year, charT>;                    // C++20
+  template<class charT> struct formatter<chrono::weekday, charT>;                 // C++20
 } // namespace std
 
 namespace chrono {
