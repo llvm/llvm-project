@@ -574,6 +574,12 @@ struct IntrinsicLibrary {
   mlir::Value invokeGenerator(SubroutineGenerator generator,
                               llvm::ArrayRef<mlir::Value> args);
 
+  /// Get pointer to unrestricted intrinsic. Generate the related unrestricted
+  /// intrinsic if it is not defined yet.
+  mlir::SymbolRefAttr
+  getUnrestrictedIntrinsicSymbolRefAttr(llvm::StringRef name,
+                                        mlir::FunctionType signature);
+
   /// Add clean-up for \p temp to the current statement context;
   void addCleanUpForTemp(mlir::Location loc, mlir::Value temp);
   /// Helper function for generating code clean-up for result descriptors
@@ -1606,6 +1612,39 @@ IntrinsicLibrary::getRuntimeCallGenerator(llvm::StringRef name,
     mlir::Type soughtType = soughtFuncType.getResult(0);
     return builder.createConvert(loc, soughtType, call.getResult(0));
   };
+}
+
+mlir::SymbolRefAttr IntrinsicLibrary::getUnrestrictedIntrinsicSymbolRefAttr(
+    llvm::StringRef name, mlir::FunctionType signature) {
+  // Unrestricted intrinsics signature follows implicit rules: argument
+  // are passed by references. But the runtime versions expect values.
+  // So instead of duplicating the runtime, just have the wrappers loading
+  // this before calling the code generators.
+  bool loadRefArguments = true;
+  mlir::FuncOp funcOp;
+  if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
+    funcOp = std::visit(
+        [&](auto generator) {
+          return getWrapper(generator, name, signature, loadRefArguments);
+        },
+        handler->generator);
+
+  if (!funcOp) {
+    llvm::SmallVector<mlir::Type> argTypes;
+    for (mlir::Type type : signature.getInputs()) {
+      if (auto refType = type.dyn_cast<fir::ReferenceType>())
+        argTypes.push_back(refType.getEleTy());
+      else
+        argTypes.push_back(type);
+    }
+    mlir::FunctionType soughtFuncType =
+        builder.getFunctionType(argTypes, signature.getResults());
+    IntrinsicLibrary::RuntimeCallGenerator rtCallGenerator =
+        getRuntimeCallGenerator(name, soughtFuncType);
+    funcOp = getWrapper(rtCallGenerator, name, signature, loadRefArguments);
+  }
+
+  return mlir::SymbolRefAttr::get(funcOp);
 }
 
 void IntrinsicLibrary::addCleanUpForTemp(mlir::Location loc, mlir::Value temp) {
@@ -3610,4 +3649,11 @@ mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Type type,
                                    mlir::Value x, mlir::Value y) {
   return IntrinsicLibrary{builder, loc}.genRuntimeCall("pow", type, {x, y});
+}
+
+mlir::SymbolRefAttr Fortran::lower::getUnrestrictedIntrinsicSymbolRefAttr(
+    fir::FirOpBuilder &builder, mlir::Location loc, llvm::StringRef name,
+    mlir::FunctionType signature) {
+  return IntrinsicLibrary{builder, loc}.getUnrestrictedIntrinsicSymbolRefAttr(
+      name, signature);
 }

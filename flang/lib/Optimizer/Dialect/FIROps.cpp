@@ -820,9 +820,10 @@ mlir::LogicalResult ConstcOp::verify() {
 
 void fir::ConvertOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.insert<ConvertConvertOptPattern, RedundantConvertOptPattern,
-                 CombineConvertOptPattern, ForwardConstantConvertPattern>(
-      context);
+  results.insert<ConvertConvertOptPattern, ConvertAscendingIndexOptPattern,
+                 ConvertDescendingIndexOptPattern, RedundantConvertOptPattern,
+                 CombineConvertOptPattern, CombineConvertTruncOptPattern,
+                 ForwardConstantConvertPattern>(context);
 }
 
 mlir::OpFoldResult fir::ConvertOp::fold(llvm::ArrayRef<mlir::Attribute> opnds) {
@@ -875,6 +876,7 @@ mlir::LogicalResult ConvertOp::verify() {
       (isIntegerCompatible(inType) && isPointerCompatible(outType)) ||
       (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
       (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
+      (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
       (fir::isa_complex(inType) && fir::isa_complex(outType)))
     return mlir::success();
   return emitOpError("invalid type conversion");
