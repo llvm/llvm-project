@@ -2584,26 +2584,22 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
   return false;
 }
 
-int X86::getCondNoFromDesc(const MCInstrDesc &MCID, bool SkipDefs) {
+int X86::getCondSrcNoFromDesc(const MCInstrDesc &MCID) {
   unsigned Opcode = MCID.getOpcode();
   if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode)))
     return -1;
-  unsigned NumOperands = MCID.getNumOperands();
-  unsigned NumDefs = MCID.getNumDefs();
-  // Assume that condition code is always the last operand
-  unsigned CondNo = NumOperands - 1;
-  if (SkipDefs)
-    return CondNo - NumDefs;
-  return CondNo;
+  // Assume that condition code is always the last use operand.
+  unsigned NumUses = MCID.getNumOperands() - MCID.getNumDefs();
+  return NumUses - 1;
 }
 
 X86::CondCode X86::getCondFromMI(const MachineInstr &MI) {
   const MCInstrDesc &MCID = MI.getDesc();
-  int CondNo = getCondNoFromDesc(MCID);
-  if (CondNo == -1)
+  int CondNo = getCondSrcNoFromDesc(MCID);
+  if (CondNo < 0)
     return X86::COND_INVALID;
-  return static_cast<X86::CondCode>(
-      MI.getOperand(static_cast<unsigned>(CondNo)).getImm());
+  CondNo += MCID.getNumDefs();
+  return static_cast<X86::CondCode>(MI.getOperand(CondNo).getImm());
 }
 
 X86::CondCode X86::getCondFromBranch(const MachineInstr &MI) {
