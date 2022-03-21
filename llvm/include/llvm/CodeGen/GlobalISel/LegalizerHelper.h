@@ -22,6 +22,7 @@
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 
 namespace llvm {
 // Forward declarations.

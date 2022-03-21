@@ -43,9 +43,6 @@
 using namespace llvm;
 
 namespace llvm {
-class DIExpression;
-class DILocalVariable;
-class DILocation;
 class MDNode;
 class RegisterBank;
 
