@@ -1862,51 +1862,48 @@ const char *CastExpr::getCastKindName(CastKind CK) {
 }
 
 namespace {
-  const Expr *skipImplicitTemporary(const Expr *E) {
-    // Skip through reference binding to temporary.
-    if (auto *Materialize = dyn_cast<MaterializeTemporaryExpr>(E))
-      E = Materialize->getSubExpr();
+// Skip over implicit nodes produced as part of semantic analysis.
+// Designed for use with IgnoreExprNodes.
+Expr *ignoreImplicitSemaNodes(Expr *E) {
+  if (auto *Materialize = dyn_cast<MaterializeTemporaryExpr>(E))
+    return Materialize->getSubExpr();
 
-    // Skip any temporary bindings; they're implicit.
-    if (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
-      E = Binder->getSubExpr();
+  if (auto *Binder = dyn_cast<CXXBindTemporaryExpr>(E))
+    return Binder->getSubExpr();
 
-    return E;
-  }
+  return E;
 }
+} // namespace
 
 Expr *CastExpr::getSubExprAsWritten() {
   const Expr *SubExpr = nullptr;
-  const CastExpr *E = this;
-  do {
-    SubExpr = skipImplicitTemporary(E->getSubExpr());
+
+  for (const CastExpr *E = this; E; E = dyn_cast<ImplicitCastExpr>(SubExpr)) {
+    SubExpr = IgnoreExprNodes(E->getSubExpr(), ignoreImplicitSemaNodes);
 
     // Conversions by constructor and conversion functions have a
     // subexpression describing the call; strip it off.
-    if (E->getCastKind() == CK_ConstructorConversion)
-      SubExpr =
-        skipImplicitTemporary(cast<CXXConstructExpr>(SubExpr->IgnoreImplicit())->getArg(0));
-    else if (E->getCastKind() == CK_UserDefinedConversion) {
+    if (E->getCastKind() == CK_ConstructorConversion) {
+      SubExpr = IgnoreExprNodes(
+          cast<CXXConstructExpr>(SubExpr->IgnoreImplicit())->getArg(0),
+          ignoreImplicitSemaNodes);
+    } else if (E->getCastKind() == CK_UserDefinedConversion) {
       SubExpr = SubExpr->IgnoreImplicit();
-      assert((isa<CXXMemberCallExpr>(SubExpr) ||
-              isa<BlockExpr>(SubExpr)) &&
+      assert((isa<CXXMemberCallExpr>(SubExpr) || isa<BlockExpr>(SubExpr)) &&
              "Unexpected SubExpr for CK_UserDefinedConversion.");
       if (auto *MCE = dyn_cast<CXXMemberCallExpr>(SubExpr))
         SubExpr = MCE->getImplicitObjectArgument();
     }
+  }
 
-    // If the subexpression we're left with is an implicit cast, look
-    // through that, too.
-  } while ((E = dyn_cast<ImplicitCastExpr>(SubExpr)));
-
-  return const_cast<Expr*>(SubExpr);
+  return const_cast<Expr *>(SubExpr);
 }
 
 NamedDecl *CastExpr::getConversionFunction() const {
   const Expr *SubExpr = nullptr;
 
   for (const CastExpr *E = this; E; E = dyn_cast<ImplicitCastExpr>(SubExpr)) {
-    SubExpr = skipImplicitTemporary(E->getSubExpr());
+    SubExpr = IgnoreExprNodes(E->getSubExpr(), ignoreImplicitSemaNodes);
 
     if (E->getCastKind() == CK_ConstructorConversion)
       return cast<CXXConstructExpr>(SubExpr)->getConstructor();
