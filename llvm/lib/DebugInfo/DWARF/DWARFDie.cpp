@@ -652,6 +652,64 @@ struct DWARFTypePrinter {
         }
       }
     }
+
+    if (auto CC = D.find(DW_AT_calling_convention)) {
+      switch (*CC->getAsUnsignedConstant()) {
+      case CallingConvention::DW_CC_BORLAND_stdcall:
+        OS << " __attribute__((stdcall))";
+        break;
+      case CallingConvention::DW_CC_BORLAND_msfastcall:
+        OS << " __attribute__((fastcall))";
+        break;
+      case CallingConvention::DW_CC_BORLAND_thiscall:
+        OS << " __attribute__((thiscall))";
+        break;
+      case CallingConvention::DW_CC_LLVM_vectorcall:
+        OS << " __attribute__((vectorcall))";
+        break;
+      case CallingConvention::DW_CC_BORLAND_pascal:
+        OS << " __attribute__((pascal))";
+        break;
+      case CallingConvention::DW_CC_LLVM_Win64:
+        OS << " __attribute__((ms_abi))";
+        break;
+      case CallingConvention::DW_CC_LLVM_X86_64SysV:
+        OS << " __attribute__((sysv_abi))";
+        break;
+      case CallingConvention::DW_CC_LLVM_AAPCS:
+        // AArch64VectorCall missing?
+        OS << " __attribute__((pcs(\"aapcs\")))";
+        break;
+      case CallingConvention::DW_CC_LLVM_AAPCS_VFP:
+        OS << " __attribute__((pcs(\"aapcs-vfp\")))";
+        break;
+      case CallingConvention::DW_CC_LLVM_IntelOclBicc:
+        OS << " __attribute__((intel_ocl_bicc))";
+        break;
+      case CallingConvention::DW_CC_LLVM_SpirFunction:
+      case CallingConvention::DW_CC_LLVM_OpenCLKernel:
+        // These aren't available as attributes, but maybe we should still
+        // render them somehow? (Clang doesn't render them, but that's an issue
+        // for template names too - since then the DWARF names of templates
+        // instantiated with function types with these calling conventions won't
+        // have distinct names - so we'd need to fix that too)
+        break;
+      case CallingConvention::DW_CC_LLVM_Swift:
+        // SwiftAsync missing
+        OS << " __attribute__((swiftcall))";
+        break;
+      case CallingConvention::DW_CC_LLVM_PreserveMost:
+        OS << " __attribute__((preserve_most))";
+        break;
+      case CallingConvention::DW_CC_LLVM_PreserveAll:
+        OS << " __attribute__((preserve_all))";
+        break;
+      case CallingConvention::DW_CC_LLVM_X86RegCall:
+        OS << " __attribute__((regcall))";
+        break;
+      }
+    }
+
     if (Const)
       OS << " const";
     if (Volatile)
