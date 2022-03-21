@@ -1049,6 +1049,15 @@ llvm.func @omp_atomic_update_intrinsic(%x:!llvm.ptr<i32>, %expr: i32) {
     %newval = "llvm.intr.smax"(%xval, %expr) : (i32, i32) -> i32
     omp.yield(%newval : i32)
   }
+  // CHECK: %[[t1:.*]] = call i32 @llvm.umax.i32(i32 %[[x_old:.*]], i32 %[[expr]])
+  // CHECK: store i32 %[[t1]], i32* %[[x_new:.*]]
+  // CHECK: %[[t2:.*]] = load i32, i32* %[[x_new]]
+  // CHECK: cmpxchg i32* %[[x]], i32 %[[x_old]], i32 %[[t2]]
+  omp.atomic.update %x : !llvm.ptr<i32> {
+  ^bb0(%xval: i32):
+    %newval = "llvm.intr.umax"(%xval, %expr) : (i32, i32) -> i32
+    omp.yield(%newval : i32)
+  }
   llvm.return
 }
 
