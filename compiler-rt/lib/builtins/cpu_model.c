@@ -815,8 +815,15 @@ static void CONSTRUCTOR_ATTRIBUTE init_have_lse_atomics(void) {
     char arch[PROP_VALUE_MAX];
     if (__system_property_get("ro.arch", arch) > 0 &&
         strncmp(arch, "exynos9810", sizeof("exynos9810") - 1) == 0) {
-      // Some cores of Exynos 9810 are ARMv8.2 and others are ARMv8.0,
-      // so disable the lse atomics completely.
+      // Some cores in the Exynos 9810 CPU are ARMv8.2 and others are ARMv8.0;
+      // only the former support LSE atomics.  However, the kernel in the
+      // initial Android 8.0 release of Galaxy S9/S9+ devices incorrectly
+      // reported the feature as being supported.
+      //
+      // The kernel appears to have been corrected to mark it unsupported as of
+      // the Android 9.0 release on those devices, and this issue has not been
+      // observed anywhere else. Thus, this workaround may be removed if
+      // compiler-rt ever drops support for Android 8.0.
       result = false;
     }
   }

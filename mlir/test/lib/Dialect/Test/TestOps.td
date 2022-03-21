@@ -617,6 +617,15 @@ def TestBranchOp : TEST_Op<"br",
   let successors = (successor AnySuccessor:$target);
 }
 
+def TestProducingBranchOp : TEST_Op<"producing_br",
+    [DeclareOpInterfaceMethods<BranchOpInterface>, Terminator,
+     AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$firstOperands,
+                       Variadic<AnyType>:$secondOperands);
+  let results = (outs I32:$dummy);
+  let successors = (successor AnySuccessor:$first,AnySuccessor:$second);
+}
+
 def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
                                  [AttrSizedOperandSegments]> {
   let arguments = (ins

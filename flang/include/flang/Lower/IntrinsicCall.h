@@ -82,6 +82,14 @@ ArgLoweringRule lowerIntrinsicArgumentAs(mlir::Location,
 /// Return place-holder for absent intrinsic arguments.
 fir::ExtendedValue getAbsentIntrinsicArgument();
 
+/// Get SymbolRefAttr of runtime (or wrapper function containing inlined
+// implementation) of an unrestricted intrinsic (defined by its signature
+// and generic name)
+mlir::SymbolRefAttr
+getUnrestrictedIntrinsicSymbolRefAttr(fir::FirOpBuilder &, mlir::Location,
+                                      llvm::StringRef name,
+                                      mlir::FunctionType signature);
+
 //===----------------------------------------------------------------------===//
 // Direct access to intrinsics that may be used by lowering outside
 // of intrinsic call lowering.

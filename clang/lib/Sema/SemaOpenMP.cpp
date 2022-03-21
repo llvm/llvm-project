@@ -7036,11 +7036,11 @@ Sema::checkOpenMPDeclareVariantFunction(Sema::DeclGroupPtrTy DG,
   }
 
   auto &&HasMultiVersionAttributes = [](const FunctionDecl *FD) {
-    return FD->hasAttrs() &&
-           (FD->hasAttr<CPUDispatchAttr>() || FD->hasAttr<CPUSpecificAttr>() ||
-            FD->hasAttr<TargetAttr>());
+    // The 'target' attribute needs to be separately checked because it does
+    // not always signify a multiversion function declaration.
+    return FD->isMultiVersion() || FD->hasAttr<TargetAttr>();
   };
-  // OpenMP is not compatible with CPU-specific attributes.
+  // OpenMP is not compatible with multiversion function attributes.
   if (HasMultiVersionAttributes(FD)) {
     Diag(FD->getLocation(), diag::err_omp_declare_variant_incompat_attributes)
         << SR;

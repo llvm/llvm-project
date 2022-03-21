@@ -1231,6 +1231,13 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
+    // SVE supports unpklo/hi instructions to reduce the number of loads.
+    for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}) {
+      setLoadExtAction(Op, MVT::nxv16i64, MVT::nxv16i8, Expand);
+      setLoadExtAction(Op, MVT::nxv8i64, MVT::nxv8i16, Expand);
+      setLoadExtAction(Op, MVT::nxv4i64, MVT::nxv4i32, Expand);
+    }
+
     // SVE supports truncating stores of 64 and 128-bit vectors
     setTruncStoreAction(MVT::v2i64, MVT::v2i8, Custom);
     setTruncStoreAction(MVT::v2i64, MVT::v2i16, Custom);

@@ -974,6 +974,7 @@ Decl *TemplateDeclInstantiator::InstantiateTypedefNameDecl(TypedefNameDecl *D,
     SemaRef.inferGslPointerAttribute(Typedef);
 
   Typedef->setAccess(D->getAccess());
+  Typedef->setReferenced(D->isReferenced());
 
   return Typedef;
 }

@@ -66,6 +66,13 @@ public:
     return Parents.begin()->get<T>();
   }
 
+  const Expr *getParentExprIgnoreParens(const Expr *E) {
+    const Expr *Parent = getParent<Expr>(E);
+    while (isa_and_nonnull<ParenExpr>(Parent))
+      Parent = getParent<Expr>(Parent);
+    return Parent;
+  }
+
   bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *) {
     // An UnresolvedMemberExpr might resolve to a non-const non-static
     // member function.
@@ -140,7 +147,7 @@ public:
       return true;
     }
 
-    const auto *Parent = getParent<Expr>(Member);
+    const auto *Parent = getParentExprIgnoreParens(Member);
 
     if (const auto *Cast = dyn_cast_or_null<ImplicitCastExpr>(Parent)) {
       // A read access to a member is safe when the member either
@@ -167,12 +174,12 @@ public:
   bool VisitCXXThisExpr(const CXXThisExpr *E) {
     Usage = Const;
 
-    const auto *Parent = getParent<Expr>(E);
+    const auto *Parent = getParentExprIgnoreParens(E);
 
     // Look through deref of this.
     if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent)) {
       if (UnOp->getOpcode() == UO_Deref) {
-        Parent = getParent<Expr>(UnOp);
+        Parent = getParentExprIgnoreParens(UnOp);
       }
     }
 
