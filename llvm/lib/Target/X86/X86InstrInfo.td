@@ -875,8 +875,8 @@ def relocImm : ComplexPattern<iAny, 1, "selectRelocImm",
 // X86 Instruction Predicate Definitions.
 def TruePredicate : Predicate<"true">;
 
-def HasCMOV      : Predicate<"Subtarget->hasCMOV()">;
-def NoCMOV       : Predicate<"!Subtarget->hasCMOV()">;
+def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
+def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
 
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
 def Has3DNow     : Predicate<"Subtarget->hasThreeDNow()">;

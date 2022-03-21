@@ -1,15 +1,13 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc-ibm-aix-xcoff -mattr=-altivec \
 ; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --section-headers --file-header %t.o | \
-; RUN: FileCheck --check-prefix=OBJ %s
+; RUN:   FileCheck --check-prefix=OBJ %s
 ; RUN: llvm-readobj --relocs --expand-relocs %t.o | FileCheck --check-prefix=RELOC %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck --check-prefix=SYM %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=DIS %s
 ; RUN: llvm-objdump -r %t.o | FileCheck --check-prefix=DIS_REL %s
 
-; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff -mattr=-altivec -data-sections=false -filetype=obj < %s 2>&1 | \
-; RUN: FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 @globalA = global i32 1, align 4
 @globalB = global i32 2, align 4

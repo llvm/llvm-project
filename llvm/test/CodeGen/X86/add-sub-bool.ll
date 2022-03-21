@@ -3,10 +3,12 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefixes=X64,NOTBM
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=+tbm | FileCheck %s --check-prefixes=X64,TBM
 
-; PR35908 - Fold ADD/SUB and bit tests into ADC/SBB+BT
+; PR35908 - Fold ADD/SUB and bit extracts into ADC/SBB+BT
 ;
-; int test_add(int x, int y, int z) { return (bool(z & (1 << 30)) + x + y); }
-; int test_sub(int x, int y, int z) { return (bool(z & (1 << 30)) - x - y); }
+; int test_add_add(int x, int y, int z) { return ((x + y) + bool(z & (1 << 30))); }
+; int test_add_sub(int x, int y, int z) { return ((x - y) + bool(z & (1 << 30))); }
+; int test_sub_add(int x, int y, int z) { return ((x + y) - bool(z & (1 << 30))); }
+; int test_sub_sub(int x, int y, int z) { return (x - (y - bool(z & (1 << 30)))); }
 
 ;
 ; Constant Bit Indices
@@ -80,6 +82,30 @@ define i32 @test_i32_add_add_commute_idx(i32 %x, i32 %y, i32 %z) {
   %add = add i32 %y, %x
   %shift = lshr i32 %z, 2
   %mask = and i32 %shift, 1
+  %add1 = add i32 %mask, %add
+  ret i32 %add1
+}
+
+define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) {
+; X86-LABEL: test_i32_add_add_idx0:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i32_add_add_idx0:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rsi), %eax
+; X64-NEXT:    andl $1, %edx
+; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    retq
+  %add = add i32 %y, %x
+  %mask = and i32 %z, 1
   %add1 = add i32 %mask, %add
   ret i32 %add1
 }
