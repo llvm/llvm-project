@@ -31,7 +31,9 @@ template <class T> struct CustomOperand {
 
 namespace SendMsg { // Symbolic names for the sendmsg(...) syntax.
 
-extern const char *const IdSymbolic[ID_GAPS_LAST_];
+extern const CustomOperand<const MCSubtargetInfo &> Msg[];
+extern const int MSG_SIZE;
+
 extern const char *const OpSysSymbolic[OP_SYS_LAST_];
 extern const char *const OpGsSymbolic[OP_GS_LAST_];
 

@@ -237,7 +237,7 @@ s_sendmsg sendmsg(4)
 // VI: s_sendmsg sendmsg(MSG_SAVEWAVE) ; encoding: [0x04,0x00,0x90,0xbf]
 
 s_sendmsg sendmsg(MSG_SAVEWAVE)
-// NOSICI: error: invalid message id
+// NOSICI: error: specified message id is not supported on this GPU
 // VI: s_sendmsg sendmsg(MSG_SAVEWAVE) ; encoding: [0x04,0x00,0x90,0xbf]
 
 s_sendmsg 0x1f
