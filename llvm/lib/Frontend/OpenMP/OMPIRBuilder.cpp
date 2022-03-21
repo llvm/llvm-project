@@ -3591,6 +3591,7 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
   case AtomicRMWInst::Nand:
   case AtomicRMWInst::Or:
   case AtomicRMWInst::Xor:
+  case AtomicRMWInst::Xchg:
     emitRMWOp = XElemTy;
     break;
   case AtomicRMWInst::Sub:
@@ -3606,7 +3607,11 @@ std::pair<Value *, Value *> OpenMPIRBuilder::emitAtomicUpdate(
     Res.first = Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
     // not needed except in case of postfix captures. Generate anyway for
     // consistency with the else part. Will be removed with any DCE pass.
-    Res.second = emitRMWOpAsInstruction(Res.first, Expr, RMWOp);
+    // AtomicRMWInst::Xchg does not have a coressponding instruction.
+    if (RMWOp == AtomicRMWInst::Xchg)
+      Res.second = Res.first;
+    else
+      Res.second = emitRMWOpAsInstruction(Res.first, Expr, RMWOp);
   } else {
     unsigned Addrspace = cast<PointerType>(X->getType())->getAddressSpace();
     IntegerType *IntCastTy =
