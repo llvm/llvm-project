@@ -14,7 +14,6 @@
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -56,8 +55,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iterator>
 #include <memory>
 #include <tuple>
 #include <vector>

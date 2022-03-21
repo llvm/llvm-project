@@ -43,10 +43,8 @@
 
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
-#include <set>
 
 struct OutlinableGroup;
 

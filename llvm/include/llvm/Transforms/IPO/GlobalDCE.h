@@ -19,11 +19,18 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/IR/Module.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/PassManager.h"
 #include <unordered_map>
 
 namespace llvm {
+class Comdat;
+class Constant;
+class Function;
+class GlobalVariable;
+class Metadata;
+class Module;
+class Value;
 
 /// Pass to remove unused function declarations.
 class GlobalDCEPass : public PassInfoMixin<GlobalDCEPass> {

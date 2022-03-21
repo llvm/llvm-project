@@ -16,17 +16,19 @@
 #define LLVM_TRANSFORMS_IPO_SAMPLEPROFILEPROBE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/PseudoProbe.h"
 #include "llvm/ProfileData/SampleProf.h"
-#include "llvm/Target/TargetMachine.h"
 #include <unordered_map>
 
 namespace llvm {
+class Any;
+class BasicBlock;
+class Function;
+class Instruction;
+class Loop;
+class PassInstrumentationCallbacks;
+class TargetMachine;
 
 class Module;
 

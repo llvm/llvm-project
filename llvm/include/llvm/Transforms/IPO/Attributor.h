@@ -108,7 +108,6 @@
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -121,7 +120,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/Utils/CallGraphUpdater.h"
 
@@ -129,6 +128,10 @@
 
 namespace llvm {
 
+class DataLayout;
+class LLVMContext;
+class Pass;
+template <typename Fn> class function_ref;
 struct AADepGraphNode;
 struct AADepGraph;
 struct Attributor;
