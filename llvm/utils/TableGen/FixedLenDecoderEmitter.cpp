@@ -969,8 +969,9 @@ emitDecoderFunction(formatted_raw_ostream &OS, DecoderSet &Decoders,
   OS.indent(Indentation) << "template <typename InsnType>\n";
   OS.indent(Indentation) << "static DecodeStatus decodeToMCInst(DecodeStatus S,"
     << " unsigned Idx, InsnType insn, MCInst &MI,\n";
-  OS.indent(Indentation) << "                                   uint64_t "
-    << "Address, const void *Decoder, bool &DecodeComplete) {\n";
+  OS.indent(Indentation)
+      << "                                   uint64_t "
+      << "Address, const MCDisassembler *Decoder, bool &DecodeComplete) {\n";
   Indentation += 2;
   OS.indent(Indentation) << "DecodeComplete = true;\n";
   // TODO: When InsnType is large, using uint64_t limits all fields to 64 bits
@@ -2221,7 +2222,7 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS) {
         "MCInst &MI,\n"
      << "                                      InsnType insn, uint64_t "
         "Address,\n"
-     << "                                      const void *DisAsm,\n"
+     << "                                      const MCDisassembler *DisAsm,\n"
      << "                                      const MCSubtargetInfo &STI) {\n"
      << "  const FeatureBitset &Bits = STI.getFeatureBits();\n"
      << "\n"

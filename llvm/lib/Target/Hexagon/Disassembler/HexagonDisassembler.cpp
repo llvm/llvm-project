@@ -78,11 +78,12 @@ static uint64_t fullValue(HexagonDisassembler const &Disassembler, MCInst &MI,
   uint64_t Operand = Upper26 | Lower6;
   return Operand;
 }
-static HexagonDisassembler const &disassembler(void const *Decoder) {
+static HexagonDisassembler const &disassembler(const MCDisassembler *Decoder) {
   return *static_cast<HexagonDisassembler const *>(Decoder);
 }
 template <size_t T>
-static void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
+static void signedDecoder(MCInst &MI, unsigned tmp,
+                          const MCDisassembler *Decoder) {
   HexagonDisassembler const &Disassembler = disassembler(Decoder);
   int64_t FullValue = fullValue(Disassembler, MI, SignExtend64<T>(tmp));
   int64_t Extended = SignExtend64<32>(FullValue);
@@ -95,65 +96,66 @@ static void signedDecoder(MCInst &MI, unsigned tmp, const void *Decoder) {
 
 static DecodeStatus DecodeIntRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
-                                               const void *Decoder);
-static DecodeStatus DecodeGeneralSubRegsRegisterClass(MCInst &Inst,
-                                                      unsigned RegNo,
-                                                      uint64_t Address,
-                                                      const void *Decoder);
-static DecodeStatus DecodeIntRegsLow8RegisterClass(MCInst &Inst, unsigned RegNo,
-                                                   uint64_t Address,
-                                                   const void *Decoder);
+                                               const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeGeneralSubRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+                                  uint64_t Address,
+                                  const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeIntRegsLow8RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                               const MCDisassembler *Decoder);
 static DecodeStatus DecodeHvxVRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
-                                             const void *Decoder);
-static DecodeStatus DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                  uint64_t Address,
-                                                  const void *Decoder);
+                                             const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                              const MCDisassembler *Decoder);
 static DecodeStatus
 DecodeGeneralDoubleLow8RegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                         uint64_t Address, const void *Decoder);
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder);
 static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
-                                             const void *Decoder);
-static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst,
-                                              unsigned RegNo,
+                                             const MCDisassembler *Decoder);
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
-                                              const void *Decoder);
+                                              const MCDisassembler *Decoder);
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
-                                                const void *Decoder);
+                                                const MCDisassembler *Decoder);
 static DecodeStatus DecodeHvxQRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
-                                             const void *Decoder);
+                                             const MCDisassembler *Decoder);
 static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
-                                               const void *Decoder);
+                                               const MCDisassembler *Decoder);
 static DecodeStatus DecodeGuestRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t Address,
-                                                 const void *Decoder);
+                                                 const MCDisassembler *Decoder);
 static DecodeStatus DecodeSysRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
-                                               const void *Decoder);
+                                               const MCDisassembler *Decoder);
 static DecodeStatus DecodeModRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
-                                               const void *Decoder);
+                                               const MCDisassembler *Decoder);
 static DecodeStatus DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t Address,
-                                                 const void *Decoder);
-static DecodeStatus DecodeGuestRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
-                                                   uint64_t Address,
-                                                   const void *Decoder);
+                                                 const MCDisassembler *Decoder);
+static DecodeStatus
+DecodeGuestRegs64RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                               const MCDisassembler *Decoder);
 static DecodeStatus DecodeSysRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
                                                  uint64_t Address,
-                                                 const void *Decoder);
-
+                                                 const MCDisassembler *Decoder);
 
 static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
-                                       uint64_t Address, const void *Decoder);
+                                       uint64_t Address,
+                                       const MCDisassembler *Decoder);
 static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
-                                    uint64_t /*Address*/, const void *Decoder);
+                                    uint64_t /*Address*/,
+                                    const MCDisassembler *Decoder);
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
-                                    const void *Decoder);
+                                    const MCDisassembler *Decoder);
 #include "HexagonDepDecoders.inc"
 #include "HexagonGenDisassemblerTables.inc"
 
@@ -542,15 +544,15 @@ static DecodeStatus DecodeRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Fail;
 }
 
-static DecodeStatus DecodeIntRegsLow8RegisterClass(MCInst &Inst, unsigned RegNo,
-                                                   uint64_t Address,
-                                                   const void *Decoder) {
+static DecodeStatus
+DecodeIntRegsLow8RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                               const MCDisassembler *Decoder) {
   return DecodeIntRegsRegisterClass(Inst, RegNo, Address, Decoder);
 }
 
 static DecodeStatus DecodeIntRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
-                                               const void *Decoder) {
+                                               const MCDisassembler *Decoder) {
   static const MCPhysReg IntRegDecoderTable[] = {
       Hexagon::R0,  Hexagon::R1,  Hexagon::R2,  Hexagon::R3,  Hexagon::R4,
       Hexagon::R5,  Hexagon::R6,  Hexagon::R7,  Hexagon::R8,  Hexagon::R9,
@@ -563,10 +565,10 @@ static DecodeStatus DecodeIntRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, IntRegDecoderTable);
 }
 
-static DecodeStatus DecodeGeneralSubRegsRegisterClass(MCInst &Inst,
-                                                      unsigned RegNo,
-                                                      uint64_t Address,
-                                                      const void *Decoder) {
+static DecodeStatus
+DecodeGeneralSubRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+                                  uint64_t Address,
+                                  const MCDisassembler *Decoder) {
   static const MCPhysReg GeneralSubRegDecoderTable[] = {
       Hexagon::R0,  Hexagon::R1,  Hexagon::R2,  Hexagon::R3,
       Hexagon::R4,  Hexagon::R5,  Hexagon::R6,  Hexagon::R7,
@@ -579,7 +581,7 @@ static DecodeStatus DecodeGeneralSubRegsRegisterClass(MCInst &Inst,
 
 static DecodeStatus DecodeHvxVRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t /*Address*/,
-                                             const void *Decoder) {
+                                             const MCDisassembler *Decoder) {
   static const MCPhysReg HvxVRDecoderTable[] = {
       Hexagon::V0,  Hexagon::V1,  Hexagon::V2,  Hexagon::V3,  Hexagon::V4,
       Hexagon::V5,  Hexagon::V6,  Hexagon::V7,  Hexagon::V8,  Hexagon::V9,
@@ -592,9 +594,10 @@ static DecodeStatus DecodeHvxVRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, HvxVRDecoderTable);
 }
 
-static DecodeStatus DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                  uint64_t /*Address*/,
-                                                  const void *Decoder) {
+static DecodeStatus
+DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
+                              uint64_t /*Address*/,
+                              const MCDisassembler *Decoder) {
   static const MCPhysReg DoubleRegDecoderTable[] = {
       Hexagon::D0,  Hexagon::D1,  Hexagon::D2,  Hexagon::D3,
       Hexagon::D4,  Hexagon::D5,  Hexagon::D6,  Hexagon::D7,
@@ -604,8 +607,10 @@ static DecodeStatus DecodeDoubleRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo >> 1, DoubleRegDecoderTable);
 }
 
-static DecodeStatus DecodeGeneralDoubleLow8RegsRegisterClass(
-    MCInst &Inst, unsigned RegNo, uint64_t /*Address*/, const void *Decoder) {
+static DecodeStatus
+DecodeGeneralDoubleLow8RegsRegisterClass(MCInst &Inst, unsigned RegNo,
+                                         uint64_t /*Address*/,
+                                         const MCDisassembler *Decoder) {
   static const MCPhysReg GeneralDoubleLow8RegDecoderTable[] = {
       Hexagon::D0, Hexagon::D1, Hexagon::D2,  Hexagon::D3,
       Hexagon::D8, Hexagon::D9, Hexagon::D10, Hexagon::D11};
@@ -615,7 +620,7 @@ static DecodeStatus DecodeGeneralDoubleLow8RegsRegisterClass(
 
 static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t /*Address*/,
-                                             const void *Decoder) {
+                                             const MCDisassembler *Decoder) {
   static const MCPhysReg HvxWRDecoderTable[] = {
       Hexagon::W0,   Hexagon::WR0,  Hexagon::W1,   Hexagon::WR1,  Hexagon::W2,
       Hexagon::WR2,  Hexagon::W3,   Hexagon::WR3,  Hexagon::W4,   Hexagon::WR4,
@@ -629,11 +634,11 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
   return DecodeRegisterClass(Inst, RegNo, HvxWRDecoderTable);
 }
 
-LLVM_ATTRIBUTE_UNUSED  // Suppress warning temporarily.
-static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst,
-                                              unsigned RegNo,
-                                              uint64_t /*Address*/,
-                                              const void *Decoder) {
+LLVM_ATTRIBUTE_UNUSED // Suppress warning temporarily.
+    static DecodeStatus
+    DecodeHvxVQRRegisterClass(MCInst &Inst, unsigned RegNo,
+                              uint64_t /*Address*/,
+                              const MCDisassembler *Decoder) {
   static const MCPhysReg HvxVQRDecoderTable[] = {
       Hexagon::VQ0,  Hexagon::VQ1,  Hexagon::VQ2,  Hexagon::VQ3,
       Hexagon::VQ4,  Hexagon::VQ5,  Hexagon::VQ6,  Hexagon::VQ7};
@@ -643,7 +648,7 @@ static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst,
 
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t /*Address*/,
-                                                const void *Decoder) {
+                                                const MCDisassembler *Decoder) {
   static const MCPhysReg PredRegDecoderTable[] = {Hexagon::P0, Hexagon::P1,
                                                   Hexagon::P2, Hexagon::P3};
 
@@ -652,7 +657,7 @@ static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 
 static DecodeStatus DecodeHvxQRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t /*Address*/,
-                                             const void *Decoder) {
+                                             const MCDisassembler *Decoder) {
   static const MCPhysReg HvxQRDecoderTable[] = {Hexagon::Q0, Hexagon::Q1,
                                                 Hexagon::Q2, Hexagon::Q3};
 
@@ -661,7 +666,7 @@ static DecodeStatus DecodeHvxQRRegisterClass(MCInst &Inst, unsigned RegNo,
 
 static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t /*Address*/,
-                                               const void *Decoder) {
+                                               const MCDisassembler *Decoder) {
   using namespace Hexagon;
 
   static const MCPhysReg CtrlRegDecoderTable[] = {
@@ -687,9 +692,9 @@ static DecodeStatus DecodeCtrRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
-                                                 uint64_t /*Address*/,
-                                                 const void *Decoder) {
+static DecodeStatus
+DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
+                             const MCDisassembler *Decoder) {
   using namespace Hexagon;
 
   static const MCPhysReg CtrlReg64DecoderTable[] = {
@@ -717,7 +722,7 @@ static DecodeStatus DecodeCtrRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
 
 static DecodeStatus DecodeModRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t /*Address*/,
-                                               const void *Decoder) {
+                                               const MCDisassembler *Decoder) {
   unsigned Register = 0;
   switch (RegNo) {
   case 0:
@@ -735,7 +740,7 @@ static DecodeStatus DecodeModRegsRegisterClass(MCInst &Inst, unsigned RegNo,
 
 static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
                                        uint64_t /*Address*/,
-                                       const void *Decoder) {
+                                       const MCDisassembler *Decoder) {
   HexagonDisassembler const &Disassembler = disassembler(Decoder);
   int64_t FullValue = fullValue(Disassembler, MI, tmp);
   assert(FullValue >= 0 && "Negative in unsigned decoder");
@@ -744,7 +749,8 @@ static DecodeStatus unsignedImmDecoder(MCInst &MI, unsigned tmp,
 }
 
 static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
-                                    uint64_t /*Address*/, const void *Decoder) {
+                                    uint64_t /*Address*/,
+                                    const MCDisassembler *Decoder) {
   HexagonDisassembler const &Disassembler = disassembler(Decoder);
   unsigned Bits = HexagonMCInstrInfo::getExtentBits(*Disassembler.MCII, MI);
   tmp = SignExtend64(tmp, Bits);
@@ -754,7 +760,7 @@ static DecodeStatus s32_0ImmDecoder(MCInst &MI, unsigned tmp,
 
 // custom decoder for various jump/call immediates
 static DecodeStatus brtargetDecoder(MCInst &MI, unsigned tmp, uint64_t Address,
-                                    const void *Decoder) {
+                                    const MCDisassembler *Decoder) {
   HexagonDisassembler const &Disassembler = disassembler(Decoder);
   unsigned Bits = HexagonMCInstrInfo::getExtentBits(*Disassembler.MCII, MI);
   // r13_2 is not extendable, so if there are no extent bits, it's r13_2
@@ -799,7 +805,7 @@ static const uint16_t SysRegDecoderTable[] = {
 
 static DecodeStatus DecodeSysRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t /*Address*/,
-                                               const void *Decoder) {
+                                               const MCDisassembler *Decoder) {
   if (RegNo >= sizeof(SysRegDecoderTable) / sizeof(SysRegDecoderTable[0]))
     return MCDisassembler::Fail;
 
@@ -824,9 +830,9 @@ static const uint16_t SysReg64DecoderTable[] = {
     Hexagon::S73_72, Hexagon::S75_74, Hexagon::S77_76, Hexagon::S79_78,
 };
 
-static DecodeStatus DecodeSysRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
-                                                 uint64_t /*Address*/,
-                                                 const void *Decoder) {
+static DecodeStatus
+DecodeSysRegs64RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
+                             const MCDisassembler *Decoder) {
   RegNo = RegNo >> 1;
   if (RegNo >= sizeof(SysReg64DecoderTable) / sizeof(SysReg64DecoderTable[0]))
     return MCDisassembler::Fail;
@@ -839,9 +845,9 @@ static DecodeStatus DecodeSysRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGuestRegsRegisterClass(MCInst &Inst, unsigned RegNo,
-                                                 uint64_t /*Address*/,
-                                                 const void *Decoder) {
+static DecodeStatus
+DecodeGuestRegsRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
+                             const MCDisassembler *Decoder) {
   using namespace Hexagon;
 
   static const MCPhysReg GuestRegDecoderTable[] = {
@@ -865,9 +871,10 @@ static DecodeStatus DecodeGuestRegsRegisterClass(MCInst &Inst, unsigned RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeGuestRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
-                                                   uint64_t /*Address*/,
-                                                   const void *Decoder) {
+static DecodeStatus
+DecodeGuestRegs64RegisterClass(MCInst &Inst, unsigned RegNo,
+                               uint64_t /*Address*/,
+                               const MCDisassembler *Decoder) {
   using namespace Hexagon;
 
   static const MCPhysReg GuestReg64DecoderTable[] = {
