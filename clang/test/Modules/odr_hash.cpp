@@ -4372,6 +4372,8 @@ template<typename G>
 G* S<G>::Foo(const G* asdf, int*) {}
 #else
 S<X> s;
+// expected-error@first.h:* {{'ParameterTest::S::Foo' has different definitions in different modules; definition in module 'FirstModule' first difference is 1st parameter with name 'aaaa'}}
+// expected-note@second.h:* {{but in 'SecondModule' found 1st parameter with name 'asdf'}}
 #endif
 }  // ParameterTest
 
