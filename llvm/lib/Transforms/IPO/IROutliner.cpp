@@ -2363,6 +2363,9 @@ void IROutliner::pruneIncompatibleRegions(
     if (BBHasAddressTaken)
       continue;
 
+    if (IRSC.getFunction()->hasOptNone())
+      continue;
+
     if (IRSC.front()->Inst->getFunction()->hasLinkOnceODRLinkage() &&
         !OutlineFromLinkODRs)
       continue;

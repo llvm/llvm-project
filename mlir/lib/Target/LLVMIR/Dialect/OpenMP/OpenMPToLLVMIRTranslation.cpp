@@ -1114,6 +1114,108 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
   return updateGenStatus;
 }
 
+static LogicalResult
+convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
+                        llvm::IRBuilderBase &builder,
+                        LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  mlir::Value mlirExpr;
+  bool isXBinopExpr = false, isPostfixUpdate = false;
+  llvm::AtomicRMWInst::BinOp binop = llvm::AtomicRMWInst::BinOp::BAD_BINOP;
+
+  omp::AtomicUpdateOp atomicUpdateOp = atomicCaptureOp.getAtomicUpdateOp();
+  omp::AtomicWriteOp atomicWriteOp = atomicCaptureOp.getAtomicWriteOp();
+
+  assert((atomicUpdateOp || atomicWriteOp) &&
+         "internal op must be an atomic.update or atomic.write op");
+
+  if (atomicWriteOp) {
+    isPostfixUpdate = true;
+    mlirExpr = atomicWriteOp.value();
+  } else {
+    isPostfixUpdate = atomicCaptureOp.getSecondOp() ==
+                      atomicCaptureOp.getAtomicUpdateOp().getOperation();
+    auto &innerOpList = atomicUpdateOp.region().front().getOperations();
+    if (innerOpList.size() != 2)
+      return atomicUpdateOp.emitError(
+          "exactly two operations are allowed inside an "
+          "atomic update region while lowering to LLVM IR");
+    Operation *innerUpdateOp = atomicUpdateOp.getFirstOp();
+    if (innerUpdateOp->getNumOperands() != 2 ||
+        !llvm::is_contained(innerUpdateOp->getOperands(),
+                            atomicUpdateOp.getRegion().getArgument(0)))
+      return atomicUpdateOp.emitError(
+          "the update operation inside the region must be a binary operation "
+          "and that update operation must have the region argument as an "
+          "operand");
+    binop = convertBinOpToAtomic(*innerUpdateOp);
+
+    isXBinopExpr = innerUpdateOp->getOperand(0) ==
+                   atomicUpdateOp.getRegion().getArgument(0);
+
+    mlirExpr = (isXBinopExpr ? innerUpdateOp->getOperand(1)
+                             : innerUpdateOp->getOperand(0));
+  }
+
+  llvm::Value *llvmExpr = moduleTranslation.lookupValue(mlirExpr);
+  llvm::Value *llvmX =
+      moduleTranslation.lookupValue(atomicCaptureOp.getAtomicReadOp().x());
+  llvm::Value *llvmV =
+      moduleTranslation.lookupValue(atomicCaptureOp.getAtomicReadOp().v());
+  auto mlirXType = atomicCaptureOp.getAtomicReadOp()
+                       .x()
+                       .getType()
+                       .cast<LLVM::LLVMPointerType>();
+  llvm::Type *llvmXElementType =
+      moduleTranslation.convertType(mlirXType.getElementType());
+  llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicX = {llvmX, llvmXElementType,
+                                                      /*isSigned=*/false,
+                                                      /*isVolatile=*/false};
+  llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicV = {llvmV, llvmXElementType,
+                                                      /*isSigned=*/false,
+                                                      /*isVolatile=*/false};
+
+  llvm::AtomicOrdering atomicOrdering =
+      convertAtomicOrdering(atomicCaptureOp.memory_order_val());
+
+  LogicalResult updateGenStatus = success();
+  auto updateFn = [&](llvm::Value *atomicx,
+                      llvm::IRBuilder<> &builder) -> llvm::Value * {
+    if (atomicWriteOp)
+      return moduleTranslation.lookupValue(atomicWriteOp.value());
+    Block &bb = *atomicUpdateOp.region().begin();
+    moduleTranslation.mapValue(*atomicUpdateOp.region().args_begin(), atomicx);
+    moduleTranslation.mapBlock(&bb, builder.GetInsertBlock());
+    if (failed(moduleTranslation.convertBlock(bb, true, builder))) {
+      updateGenStatus = (atomicUpdateOp.emitError()
+                         << "unable to convert update operation to llvm IR");
+      return nullptr;
+    }
+    omp::YieldOp yieldop = dyn_cast<omp::YieldOp>(bb.getTerminator());
+    assert(yieldop && yieldop.results().size() == 1 &&
+           "terminator must be omp.yield op and it must have exactly one "
+           "argument");
+    return moduleTranslation.lookupValue(yieldop.results()[0]);
+  };
+  // Handle ambiguous alloca, if any.
+  auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
+  llvm::UnreachableInst *unreachableInst;
+  if (allocaIP.getPoint() == ompLoc.IP.getPoint()) {
+    // Same point => split basic block and make them unambigous.
+    unreachableInst = builder.CreateUnreachable();
+    builder.SetInsertPoint(builder.GetInsertBlock()->splitBasicBlock(
+        unreachableInst, "alloca_split"));
+    ompLoc.IP = builder.saveIP();
+    unreachableInst->removeFromParent();
+  }
+  builder.restoreIP(ompBuilder->createAtomicCapture(
+      ompLoc, findAllocaInsertPoint(builder, moduleTranslation), llvmAtomicX,
+      llvmAtomicV, llvmExpr, atomicOrdering, binop, updateFn, atomicUpdateOp,
+      isPostfixUpdate, isXBinopExpr));
+  return updateGenStatus;
+}
+
 /// Converts an OpenMP reduction operation using OpenMPIRBuilder. Expects the
 /// mapping between reduction variables and their private equivalents to have
 /// been stored on the ModuleTranslation stack. Currently only supports
@@ -1246,6 +1348,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::AtomicUpdateOp op) {
         return convertOmpAtomicUpdate(op, builder, moduleTranslation);
+      })
+      .Case([&](omp::AtomicCaptureOp op) {
+        return convertOmpAtomicCapture(op, builder, moduleTranslation);
       })
       .Case([&](omp::SectionsOp) {
         return convertOmpSections(*op, builder, moduleTranslation);
