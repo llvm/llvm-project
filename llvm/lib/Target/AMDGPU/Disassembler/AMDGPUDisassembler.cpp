@@ -147,6 +147,8 @@ DECODE_OPERAND_REG(AReg_512)
 DECODE_OPERAND_REG(AReg_1024)
 DECODE_OPERAND_REG(AV_32)
 DECODE_OPERAND_REG(AV_64)
+DECODE_OPERAND_REG(AV_128)
+DECODE_OPERAND_REG(AV_512)
 
 static DecodeStatus decodeOperand_VSrc16(MCInst &Inst,
                                          unsigned Imm,
@@ -994,6 +996,14 @@ MCOperand AMDGPUDisassembler::decodeOperand_AV_32(unsigned Val) const {
 
 MCOperand AMDGPUDisassembler::decodeOperand_AV_64(unsigned Val) const {
   return decodeSrcOp(OPW64, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_AV_128(unsigned Val) const {
+  return decodeSrcOp(OPW128, Val);
+}
+
+MCOperand AMDGPUDisassembler::decodeOperand_AV_512(unsigned Val) const {
+  return decodeSrcOp(OPW512, Val);
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_VReg_64(unsigned Val) const {

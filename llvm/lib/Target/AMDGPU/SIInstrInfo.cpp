@@ -4777,6 +4777,9 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
     case AMDGPU::AV_160RegClassID:
       RCID = AMDGPU::VReg_160RegClassID;
       break;
+    case AMDGPU::AV_512RegClassID:
+      RCID = AMDGPU::VReg_512RegClassID;
+      break;
     default:
       break;
     }
