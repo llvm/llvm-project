@@ -3,6 +3,28 @@
 # RUN: llc -march=amdgcn -mcpu=gfx90a %s -o - -run-pass machine-cp -verify-machineinstrs | FileCheck -check-prefix=GFX90A %s
 
 ---
+name:  propagate_agpr
+body: |
+  bb.0:
+    successors:
+    liveins: $agpr0
+
+    ; GFX908-LABEL: name: propagate_agpr
+    ; GFX908: renamable $agpr1 = COPY renamable $agpr0, implicit $exec
+    ; GFX908-NEXT: renamable $agpr2 = COPY $agpr0, implicit $exec
+    ; GFX908-NEXT: renamable $agpr3 = COPY $agpr0, implicit $exec
+    ; GFX908-NEXT: S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
+    ; GFX90A-LABEL: name: propagate_agpr
+    ; GFX90A: renamable $agpr1 = COPY renamable $agpr0, implicit $exec
+    ; GFX90A-NEXT: renamable $agpr2 = COPY $agpr0, implicit $exec
+    ; GFX90A-NEXT: renamable $agpr3 = COPY $agpr0, implicit $exec
+    ; GFX90A-NEXT: S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
+    renamable $agpr1 = COPY renamable $agpr0, implicit $exec
+    renamable $agpr2 = COPY renamable $agpr1, implicit $exec
+    renamable $agpr3 = COPY renamable $agpr2, implicit $exec
+    S_ENDPGM 0, implicit $agpr1, implicit $agpr2, implicit $agpr3
+...
+---
 name:  do_not_propagate_agpr_to_agpr
 body: |
   bb.0:
