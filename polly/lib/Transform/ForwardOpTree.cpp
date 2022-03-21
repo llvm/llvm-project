@@ -682,7 +682,7 @@ public:
     // Instruction::mayHaveSideEffects is not sufficient because it considers
     // malloc to not have side-effects. llvm::isSafeToSpeculativelyExecute is
     // not sufficient because it allows memory accesses.
-    if (mayBeMemoryDependent(*UseInst))
+    if (mayHaveNonDefUseDependency(*UseInst))
       return ForwardingAction::notApplicable();
 
     SmallVector<ForwardingAction::KeyTy, 4> Depends;
