@@ -11,9 +11,7 @@
 load("//mlir:tblgen.bzl", "gentbl_filegroup", "td_library")
 
 package(
-    default_visibility = [
-        "//visibility:public",
-    ],
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
@@ -255,6 +253,47 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
+# ControlFlow dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "ControlFlowOpsPyTdFiles",
+    srcs = [
+        "//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    deps = [
+        "//mlir:ControlFlowOpsTdFiles",
+        "//mlir:OpBaseTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "ControlFlowOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=cf",
+            ],
+            "mlir/dialects/_cf_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/ControlFlowOps.td",
+    deps = [
+        ":ControlFlowOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "ControlFlowOpsPyFiles",
+    srcs = [
+        "mlir/dialects/cf.py",
+        ":ControlFlowOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # Math dialect.
 ##---------------------------------------------------------------------------##
 
@@ -449,7 +488,6 @@ filegroup(
     ],
 )
 
-
 ##---------------------------------------------------------------------------##
 # SCF dialect.
 ##---------------------------------------------------------------------------##
@@ -615,6 +653,47 @@ filegroup(
     srcs = [
         "mlir/dialects/sparse_tensor.py",
         ":SparseTensorOpsPyGen",
+    ],
+)
+
+##---------------------------------------------------------------------------##
+# Tensor dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "TensorOpsPyTdFiles",
+    srcs = [
+        "//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TensorOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "TensorOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=tensor",
+            ],
+            "mlir/dialects/_tensor_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TensorOps.td",
+    deps = [
+        ":TensorOpsPyTdFiles",
+    ],
+)
+
+filegroup(
+    name = "TensorOpsPyFiles",
+    srcs = [
+        "mlir/dialects/tensor.py",
+        ":TensorOpsPyGen",
     ],
 )
 
