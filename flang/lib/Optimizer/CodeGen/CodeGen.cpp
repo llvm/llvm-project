@@ -23,6 +23,7 @@
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
@@ -3328,12 +3329,21 @@ public:
         XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
                                                                   options);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
+    mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithmeticToLLVMConversionPatterns(typeConverter,
                                                             pattern);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           pattern);
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
+    // The OpenMP dialect is legal for Operations without regions, for those
+    // which contains regions it is legal if the region contains only the
+    // LLVM dialect.
+    target.addDynamicallyLegalOp<mlir::omp::ParallelOp, mlir::omp::WsLoopOp,
+                                 mlir::omp::MasterOp>([&](Operation *op) {
+      return typeConverter.isLegal(&op->getRegion(0));
+    });
+    target.addLegalDialect<mlir::omp::OpenMPDialect>();
 
     // required NOPs for applying a full conversion
     target.addLegalOp<mlir::ModuleOp>();
