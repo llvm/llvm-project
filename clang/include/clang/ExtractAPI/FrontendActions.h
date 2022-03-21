@@ -24,9 +24,22 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
 
+private:
+  /// The synthesized input buffer that contains all the provided input header
+  /// files.
+  std::unique_ptr<llvm::MemoryBuffer> Buffer;
+
 public:
+  /// Prepare to execute the action on the given CompilerInstance.
+  ///
+  /// This is called before executing the action on any inputs. This generates a
+  /// single header that includes all of CI's inputs and replaces CI's input
+  /// list with it before actually executing the action.
+  bool PrepareToExecuteAction(CompilerInstance &CI) override;
+
   static std::unique_ptr<llvm::raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile);
+  static StringRef getInputBufferName() { return "<extract-api-includes>"; }
 };
 
 } // namespace clang
