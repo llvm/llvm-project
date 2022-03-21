@@ -1171,6 +1171,25 @@ static Optional<unsigned> getGVNForPHINode(OutlinableRegion &Region,
     OGVN = Cand.getCanonicalNum(GVN);
     assert(OGVN.hasValue() && "No GVN found for incoming value?");
     PHIGVNs.push_back(*OGVN);
+
+    // Find the incoming block and use the canonical numbering as well to define
+    // the hash for the PHINode.
+    OGVN = Cand.getGVN(IncomingBlock);
+
+    // If there is no number for the incoming block, it is becaause we have
+    // split the candidate basic blocks.  So we use the previous block that it
+    // was split from to find the valid global value numbering for the PHINode.
+    if (!OGVN.hasValue()) {
+      assert(Cand.getStartBB() == IncomingBlock &&
+             "Unknown basic block used in exit path PHINode.");
+
+      BasicBlock *PrevBlock = IncomingBlock->getSinglePredecessor();
+      OGVN = Cand.getGVN(PrevBlock);
+    }
+    GVN = OGVN.getValue();
+    OGVN = Cand.getCanonicalNum(GVN);
+    assert(OGVN.hasValue() && "No GVN found for incoming block?");
+    PHIGVNs.push_back(*OGVN);
   }
 
   // Now that we have the GVNs for the incoming values, we are going to combine
