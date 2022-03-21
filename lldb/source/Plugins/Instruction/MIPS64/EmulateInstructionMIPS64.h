@@ -85,7 +85,7 @@ protected:
     const char *insn_name;
   } MipsOpcode;
 
-  static MipsOpcode *GetOpcodeForInstruction(const char *op_name);
+  static MipsOpcode *GetOpcodeForInstruction(llvm::StringRef op_name);
 
   bool Emulate_DADDiu(llvm::MCInst &insn);
 

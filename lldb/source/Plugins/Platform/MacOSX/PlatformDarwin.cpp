@@ -85,8 +85,8 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
         if (objfile) {
           FileSpec symfile_spec(objfile->GetFileSpec());
           if (symfile_spec &&
-              strcasestr(symfile_spec.GetPath().c_str(),
-                         ".dSYM/Contents/Resources/DWARF") != nullptr &&
+              llvm::StringRef(symfile_spec.GetPath())
+                  .contains_insensitive(".dSYM/Contents/Resources/DWARF") &&
               FileSystem::Instance().Exists(symfile_spec)) {
             while (module_spec.GetFilename()) {
               std::string module_basename(

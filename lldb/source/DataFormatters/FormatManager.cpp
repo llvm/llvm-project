@@ -89,11 +89,11 @@ static bool GetFormatFromFormatChar(char format_char, Format &format) {
   return false;
 }
 
-static bool GetFormatFromFormatName(const char *format_name,
+static bool GetFormatFromFormatName(llvm::StringRef format_name,
                                     bool partial_match_ok, Format &format) {
   uint32_t i;
   for (i = 0; i < g_num_format_infos; ++i) {
-    if (strcasecmp(g_format_infos[i].format_name, format_name) == 0) {
+    if (format_name.equals_insensitive(g_format_infos[i].format_name)) {
       format = g_format_infos[i].format;
       return true;
     }
@@ -101,8 +101,8 @@ static bool GetFormatFromFormatName(const char *format_name,
 
   if (partial_match_ok) {
     for (i = 0; i < g_num_format_infos; ++i) {
-      if (strcasestr(g_format_infos[i].format_name, format_name) ==
-          g_format_infos[i].format_name) {
+      if (llvm::StringRef(g_format_infos[i].format_name)
+              .startswith_insensitive(format_name)) {
         format = g_format_infos[i].format;
         return true;
       }

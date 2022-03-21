@@ -44,31 +44,7 @@ int vasprintf(char **ret, const char *fmt, va_list ap) {
   return len;
 }
 
-char *strcasestr(const char *s, const char *find) {
-  char c, sc;
-  size_t len;
-
-  if ((c = *find++) != 0) {
-    c = tolower((unsigned char)c);
-    len = strlen(find);
-    do {
-      do {
-        if ((sc = *s++) == 0)
-          return 0;
-      } while ((char)tolower((unsigned char)sc) != c);
-    } while (strncasecmp(s, find, len) != 0);
-    s--;
-  }
-  return const_cast<char *>(s);
-}
-
 #ifdef _MSC_VER
-
-int strcasecmp(const char *s1, const char *s2) { return stricmp(s1, s2); }
-
-int strncasecmp(const char *s1, const char *s2, size_t n) {
-  return strnicmp(s1, s2, n);
-}
 
 #if _MSC_VER < 1900
 namespace lldb_private {
