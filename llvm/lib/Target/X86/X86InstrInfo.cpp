@@ -2590,7 +2590,7 @@ int X86::getCondNoFromDesc(const MCInstrDesc &MCID, bool SkipDefs) {
     return -1;
   unsigned NumOperands = MCID.getNumOperands();
   unsigned NumDefs = MCID.getNumDefs();
-  // Assume that condtion code is always the last operand
+  // Assume that condition code is always the last operand
   unsigned CondNo = NumOperands - 1;
   if (SkipDefs)
     return CondNo - NumDefs;
@@ -2602,21 +2602,23 @@ X86::CondCode X86::getCondFromMI(const MachineInstr &MI) {
   int CondNo = getCondNoFromDesc(MCID);
   if (CondNo == -1)
     return X86::COND_INVALID;
-  else
-    return static_cast<X86::CondCode>(
-        MI.getOperand(static_cast<unsigned>(CondNo)).getImm());
+  return static_cast<X86::CondCode>(
+      MI.getOperand(static_cast<unsigned>(CondNo)).getImm());
 }
 
 X86::CondCode X86::getCondFromBranch(const MachineInstr &MI) {
-  return X86::isJCC(MI.getOpcode()) ? X86::getCondFromMI(MI) : X86::COND_INVALID;
+  return X86::isJCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                    : X86::COND_INVALID;
 }
 
 X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
-  return X86::isSETCC(MI.getOpcode()) ? X86::getCondFromMI(MI) : X86::COND_INVALID;
+  return X86::isSETCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                      : X86::COND_INVALID;
 }
 
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
-  return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI) : X86::COND_INVALID;
+  return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
+                                       : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,
