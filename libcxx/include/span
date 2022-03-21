@@ -610,7 +610,13 @@ template<class _Tp, size_t _Sz>
 template<class _Tp, size_t _Sz>
     span(const array<_Tp, _Sz>&) -> span<const _Tp, _Sz>;
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+template<class _Container>
+    span(_Container&) -> span<typename _Container::value_type>;
+
+template<class _Container>
+    span(const _Container&) -> span<const typename _Container::value_type>;
+#else
 template<ranges::contiguous_range _Range>
     span(_Range&&) -> span<remove_reference_t<ranges::range_reference_t<_Range>>>;
 #endif
