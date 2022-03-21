@@ -106,6 +106,8 @@ extern "C" void print_memref_f64(int64_t rank, void *ptr) {
   _mlir_ciface_print_memref_f64(&descriptor);
 }
 
+extern "C" void print_c_string(char *str) { printf("%s", str); }
+
 extern "C" void
 _mlir_ciface_print_memref_0d_f32(StridedMemRefType<float, 0> *M) {
   impl::printMemRef(*M);
