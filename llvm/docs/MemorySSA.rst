@@ -167,7 +167,7 @@ Going from the top down:
   ``MemoryPhi`` is referred to in the textual IR by the number ``6``.
 - ``2 = MemoryDef(6)`` notes that ``store i8 0, i8* %p1`` is a definition,
   and its reaching definition before it is ``6``, or the ``MemoryPhi`` after
-  ``while.cond``. (See the `Build-time use optimization`_ and `Precision`_
+  ``while.cond``. (See the `Use and Def optimization`_ and `Precision`_
   sections below for why this ``MemoryDef`` isn't linked to a separate,
   disambiguated ``MemoryPhi``.)
 - ``3 = MemoryDef(6)`` notes that ``store i8 0, i8* %p2`` is a definition; its
