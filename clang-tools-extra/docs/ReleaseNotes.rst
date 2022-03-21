@@ -96,9 +96,6 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-- Added trace code to help narrow down any checks and the relevant source code
-  that result in crashes.
-
 New checks
 ^^^^^^^^^^
 
