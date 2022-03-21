@@ -1219,7 +1219,9 @@ private:
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         SourceCode, FuncMatcher,
         [](ASTContext &Ctx, Environment &) {
-          return UncheckedOptionalAccessModel(Ctx);
+          return UncheckedOptionalAccessModel(
+              Ctx, UncheckedOptionalAccessModelOptions{
+                       /*IgnoreSmartPointerDereference=*/true});
         },
         [&MatchesLatticeChecks](
             llvm::ArrayRef<std::pair<
@@ -2002,6 +2004,34 @@ TEST_P(UncheckedOptionalAccessTest, StdSwap) {
   )",
       UnorderedElementsAre(Pair("check-3", "safe"),
                            Pair("check-4", "unsafe: input.cc:13:7")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, UniquePtrToStructWithOptionalField) {
+  // We suppress diagnostics for values reachable from smart pointers (other
+  // than `optional` itself).
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    template <typename T>
+    struct smart_ptr {
+      T& operator*() &;
+      T* operator->();
+    };
+
+    struct Foo {
+      $ns::$optional<int> opt;
+    };
+
+    void target() {
+      smart_ptr<Foo> foo;
+      *foo->opt;
+      /*[[check-1]]*/
+      *(*foo).opt;
+      /*[[check-2]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-1", "safe"), Pair("check-2", "safe")));
 }
 
 // FIXME: Add support for:
