@@ -33,7 +33,6 @@ class MCInst;
 class MCOperand;
 class ModulePass;
 
-FunctionPass *createPPCCTRLoops();
 #ifndef NDEBUG
   FunctionPass *createPPCCTRLoopsVerify();
 #endif
@@ -58,7 +57,6 @@ FunctionPass *createPPCCTRLoops();
   bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
                                          MCOperand &OutMO, AsmPrinter &AP);
 
-  void initializePPCCTRLoopsPass(PassRegistry&);
 #ifndef NDEBUG
   void initializePPCCTRLoopsVerifyPass(PassRegistry&);
 #endif
