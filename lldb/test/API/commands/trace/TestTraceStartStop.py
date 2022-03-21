@@ -166,3 +166,16 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
 
         self.expect("thread trace stop", error=True,
             substrs=["error: Process must be launched"])
+
+        # We should be able to trace the program if we relaunch it
+        # For this, we'll trace starting at a different point in the new
+        # process.
+        self.expect("breakpoint disable")
+        self.expect("b main.cpp:4")
+        self.expect("r")
+        self.expect("thread trace start")
+        # We can reconstruct the single instruction executed in the first line
+        self.expect("si")
+        self.expect("thread trace dump instructions -c 1",
+            patterns=[f'''thread #1: tid = .*
+  a.out`main \+ 11 at main.cpp:4'''])

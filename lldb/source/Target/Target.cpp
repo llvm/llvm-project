@@ -185,6 +185,8 @@ void Target::CleanupProcess() {
 
 void Target::DeleteCurrentProcess() {
   if (m_process_sp) {
+    // We dispose any active tracing sessions on the current process
+    m_trace_sp.reset();
     m_section_load_history.Clear();
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
