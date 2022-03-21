@@ -342,6 +342,19 @@ TestBranchOp::getMutableSuccessorOperands(unsigned index) {
 }
 
 //===----------------------------------------------------------------------===//
+// TestProducingBranchOp
+//===----------------------------------------------------------------------===//
+
+Optional<MutableOperandRange>
+TestProducingBranchOp::getMutableSuccessorOperands(unsigned index) {
+  assert(index <= 1 && "invalid successor index");
+  if (index == 1) {
+    return getFirstOperandsMutable();
+  }
+  return getSecondOperandsMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // TestDialectCanonicalizerOp
 //===----------------------------------------------------------------------===//
 

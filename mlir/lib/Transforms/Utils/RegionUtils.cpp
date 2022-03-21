@@ -518,6 +518,23 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
       // Let the operands differ if they are defined in a different block. These
       // will become new arguments if the blocks get merged.
       if (!lhsIsInBlock) {
+
+        // Check whether the operands aren't the result of an immediate
+        // predecessors terminator. In that case we are not able to use it as a
+        // successor operand when branching to the merged block as it does not
+        // dominate its producing operation.
+        auto isValidSuccessorArg = [](Block *block, Value operand) {
+          if (operand.getDefiningOp() !=
+              operand.getParentBlock()->getTerminator())
+            return true;
+          return !llvm::is_contained(block->getPredecessors(),
+                                     operand.getParentBlock());
+        };
+
+        if (!isValidSuccessorArg(leaderBlock, lhsOperand) ||
+            !isValidSuccessorArg(mergeBlock, rhsOperand))
+          return mlir::failure();
+
         mismatchedOperands.emplace_back(opI, operand);
         continue;
       }
