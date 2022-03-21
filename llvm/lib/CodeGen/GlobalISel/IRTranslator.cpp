@@ -3032,7 +3032,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     // Return the scalar if it is a <1 x Ty> vector.
     unsigned NumElts = CAZ->getElementCount().getFixedValue();
     if (NumElts == 1)
-      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder.get());
+      return translateCopy(C, *CAZ->getElementValue(0u), *EntryBuilder);
     SmallVector<Register, 4> Ops;
     for (unsigned I = 0; I < NumElts; ++I) {
       Constant &Elt = *CAZ->getElementValue(I);
@@ -3042,8 +3042,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
   } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CV->getNumElements() == 1)
-      return translateCopy(C, *CV->getElementAsConstant(0),
-                           *EntryBuilder.get());
+      return translateCopy(C, *CV->getElementAsConstant(0), *EntryBuilder);
     SmallVector<Register, 4> Ops;
     for (unsigned i = 0; i < CV->getNumElements(); ++i) {
       Constant &Elt = *CV->getElementAsConstant(i);
@@ -3061,7 +3060,7 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     }
   } else if (auto CV = dyn_cast<ConstantVector>(&C)) {
     if (CV->getNumOperands() == 1)
-      return translateCopy(C, *CV->getOperand(0), *EntryBuilder.get());
+      return translateCopy(C, *CV->getOperand(0), *EntryBuilder);
     SmallVector<Register, 4> Ops;
     for (unsigned i = 0; i < CV->getNumOperands(); ++i) {
       Ops.push_back(getOrCreateVReg(*CV->getOperand(i)));
@@ -3461,7 +3460,7 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
     }
   }
 
-  if (!CLI->lowerFormalArguments(*EntryBuilder.get(), F, VRegArgs, FuncInfo)) {
+  if (!CLI->lowerFormalArguments(*EntryBuilder, F, VRegArgs, FuncInfo)) {
     OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
                                F.getSubprogram(), &F.getEntryBlock());
     R << "unable to lower arguments: " << ore::NV("Prototype", F.getType());

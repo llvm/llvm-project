@@ -37,9 +37,10 @@ InputFile::~InputFile() {}
 
 static Expected<ModuleDebugStreamRef>
 getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index) {
-  ExitOnError Err("Unexpected error: ");
-
-  auto &Dbi = Err(File.getPDBDbiStream());
+  Expected<DbiStream &> DbiOrErr = File.getPDBDbiStream();
+  if (!DbiOrErr)
+    return DbiOrErr.takeError();
+  DbiStream &Dbi = *DbiOrErr;
   const auto &Modules = Dbi.modules();
   if (Index >= Modules.getModuleCount())
     return make_error<RawError>(raw_error_code::index_out_of_bounds,
@@ -500,7 +501,7 @@ bool SymbolGroupIterator::isEnd() const {
   if (!Value.File)
     return true;
   if (Value.File->isPdb()) {
-    auto &Dbi = cantFail(Value.File->pdb().getPDBDbiStream());
+    DbiStream &Dbi = cantFail(Value.File->pdb().getPDBDbiStream());
     uint32_t Count = Dbi.modules().getModuleCount();
     assert(Index <= Count);
     return Index == Count;

@@ -40,13 +40,21 @@ std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 /// Return a cmov opcode for the given register size in bytes, and operand type.
 unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false);
 
-// Turn jCC instruction into condition code.
+/// Return the source operand # for condition code by \p MCID. If the
+/// instruction doesn't have a condition code, return -1.
+int getCondSrcNoFromDesc(const MCInstrDesc &MCID);
+
+/// Return the condition code of the instruction. If the instruction doesn't
+/// have a condition code, return X86::COND_INVALID.
+CondCode getCondFromMI(const MachineInstr &MI);
+
+// Turn JCC instruction into condition code.
 CondCode getCondFromBranch(const MachineInstr &MI);
 
-// Turn setCC instruction into condition code.
+// Turn SETCC instruction into condition code.
 CondCode getCondFromSETCC(const MachineInstr &MI);
 
-// Turn CMov instruction into condition code.
+// Turn CMOV instruction into condition code.
 CondCode getCondFromCMov(const MachineInstr &MI);
 
 /// GetOppositeBranchCondition - Return the inverse of the specified cond,

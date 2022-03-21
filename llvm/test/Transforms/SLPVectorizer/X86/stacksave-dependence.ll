@@ -89,22 +89,22 @@ define void @allocas_speculation(i8** %a, i8** %b, i8** %c) {
   ret void
 }
 
-; FIXME: This is wrong because we life the alloca out of the region
+; We must be careful not to lift the inalloca alloc above the stacksave here.
+; We used to miscompile this example before adding explicit dependency handling
+; for stacksave.
 define void @stacksave(i8** %a, i8** %b, i8** %c) {
 ; CHECK-LABEL: @stacksave(
 ; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[V2:%.*]] = alloca inalloca i8, align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8*> poison, i8* [[V1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8*> [[TMP1]], i8* [[V2]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x i8*> [[TMP2]], <2 x i32> <i32 1, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i8*> [[TMP3]], i32 0
-; CHECK-NEXT:    store i8* [[TMP4]], i8** [[A:%.*]], align 8
+; CHECK-NEXT:    [[ADD1:%.*]] = getelementptr i8, i8* [[V1]], i32 1
+; CHECK-NEXT:    store i8* [[ADD1]], i8** [[A:%.*]], align 8
 ; CHECK-NEXT:    [[STACK:%.*]] = call i8* @llvm.stacksave()
+; CHECK-NEXT:    [[V2:%.*]] = alloca inalloca i8, align 1
 ; CHECK-NEXT:    call void @use(i8* inalloca(i8) [[V2]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.stackrestore(i8* [[STACK]])
-; CHECK-NEXT:    [[B2:%.*]] = getelementptr i8*, i8** [[B:%.*]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8** [[B]] to <2 x i8*>*
-; CHECK-NEXT:    store <2 x i8*> [[TMP3]], <2 x i8*>* [[TMP5]], align 8
+; CHECK-NEXT:    [[ADD2:%.*]] = getelementptr i8, i8* [[V2]], i32 1
+; CHECK-NEXT:    store i8* [[ADD1]], i8** [[B:%.*]], align 8
+; CHECK-NEXT:    [[B2:%.*]] = getelementptr i8*, i8** [[B]], i32 1
+; CHECK-NEXT:    store i8* [[ADD2]], i8** [[B2]], align 8
 ; CHECK-NEXT:    ret void
 ;
 
@@ -295,15 +295,13 @@ define void @ham() #1 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8** [[VAR32]] to <4 x i8*>*
 ; CHECK-NEXT:    store <4 x i8*> [[SHUFFLE]], <4 x i8*>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[VAR36:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 4
-; CHECK-NEXT:    store i8* [[VAR4]], i8** [[VAR36]], align 8
 ; CHECK-NEXT:    [[VAR37:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 5
 ; CHECK-NEXT:    [[VAR38:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8*> poison, i8* [[VAR5]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i8*> [[TMP3]], i8* [[VAR5]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8** [[VAR37]] to <2 x i8*>*
-; CHECK-NEXT:    store <2 x i8*> [[TMP4]], <2 x i8*>* [[TMP5]], align 8
 ; CHECK-NEXT:    [[VAR39:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 7
-; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR39]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i8*> [[TMP1]], i8* [[VAR5]], i32 1
+; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i8*> [[TMP3]], <4 x i8*> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[VAR36]] to <4 x i8*>*
+; CHECK-NEXT:    store <4 x i8*> [[SHUFFLE1]], <4 x i8*>* [[TMP4]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %var2 = alloca i8
@@ -343,15 +341,14 @@ define void @spam() #1 {
 ; CHECK-NEXT:    [[VAR5:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[VAR12:%.*]] = alloca [12 x i8*], align 8
 ; CHECK-NEXT:    [[VAR36:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 4
-; CHECK-NEXT:    store i8* [[VAR4]], i8** [[VAR36]], align 8
 ; CHECK-NEXT:    [[VAR37:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 5
 ; CHECK-NEXT:    [[VAR38:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 6
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8*> poison, i8* [[VAR5]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8*> [[TMP1]], i8* [[VAR5]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8** [[VAR37]] to <2 x i8*>*
-; CHECK-NEXT:    store <2 x i8*> [[TMP2]], <2 x i8*>* [[TMP3]], align 8
 ; CHECK-NEXT:    [[VAR39:%.*]] = getelementptr inbounds [12 x i8*], [12 x i8*]* [[VAR12]], i32 0, i32 7
-; CHECK-NEXT:    store i8* [[VAR5]], i8** [[VAR39]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i8*> poison, i8* [[VAR4]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i8*> [[TMP1]], i8* [[VAR5]], i32 1
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i8*> [[TMP2]], <4 x i8*> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i8** [[VAR36]] to <4 x i8*>*
+; CHECK-NEXT:    store <4 x i8*> [[SHUFFLE]], <4 x i8*>* [[TMP3]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %var4 = alloca i8
