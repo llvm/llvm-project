@@ -513,6 +513,9 @@ namespace {
       return Subtarget->getInstrInfo();
     }
 
+    /// Return a condition code of the given SDNode
+    X86::CondCode getCondFromNode(SDNode *N) const;
+
     /// Address-mode matching performs shift-of-and to and-of-shift
     /// reassociation in order to expose more scaled addressing
     /// opportunities.
@@ -2927,24 +2930,16 @@ bool X86DAGToDAGISel::isSExtAbsoluteSymbolRef(unsigned Width, SDNode *N) const {
          CR->getSignedMax().slt(1ull << Width);
 }
 
-static X86::CondCode getCondFromNode(SDNode *N) {
+X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {
   assert(N->isMachineOpcode() && "Unexpected node");
-  X86::CondCode CC = X86::COND_INVALID;
   unsigned Opc = N->getMachineOpcode();
-  if (Opc == X86::JCC_1)
-    CC = static_cast<X86::CondCode>(N->getConstantOperandVal(1));
-  else if (Opc == X86::SETCCr)
-    CC = static_cast<X86::CondCode>(N->getConstantOperandVal(0));
-  else if (Opc == X86::SETCCm)
-    CC = static_cast<X86::CondCode>(N->getConstantOperandVal(5));
-  else if (Opc == X86::CMOV16rr || Opc == X86::CMOV32rr ||
-           Opc == X86::CMOV64rr)
-    CC = static_cast<X86::CondCode>(N->getConstantOperandVal(2));
-  else if (Opc == X86::CMOV16rm || Opc == X86::CMOV32rm ||
-           Opc == X86::CMOV64rm)
-    CC = static_cast<X86::CondCode>(N->getConstantOperandVal(6));
+  const MCInstrDesc &MCID = getInstrInfo()->get(Opc);
+  int CondNo = X86::getCondNoFromDesc(MCID, /*SkipDefs=*/true);
+  if (CondNo == -1)
+    return X86::COND_INVALID;
 
-  return CC;
+  return static_cast<X86::CondCode>(
+      N->getConstantOperandVal(static_cast<unsigned>(CondNo)));
 }
 
 /// Test whether the given X86ISD::CMP node has any users that use a flag

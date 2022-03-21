@@ -2584,34 +2584,39 @@ bool X86InstrInfo::hasCommutePreference(MachineInstr &MI, bool &Commute) const {
   return false;
 }
 
+int X86::getCondNoFromDesc(const MCInstrDesc &MCID, bool SkipDefs) {
+  unsigned Opcode = MCID.getOpcode();
+  if (!(X86::isJCC(Opcode) || X86::isSETCC(Opcode) || X86::isCMOVCC(Opcode)))
+    return -1;
+  unsigned NumOperands = MCID.getNumOperands();
+  unsigned NumDefs = MCID.getNumDefs();
+  // Assume that condtion code is always the last operand
+  unsigned CondNo = NumOperands - 1;
+  if (SkipDefs)
+    return CondNo - NumDefs;
+  return CondNo;
+}
+
+X86::CondCode X86::getCondFromMI(const MachineInstr &MI) {
+  const MCInstrDesc &MCID = MI.getDesc();
+  int CondNo = getCondNoFromDesc(MCID);
+  if (CondNo == -1)
+    return X86::COND_INVALID;
+  else
+    return static_cast<X86::CondCode>(
+        MI.getOperand(static_cast<unsigned>(CondNo)).getImm());
+}
+
 X86::CondCode X86::getCondFromBranch(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default: return X86::COND_INVALID;
-  case X86::JCC_1:
-    return static_cast<X86::CondCode>(
-        MI.getOperand(MI.getDesc().getNumOperands() - 1).getImm());
-  }
+  return X86::isJCC(MI.getOpcode()) ? X86::getCondFromMI(MI) : X86::COND_INVALID;
 }
 
-/// Return condition code of a SETCC opcode.
 X86::CondCode X86::getCondFromSETCC(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default: return X86::COND_INVALID;
-  case X86::SETCCr: case X86::SETCCm:
-    return static_cast<X86::CondCode>(
-        MI.getOperand(MI.getDesc().getNumOperands() - 1).getImm());
-  }
+  return X86::isSETCC(MI.getOpcode()) ? X86::getCondFromMI(MI) : X86::COND_INVALID;
 }
 
-/// Return condition code of a CMov opcode.
 X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default: return X86::COND_INVALID;
-  case X86::CMOV16rr: case X86::CMOV32rr: case X86::CMOV64rr:
-  case X86::CMOV16rm: case X86::CMOV32rm: case X86::CMOV64rm:
-    return static_cast<X86::CondCode>(
-        MI.getOperand(MI.getDesc().getNumOperands() - 1).getImm());
-  }
+  return X86::isCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI) : X86::COND_INVALID;
 }
 
 /// Return the inverse of the specified condition,
