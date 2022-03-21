@@ -1608,12 +1608,12 @@ static void findCanonNumsForPHI(
 /// function.
 ///
 /// \param PN [in] - The PHINode that we are finding the canonical numbers for.
-/// \param Region [in] - The OutlinableRegion containing \p PN. 
+/// \param Region [in] - The OutlinableRegion containing \p PN.
 /// \param OverallPhiBlock [in] - The overall PHIBlock we are trying to find
 /// \p PN in.
 /// \param OutputMappings [in] - The mapping of output values from outlined
 /// region to their original values.
-/// \param UsedPhis [in, out] - The PHINodes in the block that have already been
+/// \param UsedPHIs [in, out] - The PHINodes in the block that have already been
 /// matched.
 /// \return the newly found or created PHINode in \p OverallPhiBlock.
 static PHINode*
