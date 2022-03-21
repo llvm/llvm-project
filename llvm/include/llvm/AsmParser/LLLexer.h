@@ -37,7 +37,7 @@ namespace llvm {
     lltok::Kind CurKind;
     std::string StrVal;
     unsigned UIntVal;
-    Type *TyVal = nullptr;
+    Type *TyVal;
     APFloat APFloatVal;
     APSInt  APSIntVal;
 

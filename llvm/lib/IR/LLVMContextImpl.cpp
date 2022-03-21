@@ -47,11 +47,7 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       X86_FP80Ty(C, Type::X86_FP80TyID), FP128Ty(C, Type::FP128TyID),
       PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_MMXTy(C, Type::X86_MMXTyID),
       X86_AMXTy(C, Type::X86_AMXTyID), Int1Ty(C, 1), Int8Ty(C, 8),
-      Int16Ty(C, 16), Int32Ty(C, 32), Int64Ty(C, 64), Int128Ty(C, 128) {
-  if (OpaquePointersCL.getNumOccurrences()) {
-    OpaquePointers = OpaquePointersCL;
-  }
-}
+      Int16Ty(C, 16), Int32Ty(C, 32), Int64Ty(C, 64), Int128Ty(C, 128) {}
 
 LLVMContextImpl::~LLVMContextImpl() {
   // NOTE: We need to delete the contents of OwnedModules, but Module's dtor
@@ -249,13 +245,9 @@ void LLVMContextImpl::setOptPassGate(OptPassGate& OPG) {
   this->OPG = &OPG;
 }
 
-bool LLVMContextImpl::hasOpaquePointersValue() {
-  return OpaquePointers.hasValue();
-}
-
 bool LLVMContextImpl::getOpaquePointers() {
   if (LLVM_UNLIKELY(!(OpaquePointers.hasValue())))
-    OpaquePointers = false;
+    OpaquePointers = OpaquePointersCL;
   return *OpaquePointers;
 }
 

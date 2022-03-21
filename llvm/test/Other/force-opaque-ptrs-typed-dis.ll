@@ -1,4 +1,4 @@
-; RUN: llvm-as --opaque-pointers < %s | not llvm-dis --opaque-pointers=0 2>&1 | FileCheck %s
+; RUN: llvm-as --opaque-pointers < %s | not llvm-dis 2>&1 | FileCheck %s
 
 ; CHECK: error: Opaque pointers are only supported in -opaque-pointers mode
 
