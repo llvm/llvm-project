@@ -61,7 +61,7 @@ TEST(Perf, TscConversion) {
 
   // Skip the test if the conversion parameters aren't available.
   if (!params)
-    GTEST_SKIP() << params.takeError();
+    GTEST_SKIP() << toString(params.takeError());
 
   Expected<uint64_t> tsc_before_sleep = readTsc();
   sleep(SLEEP_SECS);
@@ -69,9 +69,9 @@ TEST(Perf, TscConversion) {
 
   // Skip the test if we are unable to read the TSC value.
   if (!tsc_before_sleep)
-    GTEST_SKIP() << tsc_before_sleep.takeError();
+    GTEST_SKIP() << toString(tsc_before_sleep.takeError());
   if (!tsc_after_sleep)
-    GTEST_SKIP() << tsc_after_sleep.takeError();
+    GTEST_SKIP() << toString(tsc_after_sleep.takeError());
 
   std::chrono::nanoseconds converted_tsc_diff =
       params->ToWallTime(*tsc_after_sleep) -
