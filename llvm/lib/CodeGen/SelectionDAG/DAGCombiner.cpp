@@ -11513,9 +11513,12 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   bool LegalOperations, SDNode *N, SDValue N0,
                                   ISD::LoadExtType ExtLoadType,
                                   ISD::NodeType ExtOpc) {
+  // TODO: isFixedLengthVector() should be removed and any negative effects on
+  // code generation being the result of that target's implementation of
+  // isVectorLoadExtDesirable().
   if (!ISD::isNON_EXTLoad(N0.getNode()) ||
       !ISD::isUNINDEXEDLoad(N0.getNode()) ||
-      ((LegalOperations || VT.isVector() ||
+      ((LegalOperations || VT.isFixedLengthVector() ||
         !cast<LoadSDNode>(N0)->isSimple()) &&
        !TLI.isLoadExtLegal(ExtLoadType, VT, N0.getValueType())))
     return {};
