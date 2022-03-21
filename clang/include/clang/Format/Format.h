@@ -1592,6 +1592,7 @@ struct FormatStyle {
     /// set, and the function could/should not be put on a single line (as per
     /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
     /// \code
+    ///   false:          true:
     ///   int f()   vs.   int f()
     ///   {}              {
     ///                   }
@@ -1603,6 +1604,7 @@ struct FormatStyle {
     /// brace of the record has already been wrapped, i.e. the `AfterClass`
     /// (for classes) brace wrapping mode is set.
     /// \code
+    ///   false:           true:
     ///   class Foo   vs.  class Foo
     ///   {}               {
     ///                    }
@@ -1614,6 +1616,7 @@ struct FormatStyle {
     /// already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
     /// set.
     /// \code
+    ///   false:               true:
     ///   namespace Foo   vs.  namespace Foo
     ///   {}                   {
     ///                        }
