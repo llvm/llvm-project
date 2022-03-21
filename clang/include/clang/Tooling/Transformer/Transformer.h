@@ -71,8 +71,21 @@ private:
 };
 
 // FIXME: Use std::type_identity or backport when available.
-template <class T> struct type_identity { using type = T; };
+template <class T> struct type_identity {
+  using type = T;
+};
 } // namespace detail
+
+template <typename T> struct TransformerResult {
+  llvm::MutableArrayRef<AtomicChange> Changes;
+  T Metadata;
+};
+
+// Specialization provided only to avoid SFINAE on the Transformer
+// constructor; not intended for use.
+template <> struct TransformerResult<void> {
+  llvm::MutableArrayRef<AtomicChange> Changes;
+};
 
 /// Handles the matcher and callback registration for a single `RewriteRule`, as
 /// defined by the arguments of the constructor.
@@ -86,17 +99,6 @@ public:
   /// into a separate data structure.
   using ChangeSetConsumer = std::function<void(
       Expected<llvm::MutableArrayRef<AtomicChange>> Changes)>;
-
-  template <typename T> struct Result {
-    llvm::MutableArrayRef<AtomicChange> Changes;
-    T Metadata;
-  };
-
-  // Specialization provided only to avoid SFINAE on the Transformer
-  // constructor; not intended for use.
-  template <> struct Result<void> {
-    llvm::MutableArrayRef<AtomicChange> Changes;
-  };
 
   /// \param Consumer receives all rewrites for a single match, or an error.
   /// Will not necessarily be called for each match; for example, if the rule
@@ -116,7 +118,7 @@ public:
   template <typename MetadataT>
   explicit Transformer(
       transformer::RewriteRuleWith<MetadataT> Rule,
-      std::function<void(llvm::Expected<Transformer::Result<
+      std::function<void(llvm::Expected<TransformerResult<
                              typename detail::type_identity<MetadataT>::type>>)>
           Consumer);
 
@@ -137,12 +139,12 @@ namespace detail {
 /// happens when we have a \c RewriteRuleWith<T>.
 template <typename T> class WithMetadataImpl final : public TransformerImpl {
   transformer::RewriteRuleWith<T> Rule;
-  std::function<void(llvm::Expected<Transformer::Result<T>>)> Consumer;
+  std::function<void(llvm::Expected<TransformerResult<T>>)> Consumer;
 
 public:
   explicit WithMetadataImpl(
       transformer::RewriteRuleWith<T> R,
-      std::function<void(llvm::Expected<Transformer::Result<T>>)> Consumer)
+      std::function<void(llvm::Expected<TransformerResult<T>>)> Consumer)
       : Rule(std::move(R)), Consumer(std::move(Consumer)) {
     assert(llvm::all_of(Rule.Cases,
                         [](const transformer::RewriteRuleBase::Case &Case)
@@ -180,8 +182,8 @@ private:
       return;
     }
 
-    Consumer(Transformer::Result<T>{
-        llvm::MutableArrayRef<AtomicChange>(Changes), std::move(*Metadata)});
+    Consumer(TransformerResult<T>{llvm::MutableArrayRef<AtomicChange>(Changes),
+                                  std::move(*Metadata)});
   }
 
   std::vector<ast_matchers::internal::DynTypedMatcher>
@@ -194,7 +196,7 @@ private:
 template <typename MetadataT>
 Transformer::Transformer(
     transformer::RewriteRuleWith<MetadataT> Rule,
-    std::function<void(llvm::Expected<Transformer::Result<
+    std::function<void(llvm::Expected<TransformerResult<
                            typename detail::type_identity<MetadataT>::type>>)>
         Consumer)
     : Impl(std::make_unique<detail::WithMetadataImpl<MetadataT>>(

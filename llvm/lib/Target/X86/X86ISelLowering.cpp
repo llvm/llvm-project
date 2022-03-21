@@ -23586,8 +23586,12 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
   // that doing a bittest on the i32 value is ok.  We extend to i32 because
   // the encoding for the i16 version is larger than the i32 version.
   // Also promote i16 to i32 for performance / code size reason.
-  if (Src.getValueType() == MVT::i8 || Src.getValueType() == MVT::i16)
+  if (Src.getValueType().getScalarSizeInBits() < 32)
     Src = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Src);
+
+  // No legal type found, give up.
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(Src.getValueType()))
+    return SDValue();
 
   // See if we can use the 32-bit instruction instead of the 64-bit one for a
   // shorter encoding. Since the former takes the modulo 32 of BitNo and the

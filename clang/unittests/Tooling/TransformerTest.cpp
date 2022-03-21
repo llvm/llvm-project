@@ -140,7 +140,7 @@ protected:
   }
 
   auto consumerWithStringMetadata() {
-    return [this](Expected<Transformer::Result<std::string>> C) {
+    return [this](Expected<TransformerResult<std::string>> C) {
       if (C) {
         Changes.insert(Changes.end(),
                        std::make_move_iterator(C->Changes.begin()),
