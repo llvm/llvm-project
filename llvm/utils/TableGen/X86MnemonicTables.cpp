@@ -49,18 +49,15 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
     const CodeGenInstruction *I = NumberedInstructions[II];
     X86Disassembler::RecognizableInstr RI(Tables, *I, II);
     Record *Def = I->TheDef;
-    bool IsCodeGenOnly = RI.IsCodeGenOnly;
-    bool ForceDisassemble = RI.ForceDisassemble;
-    uint8_t Form = RI.Form;
     if ( // Filter non-X86 instructions
         !Def->isSubClassOf("X86Inst") ||
         // Skip pseudo instructions as they may contain non-alnum characters in
         // mnemonic
-        (IsCodeGenOnly && !ForceDisassemble) ||
+        (RI.IsCodeGenOnly && !RI.ForceDisassemble) ||
         // Non-parsable instruction defs contain prefix as part of AsmString
         Def->getValueAsString("AsmVariantName") == "NonParsable" ||
         // Skip CodeGenInstructions that are not real standalone instructions
-        Form == X86Local::PrefixByte || Form == X86Local::Pseudo)
+        RI.Form == X86Local::PrefixByte || RI.Form == X86Local::Pseudo)
       continue;
     // Flatten an instruction assembly string.
     std::string AsmString = I->FlattenAsmStringVariants(I->AsmString, Variant);
