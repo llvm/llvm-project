@@ -171,7 +171,7 @@ private:
 class SparseTensorStorageBase {
 public:
   /// Dimension size query.
-  virtual uint64_t getDimSize(uint64_t) = 0;
+  virtual uint64_t getDimSize(uint64_t) const = 0;
 
   /// Overhead storage.
   virtual void getPointers(std::vector<uint64_t> **, uint64_t) { fatal("p64"); }
@@ -225,7 +225,7 @@ public:
   virtual ~SparseTensorStorageBase() = default;
 
 private:
-  void fatal(const char *tp) {
+  static void fatal(const char *tp) {
     fprintf(stderr, "unsupported %s\n", tp);
     exit(1);
   }
@@ -293,8 +293,8 @@ public:
   /// Get the rank of the tensor.
   uint64_t getRank() const { return sizes.size(); }
 
-  /// Get the size in the given dimension of the tensor.
-  uint64_t getDimSize(uint64_t d) override {
+  /// Get the size of the given dimension of the tensor.
+  uint64_t getDimSize(uint64_t d) const override {
     assert(d < getRank());
     return sizes[d];
   }
@@ -549,7 +549,7 @@ private:
   }
 
   /// Finds the lexicographic differing dimension.
-  uint64_t lexDiff(const uint64_t *cursor) {
+  uint64_t lexDiff(const uint64_t *cursor) const {
     for (uint64_t r = 0, rank = getRank(); r < rank; r++)
       if (cursor[r] > idx[r])
         return r;
@@ -566,7 +566,7 @@ private:
   }
 
 private:
-  std::vector<uint64_t> sizes; // per-dimension sizes
+  const std::vector<uint64_t> sizes; // per-dimension sizes
   std::vector<uint64_t> rev;   // "reverse" permutation
   std::vector<uint64_t> idx;   // index cursor
   std::vector<std::vector<P>> pointers;
@@ -718,7 +718,7 @@ static SparseTensorCOO<V> *openSparseTensorCOO(char *filename, uint64_t rank,
 
 /// Writes the sparse tensor to extended FROSTT format.
 template <typename V>
-void outSparseTensor(void *tensor, void *dest, bool sort) {
+static void outSparseTensor(void *tensor, void *dest, bool sort) {
   assert(tensor && dest);
   auto coo = static_cast<SparseTensorCOO<V> *>(tensor);
   if (sort)
@@ -749,7 +749,7 @@ void outSparseTensor(void *tensor, void *dest, bool sort) {
 
 /// Initializes sparse tensor from an external COO-flavored format.
 template <typename V>
-SparseTensorStorage<uint64_t, uint64_t, V> *
+static SparseTensorStorage<uint64_t, uint64_t, V> *
 toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
                    uint64_t *indices, uint64_t *perm, uint8_t *sparse) {
   const DimLevelType *sparsity = (DimLevelType *)(sparse);
@@ -791,8 +791,9 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, uint64_t *shape, V *values,
 
 /// Converts a sparse tensor to an external COO-flavored format.
 template <typename V>
-void fromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
-                          uint64_t **pShape, V **pValues, uint64_t **pIndices) {
+static void fromMLIRSparseTensor(void *tensor, uint64_t *pRank, uint64_t *pNse,
+                                 uint64_t **pShape, V **pValues,
+                                 uint64_t **pIndices) {
   auto sparseTensor =
       static_cast<SparseTensorStorage<uint64_t, uint64_t, V> *>(tensor);
   uint64_t rank = sparseTensor->getRank();
