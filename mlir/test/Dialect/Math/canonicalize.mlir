@@ -91,3 +91,58 @@ func @sqrt_fold() -> f32 {
   %r = math.sqrt %c : f32
   return %r : f32
 }
+
+// CHECK-LABEL: @abs_fold
+// CHECK: %[[cst:.+]] = arith.constant 4.000000e+00 : f32
+// CHECK: return %[[cst]]
+func @abs_fold() -> f32 {
+  %c = arith.constant -4.0 : f32
+  %r = math.abs %c : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @copysign_fold
+// CHECK: %[[cst:.+]] = arith.constant -4.000000e+00 : f32
+// CHECK: return %[[cst]]
+func @copysign_fold() -> f32 {
+  %c1 = arith.constant 4.0 : f32
+  %c2 = arith.constant -9.0 : f32
+  %r = math.copysign %c1, %c2 : f32
+  return %r : f32
+}
+
+// CHECK-LABEL: @ctlz_fold1
+// CHECK: %[[cst:.+]] = arith.constant 31 : i32
+// CHECK: return %[[cst]]
+func @ctlz_fold1() -> i32 {
+  %c = arith.constant 1 : i32
+  %r = math.ctlz %c : i32
+  return %r : i32
+}
+
+// CHECK-LABEL: @ctlz_fold2
+// CHECK: %[[cst:.+]] = arith.constant 7 : i8
+// CHECK: return %[[cst]]
+func @ctlz_fold2() -> i8 {
+  %c = arith.constant 1 : i8
+  %r = math.ctlz %c : i8
+  return %r : i8
+}
+
+// CHECK-LABEL: @cttz_fold
+// CHECK: %[[cst:.+]] = arith.constant 8 : i32
+// CHECK: return %[[cst]]
+func @cttz_fold() -> i32 {
+  %c = arith.constant 256 : i32
+  %r = math.cttz %c : i32
+  return %r : i32
+}
+
+// CHECK-LABEL: @ctpop_fold
+// CHECK: %[[cst:.+]] = arith.constant 16 : i32
+// CHECK: return %[[cst]]
+func @ctpop_fold() -> i32 {
+  %c = arith.constant 0xFF0000FF : i32
+  %r = math.ctpop %c : i32
+  return %r : i32
+}
