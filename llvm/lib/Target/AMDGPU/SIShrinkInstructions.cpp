@@ -728,27 +728,21 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
       if (TII->isVOPC(Op32)) {
-        MachineOperand &Op0 = MI.getOperand(0);
-        if (Op0.isReg()) {
-          // Exclude VOPCX instructions as these don't explicitly write a
-          // dst.
-          Register DstReg = Op0.getReg();
-          if (DstReg.isVirtual()) {
-            // VOPC instructions can only write to the VCC register. We can't
-            // force them to use VCC here, because this is only one register and
-            // cannot deal with sequences which would require multiple copies of
-            // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
-            //
-            // So, instead of forcing the instruction to write to VCC, we
-            // provide a hint to the register allocator to use VCC and then we
-            // will run this pass again after RA and shrink it if it outputs to
-            // VCC.
-            MRI.setRegAllocationHint(DstReg, 0, VCCReg);
-            continue;
-          }
-          if (DstReg != VCCReg)
-            continue;
+        Register DstReg = MI.getOperand(0).getReg();
+        if (DstReg.isVirtual()) {
+          // VOPC instructions can only write to the VCC register. We can't
+          // force them to use VCC here, because this is only one register and
+          // cannot deal with sequences which would require multiple copies of
+          // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
+          //
+          // So, instead of forcing the instruction to write to VCC, we provide
+          // a hint to the register allocator to use VCC and then we will run
+          // this pass again after RA and shrink it if it outputs to VCC.
+          MRI.setRegAllocationHint(MI.getOperand(0).getReg(), 0, VCCReg);
+          continue;
         }
+        if (DstReg != VCCReg)
+          continue;
       }
 
       if (Op32 == AMDGPU::V_CNDMASK_B32_e32) {
