@@ -140,3 +140,21 @@ TEST(PWMAFunction, valueAt) {
   EXPECT_THAT(*nonNegPWAF.valueAt({2, -3}), ElementsAre(-1, -1));
   EXPECT_FALSE(nonNegPWAF.valueAt({-2, -3}).hasValue());
 }
+
+TEST(PWMAFunction, removeIdRangeRegressionTest) {
+  PWMAFunction pwafA = parsePWMAF(
+      /*numInputs=*/2, /*numOutputs=*/1,
+      {
+          {"(x, y) : (x == 0, y == 0, x - 2*(x floordiv 2) == 0, y - 2*(y "
+           "floordiv 2) == 0)",
+           {{0, 0, 0, 0, 0}}} // (0, 0)
+      });
+  PWMAFunction pwafB = parsePWMAF(
+      /*numInputs=*/2, /*numOutputs=*/1,
+      {
+          {"(x, y) : (x - 11*y == 0, 11*x - y == 0, x - 2*(x floordiv 2) == 0, "
+           "y - 2*(y floordiv 2) == 0)",
+           {{0, 0, 0, 0, 0}}} // (0, 0)
+      });
+  EXPECT_TRUE(pwafA.isEqual(pwafB));
+}
