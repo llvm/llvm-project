@@ -1278,6 +1278,7 @@ def FeatureISAVersion11_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureGFX11ExtraVGPRs])>;
 
+// Features for GFX 11.0.2 and 11.0.3 and 11.5.0
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [])>;

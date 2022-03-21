@@ -104,9 +104,10 @@ enum GPUKind : uint32_t {
   GK_GFX1101 = 91,
   GK_GFX1102 = 92,
   GK_GFX1103 = 93,
+  GK_GFX1150 = 94,
 
   GK_AMDGCN_FIRST = GK_GFX600,
-  GK_AMDGCN_LAST = GK_GFX1103,
+  GK_AMDGCN_LAST = GK_GFX1150,
 };
 
 /// Instruction set architecture version.
