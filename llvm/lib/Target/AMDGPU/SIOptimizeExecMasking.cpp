@@ -11,6 +11,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 
 using namespace llvm;
 
