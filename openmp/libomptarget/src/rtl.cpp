@@ -432,6 +432,15 @@ static void
 __tgt_get_active_offload_env(__tgt_active_offload_env *active_env,
                              char *offload_arch_output_buffer,
                              size_t offload_arch_output_buffer_size) {
+
+  // If OFFLOAD_ARCH_OVERRIDE env varible is present then use its value instead of
+  // querying it using LLVMOffloadArch library.
+  if (char *OffloadArchEnvVar = getenv("OFFLOAD_ARCH_OVERRIDE")) {
+    if (OffloadArchEnvVar) {
+      active_env->capabilities = OffloadArchEnvVar;
+      return;
+    }
+  }
   // Qget runtime capabilities of this system with libLLVMOffloadArch.a
   if (int rc = getRuntimeCapabilities(offload_arch_output_buffer,
                                       offload_arch_output_buffer_size))
