@@ -128,17 +128,21 @@ export_sources() {
             -cJf test-suite-$release$rc.src.tar.xz test-suite-$release$rc.src
     fi
 
+    # Package up top-level cmake directory so that we can append it to all projects.
+    tmp_dir=$(mktemp -d)
+    cmake_archive_file=$tmp_dir/cmake.tar
+    trap "rm -rv $tmp_dir" EXIT
+    pushd $llvm_src_dir
+    git archive -o $cmake_archive_file $tree_id cmake/
+    popd
+
     for proj in $projects; do
         echo "Creating tarball for $proj ..."
         pushd $llvm_src_dir/$proj
-        target_archive_file=$target_dir/$(template_file $proj)
-        trap "rm -fv $target_archive_file.tmp" EXIT
-        git archive --prefix=$proj-$release$rc.src/ -o $target_archive_file.tmp $tree_id .
-        # Get relative path to top-level cmake directory to be packaged
-        # alongside the project. Append that path to the tarball.
-        cmake_rel_path=$(realpath --relative-to=. $llvm_src_dir/cmake)
-        tar --append -f $target_archive_file.tmp $cmake_rel_path
-        cat $target_archive_file.tmp | xz > $target_archive_file
+        tmp_archive_file=$tmp_dir/$proj.tar
+        git archive --prefix=$proj-$release$rc.src/ -o $tmp_archive_file $tree_id .
+        tar -Af $tmp_archive_file $cmake_archive_file
+        xz < $tmp_archive_file > $target_dir/$(template_file $proj)
         popd
     done
 }
