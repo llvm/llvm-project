@@ -23,7 +23,7 @@
 #include "min_allocator.h"
 
 template <class S>
-void
+TEST_CONSTEXPR_CXX20 void
 test(typename S::size_type min_cap, typename S::size_type erased_index, typename S::size_type res_arg)
 {
     S s(min_cap, 'a');
@@ -47,7 +47,7 @@ test(typename S::size_type min_cap, typename S::size_type erased_index, typename
 #endif
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    else
+    else if (!TEST_IS_CONSTANT_EVALUATED)
     {
         try
         {

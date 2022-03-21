@@ -19,6 +19,30 @@ v_mfma_f64_4x4x4f64 a[0:1], v[0:1], a[2:3], a[2:3]
 v_mfma_f64_4x4x4f64 v[0:1], v[0:1], a[2:3], v[2:3]
 // GFX940: v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], a[2:3], v[2:3] ; encoding: [0x00,0x00,0xef,0xd3,0x00,0x05,0x0a,0x14]
 
+v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[1,0,0]
+// GFX940: v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[1,0,0] ; encoding: [0x00,0x80,0xef,0xd3,0x00,0x05,0x0a,0x34]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[0,1,0]
+// GFX940: v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[0,1,0] ; encoding: [0x00,0x80,0xef,0xd3,0x00,0x05,0x0a,0x54]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[0,0,1]
+// GFX940: v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[0,0,1] ; encoding: [0x00,0x80,0xef,0xd3,0x00,0x05,0x0a,0x94]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], a[2:3], v[2:3] neg:[1,1,1]
+// GFX940: v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], a[2:3], v[2:3] neg:[1,1,1] ; encoding: [0x00,0x00,0xef,0xd3,0x00,0x05,0x0a,0xf4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f64_4x4x4f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[1,0,0]
+// GFX940: v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] neg:[1,0,0] ; encoding: [0x00,0x80,0xef,0xd3,0x00,0x05,0x0a,0x34]
+// GFX90A: error: invalid modifier: neg is not supported
+
+v_mfma_f64_4x4x4f64 v[0:1], v[0:1], a[2:3], v[2:3] neg:[1,0,0]
+// GFX940: v_mfma_f64_4x4x4_4b_f64 v[0:1], v[0:1], a[2:3], v[2:3] neg:[1,0,0] ; encoding: [0x00,0x00,0xef,0xd3,0x00,0x05,0x0a,0x34]
+// GFX90A: error: invalid modifier: neg is not supported
+
 v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7]
 // GFX940: v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7] ; encoding: [0x00,0x80,0xee,0xd3,0x00,0x05,0x02,0x04]
 // GFX90A: error: instruction not supported on this GPU
@@ -32,6 +56,22 @@ v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7]
 
 v_mfma_f64_16x16x4f64 v[0:7], v[0:1], v[2:3], v[0:7]
 // GFX940: v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7] ; encoding: [0x00,0x00,0xee,0xd3,0x00,0x05,0x02,0x04]
+
+v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7] neg:[1,1,1]
+// GFX940: v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7] neg:[1,1,1] ; encoding: [0x00,0x80,0xee,0xd3,0x00,0x05,0x02,0xe4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7] neg:[1,1,1]
+// GFX940: v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7] neg:[1,1,1] ; encoding: [0x00,0x00,0xee,0xd3,0x00,0x05,0x02,0xe4]
+// GFX90A: error: instruction not supported on this GPU
+
+v_mfma_f64_16x16x4f64 a[0:7], v[0:1], v[2:3], a[0:7] neg:[1,0,0]
+// GFX940: v_mfma_f64_16x16x4_f64 a[0:7], v[0:1], v[2:3], a[0:7] neg:[1,0,0] ; encoding: [0x00,0x80,0xee,0xd3,0x00,0x05,0x02,0x24]
+// GFX90A: error: invalid modifier: neg is not supported
+
+v_mfma_f64_16x16x4f64 v[0:7], v[0:1], v[2:3], v[0:7] neg:[1,0,0]
+// GFX940: v_mfma_f64_16x16x4_f64 v[0:7], v[0:1], v[2:3], v[0:7] neg:[1,0,0] ; encoding: [0x00,0x00,0xee,0xd3,0x00,0x05,0x02,0x24]
+// GFX90A: error: invalid modifier: neg is not supported
 
 v_mfma_f32_16x16x1_4b_f32 a[0:15], v0, v1, a[18:33]
 // GFX940: v_mfma_f32_16x16x1_4b_f32 a[0:15], v0, v1, a[18:33] ; encoding: [0x00,0x80,0xc1,0xd3,0x00,0x03,0x4a,0x04]

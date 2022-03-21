@@ -14,10 +14,12 @@
   ],
   "keywords": [
     "LLVM",
-    "MLIR"
+    "MLIR",
+    "PDLL"
   ],
   "activationEvents": [
-    "onLanguage:mlir"
+    "onLanguage:mlir",
+    "onLanguage:pdll"
   ],
   "main": "./out/extension",
   "scripts": {
@@ -62,6 +64,17 @@
       },
       {
         "id": "mlir-injection"
+      },
+      {
+        "id": "pdll",
+        "aliases": [
+          "PDLL",
+          "pdll"
+        ],
+        "extensions": [
+          ".pdll"
+        ],
+        "configuration": "./pdll-language-configuration.json"
       }
     ],
     "grammars": [
@@ -90,6 +103,11 @@
         "embeddedLanguages": {
           "source.mlir": "mlir"
         }
+      },
+      {
+        "language": "pdll",
+        "scopeName": "source.pdll",
+        "path": "./pdll-grammar.json"
       }
     ],
     "configuration": {
@@ -100,6 +118,11 @@
           "scope": "resource",
           "type": "string",
           "description": "The file path of the mlir-lsp-server executable."
+        },
+        "mlir.pdll_server_path": {
+          "scope": "resource",
+          "type": "string",
+          "description": "The file path of the mlir-pdll-lsp-server executable."
         },
         "mlir.onSettingsChanged": {
           "type": "string",

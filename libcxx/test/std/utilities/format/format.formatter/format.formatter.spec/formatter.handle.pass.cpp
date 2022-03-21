@@ -31,9 +31,7 @@ const char* color_names[] = {"black", "red", "gold"};
 
 template <>
 struct std::formatter<color> : std::formatter<const char*> {
-  auto format(color c, format_context& ctx) {
-    return formatter<const char*>::format(color_names[static_cast<int>(c)], ctx);
-  }
+  auto format(color c, auto& ctx) { return formatter<const char*>::format(color_names[static_cast<int>(c)], ctx); }
 };
 
 void test(std::string expected, std::string_view fmt, color arg) {

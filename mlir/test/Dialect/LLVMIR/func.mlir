@@ -97,6 +97,11 @@ module {
     llvm.return
   }
 
+  // CHECK: llvm.func @nestattr(%{{.*}}: !llvm.ptr<i32> {llvm.nest})
+  llvm.func @nestattr(%arg0: !llvm.ptr<i32> {llvm.nest}) {
+    llvm.return
+  }
+
   // CHECK: llvm.func @variadic(...)
   llvm.func @variadic(...)
 

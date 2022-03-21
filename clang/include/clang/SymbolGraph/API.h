@@ -24,6 +24,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include <memory>
 
 namespace clang {
 namespace symbolgraph {
@@ -120,7 +121,25 @@ public:
   StringRef copyString(StringRef String, llvm::BumpPtrAllocator &Allocator);
   StringRef copyString(StringRef String);
 
-  using GlobalRecordMap = llvm::MapVector<StringRef, GlobalRecord *>;
+private:
+  /// \brief A custom deleter used for ``std::unique_ptr`` to APIRecords stored
+  /// in the BumpPtrAllocator.
+  ///
+  /// \tparam T the exact type of the APIRecord subclass.
+  template <typename T> struct UniquePtrBumpPtrAllocatorDeleter {
+    void operator()(T *Instance) { Instance->~T(); }
+  };
+
+public:
+  /// A unique pointer to an APIRecord stored in the BumpPtrAllocator.
+  ///
+  /// \tparam T the exact type of the APIRecord subclass.
+  template <typename T>
+  using APIRecordUniquePtr =
+      std::unique_ptr<T, UniquePtrBumpPtrAllocatorDeleter<T>>;
+
+  using GlobalRecordMap =
+      llvm::MapVector<StringRef, APIRecordUniquePtr<GlobalRecord>>;
 
   const GlobalRecordMap &getGlobals() const { return Globals; }
 

@@ -110,7 +110,7 @@ bool FinalizeMachineBundles::runOnMachineFunction(MachineFunction &MF) {
 static DebugLoc getDebugLoc(MachineBasicBlock::instr_iterator FirstMI,
                             MachineBasicBlock::instr_iterator LastMI) {
   for (auto MII = FirstMI; MII != LastMI; ++MII)
-    if (MII->getDebugLoc().get())
+    if (MII->getDebugLoc())
       return MII->getDebugLoc();
   return DebugLoc();
 }

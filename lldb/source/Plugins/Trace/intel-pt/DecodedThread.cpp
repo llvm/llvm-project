@@ -48,6 +48,8 @@ bool IntelPTInstruction::IsError() const { return (bool)m_error; }
 
 lldb::addr_t IntelPTInstruction::GetLoadAddress() const { return m_pt_insn.ip; }
 
+size_t IntelPTInstruction::GetNonErrorMemoryUsage() { return sizeof(IntelPTInstruction); }
+
 Optional<uint64_t> IntelPTInstruction::GetTimestampCounter() const {
   return m_timestamp;
 }
@@ -115,4 +117,10 @@ DecodedThread::DecodedThread(ThreadSP thread_sp,
 
 lldb::TraceCursorUP DecodedThread::GetCursor() {
   return std::make_unique<TraceCursorIntelPT>(m_thread_sp, shared_from_this());
+}
+
+size_t DecodedThread::CalculateApproximateMemoryUsage() const {
+  return m_raw_trace_size
+    + IntelPTInstruction::GetNonErrorMemoryUsage() * m_instructions.size()
+    + sizeof(DecodedThread);
 }

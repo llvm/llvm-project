@@ -2,6 +2,5 @@
 // RUN:   FileCheck %s
 //
 // REQUIRES: system-darwin
-// XFAIL: apple-silicon-mac
 //
-// CHECK: "-triple" "arm64-apple-ios{{[0-9.]+}}"
+// CHECK: "-triple" "arm64-apple-macosx{{[0-9.]+}}"

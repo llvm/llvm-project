@@ -772,8 +772,8 @@ define <4 x i32> @add_v4i32(<4 x i1> %b, <4 x i32> noundef %x, <4 x i32> noundef
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpaddd %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x i32> %y, <4 x i32> zeroinitializer
   %r = add <4 x i32> %x, %s
@@ -805,8 +805,8 @@ define <8 x i32> @add_v8i32_commute(<8 x i1> %b, <8 x i32> noundef %x, <8 x i32>
 ; AVX512VL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
-; AVX512VL-NEXT:    vmovdqa32 %ymm2, %ymm0 {%k1} {z}
-; AVX512VL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm2, %ymm1, %ymm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> zeroinitializer
   %r = add <8 x i32> %s, %x
@@ -836,8 +836,7 @@ define <8 x i32> @add_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; AVX512VL-LABEL: add_v8i32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vmovdqa32 %ymm1, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddd %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> zeroinitializer
@@ -865,8 +864,7 @@ define <8 x i64> @add_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX512-LABEL: add_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm1 {%k1} {z}
-; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i64> %y, <8 x i64> zeroinitializer
@@ -1239,8 +1237,8 @@ define <4 x i32> @shl_v4i32(<4 x i1> %b, <4 x i32> noundef %x, <4 x i32> noundef
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vpsllvd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpsllvd %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x i32> %y, <4 x i32> zeroinitializer
   %r = shl <4 x i32> %x, %s
@@ -1303,9 +1301,9 @@ define <16 x i32> @shl_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i3
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovdqa32 %zmm2, %zmm0 {%k1} {z}
-; AVX512-NEXT:    vpsllvd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsllvd %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = shl <16 x i32> %x, %s
@@ -1367,8 +1365,7 @@ define <8 x i32> @shl_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; AVX512VL-LABEL: shl_v8i32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vmovdqa32 %ymm1, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> zeroinitializer
@@ -1396,8 +1393,7 @@ define <8 x i64> @shl_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX512-LABEL: shl_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm1 {%k1} {z}
-; AVX512-NEXT:    vpsllvq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsllvq %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i64> %y, <8 x i64> zeroinitializer
@@ -1428,8 +1424,8 @@ define <4 x i32> @lshr_v4i32(<4 x i1> %b, <4 x i32> noundef %x, <4 x i32> nounde
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vpsrlvd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpsrlvd %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x i32> %y, <4 x i32> zeroinitializer
   %r = lshr <4 x i32> %x, %s
@@ -1492,9 +1488,9 @@ define <16 x i32> @lshr_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovdqa32 %zmm2, %zmm0 {%k1} {z}
-; AVX512-NEXT:    vpsrlvd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsrlvd %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = lshr <16 x i32> %x, %s
@@ -1556,8 +1552,7 @@ define <8 x i32> @lshr_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef
 ; AVX512VL-LABEL: lshr_v8i32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vmovdqa32 %ymm1, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> zeroinitializer
@@ -1585,8 +1580,7 @@ define <8 x i64> @lshr_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef
 ; AVX512-LABEL: lshr_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm1 {%k1} {z}
-; AVX512-NEXT:    vpsrlvq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsrlvq %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i64> %y, <8 x i64> zeroinitializer
@@ -1617,8 +1611,8 @@ define <4 x i32> @ashr_v4i32(<4 x i1> %b, <4 x i32> noundef %x, <4 x i32> nounde
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1} {z}
-; AVX512VL-NEXT:    vpsravd %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpsravd %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x i32> %y, <4 x i32> zeroinitializer
   %r = ashr <4 x i32> %x, %s
@@ -1681,9 +1675,9 @@ define <16 x i32> @ashr_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
-; AVX512-NEXT:    vptestnmd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovdqa32 %zmm2, %zmm0 {%k1} {z}
-; AVX512-NEXT:    vpsravd %zmm0, %zmm1, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpsravd %zmm2, %zmm1, %zmm0
+; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %s = select <16 x i1> %b, <16 x i32> zeroinitializer, <16 x i32> %y
   %r = ashr <16 x i32> %x, %s
@@ -1745,8 +1739,7 @@ define <8 x i32> @ashr_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef
 ; AVX512VL-LABEL: ashr_v8i32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vmovdqa32 %ymm1, %ymm1 {%k1} {z}
-; AVX512VL-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsravd %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> zeroinitializer
@@ -1781,8 +1774,7 @@ define <8 x i64> @ashr_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef
 ; AVX512-LABEL: ashr_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm1 {%k1} {z}
-; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsravq %zmm1, %zmm0, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i64> %y, <8 x i64> zeroinitializer

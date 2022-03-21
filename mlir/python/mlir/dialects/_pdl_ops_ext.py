@@ -59,14 +59,12 @@ class ApplyNativeConstraintOp:
   def __init__(self,
                name: Union[str, StringAttr],
                args: Sequence[Union[OpView, Operation, Value]] = [],
-               params: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
                *,
                loc=None,
                ip=None):
     name = _get_str_attr(name)
     args = _get_values(args)
-    params = params if params is None else _get_array_attr(params)
-    super().__init__(name, args, params, loc=loc, ip=ip)
+    super().__init__(name, args, loc=loc, ip=ip)
 
 
 class ApplyNativeRewriteOp:
@@ -76,14 +74,12 @@ class ApplyNativeRewriteOp:
                results: Sequence[Type],
                name: Union[str, StringAttr],
                args: Sequence[Union[OpView, Operation, Value]] = [],
-               params: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
                *,
                loc=None,
                ip=None):
     name = _get_str_attr(name)
     args = _get_values(args)
-    params = params if params is None else _get_array_attr(params)
-    super().__init__(results, name, args, params, loc=loc, ip=ip)
+    super().__init__(results, name, args, loc=loc, ip=ip)
 
 
 class AttributeOp:
@@ -236,15 +232,13 @@ class RewriteOp:
                root: Optional[Union[OpView, Operation, Value]] = None,
                name: Optional[Union[StringAttr, str]] = None,
                args: Sequence[Union[OpView, Operation, Value]] = [],
-               params: Optional[Union[ArrayAttr, Sequence[Attribute]]] = None,
                *,
                loc=None,
                ip=None):
     root = root if root is None else _get_value(root)
     name = name if name is None else _get_str_attr(name)
     args = _get_values(args)
-    params = params if params is None else _get_array_attr(params)
-    super().__init__(root, name, args, params, loc=loc, ip=ip)
+    super().__init__(root, name, args, loc=loc, ip=ip)
 
   def add_body(self):
     """Add body (block) to the rewrite."""

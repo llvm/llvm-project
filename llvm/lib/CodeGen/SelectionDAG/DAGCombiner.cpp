@@ -2161,7 +2161,11 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
     }
     if (ConstantSDNode *C = isConstOrConstSplat(V)) {
       switch (Opcode) {
+      case ISD::ADD: // X + 0 --> X
       case ISD::SUB: // X - 0 --> X
+      case ISD::SHL: // X << 0 --> X
+      case ISD::SRA: // X s>> 0 --> X
+      case ISD::SRL: // X u>> 0 --> X
         return C->isZero();
       }
     }

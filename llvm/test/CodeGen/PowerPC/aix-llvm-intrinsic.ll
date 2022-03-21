@@ -9,10 +9,7 @@
 ; RUN: llvm-readobj --symbols %t.o | FileCheck --check-prefix=CHECKSYM %s
 ; RUN: llvm-objdump -r -d --symbol-description %t.o | FileCheck --check-prefix=CHECKRELOC %s
 
-; RUN: not --crash llc -verify-machineinstrs -mcpu=pwr4 -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:                 -mattr=-altivec -filetype=obj -o %t.o 2>&1 < %s | \
-; RUN:   FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 %struct.S = type { i32, i32 }
 

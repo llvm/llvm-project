@@ -1569,6 +1569,7 @@ private:
 
   SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
   SMLoc getSMEMOffsetLoc(const OperandVector &Operands) const;
+  SMLoc getBLGPLoc(const OperandVector &Operands) const;
 
   SMLoc getOperandLoc(std::function<bool(const AMDGPUOperand&)> Test,
                       const OperandVector &Operands) const;
@@ -1600,6 +1601,7 @@ private:
   bool validateMFMA(const MCInst &Inst, const OperandVector &Operands);
   bool validateAGPRLdSt(const MCInst &Inst) const;
   bool validateVGPRAlign(const MCInst &Inst) const;
+  bool validateBLGP(const MCInst &Inst, const OperandVector &Operands);
   bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
   bool validateDivScale(const MCInst &Inst);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
@@ -4272,6 +4274,47 @@ bool AMDGPUAsmParser::validateVGPRAlign(const MCInst &Inst) const {
   return true;
 }
 
+SMLoc AMDGPUAsmParser::getBLGPLoc(const OperandVector &Operands) const {
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+    if (Op.isBLGP())
+      return Op.getStartLoc();
+  }
+  return SMLoc();
+}
+
+bool AMDGPUAsmParser::validateBLGP(const MCInst &Inst,
+                                   const OperandVector &Operands) {
+  unsigned Opc = Inst.getOpcode();
+  int BlgpIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::blgp);
+  if (BlgpIdx == -1)
+    return true;
+  SMLoc BLGPLoc = getBLGPLoc(Operands);
+  if (!BLGPLoc.isValid())
+    return true;
+  bool IsNeg = StringRef(BLGPLoc.getPointer()).startswith("neg:");
+  auto FB = getFeatureBits();
+  bool UsesNeg = false;
+  if (FB[AMDGPU::FeatureGFX940Insts]) {
+    switch (Opc) {
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_vcd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_vcd:
+      UsesNeg = true;
+    }
+  }
+
+  if (IsNeg == UsesNeg)
+    return true;
+
+  Error(BLGPLoc,
+        UsesNeg ? "invalid modifier: blgp is not supported"
+                : "invalid modifier: neg is not supported");
+
+  return false;
+}
+
 // gfx90a has an undocumented limitation:
 // DS_GWS opcodes must use even aligned registers.
 bool AMDGPUAsmParser::validateGWS(const MCInst &Inst,
@@ -4449,6 +4492,10 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateGWS(Inst, Operands)) {
+    return false;
+  }
+
+  if (!validateBLGP(Inst, Operands)) {
     return false;
   }
 
@@ -6402,7 +6449,8 @@ AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
   using namespace llvm::AMDGPU::SendMsg;
 
   Msg.Loc = getLoc();
-  if (isToken(AsmToken::Identifier) && (Msg.Id = getMsgId(getTokenStr())) >= 0) {
+  if (isToken(AsmToken::Identifier) &&
+      (Msg.Id = getMsgId(getTokenStr(), getSTI())) != OPR_ID_UNKNOWN) {
     Msg.IsSymbolic = true;
     lex(); // skip message name
   } else if (!parseExpr(Msg.Id, "a message name")) {
@@ -6441,9 +6489,16 @@ AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
   // only encoding possibility is checked.
   bool Strict = Msg.IsSymbolic;
 
-  if (!isValidMsgId(Msg.Id, getSTI(), Strict)) {
-    Error(Msg.Loc, "invalid message id");
-    return false;
+  if (Strict) {
+    if (Msg.Id == OPR_ID_UNSUPPORTED) {
+      Error(Msg.Loc, "specified message id is not supported on this GPU");
+      return false;
+    }
+  } else {
+    if (!isValidMsgId(Msg.Id)) {
+      Error(Msg.Loc, "invalid message id");
+      return false;
+    }
   }
   if (Strict && (msgRequiresOp(Msg.Id) != Op.IsDefined)) {
     if (Op.IsDefined) {
@@ -6476,7 +6531,7 @@ AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
   SMLoc Loc = getLoc();
 
   if (trySkipId("sendmsg", AsmToken::LParen)) {
-    OperandInfoTy Msg(ID_UNKNOWN_);
+    OperandInfoTy Msg(OPR_ID_UNKNOWN);
     OperandInfoTy Op(OP_NONE_);
     OperandInfoTy Stream(STREAM_ID_NONE_);
     if (parseSendMsgBody(Msg, Op, Stream) &&
@@ -7626,6 +7681,11 @@ OperandMatchResultTy AMDGPUAsmParser::parseOptionalOpr(OperandVector &Operands) 
       res = parseCPol(Operands);
     } else {
       res = parseIntWithPrefix(Op.Name, Operands, Op.Type, Op.ConvertResult);
+      if (Op.Type == AMDGPUOperand::ImmTyBLGP && res == MatchOperand_NoMatch) {
+        res = parseOperandArrayWithPrefix("neg", Operands,
+                                          AMDGPUOperand::ImmTyBLGP,
+                                          nullptr);
+      }
     }
     if (res != MatchOperand_NoMatch) {
       return res;

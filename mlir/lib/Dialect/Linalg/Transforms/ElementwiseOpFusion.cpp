@@ -2223,12 +2223,11 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
 
 void mlir::linalg::populateFoldReshapeOpsByLinearizationPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<FoldProducerReshapeOpByLinearization<false, tensor::CollapseShapeOp>,
-           FoldProducerReshapeOpByLinearization<false, tensor::ExpandShapeOp>,
-           FoldConsumerReshapeOpByLinearization<false, tensor::CollapseShapeOp>,
-           FoldConsumerReshapeOpByLinearization<false, tensor::ExpandShapeOp>>(
-          patterns.getContext());
+  patterns.add<
+      FoldProducerReshapeOpByLinearization<false, tensor::CollapseShapeOp>,
+      FoldProducerReshapeOpByLinearization<false, tensor::ExpandShapeOp>,
+      FoldConsumerReshapeOpByLinearization<false, tensor::CollapseShapeOp>>(
+      patterns.getContext());
 }
 
 void mlir::linalg::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
@@ -2236,8 +2235,7 @@ void mlir::linalg::populateFoldUnitDimsReshapeOpsByLinearizationPatterns(
   patterns
       .add<FoldProducerReshapeOpByLinearization<true, tensor::CollapseShapeOp>,
            FoldProducerReshapeOpByLinearization<true, tensor::ExpandShapeOp>,
-           FoldConsumerReshapeOpByLinearization<true, tensor::CollapseShapeOp>,
-           FoldConsumerReshapeOpByLinearization<true, tensor::ExpandShapeOp>>(
+           FoldConsumerReshapeOpByLinearization<true, tensor::CollapseShapeOp>>(
           patterns.getContext());
 }
 

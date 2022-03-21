@@ -10,6 +10,7 @@ Checks: >
 
   -misc-unconventional-assign-operator,
 
+  modernize-loop-convert,
   modernize-redundant-void-arg,
 
   readability-duplicate-include,
@@ -33,7 +34,6 @@ CheckOptions:
 # bugprone-branch-clone,
 # bugprone-macro-parentheses,
 # cppcoreguidelines-prefer-member-initializer,
-# modernize-loop-convert,
 # modernize-use-bool-literals,
 # modernize-use-default-member-init,
 # modernize-use-equals-default,

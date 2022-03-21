@@ -170,7 +170,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // 32 bits so the AtomicExpandPass will expand it so we don't need cmpxchg8b.
   // FIXME: Should we be limiting the atomic size on other configs? Default is
   // 1024.
-  if (!Subtarget.hasCMPXCHG8B())
+  if (!Subtarget.canUseCMPXCHG8B())
     setMaxAtomicSizeInBitsSupported(32);
 
   // Set up the register classes.
@@ -200,7 +200,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   // Integer absolute.
-  if (Subtarget.hasCMOV()) {
+  if (Subtarget.canUseCMOV()) {
     setOperationAction(ISD::ABS            , MVT::i16  , Custom);
     setOperationAction(ISD::ABS            , MVT::i32  , Custom);
     if (Subtarget.is64Bit())
@@ -516,9 +516,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.is64Bit())
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
 
-  if (Subtarget.hasCMPXCHG16B()) {
+  if (Subtarget.canUseCMPXCHG16B())
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, MVT::i128, Custom);
-  }
 
   // FIXME - use subtarget debug flags
   if (!Subtarget.isTargetDarwin() && !Subtarget.isTargetELF() &&
@@ -11678,9 +11677,9 @@ static bool isTargetShuffleEquivalent(MVT VT, ArrayRef<int> Mask,
   return true;
 }
 
-// Attempt to create a shuffle mask from a VSELECT condition mask.
+// Attempt to create a shuffle mask from a VSELECT/BLENDV condition mask.
 static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
-                                         SDValue Cond) {
+                                         SDValue Cond, bool IsBLENDV = false) {
   EVT CondVT = Cond.getValueType();
   unsigned EltSizeInBits = CondVT.getScalarSizeInBits();
   unsigned NumElts = CondVT.getVectorNumElements();
@@ -11698,7 +11697,8 @@ static bool createShuffleMaskFromVSELECT(SmallVectorImpl<int> &Mask,
     // Arbitrarily choose from the 2nd operand if the select condition element
     // is undef.
     // TODO: Can we do better by matching patterns such as even/odd?
-    if (UndefElts[i] || EltBits[i].isZero())
+    if (UndefElts[i] || (!IsBLENDV && EltBits[i].isZero()) ||
+        (IsBLENDV && EltBits[i].isNonNegative()))
       Mask[i] += NumElts;
   }
 
@@ -23466,7 +23466,7 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
   // Only perform this transform if CMOV is supported otherwise the select
   // below will become a branch.
-  if (!Subtarget.hasCMOV())
+  if (!Subtarget.canUseCMOV())
     return SDValue();
 
   // fold (sdiv X, pow2)
@@ -23512,9 +23512,8 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
 /// Returns the BT node and the condition code needed to use it.
-static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
-                            const SDLoc &dl, SelectionDAG &DAG,
-                            SDValue &X86CC) {
+static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
+                            SelectionDAG &DAG, X86::CondCode &X86CC) {
   assert(And.getOpcode() == ISD::AND && "Expected AND node!");
   SDValue Op0 = And.getOperand(0);
   SDValue Op1 = And.getOperand(1);
@@ -23565,6 +23564,12 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
   if (!Src.getNode())
     return SDValue();
 
+  // Remove any bit flip.
+  if (isBitwiseNot(Src)) {
+    Src = Src.getOperand(0);
+    CC = CC == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ;
+  }
+
   // If Src is i8, promote it to i32 with any_extend.  There is no i8 BT
   // instruction.  Since the shift amount is in-range-or-undefined, we know
   // that doing a bittest on the i32 value is ok.  We extend to i32 because
@@ -23586,8 +23591,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
   if (Src.getValueType() != BitNo.getValueType())
     BitNo = DAG.getNode(ISD::ANY_EXTEND, dl, Src.getValueType(), BitNo);
 
-  X86CC = DAG.getTargetConstant(CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B,
-                                dl, MVT::i8);
+  X86CC = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
   return DAG.getNode(X86ISD::BT, dl, MVT::i32, Src, BitNo);
 }
 
@@ -24293,8 +24297,11 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
   // Lower ((X >>s N) & 1) != 0 to BT(X, N).
   if (Op0.getOpcode() == ISD::AND && Op0.hasOneUse() && isNullConstant(Op1) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (SDValue BT = LowerAndToBT(Op0, CC, dl, DAG, X86CC))
+    X86::CondCode X86CondCode;
+    if (SDValue BT = LowerAndToBT(Op0, CC, dl, DAG, X86CondCode)) {
+      X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
       return BT;
+    }
   }
 
   // Try to use PTEST/PMOVMSKB for a tree ORs equality compared with 0.
@@ -24656,7 +24663,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       return (Op1.getOpcode() == ISD::CTTZ_ZERO_UNDEF && Op1.hasOneUse() &&
               Op1.getOperand(0) == CmpOp0 && isAllOnesConstant(Op2));
     };
-    if (Subtarget.hasCMOV() && (VT == MVT::i32 || VT == MVT::i64) &&
+    if (Subtarget.canUseCMOV() && (VT == MVT::i32 || VT == MVT::i64) &&
         ((CondCode == X86::COND_NE && MatchFFSMinus1(Op1, Op2)) ||
          (CondCode == X86::COND_E && MatchFFSMinus1(Op2, Op1)))) {
       // Keep Cmp.
@@ -24684,7 +24691,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
                                 DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
                                 Sub.getValue(1));
       return DAG.getNode(ISD::OR, DL, VT, SBB, Y);
-    } else if (!Subtarget.hasCMOV() && CondCode == X86::COND_E &&
+    } else if (!Subtarget.canUseCMOV() && CondCode == X86::COND_E &&
                Cmp.getOperand(0).getOpcode() == ISD::AND &&
                isOneConstant(Cmp.getOperand(0).getOperand(1))) {
       SDValue Src1, Src2;
@@ -24739,7 +24746,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     SDValue Cmp = Cond.getOperand(1);
     bool IllegalFPCMov = false;
     if (VT.isFloatingPoint() && !VT.isVector() &&
-        !isScalarFPTypeInSSEReg(VT) && Subtarget.hasCMOV())  // FPStack?
+        !isScalarFPTypeInSSEReg(VT) && Subtarget.canUseCMOV())  // FPStack?
       IllegalFPCMov = !hasFPCMov(cast<ConstantSDNode>(CC)->getSExtValue());
 
     if ((isX86LogicalCmp(Cmp) && !IllegalFPCMov) ||
@@ -24766,9 +24773,9 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     // We know the result of AND is compared against zero. Try to match
     // it to BT.
     if (Cond.getOpcode() == ISD::AND && Cond.hasOneUse()) {
-      SDValue BTCC;
-      if (SDValue BT = LowerAndToBT(Cond, ISD::SETNE, DL, DAG, BTCC)) {
-        CC = BTCC;
+      X86::CondCode X86CondCode;
+      if (SDValue BT = LowerAndToBT(Cond, ISD::SETNE, DL, DAG, X86CondCode)) {
+        CC = DAG.getTargetConstant(X86CondCode, DL, MVT::i8);
         Cond = BT;
         AddTest = false;
       }
@@ -24820,7 +24827,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   //        legal, but EmitLoweredSelect() can not deal with these extensions
   //        being inserted between two CMOV's. (in i16 case too TBN)
   //        https://bugs.llvm.org/show_bug.cgi?id=40974
-  if ((Op.getValueType() == MVT::i8 && Subtarget.hasCMOV()) ||
+  if ((Op.getValueType() == MVT::i8 && Subtarget.canUseCMOV()) ||
       (Op.getValueType() == MVT::i16 && !X86::mayFoldLoad(Op1, Subtarget) &&
        !X86::mayFoldLoad(Op2, Subtarget))) {
     Op1 = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op1);
@@ -30355,9 +30362,9 @@ bool X86TargetLowering::needsCmpXchgNb(Type *MemType) const {
   unsigned OpWidth = MemType->getPrimitiveSizeInBits();
 
   if (OpWidth == 64)
-    return Subtarget.hasCMPXCHG8B() && !Subtarget.is64Bit();
+    return Subtarget.canUseCMPXCHG8B() && !Subtarget.is64Bit();
   if (OpWidth == 128)
-    return Subtarget.hasCMPXCHG16B();
+    return Subtarget.canUseCMPXCHG16B();
 
   return false;
 }
@@ -32600,7 +32607,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT T = N->getValueType(0);
     assert((T == MVT::i64 || T == MVT::i128) && "can only expand cmpxchg pair");
     bool Regs64bit = T == MVT::i128;
-    assert((!Regs64bit || Subtarget.hasCMPXCHG16B()) &&
+    assert((!Regs64bit || Subtarget.canUseCMPXCHG16B()) &&
            "64-bit ATOMIC_CMP_SWAP_WITH_SUCCESS requires CMPXCHG16B");
     MVT HalfT = Regs64bit ? MVT::i64 : MVT::i32;
     SDValue cpInL, cpInH;
@@ -43333,29 +43340,32 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
   // but not
   //   i1 = extract_vector_elt t0:1, Constant:i64<2>
   // since the latter would need its own MOVMSK.
-  if (CIdx && SrcVT.getScalarType() == MVT::i1) {
+  if (SrcVT.getScalarType() == MVT::i1) {
+    bool IsVar = !CIdx;
     SmallVector<SDNode *, 16> BoolExtracts;
     unsigned ResNo = InputVector.getResNo();
-    auto IsBoolExtract = [&BoolExtracts, &ResNo](SDNode *Use) {
+    auto IsBoolExtract = [&BoolExtracts, &ResNo, &IsVar](SDNode *Use) {
       if (Use->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          isa<ConstantSDNode>(Use->getOperand(1)) &&
           Use->getOperand(0).getResNo() == ResNo &&
           Use->getValueType(0) == MVT::i1) {
         BoolExtracts.push_back(Use);
+        IsVar |= !isa<ConstantSDNode>(Use->getOperand(1));
         return true;
       }
       return false;
     };
+    // TODO: Can we drop the oneuse check for constant extracts?
     if (all_of(InputVector->uses(), IsBoolExtract) &&
-        BoolExtracts.size() > 1) {
+        (IsVar || BoolExtracts.size() > 1)) {
       EVT BCVT = EVT::getIntegerVT(*DAG.getContext(), NumSrcElts);
       if (SDValue BC =
               combineBitcastvxi1(DAG, BCVT, InputVector, dl, Subtarget)) {
         for (SDNode *Use : BoolExtracts) {
           // extractelement vXi1 X, MaskIdx --> ((movmsk X) & Mask) == Mask
-          unsigned MaskIdx = Use->getConstantOperandVal(1);
-          APInt MaskBit = APInt::getOneBitSet(NumSrcElts, MaskIdx);
-          SDValue Mask = DAG.getConstant(MaskBit, dl, BCVT);
+          // Mask = 1 << MaskIdx
+          SDValue MaskIdx = DAG.getZExtOrTrunc(Use->getOperand(1), dl, MVT::i8);
+          SDValue MaskBit = DAG.getConstant(1, dl, BCVT);
+          SDValue Mask = DAG.getNode(ISD::SHL, dl, BCVT, MaskBit, MaskIdx);
           SDValue Res = DAG.getNode(ISD::AND, dl, BCVT, BC, Mask);
           Res = DAG.getSetCC(dl, MVT::i1, Res, Mask, ISD::SETEQ);
           DCI.CombineTo(Use, Res);
@@ -43895,9 +43905,11 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
       return V;
 
   // Convert vselects with constant condition into shuffles.
-  if (CondConstantVector && DCI.isBeforeLegalizeOps()) {
+  if (CondConstantVector && DCI.isBeforeLegalizeOps() &&
+      (N->getOpcode() == ISD::VSELECT || N->getOpcode() == X86ISD::BLENDV)) {
     SmallVector<int, 64> Mask;
-    if (createShuffleMaskFromVSELECT(Mask, Cond))
+    if (createShuffleMaskFromVSELECT(Mask, Cond,
+                                     N->getOpcode() == X86ISD::BLENDV))
       return DAG.getVectorShuffle(VT, DL, LHS, RHS, Mask);
   }
 
@@ -45100,7 +45112,7 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
     if (!(FalseOp.getValueType() == MVT::f80 ||
           (FalseOp.getValueType() == MVT::f64 && !Subtarget.hasSSE2()) ||
           (FalseOp.getValueType() == MVT::f32 && !Subtarget.hasSSE1())) ||
-        !Subtarget.hasCMOV() || hasFPCMov(CC)) {
+        !Subtarget.canUseCMOV() || hasFPCMov(CC)) {
       SDValue Ops[] = {FalseOp, TrueOp, DAG.getTargetConstant(CC, DL, MVT::i8),
                        Flags};
       return DAG.getNode(X86ISD::CMOV, DL, N->getValueType(0), Ops);
@@ -52272,37 +52284,28 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
-static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
-  bool IsSub = N->getOpcode() == ISD::SUB;
-  SDValue X = N->getOperand(0);
-  SDValue Y = N->getOperand(1);
-
-  // If this is an add, canonicalize a zext operand to the RHS.
-  // TODO: Incomplete? What if both sides are zexts?
-  if (!IsSub && X.getOpcode() == ISD::ZERO_EXTEND &&
-      Y.getOpcode() != ISD::ZERO_EXTEND)
-    std::swap(X, Y);
-
+/// Also try (ADD/SUB)+(AND(SRL,1)) bit extraction pattern with BT+{ADC, SBB}.
+static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
+                                         SDValue X, SDValue Y,
+                                         SelectionDAG &DAG) {
   // Look through a one-use zext.
-  bool PeekedThroughZext = false;
-  if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse()) {
+  if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
     Y = Y.getOperand(0);
-    PeekedThroughZext = true;
-  }
 
-  // If this is an add, canonicalize a setcc operand to the RHS.
-  // TODO: Incomplete? What if both sides are setcc?
-  // TODO: Should we allow peeking through a zext of the other operand?
-  if (!IsSub && !PeekedThroughZext && X.getOpcode() == X86ISD::SETCC &&
-      Y.getOpcode() != X86ISD::SETCC)
-    std::swap(X, Y);
-
-  if (Y.getOpcode() != X86ISD::SETCC || !Y.hasOneUse())
+  if (!Y.hasOneUse())
     return SDValue();
 
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-  X86::CondCode CC = (X86::CondCode)Y.getConstantOperandVal(0);
+  X86::CondCode CC;
+  SDValue EFLAGS;
+  if (Y.getOpcode() == X86ISD::SETCC) {
+    CC = (X86::CondCode)Y.getConstantOperandVal(0);
+    EFLAGS = Y.getOperand(1);
+  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1))) {
+    EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
+  }
+
+  if (!EFLAGS)
+    return SDValue();
 
   // If X is -1 or 0, then we have an opportunity to avoid constants required in
   // the general case below.
@@ -52315,12 +52318,11 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
       //  0 - SETB  -->  0 -  (CF) --> CF ? -1 : 0 --> SBB %eax, %eax
       return DAG.getNode(X86ISD::SETCC_CARRY, DL, VT,
                          DAG.getTargetConstant(X86::COND_B, DL, MVT::i8),
-                         Y.getOperand(1));
+                         EFLAGS);
     }
 
     if ((!IsSub && CC == X86::COND_BE && ConstantX->isAllOnes()) ||
         (IsSub && CC == X86::COND_A && ConstantX->isZero())) {
-      SDValue EFLAGS = Y->getOperand(1);
       if (EFLAGS.getOpcode() == X86ISD::SUB && EFLAGS.hasOneUse() &&
           EFLAGS.getValueType().isInteger() &&
           !isa<ConstantSDNode>(EFLAGS.getOperand(1))) {
@@ -52343,11 +52345,10 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     // X - SETB Z --> sbb X, 0
     return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL,
                        DAG.getVTList(VT, MVT::i32), X,
-                       DAG.getConstant(0, DL, VT), Y.getOperand(1));
+                       DAG.getConstant(0, DL, VT), EFLAGS);
   }
 
   if (CC == X86::COND_A) {
-    SDValue EFLAGS = Y.getOperand(1);
     // Try to convert COND_A into COND_B in an attempt to facilitate
     // materializing "setb reg".
     //
@@ -52372,13 +52373,12 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
     // X - SETAE --> adc X, -1
     return DAG.getNode(IsSub ? X86ISD::ADC : X86ISD::SBB, DL,
                        DAG.getVTList(VT, MVT::i32), X,
-                       DAG.getConstant(-1, DL, VT), Y.getOperand(1));
+                       DAG.getConstant(-1, DL, VT), EFLAGS);
   }
 
   if (CC == X86::COND_BE) {
     // X + SETBE --> sbb X, -1
     // X - SETBE --> adc X, -1
-    SDValue EFLAGS = Y.getOperand(1);
     // Try to convert COND_BE into COND_AE in an attempt to facilitate
     // materializing "setae reg".
     //
@@ -52401,13 +52401,12 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   if (CC != X86::COND_E && CC != X86::COND_NE)
     return SDValue();
 
-  SDValue Cmp = Y.getOperand(1);
-  if (Cmp.getOpcode() != X86ISD::CMP || !Cmp.hasOneUse() ||
-      !X86::isZeroNode(Cmp.getOperand(1)) ||
-      !Cmp.getOperand(0).getValueType().isInteger())
+  if (EFLAGS.getOpcode() != X86ISD::CMP || !EFLAGS.hasOneUse() ||
+      !X86::isZeroNode(EFLAGS.getOperand(1)) ||
+      !EFLAGS.getOperand(0).getValueType().isInteger())
     return SDValue();
 
-  SDValue Z = Cmp.getOperand(0);
+  SDValue Z = EFLAGS.getOperand(0);
   EVT ZVT = Z.getValueType();
 
   // If X is -1 or 0, then we have an opportunity to avoid constants required in
@@ -52460,6 +52459,26 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   // X + (Z == 0) --> add X, (zext(sete  Z, 0)) --> adc X, 0, (cmp Z, 1)
   return DAG.getNode(IsSub ? X86ISD::SBB : X86ISD::ADC, DL, VTs, X,
                      DAG.getConstant(0, DL, VT), Cmp1.getValue(1));
+}
+
+/// If this is an add or subtract where one operand is produced by a cmp+setcc,
+/// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
+/// with CMP+{ADC, SBB}.
+static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
+  bool IsSub = N->getOpcode() == ISD::SUB;
+  SDValue X = N->getOperand(0);
+  SDValue Y = N->getOperand(1);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
+    return ADCOrSBB;
+
+  // If this is an add, commute and try again.
+  if (!IsSub)
+    return combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG);
+
+  return SDValue();
 }
 
 static SDValue matchPMADDWD(SelectionDAG &DAG, SDValue Op0, SDValue Op1,

@@ -527,10 +527,8 @@ public:
   void addToNode(unsigned id, const SmallVectorImpl<Operation *> &loads,
                  const SmallVectorImpl<Operation *> &stores) {
     Node *node = getNode(id);
-    for (auto *loadOpInst : loads)
-      node->loads.push_back(loadOpInst);
-    for (auto *storeOpInst : stores)
-      node->stores.push_back(storeOpInst);
+    llvm::append_range(node->loads, loads);
+    llvm::append_range(node->stores, stores);
   }
 
   void clearNodeLoadAndStores(unsigned id) {

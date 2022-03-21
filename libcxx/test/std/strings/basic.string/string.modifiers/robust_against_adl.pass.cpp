@@ -19,8 +19,8 @@ template<class T> struct Holder { T t; };
 template<class T>
 struct Charlike {
     char ch_;
-    Charlike(char ch) : ch_(ch) {}
-    operator char() const { return ch_; }
+    TEST_CONSTEXPR Charlike(char ch) : ch_(ch) {}
+    TEST_CONSTEXPR operator char() const { return ch_; }
 };
 
 bool test() {

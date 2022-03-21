@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple powerpc-ibm-aix -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
 ; RUN: -filetype=obj -o %t.o < %s
 ; RUN: llvm-readobj --syms %t.o | FileCheck %s
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
-; RUN: -filetype=obj -o %t.o < %s 2>&1 | FileCheck --check-prefix=64-CHECK %s
+
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 define internal i32 @foo() {
   ret i32 1
@@ -34,5 +34,3 @@ define internal i32 @foo() {
 
 ; Make sure no label is emitted.
 ; CHECK-NOT: Name: foo
-
-;64-CHECK: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
