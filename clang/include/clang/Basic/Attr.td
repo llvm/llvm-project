@@ -4065,3 +4065,10 @@ def FunctionReturnThunks : InheritableAttr,
   let Subjects = SubjectList<[Function]>;
   let Documentation = [FunctionReturnThunksDocs];
 }
+
+def YkOutline : InheritableAttr {
+  let Spellings = [GCC<"yk_outline">, Declspec<"yk_outline">];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [YkOutlineDocs];
+  let SimpleHandler = 1;
+}

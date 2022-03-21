@@ -197,4 +197,5 @@
 // CHECK-NEXT: XRayInstrument (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: XRayLogArgs (SubjectMatchRule_function, SubjectMatchRule_objc_method)
 // CHECK-NEXT: ZeroCallUsedRegs (SubjectMatchRule_function)
+// CHECK-NEXT: YkOutline (SubjectMatchRule_function)
 // CHECK-NEXT: End of supported attributes.
