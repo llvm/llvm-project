@@ -180,7 +180,7 @@ public:
 
 class InferAddressSpacesImpl {
   AssumptionCache &AC;
-  DominatorTree *DT = nullptr;
+  const DominatorTree *DT = nullptr;
   const TargetTransformInfo *TTI = nullptr;
   const DataLayout *DL = nullptr;
 
@@ -211,10 +211,11 @@ class InferAddressSpacesImpl {
   // Changes the flat address expressions in function F to point to specific
   // address spaces if InferredAddrSpace says so. Postorder is the postorder of
   // all flat expressions in the use-def graph of function F.
-  bool rewriteWithNewAddressSpaces(
-      const TargetTransformInfo &TTI, ArrayRef<WeakTrackingVH> Postorder,
-      const ValueToAddrSpaceMapTy &InferredAddrSpace,
-      const PredicatedAddrSpaceMapTy &PredicatedAS, Function *F) const;
+  bool
+  rewriteWithNewAddressSpaces(ArrayRef<WeakTrackingVH> Postorder,
+                              const ValueToAddrSpaceMapTy &InferredAddrSpace,
+                              const PredicatedAddrSpaceMapTy &PredicatedAS,
+                              Function *F) const;
 
   void appendsFlatAddressExpressionToPostorderStack(
       Value *V, PostorderStackTy &PostorderStack,
@@ -238,7 +239,7 @@ class InferAddressSpacesImpl {
   unsigned getPredicatedAddrSpace(const Value &V, Value *Opnd) const;
 
 public:
-  InferAddressSpacesImpl(AssumptionCache &AC, DominatorTree *DT,
+  InferAddressSpacesImpl(AssumptionCache &AC, const DominatorTree *DT,
                          const TargetTransformInfo *TTI, unsigned FlatAddrSpace)
       : AC(AC), DT(DT), TTI(TTI), FlatAddrSpace(FlatAddrSpace) {}
   bool run(Function &F);
@@ -330,8 +331,7 @@ getPointerOperands(const Value &V, const DataLayout &DL,
   switch (Op.getOpcode()) {
   case Instruction::PHI: {
     auto IncomingValues = cast<PHINode>(Op).incoming_values();
-    return SmallVector<Value *, 2>(IncomingValues.begin(),
-                                   IncomingValues.end());
+    return {IncomingValues.begin(), IncomingValues.end()};
   }
   case Instruction::BitCast:
   case Instruction::AddrSpaceCast:
@@ -727,7 +727,7 @@ static Value *cloneConstantExprWithNewAddressSpace(
       NewOperands.push_back(cast<Constant>(NewOperand));
       continue;
     }
-    if (auto CExpr = dyn_cast<ConstantExpr>(Operand))
+    if (auto *CExpr = dyn_cast<ConstantExpr>(Operand))
       if (Value *NewOperand = cloneConstantExprWithNewAddressSpace(
               CExpr, NewAddrSpace, ValueWithNewAddrSpace, DL, TTI)) {
         IsNew = true;
@@ -739,7 +739,7 @@ static Value *cloneConstantExprWithNewAddressSpace(
   }
 
   // If !IsNew, we will replace the Value with itself. However, replaced values
-  // are assumed to wrapped in a addrspace cast later so drop it now.
+  // are assumed to wrapped in an addrspacecast cast later so drop it now.
   if (!IsNew)
     return nullptr;
 
@@ -822,8 +822,8 @@ bool InferAddressSpacesImpl::run(Function &F) {
 
   // Changes the address spaces of the flat address expressions who are inferred
   // to point to a specific address space.
-  return rewriteWithNewAddressSpaces(*TTI, Postorder, InferredAddrSpace,
-                                     PredicatedAS, &F);
+  return rewriteWithNewAddressSpaces(Postorder, InferredAddrSpace, PredicatedAS,
+                                     &F);
 }
 
 // Constants need to be tracked through RAUW to handle cases with nested
@@ -1011,7 +1011,7 @@ static bool isSimplePointerUseValidToReplace(const TargetTransformInfo &TTI,
 }
 
 /// Update memory intrinsic uses that require more complex processing than
-/// simple memory instructions. Thse require re-mangling and may have multiple
+/// simple memory instructions. These require re-mangling and may have multiple
 /// pointer operands.
 static bool handleMemIntrinsicPtrUse(MemIntrinsic *MI, Value *OldV,
                                      Value *NewV) {
@@ -1105,7 +1105,7 @@ static Value::use_iterator skipToNextUser(Value::use_iterator I,
 }
 
 bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
-    const TargetTransformInfo &TTI, ArrayRef<WeakTrackingVH> Postorder,
+    ArrayRef<WeakTrackingVH> Postorder,
     const ValueToAddrSpaceMapTy &InferredAddrSpace,
     const PredicatedAddrSpaceMapTy &PredicatedAS, Function *F) const {
   // For each address expression to be modified, creates a clone of it with its
@@ -1179,7 +1179,7 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
       I = skipToNextUser(I, E);
 
       if (isSimplePointerUseValidToReplace(
-              TTI, U, V->getType()->getPointerAddressSpace())) {
+              *TTI, U, V->getType()->getPointerAddressSpace())) {
         // If V is used as the pointer operand of a compatible memory operation,
         // sets the pointer operand to NewV. This replacement does not change
         // the element type, so the resultant load/store is still valid.
