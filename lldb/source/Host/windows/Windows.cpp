@@ -64,27 +64,6 @@ char *strcasestr(const char *s, const char *find) {
 
 #ifdef _MSC_VER
 
-char *basename(char *path) {
-  char *l1 = strrchr(path, '\\');
-  char *l2 = strrchr(path, '/');
-  if (l2 > l1)
-    l1 = l2;
-  if (!l1)
-    return path; // no base name
-  return &l1[1];
-}
-
-char *dirname(char *path) {
-  char *l1 = strrchr(path, '\\');
-  char *l2 = strrchr(path, '/');
-  if (l2 > l1)
-    l1 = l2;
-  if (!l1)
-    return NULL; // no dir name
-  *l1 = 0;
-  return path;
-}
-
 int strcasecmp(const char *s1, const char *s2) { return stricmp(s1, s2); }
 
 int strncasecmp(const char *s1, const char *s2, size_t n) {
