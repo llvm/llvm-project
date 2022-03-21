@@ -113,8 +113,8 @@ private:
     Contexts.back().IsExpression = false;
     // If there's a template keyword before the opening angle bracket, this is a
     // template parameter, not an argument.
-    Contexts.back().InTemplateArgument =
-        Left->Previous && Left->Previous->isNot(tok::kw_template);
+    if (Left->Previous && Left->Previous->isNot(tok::kw_template))
+      Contexts.back().ContextType = Context::TemplateArgument;
 
     if (Style.Language == FormatStyle::LK_Java &&
         CurrentToken->is(tok::question))
@@ -288,7 +288,7 @@ private:
     } else if (OpeningParen.Previous &&
                OpeningParen.Previous->is(TT_ForEachMacro)) {
       // The first argument to a foreach macro is a declaration.
-      Contexts.back().IsForEachMacro = true;
+      Contexts.back().ContextType = Context::ForEachMacro;
       Contexts.back().IsExpression = false;
     } else if (OpeningParen.Previous && OpeningParen.Previous->MatchingParen &&
                OpeningParen.Previous->MatchingParen->is(TT_ObjCBlockLParen)) {
@@ -558,7 +558,7 @@ private:
     bool CppArrayTemplates =
         Style.isCpp() && Parent && Parent->is(TT_TemplateCloser) &&
         (Contexts.back().CanBeExpression || Contexts.back().IsExpression ||
-         Contexts.back().InTemplateArgument);
+         Contexts.back().ContextType == Context::TemplateArgument);
 
     bool IsCpp11AttributeSpecifier = isCpp11AttributeSpecifier(*Left) ||
                                      Contexts.back().InCpp11AttributeSpecifier;
@@ -803,7 +803,7 @@ private:
         if (Style.AlignArrayOfStructures != FormatStyle::AIAS_None) {
           if (OpeningBrace.ParentBracket == tok::l_brace &&
               couldBeInStructArrayInitializer() && CommaCount > 0)
-            Contexts.back().InStructArrayInitializer = true;
+            Contexts.back().ContextType = Context::StructArrayInitializer;
         }
         next();
         return true;
@@ -1157,16 +1157,22 @@ private:
       parseTemplateDeclaration();
       break;
     case tok::comma:
-      if (Contexts.back().InCtorInitializer)
+      switch (Contexts.back().ContextType) {
+      case Context::CtorInitializer:
         Tok->setType(TT_CtorInitializerComma);
-      else if (Contexts.back().InInheritanceList)
+        break;
+      case Context::InheritanceList:
         Tok->setType(TT_InheritanceComma);
-      else if (Contexts.back().FirstStartOfName &&
-               (Contexts.size() == 1 || startsWithInitStatement(Line))) {
-        Contexts.back().FirstStartOfName->PartOfMultiVariableDeclStmt = true;
-        Line.IsMultiVariableDeclStmt = true;
+        break;
+      default:
+        if (Contexts.back().FirstStartOfName &&
+            (Contexts.size() == 1 || startsWithInitStatement(Line))) {
+          Contexts.back().FirstStartOfName->PartOfMultiVariableDeclStmt = true;
+          Line.IsMultiVariableDeclStmt = true;
+        }
+        break;
       }
-      if (Contexts.back().IsForEachMacro)
+      if (Contexts.back().ContextType == Context::ForEachMacro)
         Contexts.back().IsExpression = true;
       break;
     case tok::identifier:
@@ -1411,7 +1417,7 @@ public:
     }
 
     for (const auto &ctx : Contexts)
-      if (ctx.InStructArrayInitializer)
+      if (ctx.ContextType == Context::StructArrayInitializer)
         return LT_ArrayOfStructInitializer;
 
     return LT_Other;
@@ -1488,14 +1494,25 @@ private:
     FormatToken *FirstObjCSelectorName = nullptr;
     FormatToken *FirstStartOfName = nullptr;
     bool CanBeExpression = true;
-    bool InTemplateArgument = false;
-    bool InCtorInitializer = false;
-    bool InInheritanceList = false;
     bool CaretFound = false;
-    bool IsForEachMacro = false;
     bool InCpp11AttributeSpecifier = false;
     bool InCSharpAttributeSpecifier = false;
-    bool InStructArrayInitializer = false;
+    enum {
+      Unknown,
+      // Like the part after `:` in a constructor.
+      //   Context(...) : IsExpression(IsExpression)
+      CtorInitializer,
+      // Like in the parentheses in a foreach.
+      ForEachMacro,
+      // Like the inheritance list in a class declaration.
+      //   class Input : public IO
+      InheritanceList,
+      // Like in the braced list.
+      //   int x[] = {};
+      StructArrayInitializer,
+      // Like in `static_cast<int>`.
+      TemplateArgument,
+    } ContextType = Unknown;
   };
 
   /// Puts a new \c Context onto the stack \c Contexts for the lifetime
@@ -1513,9 +1530,9 @@ private:
 
     ~ScopedContextCreator() {
       if (P.Style.AlignArrayOfStructures != FormatStyle::AIAS_None) {
-        if (P.Contexts.back().InStructArrayInitializer) {
+        if (P.Contexts.back().ContextType == Context::StructArrayInitializer) {
           P.Contexts.pop_back();
-          P.Contexts.back().InStructArrayInitializer = true;
+          P.Contexts.back().ContextType = Context::StructArrayInitializer;
           return;
         }
       }
@@ -1601,15 +1618,16 @@ private:
     } else if (Current.Previous &&
                Current.Previous->is(TT_CtorInitializerColon)) {
       Contexts.back().IsExpression = true;
-      Contexts.back().InCtorInitializer = true;
+      Contexts.back().ContextType = Context::CtorInitializer;
     } else if (Current.Previous && Current.Previous->is(TT_InheritanceColon)) {
-      Contexts.back().InInheritanceList = true;
+      Contexts.back().ContextType = Context::InheritanceList;
     } else if (Current.isOneOf(tok::r_paren, tok::greater, tok::comma)) {
       for (FormatToken *Previous = Current.Previous;
            Previous && Previous->isOneOf(tok::star, tok::amp);
            Previous = Previous->Previous)
         Previous->setType(TT_PointerOrReference);
-      if (Line.MustBeDeclaration && !Contexts.front().InCtorInitializer)
+      if (Line.MustBeDeclaration &&
+          Contexts.front().ContextType != Context::CtorInitializer)
         Contexts.back().IsExpression = false;
     } else if (Current.is(tok::kw_new)) {
       Contexts.back().CanBeExpression = false;
@@ -1756,7 +1774,7 @@ private:
       Current.setType(determineStarAmpUsage(
           Current,
           Contexts.back().CanBeExpression && Contexts.back().IsExpression,
-          Contexts.back().InTemplateArgument));
+          Contexts.back().ContextType == Context::TemplateArgument));
     } else if (Current.isOneOf(tok::minus, tok::plus, tok::caret)) {
       Current.setType(determinePlusMinusCaretUsage(Current));
       if (Current.is(TT_UnaryOperator) && Current.is(tok::caret))
