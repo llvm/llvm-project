@@ -2934,12 +2934,11 @@ X86::CondCode X86DAGToDAGISel::getCondFromNode(SDNode *N) const {
   assert(N->isMachineOpcode() && "Unexpected node");
   unsigned Opc = N->getMachineOpcode();
   const MCInstrDesc &MCID = getInstrInfo()->get(Opc);
-  int CondNo = X86::getCondNoFromDesc(MCID, /*SkipDefs=*/true);
-  if (CondNo == -1)
+  int CondNo = X86::getCondSrcNoFromDesc(MCID);
+  if (CondNo < 0)
     return X86::COND_INVALID;
 
-  return static_cast<X86::CondCode>(
-      N->getConstantOperandVal(static_cast<unsigned>(CondNo)));
+  return static_cast<X86::CondCode>(N->getConstantOperandVal(CondNo));
 }
 
 /// Test whether the given X86ISD::CMP node has any users that use a flag
