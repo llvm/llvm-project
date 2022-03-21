@@ -450,10 +450,6 @@ bootstrapping-build)
     clean
 
     echo "--- Generating CMake"
-    # TODO: We currently enable modules and assertions in the bootstrapping build
-    #       because that provides coverage for some specific Clang failures
-    #       we've been seeing recently, however it would be better to instead
-    #       run all CI configurations against a Clang that has assertions enabled.
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
@@ -466,7 +462,6 @@ bootstrapping-build)
           -DLLVM_TARGETS_TO_BUILD="host" \
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DLLVM_ENABLE_ASSERTIONS=ON \
-          -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake" \
           -DRUNTIMES_LIBUNWIND_TEST_CONFIG="llvm-libunwind-shared.cfg.in"
 
     echo "+++ Running the libc++ and libc++abi tests"
