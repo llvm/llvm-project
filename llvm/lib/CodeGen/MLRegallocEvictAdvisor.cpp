@@ -15,6 +15,10 @@
 #include "RegAllocGreedy.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MLModelRunner.h"
+#if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TF_API) 
+#include "llvm/Analysis/ModelUnderTrainingRunner.h"
+#include "llvm/Analysis/NoInferenceModelRunner.h"
+#endif
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -48,6 +52,9 @@ using CompiledModelType = NoopSavedModelImpl;
 
 // Options that only make sense in development mode
 #ifdef LLVM_HAVE_TF_API
+#include "RegAllocScore.h"
+#include "llvm/Analysis/Utils/TFUtils.h"
+
 static cl::opt<std::string> TrainingLog(
     "regalloc-training-log", cl::Hidden,
     cl::desc("Training log for the register allocator eviction model"));
