@@ -142,7 +142,7 @@ Optional<size_t> Trace::GetLiveProcessBinaryDataSize(llvm::StringRef kind) {
   return data_it->second;
 }
 
-Expected<ArrayRef<uint8_t>>
+Expected<std::vector<uint8_t>>
 Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
@@ -160,7 +160,7 @@ Trace::GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind) {
   return m_live_process->TraceGetBinaryData(request);
 }
 
-Expected<ArrayRef<uint8_t>>
+Expected<std::vector<uint8_t>>
 Trace::GetLiveProcessBinaryData(llvm::StringRef kind) {
   if (!m_live_process)
     return createStringError(inconvertibleErrorCode(),
