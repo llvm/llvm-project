@@ -180,7 +180,7 @@ void ReassociatePass::BuildRankMap(Function &F,
     // we cannot move.  This ensures that the ranks for these instructions are
     // all different in the block.
     for (Instruction &I : *BB)
-      if (mayBeMemoryDependent(I))
+      if (mayHaveNonDefUseDependency(I))
         ValueRankMap[&I] = ++BBRank;
   }
 }
