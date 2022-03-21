@@ -698,6 +698,10 @@ enum ASTRecordTypes {
 
   /// Record code for included files.
   PP_INCLUDED_FILES = 66,
+
+  /// Record code for an unterminated \#pragma clang assume_nonnull begin
+  /// recorded in a preamble.
+  PP_ASSUME_NONNULL_LOC = 67,
 };
 
 /// Record types used within a source manager block.
