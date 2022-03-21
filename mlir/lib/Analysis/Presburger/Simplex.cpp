@@ -888,11 +888,11 @@ MaybeOptimum<Fraction> Simplex::computeOptimum(Direction direction,
                                                ArrayRef<int64_t> coeffs) {
   if (empty)
     return OptimumKind::Empty;
-  unsigned snapshot = getSnapshot();
+
+  SimplexRollbackScopeExit scopeExit(*this);
   unsigned conIndex = addRow(coeffs);
   unsigned row = con[conIndex].pos;
   MaybeOptimum<Fraction> optimum = computeRowOptimum(direction, row);
-  rollback(snapshot);
   return optimum;
 }
 
@@ -1205,7 +1205,7 @@ public:
     // tableau before returning. We instead add a row for the objective function
     // ourselves, call into computeOptimum, compute the duals from the tableau
     // state, and finally rollback the addition of the row before returning.
-    unsigned snap = simplex.getSnapshot();
+    SimplexRollbackScopeExit scopeExit(simplex);
     unsigned conIndex = simplex.addRow(getCoeffsForDirection(dir));
     unsigned row = simplex.con[conIndex].pos;
     MaybeOptimum<Fraction> maybeWidth =
@@ -1248,7 +1248,6 @@ public:
       else
         dual.push_back(0);
     }
-    simplex.rollback(snap);
     return *maybeWidth;
   }
 

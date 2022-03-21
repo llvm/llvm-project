@@ -232,12 +232,11 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
   // inequality, s_{i,j+1}. This function recurses into the next level i + 1
   // with the part b ^ s_i1 ^ s_i2 ^ ... ^ s_ij ^ ~s_{i,j+1}.
   auto recurseWithInequality = [&, i](ArrayRef<int64_t> ineq) {
-    size_t snapshot = simplex.getSnapshot();
+    SimplexRollbackScopeExit scopeExit(simplex);
     b.addInequality(ineq);
     simplex.addInequality(ineq);
     subtractRecursively(b, simplex, s, i + 1, result);
     b.removeInequality(b.getNumInequalities() - 1);
-    simplex.rollback(snapshot);
   };
 
   // For each inequality ineq, we first recurse with the part where ineq
@@ -519,16 +518,11 @@ PresburgerRelation SetCoalescer::coalesce() {
 /// that all inequalities of `cuttingIneqsB` are redundant for the facet of
 /// `simp` where `ineq` holds as an equality is contained within `a`.
 bool SetCoalescer::isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp) {
-  unsigned snapshot = simp.getSnapshot();
+  SimplexRollbackScopeExit scopeExit(simp);
   simp.addEquality(ineq);
-  if (llvm::any_of(cuttingIneqsB, [&simp](ArrayRef<int64_t> curr) {
-        return !simp.isRedundantInequality(curr);
-      })) {
-    simp.rollback(snapshot);
-    return false;
-  }
-  simp.rollback(snapshot);
-  return true;
+  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<int64_t> curr) {
+    return simp.isRedundantInequality(curr);
+  });
 }
 
 void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,
