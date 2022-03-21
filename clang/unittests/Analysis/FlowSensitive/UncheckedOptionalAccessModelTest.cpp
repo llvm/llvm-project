@@ -507,6 +507,9 @@ namespace std {
 template <typename T>
 constexpr remove_reference_t<T>&& move(T&& x);
 
+template <typename T>
+void swap(T& a, T& b) noexcept;
+
 } // namespace std
 
 #endif // UTILITY_H
@@ -718,6 +721,8 @@ class optional : private __optional_storage_base<_Tp> {
 
   constexpr explicit operator bool() const noexcept;
   using __base::has_value;
+
+  constexpr void swap(optional& __opt) noexcept;
 };
 
 template <typename T>
@@ -938,6 +943,8 @@ class optional {
 
   constexpr explicit operator bool() const noexcept;
   constexpr bool has_value() const noexcept;
+
+  void swap(optional& rhs) noexcept;
 };
 
 template <typename T>
@@ -1129,6 +1136,8 @@ class Optional {
 
   constexpr explicit operator bool() const noexcept;
   constexpr bool has_value() const noexcept;
+
+  void swap(Optional& other);
 };
 
 template <typename T>
@@ -1911,10 +1920,93 @@ TEST_P(UncheckedOptionalAccessTest, NulloptAssignment) {
       UnorderedElementsAre(Pair("check", "unsafe: input.cc:6:7")));
 }
 
+TEST_P(UncheckedOptionalAccessTest, OptionalSwap) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = 3;
+
+      opt1.swap(opt2);
+
+      opt1.value();
+      /*[[check-1]]*/
+
+      opt2.value();
+      /*[[check-2]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-1", "safe"),
+                           Pair("check-2", "unsafe: input.cc:13:7")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = 3;
+
+      opt2.swap(opt1);
+
+      opt1.value();
+      /*[[check-3]]*/
+
+      opt2.value();
+      /*[[check-4]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-3", "safe"),
+                           Pair("check-4", "unsafe: input.cc:13:7")));
+}
+
+TEST_P(UncheckedOptionalAccessTest, StdSwap) {
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = 3;
+
+      std::swap(opt1, opt2);
+
+      opt1.value();
+      /*[[check-1]]*/
+
+      opt2.value();
+      /*[[check-2]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-1", "safe"),
+                           Pair("check-2", "unsafe: input.cc:13:7")));
+
+  ExpectLatticeChecksFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    void target() {
+      $ns::$optional<int> opt1 = $ns::nullopt;
+      $ns::$optional<int> opt2 = 3;
+
+      std::swap(opt2, opt1);
+
+      opt1.value();
+      /*[[check-3]]*/
+
+      opt2.value();
+      /*[[check-4]]*/
+    }
+  )",
+      UnorderedElementsAre(Pair("check-3", "safe"),
+                           Pair("check-4", "unsafe: input.cc:13:7")));
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
-// - swap
 // - invalidation (passing optional by non-const reference/pointer)
 // - `value_or(nullptr) != nullptr`, `value_or(0) != 0`, `value_or("").empty()`
 // - nested `optional` values
