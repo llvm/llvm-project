@@ -15,7 +15,7 @@ using namespace mlir;
 
 ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
     OpAsmParser &parser, bool allowAttributes, bool allowVariadic,
-    SmallVectorImpl<OpAsmParser::OperandType> &argNames,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
     SmallVectorImpl<Location> &argLocations, bool &isVariadic) {
   if (parser.parseLParen())
@@ -28,7 +28,7 @@ ParseResult mlir::function_interface_impl::parseFunctionArgumentList(
     SMLoc loc = parser.getCurrentLocation();
 
     // Parse argument name if present.
-    OpAsmParser::OperandType argument;
+    OpAsmParser::UnresolvedOperand argument;
     Type argumentType;
     if (succeeded(parser.parseOptionalRegionArgument(argument)) &&
         !argument.name.empty()) {
@@ -133,7 +133,7 @@ parseFunctionResultList(OpAsmParser &parser, SmallVectorImpl<Type> &resultTypes,
 
 ParseResult mlir::function_interface_impl::parseFunctionSignature(
     OpAsmParser &parser, bool allowVariadic,
-    SmallVectorImpl<OpAsmParser::OperandType> &argNames,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &argNames,
     SmallVectorImpl<Type> &argTypes, SmallVectorImpl<NamedAttrList> &argAttrs,
     SmallVectorImpl<Location> &argLocations, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
@@ -194,7 +194,7 @@ void mlir::function_interface_impl::addArgAndResultAttrs(
 ParseResult mlir::function_interface_impl::parseFunctionOp(
     OpAsmParser &parser, OperationState &result, bool allowVariadic,
     FuncTypeBuilder funcTypeBuilder) {
-  SmallVector<OpAsmParser::OperandType> entryArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand> entryArgs;
   SmallVector<NamedAttrList> argAttrs;
   SmallVector<NamedAttrList> resultAttrs;
   SmallVector<Type> argTypes;

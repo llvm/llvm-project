@@ -481,11 +481,11 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
 ///             ( `,` integer `:` bb-id (`(` ssa-use-and-type-list `)`)? )*
 static ParseResult parseSwitchOpCases(
     OpAsmParser &parser, Type &flagType, Block *&defaultDestination,
-    SmallVectorImpl<OpAsmParser::OperandType> &defaultOperands,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &defaultOperands,
     SmallVectorImpl<Type> &defaultOperandTypes,
     DenseIntElementsAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
-    SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &caseOperands,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &caseOperands,
     SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
   if (parser.parseKeyword("default") || parser.parseColon() ||
       parser.parseSuccessor(defaultDestination))
@@ -505,7 +505,7 @@ static ParseResult parseSwitchOpCases(
     values.push_back(APInt(bitWidth, value));
 
     Block *destination;
-    SmallVector<OpAsmParser::OperandType> operands;
+    SmallVector<OpAsmParser::UnresolvedOperand> operands;
     SmallVector<Type> operandTypes;
     if (failed(parser.parseColon()) ||
         failed(parser.parseSuccessor(destination)))

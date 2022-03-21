@@ -48,14 +48,15 @@ static LogicalResult verifySwitchOp(OpT op) {
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseCreateOperationOpAttributes(
-    OpAsmParser &p, SmallVectorImpl<OpAsmParser::OperandType> &attrOperands,
+    OpAsmParser &p,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &attrOperands,
     ArrayAttr &attrNamesAttr) {
   Builder &builder = p.getBuilder();
   SmallVector<Attribute, 4> attrNames;
   if (succeeded(p.parseOptionalLBrace())) {
     do {
       StringAttr nameAttr;
-      OpAsmParser::OperandType operand;
+      OpAsmParser::UnresolvedOperand operand;
       if (p.parseAttribute(nameAttr) || p.parseEqual() ||
           p.parseOperand(operand))
         return failure();
@@ -100,7 +101,7 @@ void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
 
 ParseResult ForEachOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse the loop variable followed by type.
-  OpAsmParser::OperandType loopVariable;
+  OpAsmParser::UnresolvedOperand loopVariable;
   Type loopVariableType;
   if (parser.parseRegionArgument(loopVariable) ||
       parser.parseColonType(loopVariableType))
@@ -111,7 +112,7 @@ ParseResult ForEachOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the operand (value range).
-  OpAsmParser::OperandType operandInfo;
+  OpAsmParser::UnresolvedOperand operandInfo;
   if (parser.parseOperand(operandInfo))
     return failure();
 

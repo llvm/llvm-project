@@ -959,14 +959,14 @@ void DmaStartOp::print(OpAsmPrinter &p) {
 //                       memref<1 x i32>
 //
 ParseResult DmaStartOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcMemRefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> srcIndexInfos;
-  OpAsmParser::OperandType dstMemRefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> dstIndexInfos;
-  OpAsmParser::OperandType numElementsInfo;
-  OpAsmParser::OperandType tagMemrefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> tagIndexInfos;
-  SmallVector<OpAsmParser::OperandType, 2> strideInfo;
+  OpAsmParser::UnresolvedOperand srcMemRefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> srcIndexInfos;
+  OpAsmParser::UnresolvedOperand dstMemRefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> dstIndexInfos;
+  OpAsmParser::UnresolvedOperand numElementsInfo;
+  OpAsmParser::UnresolvedOperand tagMemrefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> tagIndexInfos;
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> strideInfo;
 
   SmallVector<Type, 3> types;
   auto indexType = parser.getBuilder().getIndexType();
@@ -1153,9 +1153,9 @@ LogicalResult GenericAtomicRMWOp::verify() {
 
 ParseResult GenericAtomicRMWOp::parse(OpAsmParser &parser,
                                       OperationState &result) {
-  OpAsmParser::OperandType memref;
+  OpAsmParser::UnresolvedOperand memref;
   Type memrefType;
-  SmallVector<OpAsmParser::OperandType, 4> ivs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
 
   Type indexType = parser.getBuilder().getIndexType();
   if (parser.parseOperand(memref) ||
@@ -1341,8 +1341,8 @@ void PrefetchOp::print(OpAsmPrinter &p) {
 }
 
 ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType memrefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> indexInfo;
+  OpAsmParser::UnresolvedOperand memrefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> indexInfo;
   IntegerAttr localityHint;
   MemRefType type;
   StringRef readOrWrite, cacheType;
@@ -2422,7 +2422,7 @@ void TransposeOp::print(OpAsmPrinter &p) {
 }
 
 ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType in;
+  OpAsmParser::UnresolvedOperand in;
   AffineMap permutation;
   MemRefType srcType, dstType;
   if (parser.parseOperand(in) || parser.parseAffineMap(permutation) ||

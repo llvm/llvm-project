@@ -93,7 +93,7 @@ struct ToyInlinerInterface : public DialectInlinerInterface {
 /// of 'printBinaryOp' below.
 static mlir::ParseResult parseBinaryOp(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
-  SmallVector<mlir::OpAsmParser::OperandType, 2> operands;
+  SmallVector<mlir::OpAsmParser::UnresolvedOperand, 2> operands;
   SMLoc operandsLoc = parser.getCurrentLocation();
   Type type;
   if (parser.parseOperandList(operands, /*requiredOperandCount=*/2) ||

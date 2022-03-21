@@ -40,7 +40,7 @@ using namespace ROCDL;
 //     `llvm.amdgcn.buffer.load.* %rsrc, %vindex, %offset, %glc, %slc :
 //     result_type`
 ParseResult MubufLoadOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> ops;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
   Type type;
   if (parser.parseOperandList(ops, 5) || parser.parseColonType(type) ||
       parser.addTypeToList(type, result.types))
@@ -63,7 +63,7 @@ void MubufLoadOp::print(OpAsmPrinter &p) {
 //     `llvm.amdgcn.buffer.store.* %vdata, %rsrc, %vindex, %offset, %glc, %slc :
 //     result_type`
 ParseResult MubufStoreOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> ops;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
   Type type;
   if (parser.parseOperandList(ops, 6) || parser.parseColonType(type))
     return failure();

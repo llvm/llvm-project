@@ -94,7 +94,7 @@ static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
     return mlir::failure();
   auto &builder = parser.getBuilder();
   result.addAttribute("in_type", mlir::TypeAttr::get(intype));
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
   llvm::SmallVector<mlir::Type> typeVec;
   bool hasOperands = false;
   std::int32_t typeparamsSize = 0;
@@ -627,7 +627,7 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
 
 mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
                                      mlir::OperationState &result) {
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
   if (parser.parseOperandList(operands))
     return mlir::failure();
 
@@ -654,7 +654,8 @@ mlir::ParseResult fir::CallOp::parse(mlir::OpAsmParser &parser,
       return mlir::failure();
   } else {
     auto funcArgs =
-        llvm::ArrayRef<mlir::OpAsmParser::OperandType>(operands).drop_front();
+        llvm::ArrayRef<mlir::OpAsmParser::UnresolvedOperand>(operands)
+            .drop_front();
     if (parser.resolveOperand(operands[0], funcType, result.operands) ||
         parser.resolveOperands(funcArgs, funcType.getInputs(),
                                parser.getNameLoc(), result.operands))
@@ -707,7 +708,7 @@ static void printCmpOp(OpAsmPrinter &p, OPTY op) {
 template <typename OPTY>
 static mlir::ParseResult parseCmpOp(mlir::OpAsmParser &parser,
                                     mlir::OperationState &result) {
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> ops;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> ops;
   mlir::NamedAttrList attrs;
   mlir::Attribute predicateNameAttr;
   mlir::Type type;
@@ -895,13 +896,13 @@ void CoordinateOp::print(mlir::OpAsmPrinter &p) {
 
 mlir::ParseResult CoordinateOp::parse(mlir::OpAsmParser &parser,
                                       mlir::OperationState &result) {
-  mlir::OpAsmParser::OperandType memref;
+  mlir::OpAsmParser::UnresolvedOperand memref;
   if (parser.parseOperand(memref) || parser.parseComma())
     return mlir::failure();
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> coorOperands;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> coorOperands;
   if (parser.parseOperandList(coorOperands))
     return mlir::failure();
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> allOperands;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> allOperands;
   allOperands.push_back(memref);
   allOperands.append(coorOperands.begin(), coorOperands.end());
   mlir::FunctionType funcTy;
@@ -955,7 +956,7 @@ mlir::FunctionType fir::DispatchOp::getFunctionType() {
 mlir::ParseResult DispatchOp::parse(mlir::OpAsmParser &parser,
                                     mlir::OperationState &result) {
   mlir::FunctionType calleeType;
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
   auto calleeLoc = parser.getNameLoc();
   llvm::StringRef calleeName;
   if (failed(parser.parseOptionalKeyword(&calleeName))) {
@@ -1100,7 +1101,7 @@ mlir::ParseResult EmboxProcOp::parse(mlir::OpAsmParser &parser,
   if (parser.parseAttribute(procRef, "funcname", result.attributes))
     return mlir::failure();
   bool hasTuple = false;
-  mlir::OpAsmParser::OperandType tupleRef;
+  mlir::OpAsmParser::UnresolvedOperand tupleRef;
   if (!parser.parseOptionalComma()) {
     if (parser.parseOperand(tupleRef))
       return mlir::failure();
@@ -1376,7 +1377,7 @@ mlir::ParseResult FieldIndexOp::parse(mlir::OpAsmParser &parser,
   result.addAttribute(fir::FieldIndexOp::typeAttrName(),
                       mlir::TypeAttr::get(recty));
   if (!parser.parseOptionalLParen()) {
-    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+    llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
     llvm::SmallVector<mlir::Type> types;
     auto loc = parser.getNameLoc();
     if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::None) ||
@@ -1591,7 +1592,7 @@ void fir::IterWhileOp::build(mlir::OpBuilder &builder,
 mlir::ParseResult IterWhileOp::parse(mlir::OpAsmParser &parser,
                                      mlir::OperationState &result) {
   auto &builder = parser.getBuilder();
-  mlir::OpAsmParser::OperandType inductionVariable, lb, ub, step;
+  mlir::OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
   if (parser.parseLParen() || parser.parseRegionArgument(inductionVariable) ||
       parser.parseEqual())
     return mlir::failure();
@@ -1608,7 +1609,7 @@ mlir::ParseResult IterWhileOp::parse(mlir::OpAsmParser &parser,
       parser.resolveOperand(step, indexType, result.operands))
     return mlir::failure();
 
-  mlir::OpAsmParser::OperandType iterateVar, iterateInput;
+  mlir::OpAsmParser::UnresolvedOperand iterateVar, iterateInput;
   if (parser.parseKeyword("and") || parser.parseLParen() ||
       parser.parseRegionArgument(iterateVar) || parser.parseEqual() ||
       parser.parseOperand(iterateInput) || parser.parseRParen() ||
@@ -1616,7 +1617,7 @@ mlir::ParseResult IterWhileOp::parse(mlir::OpAsmParser &parser,
     return mlir::failure();
 
   // Parse the initial iteration arguments.
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> regionArgs;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> regionArgs;
   auto prependCount = false;
 
   // Induction variable.
@@ -1624,7 +1625,7 @@ mlir::ParseResult IterWhileOp::parse(mlir::OpAsmParser &parser,
   regionArgs.push_back(iterateVar);
 
   if (succeeded(parser.parseOptionalKeyword("iter_args"))) {
-    llvm::SmallVector<mlir::OpAsmParser::OperandType> operands;
+    llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
     llvm::SmallVector<mlir::Type> regionTypes;
     // Parse assignment list and results type list.
     if (parser.parseAssignmentList(regionArgs, operands) ||
@@ -1860,7 +1861,7 @@ mlir::ParseResult fir::LoadOp::getElementOf(mlir::Type &ele, mlir::Type ref) {
 mlir::ParseResult LoadOp::parse(mlir::OpAsmParser &parser,
                                 mlir::OperationState &result) {
   mlir::Type type;
-  mlir::OpAsmParser::OperandType oper;
+  mlir::OpAsmParser::UnresolvedOperand oper;
   if (parser.parseOperand(oper) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(type) ||
@@ -1915,7 +1916,7 @@ void fir::DoLoopOp::build(mlir::OpBuilder &builder,
 mlir::ParseResult DoLoopOp::parse(mlir::OpAsmParser &parser,
                                   mlir::OperationState &result) {
   auto &builder = parser.getBuilder();
-  mlir::OpAsmParser::OperandType inductionVariable, lb, ub, step;
+  mlir::OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
   // Parse the induction variable followed by '='.
   if (parser.parseRegionArgument(inductionVariable) || parser.parseEqual())
     return mlir::failure();
@@ -1934,7 +1935,7 @@ mlir::ParseResult DoLoopOp::parse(mlir::OpAsmParser &parser,
     result.addAttribute("unordered", builder.getUnitAttr());
 
   // Parse the optional initial iteration arguments.
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> regionArgs, operands;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> regionArgs, operands;
   llvm::SmallVector<mlir::Type> argTypes;
   auto prependCount = false;
   regionArgs.push_back(inductionVariable);
@@ -2346,7 +2347,7 @@ static LogicalResult verifyIntegralSwitchTerminator(OpT op) {
 static mlir::ParseResult parseIntegralSwitchTerminator(
     mlir::OpAsmParser &parser, mlir::OperationState &result,
     llvm::StringRef casesAttr, llvm::StringRef operandSegmentAttr) {
-  mlir::OpAsmParser::OperandType selector;
+  mlir::OpAsmParser::UnresolvedOperand selector;
   mlir::Type type;
   if (parseSelector(parser, result, selector, type))
     return mlir::failure();
@@ -2556,13 +2557,13 @@ fir::SelectCaseOp::getSuccessorOperands(mlir::ValueRange operands,
 // parser for fir.select_case Op
 mlir::ParseResult SelectCaseOp::parse(mlir::OpAsmParser &parser,
                                       mlir::OperationState &result) {
-  mlir::OpAsmParser::OperandType selector;
+  mlir::OpAsmParser::UnresolvedOperand selector;
   mlir::Type type;
   if (parseSelector(parser, result, selector, type))
     return mlir::failure();
 
   llvm::SmallVector<mlir::Attribute> attrs;
-  llvm::SmallVector<mlir::OpAsmParser::OperandType> opers;
+  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> opers;
   llvm::SmallVector<mlir::Block *> dests;
   llvm::SmallVector<llvm::SmallVector<mlir::Value>> destArgs;
   llvm::SmallVector<int32_t> argOffs;
@@ -2579,8 +2580,8 @@ mlir::ParseResult SelectCaseOp::parse(mlir::OpAsmParser &parser,
     if (attr.dyn_cast_or_null<mlir::UnitAttr>()) {
       argOffs.push_back(0);
     } else if (attr.dyn_cast_or_null<fir::ClosedIntervalAttr>()) {
-      mlir::OpAsmParser::OperandType oper1;
-      mlir::OpAsmParser::OperandType oper2;
+      mlir::OpAsmParser::UnresolvedOperand oper1;
+      mlir::OpAsmParser::UnresolvedOperand oper2;
       if (parser.parseOperand(oper1) || parser.parseComma() ||
           parser.parseOperand(oper2) || parser.parseComma())
         return mlir::failure();
@@ -2589,7 +2590,7 @@ mlir::ParseResult SelectCaseOp::parse(mlir::OpAsmParser &parser,
       argOffs.push_back(2);
       offSize += 2;
     } else {
-      mlir::OpAsmParser::OperandType oper;
+      mlir::OpAsmParser::UnresolvedOperand oper;
       if (parser.parseOperand(oper) || parser.parseComma())
         return mlir::failure();
       opers.push_back(oper);
@@ -2861,7 +2862,7 @@ fir::SelectTypeOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
 }
 
 ParseResult SelectTypeOp::parse(OpAsmParser &parser, OperationState &result) {
-  mlir::OpAsmParser::OperandType selector;
+  mlir::OpAsmParser::UnresolvedOperand selector;
   mlir::Type type;
   if (parseSelector(parser, result, selector, type))
     return mlir::failure();
@@ -3075,8 +3076,8 @@ mlir::Type fir::StoreOp::elementType(mlir::Type refType) {
 mlir::ParseResult StoreOp::parse(mlir::OpAsmParser &parser,
                                  mlir::OperationState &result) {
   mlir::Type type;
-  mlir::OpAsmParser::OperandType oper;
-  mlir::OpAsmParser::OperandType store;
+  mlir::OpAsmParser::UnresolvedOperand oper;
+  mlir::OpAsmParser::UnresolvedOperand store;
   if (parser.parseOperand(oper) || parser.parseKeyword("to") ||
       parser.parseOperand(store) ||
       parser.parseOptionalAttrDict(result.attributes) ||
@@ -3274,7 +3275,7 @@ mlir::ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   mlir::Region *elseRegion = result.addRegion();
 
   auto &builder = parser.getBuilder();
-  OpAsmParser::OperandType cond;
+  OpAsmParser::UnresolvedOperand cond;
   mlir::Type i1Type = builder.getIntegerType(1);
   if (parser.parseOperand(cond) ||
       parser.resolveOperand(cond, i1Type, result.operands))
@@ -3363,10 +3364,10 @@ unsigned fir::getCaseArgumentOffset(llvm::ArrayRef<mlir::Attribute> cases,
   return o;
 }
 
-mlir::ParseResult fir::parseSelector(mlir::OpAsmParser &parser,
-                                     mlir::OperationState &result,
-                                     mlir::OpAsmParser::OperandType &selector,
-                                     mlir::Type &type) {
+mlir::ParseResult
+fir::parseSelector(mlir::OpAsmParser &parser, mlir::OperationState &result,
+                   mlir::OpAsmParser::UnresolvedOperand &selector,
+                   mlir::Type &type) {
   if (parser.parseOperand(selector) || parser.parseColonType(type) ||
       parser.resolveOperand(selector, type, result.operands) ||
       parser.parseLSquare())

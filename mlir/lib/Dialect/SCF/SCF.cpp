@@ -393,7 +393,7 @@ void ForOp::print(OpAsmPrinter &p) {
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
-  OpAsmParser::OperandType inductionVariable, lb, ub, step;
+  OpAsmParser::UnresolvedOperand inductionVariable, lb, ub, step;
   // Parse the induction variable followed by '='.
   if (parser.parseRegionArgument(inductionVariable) || parser.parseEqual())
     return failure();
@@ -409,7 +409,7 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse the optional initial iteration arguments.
-  SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
   SmallVector<Type, 4> argTypes;
   regionArgs.push_back(inductionVariable);
 
@@ -1125,7 +1125,7 @@ ParseResult IfOp::parse(OpAsmParser &parser, OperationState &result) {
   Region *elseRegion = result.addRegion();
 
   auto &builder = parser.getBuilder();
-  OpAsmParser::OperandType cond;
+  OpAsmParser::UnresolvedOperand cond;
   Type i1Type = builder.getIntegerType(1);
   if (parser.parseOperand(cond) ||
       parser.resolveOperand(cond, i1Type, result.operands))
@@ -1979,20 +1979,20 @@ LogicalResult ParallelOp::verify() {
 ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::OperandType, 4> ivs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
   if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
                                      OpAsmParser::Delimiter::Paren))
     return failure();
 
   // Parse loop bounds.
-  SmallVector<OpAsmParser::OperandType, 4> lower;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> lower;
   if (parser.parseEqual() ||
       parser.parseOperandList(lower, ivs.size(),
                               OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(lower, builder.getIndexType(), result.operands))
     return failure();
 
-  SmallVector<OpAsmParser::OperandType, 4> upper;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> upper;
   if (parser.parseKeyword("to") ||
       parser.parseOperandList(upper, ivs.size(),
                               OpAsmParser::Delimiter::Paren) ||
@@ -2000,7 +2000,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse step values.
-  SmallVector<OpAsmParser::OperandType, 4> steps;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, ivs.size(),
                               OpAsmParser::Delimiter::Paren) ||
@@ -2008,7 +2008,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse init values.
-  SmallVector<OpAsmParser::OperandType, 4> initVals;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> initVals;
   if (succeeded(parser.parseOptionalKeyword("init"))) {
     if (parser.parseOperandList(initVals, /*requiredOperandCount=*/-1,
                                 OpAsmParser::Delimiter::Paren))
@@ -2290,7 +2290,7 @@ LogicalResult ReduceOp::verifyRegions() {
 
 ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse an opening `(` followed by the reduced value followed by `)`
-  OpAsmParser::OperandType operand;
+  OpAsmParser::UnresolvedOperand operand;
   if (parser.parseLParen() || parser.parseOperand(operand) ||
       parser.parseRParen())
     return failure();
@@ -2385,7 +2385,7 @@ void WhileOp::getSuccessorRegions(Optional<unsigned> index,
 /// assignment-list ::= assignment | assignment `,` assignment-list
 /// assignment ::= ssa-value `=` ssa-value
 ParseResult scf::WhileOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 4> regionArgs, operands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> regionArgs, operands;
   Region *before = result.addRegion();
   Region *after = result.addRegion();
 

@@ -167,7 +167,7 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
 
   // Parse dependency tokens.
   if (succeeded(parser.parseOptionalLSquare())) {
-    SmallVector<OpAsmParser::OperandType, 4> tokenArgs;
+    SmallVector<OpAsmParser::UnresolvedOperand, 4> tokenArgs;
     if (parser.parseOperandList(tokenArgs) ||
         parser.resolveOperands(tokenArgs, tokenTy, result.operands) ||
         parser.parseRSquare())
@@ -177,8 +177,8 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   // Parse async value operands (%value as %unwrapped : !async.value<!type>).
-  SmallVector<OpAsmParser::OperandType, 4> valueArgs;
-  SmallVector<OpAsmParser::OperandType, 4> unwrappedArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> valueArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> unwrappedArgs;
   SmallVector<Type, 4> valueTypes;
   SmallVector<Type, 4> unwrappedTypes;
 

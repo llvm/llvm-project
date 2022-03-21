@@ -1734,7 +1734,7 @@ void printInferType(OpAsmPrinter &printer, Operation *op, Value optOperand,
                     Type typeToInfer, Type typeToInferFrom) {}
 
 ParseResult parseInferType(OpAsmParser &parser,
-                           Optional<OpAsmParser::OperandType> optOperand,
+                           Optional<OpAsmParser::UnresolvedOperand> optOperand,
                            Type &typeToInfer, Type typeToInferFrom) {
   if (optOperand)
     typeToInfer = typeToInferFrom;

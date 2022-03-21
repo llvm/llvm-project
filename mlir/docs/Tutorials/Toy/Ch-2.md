@@ -639,7 +639,7 @@ mlir::ParseResult PrintOp::parse(mlir::OpAsmParser &parser,
                                  mlir::OperationState &result) {
   // Parse the input operand, the attribute dictionary, and the type of the
   // input.
-  mlir::OpAsmParser::OperandType inputOperand;
+  mlir::OpAsmParser::UnresolvedOperand inputOperand;
   mlir::Type inputType;
   if (parser.parseOperand(inputOperand) ||
       parser.parseOptionalAttrDict(result.attributes) || parser.parseColon() ||
