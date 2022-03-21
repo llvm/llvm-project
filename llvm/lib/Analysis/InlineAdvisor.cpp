@@ -443,7 +443,7 @@ std::string llvm::formatCallSiteLocation(DebugLoc DLoc,
 }
 
 void llvm::addLocationToRemarks(OptimizationRemark &Remark, DebugLoc DLoc) {
-  if (!DLoc.get()) {
+  if (!DLoc) {
     return;
   }
 

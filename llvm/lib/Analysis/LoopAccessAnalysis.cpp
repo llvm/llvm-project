@@ -2366,7 +2366,7 @@ const LoopAccessInfo &LoopAccessLegacyAnalysis::getInfo(Loop *L) {
   if (!LAI)
     LAI = std::make_unique<LoopAccessInfo>(L, SE, TLI, AA, DT, LI);
 
-  return *LAI.get();
+  return *LAI;
 }
 
 void LoopAccessLegacyAnalysis::print(raw_ostream &OS, const Module *M) const {

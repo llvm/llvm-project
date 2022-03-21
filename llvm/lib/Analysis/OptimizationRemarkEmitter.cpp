@@ -47,7 +47,7 @@ OptimizationRemarkEmitter::OptimizationRemarkEmitter(const Function *F)
 bool OptimizationRemarkEmitter::invalidate(
     Function &F, const PreservedAnalyses &PA,
     FunctionAnalysisManager::Invalidator &Inv) {
-  if (OwnedBFI.get()) {
+  if (OwnedBFI) {
     OwnedBFI.reset();
     BFI = nullptr;
   }

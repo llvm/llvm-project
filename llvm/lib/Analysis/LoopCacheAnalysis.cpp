@@ -550,7 +550,7 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
 
       bool Added = false;
       for (ReferenceGroupTy &RefGroup : RefGroups) {
-        const IndexedReference &Representative = *RefGroup.front().get();
+        const IndexedReference &Representative = *RefGroup.front();
         LLVM_DEBUG({
           dbgs() << "References:\n";
           dbgs().indent(2) << *R << "\n";
