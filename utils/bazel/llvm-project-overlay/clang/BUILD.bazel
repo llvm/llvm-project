@@ -1298,6 +1298,7 @@ cc_library(
         ":basic",
         ":frontend",
         ":index",
+        "//llvm:Support",
     ],
 )
 
