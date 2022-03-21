@@ -235,9 +235,9 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-// CHECK1-NEXT:    store i32 0, i32* [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to i32**
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[TMP2]], align 8
+// CHECK1-NEXT:    store i32 0, i32* [[TMP3]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -266,9 +266,9 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to float*
-// CHECK1-NEXT:    store float 0.000000e+00, float* [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to float**
+// CHECK1-NEXT:    [[TMP3:%.*]] = load float*, float** [[TMP2]], align 8
+// CHECK1-NEXT:    store float 0.000000e+00, float* [[TMP3]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -297,9 +297,9 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-// CHECK1-NEXT:    store i32 0, i32* [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to i32**
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[TMP2]], align 8
+// CHECK1-NEXT:    store i32 0, i32* [[TMP3]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -328,8 +328,8 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to [5 x %struct.S]*
+// CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to [5 x %struct.S]**
+// CHECK1-NEXT:    [[TMP3:%.*]] = load [5 x %struct.S]*, [5 x %struct.S]** [[TMP2]], align 8
 // CHECK1-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [5 x %struct.S], [5 x %struct.S]* [[TMP3]], i32 0, i32 0
 // CHECK1-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_S:%.*]], %struct.S* [[ARRAY_BEGIN]], i64 5
 // CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAY_BEGIN]], [[TMP4]]
@@ -437,16 +437,16 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP4:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i8* bitcast (i64* @{{reduction_size[.].+[.]}})
-// CHECK1-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP4]] to i64*
-// CHECK1-NEXT:    [[TMP6:%.*]] = load i64, i64* [[TMP5]], align 8
-// CHECK1-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP3]] to i16*
-// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP7]], i64 [[TMP6]]
-// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq i16* [[TMP7]], [[TMP8]]
+// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8** [[DOTADDR]] to i16**
+// CHECK1-NEXT:    [[TMP4:%.*]] = load i16*, i16** [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP5:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i8* bitcast (i64* @{{reduction_size[.].+[.]}})
+// CHECK1-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP5]] to i64*
+// CHECK1-NEXT:    [[TMP7:%.*]] = load i64, i64* [[TMP6]], align 8
+// CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP4]], i64 [[TMP7]]
+// CHECK1-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq i16* [[TMP4]], [[TMP8]]
 // CHECK1-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK1:       omp.arrayinit.body:
-// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi i16* [ [[TMP7]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK1-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi i16* [ [[TMP4]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK1-NEXT:    store i16 0, i16* [[OMP_ARRAYCPY_DESTELEMENTPAST]], align 2
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr i16, i16* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
 // CHECK1-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq i16* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP8]]
@@ -906,9 +906,9 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-// CHECK2-NEXT:    store i32 0, i32* [[TMP3]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to i32**
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[TMP2]], align 8
+// CHECK2-NEXT:    store i32 0, i32* [[TMP3]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -937,9 +937,9 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to float*
-// CHECK2-NEXT:    store float 0.000000e+00, float* [[TMP3]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to float**
+// CHECK2-NEXT:    [[TMP3:%.*]] = load float*, float** [[TMP2]], align 8
+// CHECK2-NEXT:    store float 0.000000e+00, float* [[TMP3]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -968,9 +968,9 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-// CHECK2-NEXT:    store i32 0, i32* [[TMP3]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to i32**
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[TMP2]], align 8
+// CHECK2-NEXT:    store i32 0, i32* [[TMP3]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
@@ -999,8 +999,8 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to [5 x %struct.S]*
+// CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to [5 x %struct.S]**
+// CHECK2-NEXT:    [[TMP3:%.*]] = load [5 x %struct.S]*, [5 x %struct.S]** [[TMP2]], align 8
 // CHECK2-NEXT:    [[ARRAY_BEGIN:%.*]] = getelementptr inbounds [5 x %struct.S], [5 x %struct.S]* [[TMP3]], i32 0, i32 0
 // CHECK2-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_S:%.*]], %struct.S* [[ARRAY_BEGIN]], i64 5
 // CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq %struct.S* [[ARRAY_BEGIN]], [[TMP4]]
@@ -1108,16 +1108,16 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(%struct.ident_t* @[[GLOB1]])
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK2-NEXT:    [[TMP4:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i8* bitcast (i64* @{{reduction_size[.].+[.]}})
-// CHECK2-NEXT:    [[TMP5:%.*]] = bitcast i8* [[TMP4]] to i64*
-// CHECK2-NEXT:    [[TMP6:%.*]] = load i64, i64* [[TMP5]], align 8
-// CHECK2-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP3]] to i16*
-// CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP7]], i64 [[TMP6]]
-// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq i16* [[TMP7]], [[TMP8]]
+// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8** [[DOTADDR]] to i16**
+// CHECK2-NEXT:    [[TMP4:%.*]] = load i16*, i16** [[TMP3]], align 8
+// CHECK2-NEXT:    [[TMP5:%.*]] = call i8* @__kmpc_threadprivate_cached(%struct.ident_t* @[[GLOB1]], i32 [[TMP2]], i8* bitcast (i64* @{{reduction_size[.].+[.]}})
+// CHECK2-NEXT:    [[TMP6:%.*]] = bitcast i8* [[TMP5]] to i64*
+// CHECK2-NEXT:    [[TMP7:%.*]] = load i64, i64* [[TMP6]], align 8
+// CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr i16, i16* [[TMP4]], i64 [[TMP7]]
+// CHECK2-NEXT:    [[OMP_ARRAYINIT_ISEMPTY:%.*]] = icmp eq i16* [[TMP4]], [[TMP8]]
 // CHECK2-NEXT:    br i1 [[OMP_ARRAYINIT_ISEMPTY]], label [[OMP_ARRAYINIT_DONE:%.*]], label [[OMP_ARRAYINIT_BODY:%.*]]
 // CHECK2:       omp.arrayinit.body:
-// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi i16* [ [[TMP7]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
+// CHECK2-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST:%.*]] = phi i16* [ [[TMP4]], [[ENTRY:%.*]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT:%.*]], [[OMP_ARRAYINIT_BODY]] ]
 // CHECK2-NEXT:    store i16 0, i16* [[OMP_ARRAYCPY_DESTELEMENTPAST]], align 2
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT]] = getelementptr i16, i16* [[OMP_ARRAYCPY_DESTELEMENTPAST]], i32 1
 // CHECK2-NEXT:    [[OMP_ARRAYCPY_DONE:%.*]] = icmp eq i16* [[OMP_ARRAYCPY_DEST_ELEMENT]], [[TMP8]]
