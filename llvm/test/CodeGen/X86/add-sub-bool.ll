@@ -238,6 +238,40 @@ define i32 @test_i32_sub_sub_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %sub1
 }
 
+define i32 @test_i32_sub_sub_commute_idx(i32 %x, i32 %y, i32 %z) {
+; X86-LABEL: test_i32_sub_sub_commute_idx:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $15, %ecx
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    retl
+;
+; NOTBM-LABEL: test_i32_sub_sub_commute_idx:
+; NOTBM:       # %bb.0:
+; NOTBM-NEXT:    movl %edi, %eax
+; NOTBM-NEXT:    shrl $15, %edx
+; NOTBM-NEXT:    andl $1, %edx
+; NOTBM-NEXT:    subl %esi, %eax
+; NOTBM-NEXT:    subl %edx, %eax
+; NOTBM-NEXT:    retq
+;
+; TBM-LABEL: test_i32_sub_sub_commute_idx:
+; TBM:       # %bb.0:
+; TBM-NEXT:    movl %edi, %eax
+; TBM-NEXT:    bextrl $271, %edx, %ecx # imm = 0x10F
+; TBM-NEXT:    subl %esi, %eax
+; TBM-NEXT:    subl %ecx, %eax
+; TBM-NEXT:    retq
+  %shift = lshr i32 %z, 15
+  %mask = and i32 %shift, 1
+  %sub0 = sub i32 %x, %y
+  %sub1 = sub i32 %sub0, %mask
+  ret i32 %sub1
+}
+
 ;
 ; Variable Bit Indices
 ;
@@ -412,5 +446,33 @@ define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   %mask = and i32 %shift, 1
   %sub0 = sub i32 %y, %mask
   %sub1 = sub i32 %x, %sub0
+  ret i32 %sub1
+}
+
+define i32 @test_i32_sub_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+; X86-LABEL: test_i32_sub_sub_commute_var:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shrl %cl, %edx
+; X86-NEXT:    andl $1, %edx
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i32_sub_sub_commute_var:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    shrl %cl, %edx
+; X64-NEXT:    andl $1, %edx
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    subl %edx, %eax
+; X64-NEXT:    retq
+  %shift = lshr i32 %z, %w
+  %mask = and i32 %shift, 1
+  %sub0 = sub i32 %x, %y
+  %sub1 = sub i32 %sub0, %mask
   ret i32 %sub1
 }
