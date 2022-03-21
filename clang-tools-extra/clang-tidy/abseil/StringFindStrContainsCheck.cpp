@@ -30,7 +30,7 @@ using ::clang::transformer::cat;
 using ::clang::transformer::changeTo;
 using ::clang::transformer::makeRule;
 using ::clang::transformer::node;
-using ::clang::transformer::RewriteRule;
+using ::clang::transformer::RewriteRuleWith;
 
 AST_MATCHER(Type, isCharType) { return Node.isCharType(); }
 
@@ -39,7 +39,7 @@ static const char DefaultStringLikeClasses[] = "::std::basic_string;"
                                                "::absl::string_view";
 static const char DefaultAbseilStringsMatchHeader[] = "absl/strings/match.h";
 
-static transformer::RewriteRule
+static transformer::RewriteRuleWith<std::string>
 makeRewriteRule(const std::vector<std::string> &StringLikeClassNames,
                 StringRef AbseilStringsMatchHeader) {
   auto StringLikeClass = cxxRecordDecl(hasAnyName(SmallVector<StringRef, 4>(
@@ -62,7 +62,7 @@ makeRewriteRule(const std::vector<std::string> &StringLikeClassNames,
             hasArgument(1, cxxDefaultArgExpr())),
       onImplicitObjectArgument(expr().bind("string_being_searched")));
 
-  RewriteRule Rule = applyFirst(
+  RewriteRuleWith<std::string> Rule = applyFirst(
       {makeRule(
            binaryOperator(hasOperatorName("=="),
                           hasOperands(ignoringParenImpCasts(StringNpos),
