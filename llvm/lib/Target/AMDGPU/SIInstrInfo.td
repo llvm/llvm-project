@@ -2669,15 +2669,6 @@ def getMFMAEarlyClobberOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
-// Maps an v_cmp instruction to its v_cmpx equivalent.
-def getVCMPXOpFromVCMP : InstrMapping {
-  let FilterClass = "VCMPVCMPXTable";
-  let RowFields = ["VCMPOp"];
-  let ColFields = ["IsVCMPX"];
-  let KeyCol = ["0"];
-  let ValueCols = [["1"]];
-}
-
 include "SIInstructions.td"
 
 include "DSInstructions.td"

@@ -3856,19 +3856,18 @@ static void copyFlagsToImplicitVCC(MachineInstr &MI,
 
 MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
                                            unsigned Op32) const {
-  MachineBasicBlock *MBB = MI.getParent();
+  MachineBasicBlock *MBB = MI.getParent();;
   MachineInstrBuilder Inst32 =
     BuildMI(*MBB, MI, MI.getDebugLoc(), get(Op32))
     .setMIFlags(MI.getFlags());
 
   // Add the dst operand if the 32-bit encoding also has an explicit $vdst.
   // For VOPC instructions, this is replaced by an implicit def of vcc.
-  if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::vdst) != -1) {
+  int Op32DstIdx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::vdst);
+  if (Op32DstIdx != -1) {
     // dst
     Inst32.add(MI.getOperand(0));
-  } else if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::sdst) != -1) {
-    // VOPCX instructions won't be writing to an explicit dst, so this should
-    // not fail for these instructions.
+  } else {
     assert(((MI.getOperand(0).getReg() == AMDGPU::VCC) ||
             (MI.getOperand(0).getReg() == AMDGPU::VCC_LO)) &&
            "Unexpected case");
