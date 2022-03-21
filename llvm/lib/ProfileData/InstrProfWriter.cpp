@@ -253,14 +253,28 @@ void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
   Dest.sortValueData();
 }
 
-void InstrProfWriter::addRecord(const Function::GUID Id,
-                                const memprof::MemProfRecord &Record,
+void InstrProfWriter::addRecord(const memprof::MemProfRecord &MR,
                                 function_ref<void(Error)> Warn) {
-  auto Result = MemProfData.insert({Id, Record});
-  if (!Result.second) {
-    memprof::MemProfRecord &Existing = Result.first->second;
-    Existing.merge(Record);
+  // Use 0 as a sentinel value since its highly unlikely that the lower 64-bits
+  // of a 128 bit md5 hash will be all zeros.
+  // TODO: Move this Key frame detection to the contructor to avoid having to
+  // scan all the callstacks again when adding a new record.
+  uint64_t Key = 0;
+  for (auto Iter = MR.CallStack.rbegin(), End = MR.CallStack.rend();
+       Iter != End; Iter++) {
+    if (!Iter->IsInlineFrame) {
+      Key = Iter->Function;
+      break;
+    }
   }
+
+  if (Key == 0) {
+    Warn(make_error<InstrProfError>(
+        instrprof_error::invalid_prof,
+        "could not determine leaf function for memprof record."));
+  }
+
+  MemProfData[Key].push_back(MR);
 }
 
 void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
@@ -269,9 +283,9 @@ void InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW,
     for (auto &Func : I.getValue())
       addRecord(I.getKey(), Func.first, std::move(Func.second), 1, Warn);
 
-  for (auto &I : IPW.MemProfData) {
-    addRecord(I.first, I.second, Warn);
-  }
+  for (auto &I : IPW.MemProfData)
+    for (const auto &MR : I.second)
+      addRecord(MR, Warn);
 }
 
 bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
@@ -401,8 +415,8 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
     MemProfWriter->Schema = &Schema;
     OnDiskChainedHashTableGenerator<memprof::MemProfRecordWriterTrait>
         MemProfGenerator;
-    for (auto &I : MemProfData) {
-      // Insert the key (func hash) and value (memprof record).
+    for (const auto &I : MemProfData) {
+      // Insert the key (func hash) and value (vector of memprof records).
       MemProfGenerator.insert(I.first, I.second);
     }
 

@@ -14,11 +14,9 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
-#include "llvm/IR/GlobalValue.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProfReader.h"
@@ -59,15 +57,14 @@ public:
   static Expected<std::unique_ptr<RawMemProfReader>>
   create(const Twine &Path, const StringRef ProfiledBinary);
 
-  using GuidMemProfRecordPair = std::pair<GlobalValue::GUID, MemProfRecord>;
-  using Iterator = InstrProfIterator<GuidMemProfRecordPair, RawMemProfReader>;
+  Error readNextRecord(MemProfRecord &Record);
+
+  using Iterator = InstrProfIterator<MemProfRecord, RawMemProfReader>;
   Iterator end() { return Iterator(); }
   Iterator begin() {
-    Iter = FunctionProfileData.begin();
+    Iter = ProfileData.begin();
     return Iterator(this);
   }
-
-  Error readNextRecord(GuidMemProfRecordPair &GuidRecord);
 
   // The RawMemProfReader only holds memory profile information.
   InstrProfKind getProfileKind() const { return InstrProfKind::MemProf; }
@@ -78,15 +75,13 @@ public:
                    llvm::MapVector<uint64_t, MemInfoBlock> &Prof,
                    CallStackMap &SM)
       : Symbolizer(std::move(Sym)), SegmentInfo(Seg.begin(), Seg.end()),
-        CallstackProfileData(Prof), StackMap(SM) {
+        ProfileData(Prof), StackMap(SM) {
     // We don't call initialize here since there is no raw profile to read. The
     // test should pass in the raw profile as structured data.
 
     // If there is an error here then the mock symbolizer has not been
     // initialized properly.
     if (Error E = symbolizeAndFilterStackFrames())
-      report_fatal_error(std::move(E));
-    if (Error E = mapRawProfileToRecords())
       report_fatal_error(std::move(E));
   }
 
@@ -101,12 +96,10 @@ private:
   // symbolize or those that belong to the runtime. For profile entries where
   // the entire callstack is pruned, we drop the entry from the profile.
   Error symbolizeAndFilterStackFrames();
-  // Construct memprof records for each function and store it in the
-  // `FunctionProfileData` map. A function may have allocation profile data or
-  // callsite data or both.
-  Error mapRawProfileToRecords();
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
+  Error fillRecord(const uint64_t Id, const MemInfoBlock &MIB,
+                   MemProfRecord &Record);
   // Prints aggregate counts for each raw profile parsed from the DataBuffer in
   // YAML format.
   void printSummaries(raw_ostream &OS) const;
@@ -119,15 +112,15 @@ private:
   llvm::SmallVector<SegmentEntry, 16> SegmentInfo;
   // A map from callstack id (same as key in CallStackMap below) to the heap
   // information recorded for that allocation context.
-  llvm::MapVector<uint64_t, MemInfoBlock> CallstackProfileData;
+  llvm::MapVector<uint64_t, MemInfoBlock> ProfileData;
   CallStackMap StackMap;
 
   // Cached symbolization from PC to Frame.
   llvm::DenseMap<uint64_t, llvm::SmallVector<MemProfRecord::Frame>>
       SymbolizedFrame;
 
-  llvm::MapVector<GlobalValue::GUID, MemProfRecord> FunctionProfileData;
-  llvm::MapVector<GlobalValue::GUID, MemProfRecord>::iterator Iter;
+  // Iterator to read from the ProfileData MapVector.
+  llvm::MapVector<uint64_t, MemInfoBlock>::iterator Iter = ProfileData.end();
 };
 
 } // namespace memprof
