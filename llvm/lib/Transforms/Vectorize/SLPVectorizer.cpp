@@ -778,7 +778,7 @@ static bool areAllOperandsNonInsts(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
-  return !I->mayReadOrWriteMemory() && all_of(I->operands(), [I](Value *V) {
+  return !mayBeMemoryDependent(*I) && all_of(I->operands(), [I](Value *V) {
     auto *IO = dyn_cast<Instruction>(V);
     if (!IO)
       return true;
