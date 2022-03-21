@@ -126,14 +126,27 @@ void Matrix::insertColumns(unsigned pos, unsigned count) {
       unsigned r = ri;
       unsigned c = ci;
       int64_t &dest = data[r * nReservedColumns + c];
-      if (c >= nColumns)
+      if (c >= nColumns) { // NOLINT
+        // Out of bounds columns are zero-initialized. NOLINT because clang-tidy
+        // complains about this branch being the same as the c >= pos one.
+        //
+        // TODO: this case can be skipped if the number of reserved columns
+        // didn't change.
         dest = 0;
-      else if (c >= pos + count)
+      } else if (c >= pos + count) {
+        // Shift the data occuring after the inserted columns.
         dest = data[r * oldNReservedColumns + c - count];
-      else if (c >= pos)
+      } else if (c >= pos) {
+        // The inserted columns are also zero-initialized.
         dest = 0;
-      else
+      } else {
+        // The columns before the inserted columns stay at the same (row, col)
+        // but this corresponds to a different location in the linearized array
+        // if the number of reserved columns changed.
+        if (nReservedColumns == oldNReservedColumns)
+          break;
         dest = data[r * oldNReservedColumns + c];
+      }
     }
   }
 }
