@@ -514,6 +514,10 @@ defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPat
 
 // Developer Driver Options
 
+def fencrypt_string : Flag<["-"], "fencrypt-string">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Encrypt your strings">,
+  MarshallingInfoFlag<CodeGenOpts<"EncryptString">>;
+
 def internal_Group : OptionGroup<"<clang internal options>">, Flags<[HelpHidden]>;
 def internal_driver_Group : OptionGroup<"<clang driver internal options>">,
   Group<internal_Group>, HelpText<"DRIVER OPTIONS">;

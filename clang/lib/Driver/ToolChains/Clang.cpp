@@ -6371,6 +6371,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                      options::OPT_fno_ms_extensions, true)));
   if (IsMSVCCompat)
     CmdArgs.push_back("-fms-compatibility");
+  
+  // -fencrypt-string (encrypt your string)
+  if (Args.hasArg(options::OPT_fencrypt_string))
+    CmdArgs.push_back("-fencrypt-string");
 
   // Handle -fgcc-version, if present.
   VersionTuple GNUCVer;

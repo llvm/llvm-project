@@ -30,6 +30,7 @@ CODEGENOPT(Name, Bits, Default)
 CODEGENOPT(DisableIntegratedAS, 1, 0) ///< -no-integrated-as
 ENUM_CODEGENOPT(CompressDebugSections, llvm::DebugCompressionType, 2,
                 llvm::DebugCompressionType::None)
+CODEGENOPT(EncryptString, 1, 0) ///< Encrypt your strings
 CODEGENOPT(RelaxELFRelocations, 1, 0) ///< -Wa,--mrelax-relocations
 CODEGENOPT(AsmVerbose        , 1, 0) ///< -dA, -fverbose-asm.
 CODEGENOPT(Dwarf64           , 1, 0) ///< -gdwarf64.
