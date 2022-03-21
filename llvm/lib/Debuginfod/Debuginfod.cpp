@@ -115,6 +115,41 @@ Expected<std::string> getCachedOrDownloadArtifact(StringRef UniqueKey,
                                      getDefaultDebuginfodTimeout());
 }
 
+namespace {
+
+/// A simple handler which streams the returned data to a cache file. The cache
+/// file is only created if a 200 OK status is observed.
+class StreamedHTTPResponseHandler : public HTTPResponseHandler {
+  using CreateStreamFn =
+      std::function<Expected<std::unique_ptr<CachedFileStream>>()>;
+  CreateStreamFn CreateStream;
+  HTTPClient &Client;
+  std::unique_ptr<CachedFileStream> FileStream;
+
+public:
+  StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
+      : CreateStream(CreateStream), Client(Client) {}
+  virtual ~StreamedHTTPResponseHandler() = default;
+
+  Error handleBodyChunk(StringRef BodyChunk) override;
+};
+
+} // namespace
+
+Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
+  if (!FileStream) {
+    if (Client.responseCode() != 200)
+      return Error::success();
+    Expected<std::unique_ptr<CachedFileStream>> FileStreamOrError =
+        CreateStream();
+    if (!FileStreamOrError)
+      return FileStreamOrError.takeError();
+    FileStream = std::move(*FileStreamOrError);
+  }
+  *FileStream->OS << BodyChunk;
+  return Error::success();
+}
+
 Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
     ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
@@ -155,27 +190,17 @@ Expected<std::string> getCachedOrDownloadArtifact(
     SmallString<64> ArtifactUrl;
     sys::path::append(ArtifactUrl, sys::path::Style::posix, ServerUrl, UrlPath);
 
-    Expected<HTTPResponseBuffer> ResponseOrErr = Client.get(ArtifactUrl);
-    if (!ResponseOrErr)
-      return ResponseOrErr.takeError();
+    // Perform the HTTP request and if successful, write the response body to
+    // the cache.
+    StreamedHTTPResponseHandler Handler([&]() { return CacheAddStream(Task); },
+                                        Client);
+    HTTPRequest Request(ArtifactUrl);
+    Error Err = Client.perform(Request, Handler);
+    if (Err)
+      return std::move(Err);
 
-    HTTPResponseBuffer &Response = *ResponseOrErr;
-    if (Response.Code != 200)
+    if (Client.responseCode() != 200)
       continue;
-
-    // We have retrieved the artifact from this server, and now add it to the
-    // file cache.
-    Expected<std::unique_ptr<CachedFileStream>> FileStreamOrErr =
-        CacheAddStream(Task);
-    if (!FileStreamOrErr)
-      return FileStreamOrErr.takeError();
-    std::unique_ptr<CachedFileStream> &FileStream = *FileStreamOrErr;
-    if (!Response.Body)
-      return createStringError(
-          errc::io_error, "Unallocated MemoryBuffer in HTTPResponseBuffer.");
-
-    *FileStream->OS << StringRef(Response.Body->getBufferStart(),
-                                 Response.Body->getBufferSize());
 
     // Return the path to the artifact on disk.
     return std::string(AbsCachedArtifactPath);

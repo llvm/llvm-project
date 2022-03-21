@@ -90,6 +90,8 @@ class DIInliningInfo {
 public:
   DIInliningInfo() = default;
 
+  /// Returns the frame at `Index`. Frames are stored in bottom-up
+  /// (leaf-to-root) order with increasing index.
   const DILineInfo &getFrame(unsigned Index) const {
     assert(Index < Frames.size());
     return Frames[Index];

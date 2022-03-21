@@ -297,6 +297,12 @@ config("compiler_defaults") {
     if (current_os == "win") {
       assert(is_clang, "sysroot only works with clang-cl as host compiler")
       cflags += [ "/winsysroot" + rebase_path(sysroot, root_build_dir) ]
+      if (use_lld) {
+        ldflags += [ "/winsysroot:" + rebase_path(sysroot, root_build_dir) ]
+
+        # FIXME: Remove once PR54409 is fixed.
+        ldflags += [ "/machine:x64" ]
+      }
     } else if (current_os != "ios" && current_os != "mac" &&
                current_os != "android") {
       cflags += [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
