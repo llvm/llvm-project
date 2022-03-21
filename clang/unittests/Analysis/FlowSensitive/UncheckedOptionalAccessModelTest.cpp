@@ -496,6 +496,24 @@ using enable_if_t = typename std::enable_if<B, T>::type;
 #endif // ABSL_TYPE_TRAITS_H
 )";
 
+static constexpr char StdStringHeader[] = R"(
+#ifndef STRING_H
+#define STRING_H
+
+namespace std {
+
+struct string {
+  string(const char*);
+  ~string();
+  bool empty();
+};
+bool operator!=(const string &LHS, const char *RHS);
+
+} // namespace std
+
+#endif // STRING_H
+)";
+
 static constexpr char StdUtilityHeader[] = R"(
 #ifndef UTILITY_H
 #define UTILITY_H
@@ -1198,6 +1216,7 @@ private:
     std::vector<std::pair<std::string, std::string>> Headers;
     Headers.emplace_back("cstddef.h", CSDtdDefHeader);
     Headers.emplace_back("std_initializer_list.h", StdInitializerListHeader);
+    Headers.emplace_back("std_string.h", StdStringHeader);
     Headers.emplace_back("std_type_traits.h", StdTypeTraitsHeader);
     Headers.emplace_back("std_utility.h", StdUtilityHeader);
     Headers.emplace_back("std_optional.h", StdOptionalHeader);
@@ -1209,6 +1228,7 @@ private:
       #include "base_optional.h"
       #include "std_initializer_list.h"
       #include "std_optional.h"
+      #include "std_string.h"
       #include "std_utility.h"
 
       template <typename T>
@@ -1712,6 +1732,102 @@ TEST_P(UncheckedOptionalAccessTest, ValueOr) {
                          UnorderedElementsAre(Pair("check", "safe")));
 }
 
+TEST_P(UncheckedOptionalAccessTest, ValueOrComparison) {
+  // Pointers.
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int*> opt) {
+      if (opt.value_or(nullptr) != nullptr) {
+        opt.value();
+        /*[[check-ptrs-1]]*/
+      } else {
+        opt.value();
+        /*[[check-ptrs-2]]*/
+      }
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-ptrs-1", "safe"),
+                           Pair("check-ptrs-2", "unsafe: input.cc:9:9")));
+
+  // Integers.
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> opt) {
+      if (opt.value_or(0) != 0) {
+        opt.value();
+        /*[[check-ints-1]]*/
+      } else {
+        opt.value();
+        /*[[check-ints-2]]*/
+      }
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-ints-1", "safe"),
+                           Pair("check-ints-2", "unsafe: input.cc:9:9")));
+
+  // Strings.
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<std::string> opt) {
+      if (!opt.value_or("").empty()) {
+        opt.value();
+        /*[[check-strings-1]]*/
+      } else {
+        opt.value();
+        /*[[check-strings-2]]*/
+      }
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-strings-1", "safe"),
+                           Pair("check-strings-2", "unsafe: input.cc:9:9")));
+
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<std::string> opt) {
+      if (opt.value_or("") != "") {
+        opt.value();
+        /*[[check-strings-neq-1]]*/
+      } else {
+        opt.value();
+        /*[[check-strings-neq-2]]*/
+      }
+    }
+  )code",
+      UnorderedElementsAre(
+          Pair("check-strings-neq-1", "safe"),
+          Pair("check-strings-neq-2", "unsafe: input.cc:9:9")));
+
+  // Pointer-to-optional.
+  //
+  // FIXME: make `opt` a parameter directly, once we ensure that all `optional`
+  // values have a `has_value` property.
+  ExpectLatticeChecksFor(
+      R"code(
+    #include "unchecked_optional_access_test.h"
+
+    void target($ns::$optional<int> p) {
+      $ns::$optional<int> *opt = &p;
+      if (opt->value_or(0) != 0) {
+        opt->value();
+        /*[[check-pto-1]]*/
+      } else {
+        opt->value();
+        /*[[check-pto-2]]*/
+      }
+    }
+  )code",
+      UnorderedElementsAre(Pair("check-pto-1", "safe"),
+                           Pair("check-pto-2", "unsafe: input.cc:10:9")));
+}
+
 TEST_P(UncheckedOptionalAccessTest, Emplace) {
   ExpectLatticeChecksFor(R"(
     #include "unchecked_optional_access_test.h"
@@ -2038,5 +2154,4 @@ TEST_P(UncheckedOptionalAccessTest, UniquePtrToStructWithOptionalField) {
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
 // - invalidation (passing optional by non-const reference/pointer)
-// - `value_or(nullptr) != nullptr`, `value_or(0) != 0`, `value_or("").empty()`
 // - nested `optional` values
