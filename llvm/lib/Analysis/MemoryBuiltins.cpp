@@ -42,6 +42,7 @@
 #include <cassert>
 #include <cstdint>
 #include <iterator>
+#include <numeric>
 #include <type_traits>
 #include <utility>
 
@@ -812,37 +813,35 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitLoadInst(LoadInst&) {
   return unknown();
 }
 
-SizeOffsetType ObjectSizeOffsetVisitor::visitPHINode(PHINode&) {
-  // too complex to analyze statically.
-  return unknown();
+SizeOffsetType ObjectSizeOffsetVisitor::combineSizeOffset(SizeOffsetType LHS,
+                                                          SizeOffsetType RHS) {
+  if (!bothKnown(LHS) || !bothKnown(RHS))
+    return unknown();
+
+  switch (Options.EvalMode) {
+  case ObjectSizeOpts::Mode::Min:
+    return (getSizeWithOverflow(LHS).slt(getSizeWithOverflow(RHS))) ? LHS : RHS;
+  case ObjectSizeOpts::Mode::Max:
+    return (getSizeWithOverflow(LHS).sgt(getSizeWithOverflow(RHS))) ? LHS : RHS;
+  case ObjectSizeOpts::Mode::Exact:
+    return (getSizeWithOverflow(LHS).eq(getSizeWithOverflow(RHS))) ? LHS
+                                                                   : unknown();
+  }
+  llvm_unreachable("missing an eval mode");
+}
+
+SizeOffsetType ObjectSizeOffsetVisitor::visitPHINode(PHINode &PN) {
+  auto IncomingValues = PN.incoming_values();
+  return std::accumulate(IncomingValues.begin() + 1, IncomingValues.end(),
+                         compute(*IncomingValues.begin()),
+                         [this](SizeOffsetType LHS, Value *VRHS) {
+                           return combineSizeOffset(LHS, compute(VRHS));
+                         });
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitSelectInst(SelectInst &I) {
-  SizeOffsetType TrueSide  = compute(I.getTrueValue());
-  SizeOffsetType FalseSide = compute(I.getFalseValue());
-  if (bothKnown(TrueSide) && bothKnown(FalseSide)) {
-    if (TrueSide == FalseSide) {
-        return TrueSide;
-    }
-
-    APInt TrueResult = getSizeWithOverflow(TrueSide);
-    APInt FalseResult = getSizeWithOverflow(FalseSide);
-
-    if (TrueResult == FalseResult) {
-      return TrueSide;
-    }
-    if (Options.EvalMode == ObjectSizeOpts::Mode::Min) {
-      if (TrueResult.slt(FalseResult))
-        return TrueSide;
-      return FalseSide;
-    }
-    if (Options.EvalMode == ObjectSizeOpts::Mode::Max) {
-      if (TrueResult.sgt(FalseResult))
-        return TrueSide;
-      return FalseSide;
-    }
-  }
-  return unknown();
+  return combineSizeOffset(compute(I.getTrueValue()),
+                           compute(I.getFalseValue()));
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitUndefValue(UndefValue&) {
