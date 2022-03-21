@@ -38,6 +38,12 @@ OverheadType overheadTypeEncoding(Type tp);
 /// Converts the internal type-encoding for overhead storage to an mlir::Type.
 Type getOverheadType(Builder &builder, OverheadType ot);
 
+/// Returns the OverheadType for pointer overhead storage.
+OverheadType pointerOverheadTypeEncoding(const SparseTensorEncodingAttr &enc);
+
+/// Returns the OverheadType for index overhead storage.
+OverheadType indexOverheadTypeEncoding(const SparseTensorEncodingAttr &enc);
+
 /// Returns the mlir::Type for pointer overhead storage.
 Type getPointerOverheadType(Builder &builder,
                             const SparseTensorEncodingAttr &enc);
