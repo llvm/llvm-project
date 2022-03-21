@@ -80,6 +80,65 @@ define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) nounwind {
   ret i32 %add1
 }
 
+define i128 @test_i128_add_add_idx(i128 %x, i128 %y, i128 %z) nounwind {
+; X86-LABEL: test_i128_add_add_idx:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    shrl $5, %edx
+; X86-NEXT:    andl $1, %edx
+; X86-NEXT:    addl %ebx, %edx
+; X86-NEXT:    adcl $0, %edi
+; X86-NEXT:    adcl $0, %esi
+; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl %edi, 4(%eax)
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl $4
+;
+; NOTBM-LABEL: test_i128_add_add_idx:
+; NOTBM:       # %bb.0:
+; NOTBM-NEXT:    movq %r9, %rax
+; NOTBM-NEXT:    addq %rdx, %rdi
+; NOTBM-NEXT:    adcq %rcx, %rsi
+; NOTBM-NEXT:    shrl $5, %eax
+; NOTBM-NEXT:    andl $1, %eax
+; NOTBM-NEXT:    addq %rdi, %rax
+; NOTBM-NEXT:    adcq $0, %rsi
+; NOTBM-NEXT:    movq %rsi, %rdx
+; NOTBM-NEXT:    retq
+;
+; TBM-LABEL: test_i128_add_add_idx:
+; TBM:       # %bb.0:
+; TBM-NEXT:    addq %rdx, %rdi
+; TBM-NEXT:    adcq %rcx, %rsi
+; TBM-NEXT:    bextrl $261, %r9d, %eax # imm = 0x105
+; TBM-NEXT:    addq %rdi, %rax
+; TBM-NEXT:    adcq $0, %rsi
+; TBM-NEXT:    movq %rsi, %rdx
+; TBM-NEXT:    retq
+  %add = add i128 %y, %x
+  %shift = lshr i128 %z, 69
+  %mask = and i128 %shift, 1
+  %add1 = add i128 %add, %mask
+  ret i128 %add1
+}
+
 define i32 @test_i32_add_sub_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_sub_idx:
 ; X86:       # %bb.0:
@@ -254,6 +313,48 @@ define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwin
   %mask = and i32 %shift, 1
   %add1 = add i32 %mask, %add
   ret i32 %add1
+}
+
+define i64 @test_i64_add_add_var(i64 %x, i64 %y, i64 %z, i64 %w) nounwind {
+; X86-LABEL: test_i64_add_add_var:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ebx, %edi
+; X86-NEXT:    shrl %cl, %edi
+; X86-NEXT:    shrdl %cl, %ebx, %esi
+; X86-NEXT:    testb $32, %cl
+; X86-NEXT:    jne .LBB11_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:  .LBB11_2:
+; X86-NEXT:    andl $1, %edi
+; X86-NEXT:    addl %edi, %eax
+; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i64_add_add_var:
+; X64:       # %bb.0:
+; X64-NEXT:    movq %rdi, %rax
+; X64-NEXT:    btq %rcx, %rdx
+; X64-NEXT:    adcq %rsi, %rax
+; X64-NEXT:    retq
+  %add = add i64 %y, %x
+  %shift = lshr i64 %z, %w
+  %mask = and i64 %shift, 1
+  %add1 = add i64 %add, %mask
+  ret i64 %add1
 }
 
 define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
