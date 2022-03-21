@@ -48,16 +48,15 @@ public:
   /// cases where the options disable the check.
   ///
   /// See \c setRule for constraints on the rule.
-  TransformerClangTidyCheck(
-      std::function<Optional<transformer::RewriteRuleWith<std::string>>(
-          const LangOptions &, const OptionsView &)>
-          MakeRule,
-      StringRef Name, ClangTidyContext *Context);
+  TransformerClangTidyCheck(std::function<Optional<transformer::RewriteRule>(
+                                const LangOptions &, const OptionsView &)>
+                                MakeRule,
+                            StringRef Name, ClangTidyContext *Context);
 
   /// Convenience overload of the constructor when the rule doesn't have any
   /// dependencies.
-  TransformerClangTidyCheck(transformer::RewriteRuleWith<std::string> R,
-                            StringRef Name, ClangTidyContext *Context);
+  TransformerClangTidyCheck(transformer::RewriteRule R, StringRef Name,
+                            ClangTidyContext *Context);
 
   void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
                            Preprocessor *ModuleExpanderPP) override;
@@ -75,10 +74,10 @@ public:
   /// is a bug.  If no explanation is desired, indicate that explicitly (for
   /// example, by passing `text("no explanation")` to `makeRule` as the
   /// `Explanation` argument).
-  void setRule(transformer::RewriteRuleWith<std::string> R);
+  void setRule(transformer::RewriteRule R);
 
 private:
-  transformer::RewriteRuleWith<std::string> Rule;
+  transformer::RewriteRule Rule;
   IncludeInserter Inserter;
 };
 

@@ -28,14 +28,14 @@ using transformer::IncludeFormat;
 using transformer::makeRule;
 using transformer::node;
 using transformer::noopEdit;
-using transformer::RewriteRuleWith;
+using transformer::RewriteRule;
 using transformer::RootID;
 using transformer::statement;
 
 // Invert the code of an if-statement, while maintaining its semantics.
-RewriteRuleWith<std::string> invertIf() {
+RewriteRule invertIf() {
   StringRef C = "C", T = "T", E = "E";
-  RewriteRuleWith<std::string> Rule = makeRule(
+  RewriteRule Rule = makeRule(
       ifStmt(hasCondition(expr().bind(C)), hasThen(stmt().bind(T)),
              hasElse(stmt().bind(E))),
       change(statement(RootID), cat("if(!(", node(std::string(C)), ")) ",
@@ -140,9 +140,8 @@ TEST(TransformerClangTidyCheckTest, TwoMatchesInMacroExpansion) {
 }
 
 // A trivial rewrite-rule generator that requires Objective-C code.
-Optional<RewriteRuleWith<std::string>>
-needsObjC(const LangOptions &LangOpts,
-          const ClangTidyCheck::OptionsView &Options) {
+Optional<RewriteRule> needsObjC(const LangOptions &LangOpts,
+                                const ClangTidyCheck::OptionsView &Options) {
   if (!LangOpts.ObjC)
     return None;
   return makeRule(clang::ast_matchers::functionDecl(),
@@ -166,9 +165,8 @@ TEST(TransformerClangTidyCheckTest, DisableByLang) {
 }
 
 // A trivial rewrite rule generator that checks config options.
-Optional<RewriteRuleWith<std::string>>
-noSkip(const LangOptions &LangOpts,
-       const ClangTidyCheck::OptionsView &Options) {
+Optional<RewriteRule> noSkip(const LangOptions &LangOpts,
+                             const ClangTidyCheck::OptionsView &Options) {
   if (Options.get("Skip", "false") == "true")
     return None;
   return makeRule(clang::ast_matchers::functionDecl(),
@@ -196,11 +194,10 @@ TEST(TransformerClangTidyCheckTest, DisableByConfig) {
                           Input, nullptr, "input.cc", None, Options));
 }
 
-RewriteRuleWith<std::string> replaceCall(IncludeFormat Format) {
+RewriteRule replaceCall(IncludeFormat Format) {
   using namespace ::clang::ast_matchers;
-  RewriteRuleWith<std::string> Rule =
-      makeRule(callExpr(callee(functionDecl(hasName("f")))),
-               change(cat("other()")), cat("no message"));
+  RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
+                              change(cat("other()")), cat("no message"));
   addInclude(Rule, "clang/OtherLib.h", Format);
   return Rule;
 }
@@ -246,10 +243,10 @@ TEST(TransformerClangTidyCheckTest, AddIncludeAngled) {
 }
 
 class IncludeOrderCheck : public TransformerClangTidyCheck {
-  static RewriteRuleWith<std::string> rule() {
+  static RewriteRule rule() {
     using namespace ::clang::ast_matchers;
-    RewriteRuleWith<std::string> Rule = transformer::makeRule(
-        integerLiteral(), change(cat("5")), cat("no message"));
+    RewriteRule Rule = transformer::makeRule(integerLiteral(), change(cat("5")),
+                                             cat("no message"));
     addInclude(Rule, "bar.h", IncludeFormat::Quoted);
     return Rule;
   }

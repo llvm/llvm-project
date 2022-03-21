@@ -13,16 +13,16 @@
 namespace clang {
 namespace tidy {
 namespace utils {
-using transformer::RewriteRuleWith;
+using transformer::RewriteRule;
 
 #ifndef NDEBUG
-static bool hasGenerator(const transformer::Generator<std::string> &G) {
-  return G != nullptr;
+static bool hasExplanation(const RewriteRule::Case &C) {
+  return C.Explanation != nullptr;
 }
 #endif
 
-static void verifyRule(const RewriteRuleWith<std::string> &Rule) {
-  assert(llvm::all_of(Rule.Metadata, hasGenerator) &&
+static void verifyRule(const RewriteRule &Rule) {
+  assert(llvm::all_of(Rule.Cases, hasExplanation) &&
          "clang-tidy checks must have an explanation by default;"
          " explicitly provide an empty explanation if none is desired");
 }
@@ -39,24 +39,23 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(StringRef Name,
 // we would be accessing `getLangOpts` and `Options` before the underlying
 // `ClangTidyCheck` instance was properly initialized.
 TransformerClangTidyCheck::TransformerClangTidyCheck(
-    std::function<Optional<RewriteRuleWith<std::string>>(const LangOptions &,
-                                                         const OptionsView &)>
+    std::function<Optional<RewriteRule>(const LangOptions &,
+                                        const OptionsView &)>
         MakeRule,
     StringRef Name, ClangTidyContext *Context)
     : TransformerClangTidyCheck(Name, Context) {
-  if (Optional<RewriteRuleWith<std::string>> R =
-          MakeRule(getLangOpts(), Options))
+  if (Optional<RewriteRule> R = MakeRule(getLangOpts(), Options))
     setRule(std::move(*R));
 }
 
-TransformerClangTidyCheck::TransformerClangTidyCheck(
-    RewriteRuleWith<std::string> R, StringRef Name, ClangTidyContext *Context)
+TransformerClangTidyCheck::TransformerClangTidyCheck(RewriteRule R,
+                                                     StringRef Name,
+                                                     ClangTidyContext *Context)
     : TransformerClangTidyCheck(Name, Context) {
   setRule(std::move(R));
 }
 
-void TransformerClangTidyCheck::setRule(
-    transformer::RewriteRuleWith<std::string> R) {
+void TransformerClangTidyCheck::setRule(transformer::RewriteRule R) {
   verifyRule(R);
   Rule = std::move(R);
 }
@@ -78,9 +77,8 @@ void TransformerClangTidyCheck::check(
   if (Result.Context->getDiagnostics().hasErrorOccurred())
     return;
 
-  size_t I = transformer::detail::findSelectedCase(Result, Rule);
-  Expected<SmallVector<transformer::Edit, 1>> Edits =
-      Rule.Cases[I].Edits(Result);
+  RewriteRule::Case Case = transformer::detail::findSelectedCase(Result, Rule);
+  Expected<SmallVector<transformer::Edit, 1>> Edits = Case.Edits(Result);
   if (!Edits) {
     llvm::errs() << "Rewrite failed: " << llvm::toString(Edits.takeError())
                  << "\n";
@@ -91,7 +89,7 @@ void TransformerClangTidyCheck::check(
   if (Edits->empty())
     return;
 
-  Expected<std::string> Explanation = Rule.Metadata[I]->eval(Result);
+  Expected<std::string> Explanation = Case.Explanation->eval(Result);
   if (!Explanation) {
     llvm::errs() << "Error in explanation: "
                  << llvm::toString(Explanation.takeError()) << "\n";
