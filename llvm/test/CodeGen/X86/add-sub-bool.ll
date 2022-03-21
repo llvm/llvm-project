@@ -14,7 +14,7 @@
 ; Constant Bit Indices
 ;
 
-define i32 @test_i32_add_add_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_add_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_add_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -35,7 +35,7 @@ define i32 @test_i32_add_add_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_add_commute_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_add_commute_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_add_commute_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -56,7 +56,7 @@ define i32 @test_i32_add_add_commute_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_add_idx0:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -80,7 +80,7 @@ define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_sub_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_sub_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_sub_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -105,7 +105,7 @@ define i32 @test_i32_add_sub_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add
 }
 
-define i32 @test_i32_add_sub_commute_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_sub_commute_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_sub_commute_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -128,7 +128,7 @@ define i32 @test_i32_add_sub_commute_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add
 }
 
-define i32 @test_i32_sub_add_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_sub_add_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_sub_add_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -152,7 +152,7 @@ define i32 @test_i32_sub_add_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %sub
 }
 
-define i32 @test_i32_sub_sub_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_sub_sub_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_sub_sub_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -185,7 +185,7 @@ define i32 @test_i32_sub_sub_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %sub1
 }
 
-define i32 @test_i32_sub_sub_commute_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_sub_sub_commute_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_sub_sub_commute_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -210,7 +210,7 @@ define i32 @test_i32_sub_sub_commute_idx(i32 %x, i32 %y, i32 %z) {
 ; Variable Bit Indices
 ;
 
-define i32 @test_i32_add_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_add_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_add_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -233,7 +233,7 @@ define i32 @test_i32_add_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_add_commute_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -256,7 +256,7 @@ define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_sub_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -281,7 +281,7 @@ define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add
 }
 
-define i32 @test_i32_add_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_sub_commute_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -306,7 +306,7 @@ define i32 @test_i32_add_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add
 }
 
-define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_add_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -332,7 +332,7 @@ define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %sub
 }
 
-define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_sub_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -360,7 +360,7 @@ define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %sub1
 }
 
-define i32 @test_i32_sub_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_sub_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_sub_commute_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
