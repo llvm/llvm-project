@@ -255,6 +255,34 @@ define i32 @test_i32_sub_sub_commute_idx(i32 %x, i32 %y, i32 %z) nounwind {
   ret i32 %sub1
 }
 
+define i32 @test_i32_sub_sum_idx(i32 %x, i32 %y, i32 %z) nounwind {
+; X86-LABEL: test_i32_sub_sum_idx:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    btl $30, {{[0-9]+}}(%esp)
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i32_sub_sum_idx:
+; X64:       # %bb.0:
+; X64-NEXT:    addl %esi, %edi
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    btl $30, %edx
+; X64-NEXT:    sbbl %eax, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    retq
+  %shift = lshr i32 %z, 30
+  %mask = and i32 %shift, 1
+  %add = add i32 %y, %x
+  %sub = sub i32 %mask, %add
+  ret i32 %sub
+}
+
 ;
 ; Variable Bit Indices
 ;
@@ -322,10 +350,10 @@ define i64 @test_i64_add_add_var(i64 %x, i64 %y, i64 %z, i64 %w) nounwind {
 ; X86-NEXT:    shrl %cl, %edi
 ; X86-NEXT:    shrdl %cl, %ebx, %esi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    jne .LBB11_2
+; X86-NEXT:    jne .LBB12_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:  .LBB11_2:
+; X86-NEXT:  .LBB12_2:
 ; X86-NEXT:    andl $1, %edi
 ; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    adcl $0, %edx
@@ -469,4 +497,36 @@ define i32 @test_i32_sub_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwin
   %sub0 = sub i32 %x, %y
   %sub1 = sub i32 %sub0, %mask
   ret i32 %sub1
+}
+
+define i32 @test_i32_sub_sum_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
+; X86-LABEL: test_i32_sub_sum_var:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    sbbl %eax, %eax
+; X86-NEXT:    andl $1, %eax
+; X86-NEXT:    subl %esi, %eax
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i32_sub_sum_var:
+; X64:       # %bb.0:
+; X64-NEXT:    addl %esi, %edi
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    sbbl %eax, %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    subl %edi, %eax
+; X64-NEXT:    retq
+  %shift = lshr i32 %z, %w
+  %mask = and i32 %shift, 1
+  %add = add i32 %y, %x
+  %sub = sub i32 %mask, %add
+  ret i32 %sub
 }
