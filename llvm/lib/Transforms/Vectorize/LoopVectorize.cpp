@@ -646,9 +646,8 @@ protected:
 
   /// Complete the loop skeleton by adding debug MDs, creating appropriate
   /// conditional branches in the middle block, preparing the builder and
-  /// running the verifier. Take in the vector loop \p L as argument, and return
-  /// the preheader of the completed vector loop.
-  BasicBlock *completeLoopSkeleton(Loop *L, MDNode *OrigLoopID);
+  /// running the verifier. Return the preheader of the completed vector loop.
+  BasicBlock *completeLoopSkeleton(MDNode *OrigLoopID);
 
   /// Add additional metadata to \p To that was not present on \p Orig.
   ///
@@ -3234,13 +3233,10 @@ void InnerLoopVectorizer::createInductionResumeValues(
   }
 }
 
-BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
-                                                      MDNode *OrigLoopID) {
-  assert(L && "Expected valid loop.");
-
+BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(MDNode *OrigLoopID) {
   // The trip counts should be cached by now.
-  Value *Count = getOrCreateTripCount(L->getLoopPreheader());
-  Value *VectorTripCount = getOrCreateVectorTripCount(L->getLoopPreheader());
+  Value *Count = getOrCreateTripCount(LoopVectorPreHeader);
+  Value *VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
 
   auto *ScalarLatchTerm = OrigLoop->getLoopLatch()->getTerminator();
 
@@ -3264,10 +3260,6 @@ BasicBlock *InnerLoopVectorizer::completeLoopSkeleton(Loop *L,
     CmpN->setDebugLoc(ScalarLatchTerm->getDebugLoc());
     cast<BranchInst>(LoopMiddleBlock->getTerminator())->setCondition(CmpN);
   }
-
-  // Get ready to start creating new instructions into the vectorized body.
-  assert(LoopVectorPreHeader == L->getLoopPreheader() &&
-         "Inconsistent vector loop preheader");
 
 #ifdef EXPENSIVE_CHECKS
   assert(DT->verify(DominatorTree::VerificationLevel::Fast));
@@ -3348,7 +3340,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // Emit phis for the new starting index of the scalar loop.
   createInductionResumeValues(Lp);
 
-  return {completeLoopSkeleton(Lp, OrigLoopID), nullptr};
+  return {completeLoopSkeleton(OrigLoopID), nullptr};
 }
 
 // Fix up external users of the induction variable. At this point, we are
@@ -7897,7 +7889,7 @@ EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   // because the vplan in the second pass still contains the inductions from the
   // original loop.
 
-  return {completeLoopSkeleton(Lp, OrigLoopID), nullptr};
+  return {completeLoopSkeleton(OrigLoopID), nullptr};
 }
 
 void EpilogueVectorizerMainLoop::printDebugTracesAtStart() {
@@ -8076,7 +8068,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
   createInductionResumeValues(Lp, {VecEpilogueIterationCountCheck,
                                    EPI.VectorTripCount} /* AdditionalBypass */);
 
-  return {completeLoopSkeleton(Lp, OrigLoopID), EPResumeVal};
+  return {completeLoopSkeleton(OrigLoopID), EPResumeVal};
 }
 
 BasicBlock *
