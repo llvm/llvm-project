@@ -151,9 +151,62 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   void **GlobalArgs = nullptr;
   if (nargs) {
     __kmpc_begin_sharing_variables(&GlobalArgs, nargs);
-#pragma unroll
-    for (int I = 0; I < nargs; I++)
-      GlobalArgs[I] = args[I];
+    switch (nargs) {
+    default:
+      for (int I = 0; I < nargs; I++)
+        GlobalArgs[I] = args[I];
+      break;
+    case 16:
+      GlobalArgs[15] = args[15];
+      // FALLTHROUGH
+    case 15:
+      GlobalArgs[14] = args[14];
+      // FALLTHROUGH
+    case 14:
+      GlobalArgs[13] = args[13];
+      // FALLTHROUGH
+    case 13:
+      GlobalArgs[12] = args[12];
+      // FALLTHROUGH
+    case 12:
+      GlobalArgs[11] = args[11];
+      // FALLTHROUGH
+    case 11:
+      GlobalArgs[10] = args[10];
+      // FALLTHROUGH
+    case 10:
+      GlobalArgs[9] = args[9];
+      // FALLTHROUGH
+    case 9:
+      GlobalArgs[8] = args[8];
+      // FALLTHROUGH
+    case 8:
+      GlobalArgs[7] = args[7];
+      // FALLTHROUGH
+    case 7:
+      GlobalArgs[6] = args[6];
+      // FALLTHROUGH
+    case 6:
+      GlobalArgs[5] = args[5];
+      // FALLTHROUGH
+    case 5:
+      GlobalArgs[4] = args[4];
+      // FALLTHROUGH
+    case 4:
+      GlobalArgs[3] = args[3];
+      // FALLTHROUGH
+    case 3:
+      GlobalArgs[2] = args[2];
+      // FALLTHROUGH
+    case 2:
+      GlobalArgs[1] = args[1];
+      // FALLTHROUGH
+    case 1:
+      GlobalArgs[0] = args[0];
+      // FALLTHROUGH
+    case 0:
+      break;
+    }
   }
 
   {
