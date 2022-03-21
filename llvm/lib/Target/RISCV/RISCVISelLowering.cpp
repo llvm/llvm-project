@@ -4623,9 +4623,11 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
 
   // If this is a sign-extended 32-bit constant, we can truncate it and rely
   // on the instruction to sign-extend since SEW>XLEN.
-  if (DAG.ComputeNumSignBits(ScalarOp) > 32) {
-    ScalarOp = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, ScalarOp);
-    return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
+  if (auto *CVal = dyn_cast<ConstantSDNode>(ScalarOp)) {
+    if (isInt<32>(CVal->getSExtValue())) {
+      ScalarOp = DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32);
+      return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
+    }
   }
 
   switch (IntNo) {
