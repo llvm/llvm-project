@@ -241,7 +241,7 @@ def main():
     subs = {
       '%s' : ti.path,
       '%t' : tempfile.NamedTemporaryFile().name,
-      '%S' : os.getcwd(),
+      '%S' : os.path.dirname(ti.path),
     }
 
     for l in ti.run_lines:
