@@ -52477,9 +52477,13 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
 
-  // If this is an add, commute and try again.
-  if (!IsSub)
-    return combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG);
+  // Commute and try again (negate the result for subtracts).
+  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG)) {
+    if (IsSub)
+      ADCOrSBB =
+          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), ADCOrSBB);
+    return ADCOrSBB;
+  }
 
   return SDValue();
 }
