@@ -171,11 +171,11 @@ ArrayRef<uint8_t> PerfEvent::GetDataBuffer() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
   return {reinterpret_cast<uint8_t *>(m_metadata_data_base.get()) +
               mmap_metadata.data_offset,
-          mmap_metadata.data_size};
+           static_cast<size_t>(mmap_metadata.data_size)};
 }
 
 ArrayRef<uint8_t> PerfEvent::GetAuxBuffer() const {
   perf_event_mmap_page &mmap_metadata = GetMetadataPage();
   return {reinterpret_cast<uint8_t *>(m_aux_base.get()),
-          mmap_metadata.aux_size};
+           static_cast<size_t>(mmap_metadata.aux_size)};
 }
