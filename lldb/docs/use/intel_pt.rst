@@ -4,21 +4,21 @@ Tracing with Intel Processor Trace
 .. contents::
   :local:
 
-Intel PT is a technology available in modern Intel CPUs that allows efficient 
-tracing of all the instructions executed by a process. 
-LLDB can collect traces and dump them using its symbolication stack. 
-You can read more here 
+Intel PT is a technology available in modern Intel CPUs that allows efficient
+tracing of all the instructions executed by a process.
+LLDB can collect traces and dump them using its symbolication stack.
+You can read more here
 https://easyperf.net/blog/2019/08/23/Intel-Processor-Trace.
 
 Prerequisites
 -------------
 
-Confirm that your CPU supports Intel PT 
-(see https://www.intel.com/content/www/us/en/support/articles/000056730/processors.html) 
+Confirm that your CPU supports Intel PT
+(see https://www.intel.com/content/www/us/en/support/articles/000056730/processors.html)
 and that your operating system is Linux.
 
 Check for the existence of this particular file on your Linux system
-:: 
+::
 
   $ cat /sys/bus/event_source/devices/intel_pt/type
 
@@ -28,9 +28,9 @@ The output should be a number. Otherwise, try upgrading your kernel.
 Build Instructions
 ------------------
 
-Clone and build the low level Intel PT 
+Clone and build the low level Intel PT
 decoder library [LibIPT library](https://github.com/intel/libipt).
-:: 
+::
 
   $ git clone git@github.com:intel/libipt.git
   $ mkdir libipt-build
@@ -38,19 +38,19 @@ decoder library [LibIPT library](https://github.com/intel/libipt).
   $ cd libipt-build
   $ make
 
-This will generate a few files in the `<libipt-build>/lib` 
+This will generate a few files in the `<libipt-build>/lib`
 and `<libipt-build>/libipt/include` directories.
 
 Configure and build LLDB with Intel PT support
-:: 
+::
 
-  $ cmake \                
+  $ cmake \
       -DLLDB_BUILD_INTEL_PT=ON \
       -DLIBIPT_INCLUDE_PATH="<libipt-build>/libipt/include" \
       -DLIBIPT_LIBRARY_PATH="<libipt-build>/lib" \
-      ... other common configuration parameters 
+      ... other common configuration parameters
 
-:: 
+::
 
   $ cd <lldb-build> && ninja lldb lldb-server # if using Ninja
 
@@ -58,11 +58,11 @@ Configure and build LLDB with Intel PT support
 How to Use
 ----------
 
-When you are debugging a process, you can turn on intel-pt tracing, 
-which will “record” all the instructions that the process will execute. 
-After turning it on, you can continue debugging, and at any breakpoint, 
+When you are debugging a process, you can turn on intel-pt tracing,
+which will “record” all the instructions that the process will execute.
+After turning it on, you can continue debugging, and at any breakpoint,
 you can inspect the instruction list.
- 
+
 For example:
 ::
   lldb <target>
@@ -70,7 +70,7 @@ For example:
   > run
   > process trace start # start tracing on all threads, including future ones
   # keep debugging until you hit a breakpoint
-  
+
   > thread trace dump instructions
   # this should output something like
 
@@ -86,53 +86,53 @@ For example:
       [4962259] 0x00007fffeb66b648    movl   %eax, %r11d
 
   # you can keep pressing ENTER to see more and more instructions
- 
-The number between brackets is the instruction index, 
+
+The number between brackets is the instruction index,
 and by default the current thread will be picked.
- 
+
 Configuring the trace size
 --------------------------
- 
-The CPU stores the instruction list in a compressed format in a ring buffer, 
-which keeps the latest information. 
-By default, LLDB uses a buffer of 4KB per thread, 
-but you can change it by running. 
+
+The CPU stores the instruction list in a compressed format in a ring buffer,
+which keeps the latest information.
+By default, LLDB uses a buffer of 4KB per thread,
+but you can change it by running.
 The size must be a power of 2 and at least 4KB.
 ::
   thread trace start all -s <size_in_bytes>
- 
+
 For reference, a 1MB trace buffer can easily store around 5M instructions.
- 
+
 Printing more instructions
 --------------------------
- 
+
 If you want to dump more instructions at a time, you can run
 ::
   thread trace dump instructions -c <count>
- 
+
 Printing the instructions of another thread
 -------------------------------------------
 
-By default the current thread will be picked when dumping instructions, 
+By default the current thread will be picked when dumping instructions,
 but you can do
-:: 
+::
   thread trace dump instructions <#thread index>
   #e.g.
   thread trace dump instructions 8
- 
+
 to select another thread.
- 
+
 Crash Analysis
 --------------
- 
-What if you are debugging + tracing a process that crashes? 
+
+What if you are debugging + tracing a process that crashes?
 Then you can just do
 ::
   thread trace dump instructions
- 
-To inspect how it crashed! There's nothing special that you need to do. 
+
+To inspect how it crashed! There's nothing special that you need to do.
 For example
-:: 
+::
     * thread #1, name = 'a.out', stop reason = signal SIGFPE: integer divide by zero
         frame #0: 0x00000000004009f1 a.out`main at main.cpp:8:14
       6       int x;
@@ -150,20 +150,20 @@ For example
         [8386] 0x00000000004009eb    movl   $0xc, %eax
         [8387] 0x00000000004009f0    cltd
 
-.. note:: 
-  At this moment, we are not including the failed instruction in the trace, 
+.. note::
+  At this moment, we are not including the failed instruction in the trace,
   but in the future we might do it for readability.
- 
- 
+
+
 Offline Trace Analysis
 ----------------------
- 
-It's also possible to record a trace using a custom Intel PT collector 
-and decode + symbolicate the trace using LLDB. 
+
+It's also possible to record a trace using a custom Intel PT collector
+and decode + symbolicate the trace using LLDB.
 For that, the command trace load is useful.
-In order to use trace load, you need to first create a JSON file with 
-the definition of the trace session. 
-For example 
+In order to use trace load, you need to first create a JSON file with
+the definition of the trace session.
+For example
 ::
   {
     "trace": {
@@ -182,7 +182,7 @@ For example
         "threads": [
           {
             "tid": 815455,
-            "traceFile": "trace.file" # raw thread-specific trace from the AUX buffer 
+            "traceFile": "trace.file" # raw thread-specific trace from the AUX buffer
           }
         ],
         "modules": [ # this are all the shared libraries + the main executable
@@ -204,29 +204,29 @@ For example
       }
     ]
   }
- 
+
 You can see the full schema by typing
 ::
   trace schema intel-pt
- 
-The JSON file mainly contains all the shared libraries that 
-were part of the traced process, along with their memory load address. 
-If the analysis is done on the same computer where the traces were obtained, 
-it's enough to use the “systemPath” field. 
-If the analysis is done on a different machines, these files need to be 
-copied over and the “file” field should point to the 
+
+The JSON file mainly contains all the shared libraries that
+were part of the traced process, along with their memory load address.
+If the analysis is done on the same computer where the traces were obtained,
+it's enough to use the “systemPath” field.
+If the analysis is done on a different machines, these files need to be
+copied over and the “file” field should point to the
 location of the file relative to the JSON file.
 Once you have the JSON file and the module files in place, you can simple run
 ::
   lldb
   > trace load /path/to/json
   > thread trace dump instructions <optional thread index>
- 
+
 Then it's like in the live session case
 
 References
 ----------
 
-Original RFC document [the RFC document](https://docs.google.com/document/d/1cOVTGp1sL_HBXjP9eB7qjVtDNr5xnuZvUUtv43G5eVI) for this.
-Some details about how Meta is using Intel Processor Trace can be found 
-in this [blog post](https://engineering.fb.com/2021/04/27/developer-tools/reverse-debugging/).
+- Original RFC document [the RFC document](https://docs.google.com/document/d/1cOVTGp1sL_HBXjP9eB7qjVtDNr5xnuZvUUtv43G5eVI) for this.
+- Some details about how Meta is using Intel Processor Trace can be found
+- in this [blog post](https://engineering.fb.com/2021/04/27/developer-tools/reverse-debugging/).
