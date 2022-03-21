@@ -914,14 +914,14 @@ private:
     std::unique_ptr<VarLocSet> &VLS = Locs[MBB];
     if (!VLS)
       VLS = std::make_unique<VarLocSet>(Alloc);
-    return *VLS.get();
+    return *VLS;
   }
 
   const VarLocSet &getVarLocsInMBB(const MachineBasicBlock *MBB,
                                    const VarLocInMBB &Locs) const {
     auto It = Locs.find(MBB);
     assert(It != Locs.end() && "MBB not in map");
-    return *It->second.get();
+    return *It->second;
   }
 
   /// Tests whether this instruction is a spill to a stack location.
@@ -1940,7 +1940,7 @@ bool VarLocBasedLDV::join(
 
     // Just copy over the Out locs to incoming locs for the first visited
     // predecessor, and for all other predecessors join the Out locs.
-    VarLocSet &OutLocVLS = *OL->second.get();
+    VarLocSet &OutLocVLS = *OL->second;
     if (!NumVisited)
       InLocsT = OutLocVLS;
     else
@@ -1999,7 +1999,7 @@ void VarLocBasedLDV::flushPendingLocs(VarLocInMBB &PendingInLocs,
   for (auto &Iter : PendingInLocs) {
     // Map is keyed on a constant pointer, unwrap it so we can insert insts.
     auto &MBB = const_cast<MachineBasicBlock &>(*Iter.first);
-    VarLocSet &Pending = *Iter.second.get();
+    VarLocSet &Pending = *Iter.second;
 
     SmallVector<VarLoc, 32> VarLocs;
     collectAllVarLocs(VarLocs, Pending, VarLocIDs);

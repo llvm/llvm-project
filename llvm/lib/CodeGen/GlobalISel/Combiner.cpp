@@ -113,7 +113,7 @@ bool Combiner::combineMachineInstrs(MachineFunction &MF,
 
   bool MFChanged = false;
   bool Changed;
-  MachineIRBuilder &B = *Builder.get();
+  MachineIRBuilder &B = *Builder;
 
   do {
     // Collect all instructions. Do a post order traversal for basic blocks and
