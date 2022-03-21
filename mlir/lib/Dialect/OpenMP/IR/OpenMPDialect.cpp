@@ -1149,6 +1149,33 @@ LogicalResult AtomicUpdateOp::verifyRegions() {
 // Verifier for AtomicCaptureOp
 //===----------------------------------------------------------------------===//
 
+Operation *AtomicCaptureOp::getFirstOp() {
+  return &getRegion().front().getOperations().front();
+}
+
+Operation *AtomicCaptureOp::getSecondOp() {
+  auto &ops = getRegion().front().getOperations();
+  return ops.getNextNode(ops.front());
+}
+
+AtomicReadOp AtomicCaptureOp::getAtomicReadOp() {
+  if (auto op = dyn_cast<AtomicReadOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicReadOp>(getSecondOp());
+}
+
+AtomicWriteOp AtomicCaptureOp::getAtomicWriteOp() {
+  if (auto op = dyn_cast<AtomicWriteOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicWriteOp>(getSecondOp());
+}
+
+AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
+  if (auto op = dyn_cast<AtomicUpdateOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicUpdateOp>(getSecondOp());
+}
+
 LogicalResult AtomicCaptureOp::verifyRegions() {
   Block::OpListType &ops = region().front().getOperations();
   if (ops.size() != 3)

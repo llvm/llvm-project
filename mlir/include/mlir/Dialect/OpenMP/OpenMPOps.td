@@ -717,6 +717,11 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update",
   }];
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+  let extraClassDeclaration = [{
+    Operation* getFirstOp() {
+      return &getRegion().front().getOperations().front();
+    }
+  }];
 }
 
 def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
@@ -764,6 +769,25 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture",
     $region attr-dict
   }];
   let hasRegionVerifier = 1;
+  let extraClassDeclaration = [{
+    /// Returns the first operation in atomic capture region
+    Operation* getFirstOp();
+
+    /// Returns the second operation in atomic capture region
+    Operation* getSecondOp();
+
+    /// Returns the `atomic.read` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicReadOp getAtomicReadOp();
+
+    /// Returns the `atomic.write` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicWriteOp getAtomicWriteOp();
+
+    /// Returns the `atomic.update` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicUpdateOp getAtomicUpdateOp();
+  }];
 }
 
 //===----------------------------------------------------------------------===//
