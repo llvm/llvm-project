@@ -14,8 +14,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANTRANSFORMS_H
 
 #include "VPlan.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace llvm {
 

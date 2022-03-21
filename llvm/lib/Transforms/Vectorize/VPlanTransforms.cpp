@@ -14,6 +14,7 @@
 #include "VPlanTransforms.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
 
 using namespace llvm;
 
