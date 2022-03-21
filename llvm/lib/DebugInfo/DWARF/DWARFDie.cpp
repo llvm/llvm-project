@@ -258,6 +258,7 @@ struct DWARFTypePrinter {
       break;
     }
     case DW_TAG_APPLE_ptrauth_type:
+      appendQualifiedNameBefore(Inner());
       break;
     case DW_TAG_const_type:
     case DW_TAG_volatile_type:
