@@ -5,8 +5,5 @@ unittest("DebuginfodTests") {
     "//llvm/lib/Debuginfod",
     "//llvm/lib/Testing/Support",
   ]
-  sources = [
-    "DebuginfodTests.cpp",
-    "HTTPClientTests.cpp",
-  ]
+  sources = [ "DebuginfodTests.cpp" ]
 }
