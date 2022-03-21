@@ -1899,14 +1899,17 @@ static void emitReductionListCopy(
     // new element.
     bool IncrScratchpadSrc = false;
     bool IncrScratchpadDest = false;
+    QualType PrivatePtrType = C.getPointerType(Private->getType());
+    llvm::Type *PrivateLlvmPtrType = CGF.ConvertType(PrivatePtrType);
 
     switch (Action) {
     case RemoteLaneToThread: {
       // Step 1.1: Get the address for the src element in the Reduce list.
       Address SrcElementPtrAddr = Bld.CreateConstArrayGEP(SrcBase, Idx);
-      SrcElementAddr = CGF.EmitLoadOfPointer(
-          SrcElementPtrAddr,
-          C.getPointerType(Private->getType())->castAs<PointerType>());
+      SrcElementAddr =
+          CGF.EmitLoadOfPointer(CGF.Builder.CreateElementBitCast(
+                                    SrcElementPtrAddr, PrivateLlvmPtrType),
+                                PrivatePtrType->castAs<PointerType>());
 
       // Step 1.2: Create a temporary to store the element in the destination
       // Reduce list.
@@ -1920,24 +1923,27 @@ static void emitReductionListCopy(
     case ThreadCopy: {
       // Step 1.1: Get the address for the src element in the Reduce list.
       Address SrcElementPtrAddr = Bld.CreateConstArrayGEP(SrcBase, Idx);
-      SrcElementAddr = CGF.EmitLoadOfPointer(
-          SrcElementPtrAddr,
-          C.getPointerType(Private->getType())->castAs<PointerType>());
+      SrcElementAddr =
+          CGF.EmitLoadOfPointer(CGF.Builder.CreateElementBitCast(
+                                    SrcElementPtrAddr, PrivateLlvmPtrType),
+                                PrivatePtrType->castAs<PointerType>());
 
       // Step 1.2: Get the address for dest element.  The destination
       // element has already been created on the thread's stack.
       DestElementPtrAddr = Bld.CreateConstArrayGEP(DestBase, Idx);
-      DestElementAddr = CGF.EmitLoadOfPointer(
-          DestElementPtrAddr,
-          C.getPointerType(Private->getType())->castAs<PointerType>());
+      DestElementAddr =
+          CGF.EmitLoadOfPointer(CGF.Builder.CreateElementBitCast(
+                                    DestElementPtrAddr, PrivateLlvmPtrType),
+                                PrivatePtrType->castAs<PointerType>());
       break;
     }
     case ThreadToScratchpad: {
       // Step 1.1: Get the address for the src element in the Reduce list.
       Address SrcElementPtrAddr = Bld.CreateConstArrayGEP(SrcBase, Idx);
-      SrcElementAddr = CGF.EmitLoadOfPointer(
-          SrcElementPtrAddr,
-          C.getPointerType(Private->getType())->castAs<PointerType>());
+      SrcElementAddr =
+          CGF.EmitLoadOfPointer(CGF.Builder.CreateElementBitCast(
+                                    SrcElementPtrAddr, PrivateLlvmPtrType),
+                                PrivatePtrType->castAs<PointerType>());
 
       // Step 1.2: Get the address for dest element:
       // address = base + index * ElementSizeInChars.

@@ -389,7 +389,7 @@ TEST(SimplexTest, isMarkedRedundantTiledLoopNestConstraints) {
   EXPECT_FALSE(simplex.isMarkedRedundant(5));
 }
 
-TEST(Simplextest, pivotRedundantRegressionTest) {
+TEST(SimplexTest, pivotRedundantRegressionTest) {
   Simplex simplex(2);
   simplex.addInequality({-1, 0, -1}); // x <= -1.
   unsigned snapshot = simplex.getSnapshot();

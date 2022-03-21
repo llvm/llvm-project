@@ -278,13 +278,29 @@ void OutlinableRegion::splitCandidate() {
   // We iterate over the instructions in the region, if we find a PHINode, we
   // check if there are predecessors outside of the region, if there are,
   // we ignore this region since we are unable to handle the severing of the
-  // phi node right now. 
+  // phi node right now.
+
+  // TODO: Handle extraneous inputs for PHINodes through variable number of
+  // inputs, similar to how outputs are handled.
   BasicBlock::iterator It = StartInst->getIterator();
+  EndBB = BackInst->getParent();
+  BasicBlock *IBlock;
+  bool EndBBTermAndBackInstDifferent = EndBB->getTerminator() != BackInst;
   while (PHINode *PN = dyn_cast<PHINode>(&*It)) {
     unsigned NumPredsOutsideRegion = 0;
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-      if (!BBSet.contains(PN->getIncomingBlock(i)))
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+      if (!BBSet.contains(PN->getIncomingBlock(i))) {
         ++NumPredsOutsideRegion;
+        continue;
+      }
+
+      // We must consider the case there the incoming block to the PHINode is
+      // the same as the final block of the OutlinableRegion.  If this is the
+      // case, the branch from this block must also be outlined to be valid.
+      IBlock = PN->getIncomingBlock(i);
+      if (IBlock == EndBB && EndBBTermAndBackInstDifferent)
+        ++NumPredsOutsideRegion;
+    }
 
     if (NumPredsOutsideRegion > 1)
       return;
@@ -299,11 +315,9 @@ void OutlinableRegion::splitCandidate() {
   
   // If the region ends with a PHINode, but does not contain all of the phi node
   // instructions of the region, we ignore it for now.
-  if (isa<PHINode>(BackInst)) {
-    EndBB = BackInst->getParent();
-    if (BackInst != &*std::prev(EndBB->getFirstInsertionPt()))
-      return;
-  }
+  if (isa<PHINode>(BackInst) &&
+      BackInst != &*std::prev(EndBB->getFirstInsertionPt()))
+    return;
 
   // The basic block gets split like so:
   // block:                 block:
