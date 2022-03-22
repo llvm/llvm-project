@@ -269,3 +269,129 @@ function(add_libc_fuzzer target_name)
   )
   add_dependencies(libc-fuzzer ${fq_target_name})
 endfunction(add_libc_fuzzer)
+
+# Rule to add an integration test. An integration test is like a unit test
+# but does not use the system libc. Not even the loader from the system libc
+# is linked to the final executable. The final exe is fully statically linked.
+# The libc that the final exe links to consists of only the object files of
+# the DEPENDS targets.
+# 
+# Usage:
+#   add_integration_test(
+#     <target name>
+#     SUITE <the suite to which the test should belong>
+#     SRCS <src1.cpp> [src2.cpp ...]
+#     HDRS [hdr1.cpp ...]
+#     LOADER <fully qualified loader target name>
+#     DEPENDS <list of entrypoint or other object targets>
+#     ARGS <list of command line arguments to be passed to the test>
+#     ENV <list of environment variables to set before running the test>
+#   )
+#
+# The loader target should provide a property named LOADER_OBJECT which is
+# the full path to the object file produces when the loader is built.
+#
+# The DEPENDS list can be empty. If not empty, it should be a list of
+# targets added with add_entrypoint_object or add_object_library.
+function(add_integration_test test_name)
+  cmake_parse_arguments(
+    "INTEGRATION_TEST"
+    "" # No optional arguments
+    "SUITE;LOADER" # Single value arguments
+    "SRCS;HDRS;DEPENDS;ARGS;ENV" # Multi-value arguments
+    ${ARGN}
+  )
+  get_fq_target_name(${test_name} fq_target_name)
+
+  if(NOT INTEGRATION_TEST_SUITE)
+    message(FATAL_ERROR "SUITE not specified for ${fq_target_name}")
+  endif()
+  if(NOT INTEGRATION_TEST_LOADER)
+    message(FATAL_ERROR "The LOADER to link to the integration test is missing.")
+  endif()
+  if(NOT INTEGRATION_TEST_SRCS)
+    message(FATAL_ERROR "The SRCS list for add_integration_test is missing.")
+  endif()
+
+  get_fq_target_name(${test_name}.libc fq_libc_target_name)
+
+  get_fq_deps_list(fq_deps_list ${INTEGRATION_TEST_DEPENDS})
+  # Add memory functions to which compilers can emit calls.
+  list(APPEND fq_deps_list
+          libc.src.string.bcmp
+          libc.src.string.bzero
+          libc.src.string.memcmp
+          libc.src.string.memcpy
+          libc.src.string.memset)
+  list(REMOVE_DUPLICATES fq_deps_list)
+  # TODO: Instead of gathering internal object files from entrypoints,
+  # collect the object files with public names of entrypoints.
+  get_object_files_for_test(
+      link_object_files skipped_entrypoints_list ${fq_deps_list})
+  if(skipped_entrypoints_list)
+    message(STATUS "Skipping ${fq_target_name} as it has skipped deps.")
+    return()
+  endif()
+
+  # Create a sysroot structure
+  set(sysroot ${CMAKE_CURRENT_BINARY_DIR}/${test_name}/sysroot)
+  file(MAKE_DIRECTORY ${sysroot})
+  file(MAKE_DIRECTORY ${sysroot}/include)
+  set(sysroot_lib ${sysroot}/lib)
+  file(MAKE_DIRECTORY ${sysroot_lib})
+  # Add dummy crti.o, crtn.o, libm.a and libc++.a
+  file(TOUCH ${sysroot_lib}/crti.o)
+  file(TOUCH ${sysroot_lib}/crtn.o)
+  file(TOUCH ${sysroot_lib}/libm.a)
+  file(TOUCH ${sysroot_lib}/libc++.a)
+  # Copy the loader object
+  get_target_property(loader_object_file ${INTEGRATION_TEST_LOADER} LOADER_OBJECT)
+  if(NOT loader_object_file)
+    message(FATAL_ERROR "Missing LOADER_OBJECT property of ${INTEGRATION_TEST_LOADER}.")
+  endif()
+  set(loader_dst ${sysroot_lib}/${LIBC_TARGET_ARCHITECTURE}-linux-gnu/crt1.o)
+  add_custom_command(
+    OUTPUT ${loader_dst}
+    COMMAND cmake -E copy ${loader_object_file} ${loader_dst}
+    DEPENDS ${INTEGRATION_TEST_LOADER}
+  )
+  add_custom_target(
+    ${fq_target_name}.__copy_loader__
+    DEPENDS ${loader_dst}
+  )
+
+  add_library(
+    ${fq_libc_target_name}
+    STATIC
+    ${link_object_files}
+  )
+  set_target_properties(${fq_libc_target_name} PROPERTIES ARCHIVE_OUTPUT_NAME c)
+  set_target_properties(${fq_libc_target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${sysroot_lib})
+
+  add_executable(
+    ${fq_target_name}
+    EXCLUDE_FROM_ALL
+    ${INTEGRATION_TEST_SRCS}
+    ${INTEGRATION_TEST_HDRS}
+  )
+  target_include_directories(
+    ${fq_target_name}
+    PRIVATE
+      ${LIBC_SOURCE_DIR}
+      ${LIBC_BUILD_DIR}
+      ${LIBC_BUILD_DIR}/include
+  )
+  target_link_options(${fq_target_name} PRIVATE --sysroot=${sysroot} -static -stdlib=libc++)
+  add_dependencies(${fq_target_name}
+                   ${fq_target_name}.__copy_loader__
+                   ${fq_libc_target_name}
+                   libc.utils.IntegrationTest.test)
+
+  add_custom_command(
+    TARGET ${fq_target_name}
+    POST_BUILD
+    COMMAND ${INTEGRATION_TEST_ENV} $<TARGET_FILE:${fq_target_name}> ${INTEGRATION_TEST_ARGS}
+  )
+
+  add_dependencies(${INTEGRATION_TEST_SUITE} ${fq_target_name})
+endfunction(add_integration_test)

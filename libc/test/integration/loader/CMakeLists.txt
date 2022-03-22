@@ -1,5 +1,3 @@
-add_custom_target(libc_loader_tests)
-
 # A rule to add loader tests. When we have a complete loader, we should
 # be able to use the add_libc_unittest rule or an extension of it. But,
 # while the loader is getting built, we need to use a special rule like

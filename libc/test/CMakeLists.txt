@@ -19,4 +19,3 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 add_subdirectory(integration)
-add_subdirectory(loader)
