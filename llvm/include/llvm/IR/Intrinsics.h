@@ -142,6 +142,7 @@ namespace Intrinsic {
       VecOfBitcastsToInt,
       AMX,
       PPCQuad,
+      AnyPtrToElt,
     } Kind;
 
     union {
@@ -180,14 +181,15 @@ namespace Intrinsic {
       return (ArgKind)(Argument_Info & 7);
     }
 
-    // VecOfAnyPtrsToElt uses both an overloaded argument (for address space)
-    // and a reference argument (for matching vector width and element types)
+    // VecOfAnyPtrsToElt and AnyPtrToElt uses both an overloaded argument (for
+    // address space) and a reference argument (for matching vector width and
+    // element types)
     unsigned getOverloadArgNumber() const {
-      assert(Kind == VecOfAnyPtrsToElt);
+      assert(Kind == VecOfAnyPtrsToElt || Kind == AnyPtrToElt);
       return Argument_Info >> 16;
     }
     unsigned getRefArgNumber() const {
-      assert(Kind == VecOfAnyPtrsToElt);
+      assert(Kind == VecOfAnyPtrsToElt || Kind == AnyPtrToElt);
       return Argument_Info & 0xFFFF;
     }
 

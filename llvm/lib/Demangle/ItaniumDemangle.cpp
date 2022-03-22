@@ -404,6 +404,9 @@ char *ItaniumPartialDemangler::getFunctionBaseName(char *Buf, size_t *N) const {
     case Node::KAbiTagAttr:
       Name = static_cast<const AbiTagAttr *>(Name)->Base;
       continue;
+    case Node::KModuleEntity:
+      Name = static_cast<const ModuleEntity *>(Name)->Name;
+      continue;
     case Node::KNestedName:
       Name = static_cast<const NestedName *>(Name)->Name;
       continue;
@@ -441,6 +444,9 @@ char *ItaniumPartialDemangler::getFunctionDeclContextName(char *Buf,
     }
     break;
   }
+
+  if (Name->getKind() == Node::KModuleEntity)
+    Name = static_cast<const ModuleEntity *>(Name)->Name;
 
   switch (Name->getKind()) {
   case Node::KNestedName:
@@ -543,6 +549,9 @@ bool ItaniumPartialDemangler::isCtorOrDtor() const {
       break;
     case Node::KNestedName:
       N = static_cast<const NestedName *>(N)->Name;
+      break;
+    case Node::KModuleEntity:
+      N = static_cast<const ModuleEntity *>(N)->Name;
       break;
     }
   }
