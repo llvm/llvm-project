@@ -293,7 +293,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   // Hold a mapping from function to each callsite location we encounter within
   // it that is part of some dynamic allocation context. The location is stored
   // as a pointer to a symbolized list of inline frames.
-  using LocationPtr = const llvm::SmallVector<MemProfRecord::Frame> *;
+  using LocationPtr = const llvm::SmallVector<FrameId> *;
   llvm::DenseMap<GlobalValue::GUID, llvm::SetVector<LocationPtr>>
       PerFunctionCallSites;
 
@@ -309,7 +309,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
           "memprof callstack record does not contain id: " + Twine(StackId));
 
     // Construct the symbolized callstack.
-    llvm::SmallVector<MemProfRecord::Frame> Callstack;
+    llvm::SmallVector<FrameId> Callstack;
     Callstack.reserve(It->getSecond().size());
 
     llvm::ArrayRef<uint64_t> Addresses = It->getSecond();
@@ -317,10 +317,9 @@ Error RawMemProfReader::mapRawProfileToRecords() {
       const uint64_t Address = Addresses[I];
       assert(SymbolizedFrame.count(Address) > 0 &&
              "Address not found in SymbolizedFrame map");
-      const SmallVector<MemProfRecord::Frame> &Frames =
-          SymbolizedFrame[Address];
+      const SmallVector<FrameId> &Frames = SymbolizedFrame[Address];
 
-      assert(!Frames.back().IsInlineFrame &&
+      assert(!idToFrame(Frames.back()).IsInlineFrame &&
              "The last frame should not be inlined");
 
       // Record the callsites for each function. Skip the first frame of the
@@ -333,7 +332,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
         // though we only need the frames up to and including the frame for
         // Frames[J].Function. This will enable better deduplication for
         // compression in the future.
-        PerFunctionCallSites[Frames[J].Function].insert(&Frames);
+        const GlobalValue::GUID Guid = idToFrame(Frames[J]).Function;
+        PerFunctionCallSites[Guid].insert(&Frames);
       }
 
       // Add all the frames to the current allocation callstack.
@@ -343,12 +343,13 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // We attach the memprof record to each function bottom-up including the
     // first non-inline frame.
     for (size_t I = 0; /*Break out using the condition below*/; I++) {
+      const Frame &F = idToFrame(Callstack[I]);
       auto Result =
-          FunctionProfileData.insert({Callstack[I].Function, MemProfRecord()});
-      MemProfRecord &Record = Result.first->second;
+          FunctionProfileData.insert({F.Function, IndexedMemProfRecord()});
+      IndexedMemProfRecord &Record = Result.first->second;
       Record.AllocSites.emplace_back(Callstack, Entry.second);
 
-      if (!Callstack[I].IsInlineFrame)
+      if (!F.IsInlineFrame)
         break;
     }
   }
@@ -359,8 +360,8 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     const GlobalValue::GUID Id = I->first;
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
-    auto Result = FunctionProfileData.insert({Id, MemProfRecord()});
-    MemProfRecord &Record = Result.first->second;
+    auto Result = FunctionProfileData.insert({Id, IndexedMemProfRecord()});
+    IndexedMemProfRecord &Record = Result.first->second;
     for (LocationPtr Loc : I->getSecond()) {
       Record.CallSites.push_back(*Loc);
     }
@@ -405,17 +406,22 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
 
       for (size_t I = 0, NumFrames = DI.getNumberOfFrames(); I < NumFrames;
            I++) {
-        const auto &Frame = DI.getFrame(I);
+        const auto &DIFrame = DI.getFrame(I);
         LLVM_DEBUG(
             // Print out the name to guid mapping for debugging.
-            llvm::dbgs() << "FunctionName: " << Frame.FunctionName << " GUID: "
-                         << MemProfRecord::getGUID(Frame.FunctionName)
+            llvm::dbgs() << "FunctionName: " << DIFrame.FunctionName
+                         << " GUID: "
+                         << IndexedMemProfRecord::getGUID(DIFrame.FunctionName)
                          << "\n";);
-        SymbolizedFrame[VAddr].emplace_back(
-            MemProfRecord::getGUID(Frame.FunctionName),
-            Frame.Line - Frame.StartLine, Frame.Column,
-            // Only the last entry is not an inlined location.
-            I != NumFrames - 1);
+
+        const Frame F(IndexedMemProfRecord::getGUID(DIFrame.FunctionName),
+                      DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
+                      // Only the last entry is not an inlined location.
+                      I != NumFrames - 1);
+
+        const FrameId Id = F.hash();
+        IdToFrame.insert({Id, F});
+        SymbolizedFrame[VAddr].push_back(Id);
       }
     }
 
@@ -518,7 +524,11 @@ Error RawMemProfReader::readNextRecord(GuidMemProfRecordPair &GuidRecord) {
   if (Iter == FunctionProfileData.end())
     return make_error<InstrProfError>(instrprof_error::eof);
 
-  GuidRecord = {Iter->first, Iter->second};
+  auto IdToFrameCallback = [this](const FrameId Id) {
+    return this->idToFrame(Id);
+  };
+  const IndexedMemProfRecord &IndexedRecord = Iter->second;
+  GuidRecord = {Iter->first, MemProfRecord(IndexedRecord, IdToFrameCallback)};
   Iter++;
   return Error::success();
 }

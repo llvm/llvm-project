@@ -25,6 +25,9 @@ using ::llvm::DILineInfo;
 using ::llvm::DILineInfoSpecifier;
 using ::llvm::DILocal;
 using ::llvm::memprof::CallStackMap;
+using ::llvm::memprof::Frame;
+using ::llvm::memprof::FrameId;
+using ::llvm::memprof::IndexedMemProfRecord;
 using ::llvm::memprof::MemInfoBlock;
 using ::llvm::memprof::MemProfRecord;
 using ::llvm::memprof::MemProfSchema;
@@ -94,32 +97,18 @@ const DILineInfoSpecifier specifier() {
 }
 
 MATCHER_P4(FrameContains, FunctionName, LineOffset, Column, Inline, "") {
+  const Frame &F = arg;
+
   const uint64_t ExpectedHash = llvm::Function::getGUID(FunctionName);
-  if (arg.Function != ExpectedHash) {
+  if (F.Function != ExpectedHash) {
     *result_listener << "Hash mismatch";
     return false;
   }
-  if (arg.LineOffset == LineOffset && arg.Column == Column &&
-      arg.IsInlineFrame == Inline) {
+  if (F.LineOffset == LineOffset && F.Column == Column &&
+      F.IsInlineFrame == Inline) {
     return true;
   }
   *result_listener << "LineOffset, Column or Inline mismatch";
-  return false;
-}
-
-MATCHER_P(EqualsRecord, Want, "") {
-  if (arg == Want)
-    return true;
-
-  std::string Explanation;
-  llvm::raw_string_ostream OS(Explanation);
-  OS << "\n Want: \n";
-  Want.print(OS);
-  OS << "\n Got: \n";
-  arg.print(OS);
-  OS.flush();
-
-  *result_listener << Explanation;
   return false;
 }
 
@@ -186,7 +175,7 @@ TEST(MemProf, FillsValue) {
   ASSERT_EQ(Records.size(), 4U);
 
   // Check the memprof record for foo.
-  const llvm::GlobalValue::GUID FooId = MemProfRecord::getGUID("foo");
+  const llvm::GlobalValue::GUID FooId = IndexedMemProfRecord::getGUID("foo");
   ASSERT_EQ(Records.count(FooId), 1U);
   const MemProfRecord &Foo = Records[FooId];
   ASSERT_EQ(Foo.AllocSites.size(), 1U);
@@ -202,7 +191,7 @@ TEST(MemProf, FillsValue) {
   EXPECT_TRUE(Foo.CallSites.empty());
 
   // Check the memprof record for bar.
-  const llvm::GlobalValue::GUID BarId = MemProfRecord::getGUID("bar");
+  const llvm::GlobalValue::GUID BarId = IndexedMemProfRecord::getGUID("bar");
   ASSERT_EQ(Records.count(BarId), 1U);
   const MemProfRecord &Bar = Records[BarId];
   ASSERT_EQ(Bar.AllocSites.size(), 1U);
@@ -222,7 +211,7 @@ TEST(MemProf, FillsValue) {
   EXPECT_THAT(Bar.CallSites[0][1], FrameContains("bar", 51U, 20U, false));
 
   // Check the memprof record for xyz.
-  const llvm::GlobalValue::GUID XyzId = MemProfRecord::getGUID("xyz");
+  const llvm::GlobalValue::GUID XyzId = IndexedMemProfRecord::getGUID("xyz");
   ASSERT_EQ(Records.count(XyzId), 1U);
   const MemProfRecord &Xyz = Records[XyzId];
   ASSERT_EQ(Xyz.CallSites.size(), 1U);
@@ -233,7 +222,7 @@ TEST(MemProf, FillsValue) {
   EXPECT_THAT(Xyz.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
 
   // Check the memprof record for abc.
-  const llvm::GlobalValue::GUID AbcId = MemProfRecord::getGUID("abc");
+  const llvm::GlobalValue::GUID AbcId = IndexedMemProfRecord::getGUID("abc");
   ASSERT_EQ(Records.count(AbcId), 1U);
   const MemProfRecord &Abc = Records[AbcId];
   EXPECT_TRUE(Abc.AllocSites.empty());
@@ -275,14 +264,12 @@ TEST(MemProf, RecordSerializationRoundTrip) {
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
                     /*dealloc_cpu=*/4);
 
-  llvm::SmallVector<llvm::SmallVector<MemProfRecord::Frame>> AllocCallStacks = {
-      {{0x123, 1, 2, false}, {0x345, 3, 4, false}},
-      {{0x123, 1, 2, false}, {0x567, 5, 6, false}}};
+  llvm::SmallVector<llvm::SmallVector<FrameId>> AllocCallStacks = {
+      {0x123, 0x345}, {0x123, 0x567}};
 
-  llvm::SmallVector<llvm::SmallVector<MemProfRecord::Frame>> CallSites = {
-      {{0x333, 1, 2, false}, {0x777, 3, 4, true}}};
+  llvm::SmallVector<llvm::SmallVector<FrameId>> CallSites = {{0x333, 0x777}};
 
-  MemProfRecord Record;
+  IndexedMemProfRecord Record;
   for (const auto &ACS : AllocCallStacks) {
     // Use the same info block for both allocation sites.
     Record.AllocSites.emplace_back(ACS, Info);
@@ -294,10 +281,10 @@ TEST(MemProf, RecordSerializationRoundTrip) {
   Record.serialize(Schema, OS);
   OS.flush();
 
-  const MemProfRecord GotRecord = MemProfRecord::deserialize(
+  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()));
 
-  EXPECT_THAT(GotRecord, EqualsRecord(Record));
+  EXPECT_EQ(Record, GotRecord);
 }
 
 TEST(MemProf, SymbolizationFilter) {

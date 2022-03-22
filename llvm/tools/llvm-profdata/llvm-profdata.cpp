@@ -266,12 +266,25 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       return;
     }
 
-    // Add the records into the writer context.
-    for (auto I = Reader->begin(), E = Reader->end(); I != E; ++I) {
-      WC->Writer.addRecord(/*Id=*/I->first, /*Record=*/I->second, [&](Error E) {
-        instrprof_error IPE = InstrProfError::take(std::move(E));
-        WC->Errors.emplace_back(make_error<InstrProfError>(IPE), Filename);
-      });
+    auto MemProfError = [&](Error E) {
+      instrprof_error IPE = InstrProfError::take(std::move(E));
+      WC->Errors.emplace_back(make_error<InstrProfError>(IPE), Filename);
+    };
+
+    // Add the frame mappings into the writer context.
+    const auto &IdToFrame = Reader->getFrameMapping();
+    for (const auto &I : IdToFrame) {
+      bool Succeeded = WC->Writer.addMemProfFrame(
+          /*Id=*/I.first, /*Frame=*/I.getSecond(), MemProfError);
+      // If we weren't able to add the frame mappings then it doesn't make sense
+      // to try to add the records from this profile.
+      if (!Succeeded)
+        return;
+    }
+    const auto &FunctionProfileData = Reader->getProfileData();
+    // Add the memprof records into the writer context.
+    for (const auto &I : FunctionProfileData) {
+      WC->Writer.addMemProfRecord(/*Id=*/I.first, /*Record=*/I.second);
     }
     return;
   }

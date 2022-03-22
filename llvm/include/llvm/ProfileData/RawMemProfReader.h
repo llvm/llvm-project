@@ -90,6 +90,17 @@ public:
       report_fatal_error(std::move(E));
   }
 
+  // Return a const reference to the internal Id to Frame mappings.
+  const llvm::DenseMap<FrameId, Frame> &getFrameMapping() const {
+    return IdToFrame;
+  }
+
+  // Return a const reference to the internal function profile data.
+  const llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> &
+  getProfileData() const {
+    return FunctionProfileData;
+  }
+
 private:
   RawMemProfReader(std::unique_ptr<MemoryBuffer> DataBuffer,
                    object::OwningBinary<object::Binary> &&Bin)
@@ -105,6 +116,13 @@ private:
   // `FunctionProfileData` map. A function may have allocation profile data or
   // callsite data or both.
   Error mapRawProfileToRecords();
+
+  // A helper method to extract the frame from the IdToFrame map.
+  const Frame &idToFrame(const FrameId Id) const {
+    auto It = IdToFrame.find(Id);
+    assert(It != IdToFrame.end() && "Id not found in map.");
+    return It->getSecond();
+  }
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
   // Prints aggregate counts for each raw profile parsed from the DataBuffer in
@@ -123,11 +141,11 @@ private:
   CallStackMap StackMap;
 
   // Cached symbolization from PC to Frame.
-  llvm::DenseMap<uint64_t, llvm::SmallVector<MemProfRecord::Frame>>
-      SymbolizedFrame;
+  llvm::DenseMap<uint64_t, llvm::SmallVector<FrameId>> SymbolizedFrame;
+  llvm::DenseMap<FrameId, Frame> IdToFrame;
 
-  llvm::MapVector<GlobalValue::GUID, MemProfRecord> FunctionProfileData;
-  llvm::MapVector<GlobalValue::GUID, MemProfRecord>::iterator Iter;
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord> FunctionProfileData;
+  llvm::MapVector<GlobalValue::GUID, IndexedMemProfRecord>::iterator Iter;
 };
 
 } // namespace memprof
