@@ -1478,7 +1478,10 @@ bool msgSupportsStream(int64_t MsgId, int64_t OpId,
 void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
                uint16_t &StreamId, const MCSubtargetInfo &STI) {
   MsgId = Val & getMsgIdMask(STI);
-  if (!isGFX11Plus(STI)) {
+  if (isGFX11Plus(STI)) {
+    OpId = 0;
+    StreamId = 0;
+  } else {
     OpId = (Val & OP_MASK_) >> OP_SHIFT_;
     StreamId = (Val & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
   }
