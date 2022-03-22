@@ -368,7 +368,8 @@ enum TypeAttrLocation {
 };
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
-                             TypeAttrLocation TAL, ParsedAttributesView &attrs);
+                             TypeAttrLocation TAL,
+                             const ParsedAttributesView &attrs);
 
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type);
@@ -8149,7 +8150,12 @@ static bool isAddressSpaceKind(const ParsedAttr &attr) {
 
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
-                             ParsedAttributesView &attrs) {
+                             const ParsedAttributesView &attrs) {
+
+  state.setParsedNoDeref(false);
+  if (attrs.empty())
+    return;
+
   // Scan through and apply attributes to this type where it makes sense.  Some
   // attributes (such as __address_space__, __vector_size__, etc) apply to the
   // type, but others can be present in the type specifiers even though they
@@ -8159,9 +8165,6 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
   // sure we visit every element once. Copy the attributes list, and iterate
   // over that.
   ParsedAttributesView AttrsCopy{attrs};
-
-  state.setParsedNoDeref(false);
-
   for (ParsedAttr &attr : AttrsCopy) {
 
     // Skip attributes that were marked to be invalid.

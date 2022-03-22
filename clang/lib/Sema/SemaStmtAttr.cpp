@@ -495,8 +495,7 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
   }
 }
 
-void Sema::ProcessStmtAttributes(Stmt *S,
-                                 const ParsedAttributesWithRange &InAttrs,
+void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
                                  SmallVectorImpl<const Attr *> &OutAttrs) {
   for (const ParsedAttr &AL : InAttrs) {
     if (const Attr *A = ProcessStmtAttribute(*this, S, AL, InAttrs.Range))

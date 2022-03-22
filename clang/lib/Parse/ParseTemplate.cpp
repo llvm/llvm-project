@@ -204,7 +204,7 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
     return nullptr;
   }
 
-  ParsedAttributesWithRange prefixAttrs(AttrFactory);
+  ParsedAttributes prefixAttrs(AttrFactory);
   MaybeParseCXX11Attributes(prefixAttrs);
 
   if (Tok.is(tok::kw_using)) {

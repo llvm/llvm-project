@@ -587,7 +587,7 @@ StmtResult Sema::BuildAttributedStmt(SourceLocation AttrsLoc,
   return AttributedStmt::Create(Context, AttrsLoc, Attrs, SubStmt);
 }
 
-StmtResult Sema::ActOnAttributedStmt(const ParsedAttributesWithRange &Attrs,
+StmtResult Sema::ActOnAttributedStmt(const ParsedAttributes &Attrs,
                                      Stmt *SubStmt) {
   SmallVector<const Attr *, 1> SemanticAttrs;
   ProcessStmtAttributes(SubStmt, Attrs, SemanticAttrs);

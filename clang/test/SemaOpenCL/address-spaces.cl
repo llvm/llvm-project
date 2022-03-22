@@ -258,7 +258,7 @@ __kernel void k() {
 
 void func_multiple_addr2(void) {
   typedef __private int private_int_t;
-  __private __attribute__((opencl_global)) int var1;   // expected-error {{multiple address spaces specified for type}} \
+  __attribute__((opencl_global)) __private int var1;   // expected-error {{multiple address spaces specified for type}} \
                                                        // expected-error {{function scope variable cannot be declared in global address space}}
   __private __attribute__((opencl_global)) int *var2;  // expected-error {{multiple address spaces specified for type}}
   __attribute__((opencl_global)) private_int_t var3;   // expected-error {{multiple address spaces specified for type}}
