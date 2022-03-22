@@ -13,12 +13,12 @@
 // TILE-002-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 // TILE-234-DAG: #[[$strided2D:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 
-//   TILE-2-DAG: #[[$bound_map:.*]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
-//  TILE-02-DAG: #[[$bound_map:.*]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
-// TILE-002-DAG: #[[$bound_map:.*]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
-// TILE-234-DAG: #[[$bound_map_2:.*]] = affine_map<(d0)[s0] -> (2, -d0 + s0)>
-// TILE-234-DAG: #[[$bound_map_3:.*]] = affine_map<(d0)[s0] -> (3, -d0 + s0)>
-// TILE-234-DAG: #[[$bound_map_4:.*]] = affine_map<(d0)[s0] -> (4, -d0 + s0)>
+//   TILE-2-DAG: #[[$bound_map:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
+//  TILE-02-DAG: #[[$bound_map:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
+// TILE-002-DAG: #[[$bound_map:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
+// TILE-234-DAG: #[[$bound_map_2:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
+// TILE-234-DAG: #[[$bound_map_3:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 3)>
+// TILE-234-DAG: #[[$bound_map_4:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 4)>
 
 //   TILE-2-DAG: #[[$stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>
 //  TILE-02-DAG: #[[$stride_99_1_layout_map:.*]] = affine_map<(d0, d1)[s0] -> (d0 * 99 + s0 + d1)>

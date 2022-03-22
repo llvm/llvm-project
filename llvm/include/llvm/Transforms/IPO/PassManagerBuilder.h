@@ -16,7 +16,6 @@
 
 #include "llvm-c/Transforms/PassManagerBuilder.h"
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
 

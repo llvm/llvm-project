@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/Matchers.h"
@@ -2708,6 +2709,80 @@ template <typename T> struct MergeAffineMinMaxOp : public OpRewritePattern<T> {
   }
 };
 
+/// Canonicalize the result expression order of an affine map and return success
+/// if the order changed.
+///
+/// The function flattens the map's affine expressions to coefficient arrays and
+/// sorts them in lexicographic order. A coefficient array contains a multiplier
+/// for every dimension/symbol and a constant term. The canonicalization fails
+/// if a result expression is not pure or if the flattening requires local
+/// variables that, unlike dimensions and symbols, have no global order.
+static LogicalResult canonicalizeMapExprAndTermOrder(AffineMap &map) {
+  SmallVector<SmallVector<int64_t>> flattenedExprs;
+  for (const AffineExpr &resultExpr : map.getResults()) {
+    // Fail if the expression is not pure.
+    if (!resultExpr.isPureAffine())
+      return failure();
+
+    SimpleAffineExprFlattener flattener(map.getNumDims(), map.getNumSymbols());
+    flattener.walkPostOrder(resultExpr);
+
+    // Fail if the flattened expression has local variables.
+    if (flattener.operandExprStack.back().size() !=
+        map.getNumDims() + map.getNumSymbols() + 1)
+      return failure();
+
+    flattenedExprs.emplace_back(flattener.operandExprStack.back().begin(),
+                                flattener.operandExprStack.back().end());
+  }
+
+  // Fail if sorting is not necessary.
+  if (llvm::is_sorted(flattenedExprs))
+    return failure();
+
+  // Reorder the result expressions according to their flattened form.
+  SmallVector<unsigned> resultPermutation =
+      llvm::to_vector(llvm::seq<unsigned>(0, map.getNumResults()));
+  llvm::sort(resultPermutation, [&](unsigned lhs, unsigned rhs) {
+    return flattenedExprs[lhs] < flattenedExprs[rhs];
+  });
+  SmallVector<AffineExpr> newExprs;
+  for (unsigned idx : resultPermutation)
+    newExprs.push_back(map.getResult(idx));
+
+  map = AffineMap::get(map.getNumDims(), map.getNumSymbols(), newExprs,
+                       map.getContext());
+  return success();
+}
+
+/// Canonicalize the affine map result expression order of an affine min/max
+/// operation.
+///
+/// The pattern calls `canonicalizeMapExprAndTermOrder` to order the result
+/// expressions and replaces the operation if the order changed.
+///
+/// For example, the following operation:
+///
+///   %0 = affine.min affine_map<(d0, d1) -> (d0 + d1, d1 + 16, 32)> (%i0, %i1)
+///
+/// Turns into:
+///
+///   %0 = affine.min affine_map<(d0, d1) -> (32, d1 + 16, d0 + d1)> (%i0, %i1)
+template <typename T>
+struct CanonicalizeAffineMinMaxOpExprAndTermOrder : public OpRewritePattern<T> {
+  using OpRewritePattern<T>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(T affineOp,
+                                PatternRewriter &rewriter) const override {
+    AffineMap map = affineOp.getAffineMap();
+    if (failed(canonicalizeMapExprAndTermOrder(map)))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<T>(affineOp, map, affineOp.getMapOperands());
+    return success();
+  }
+};
+
 template <typename T>
 struct CanonicalizeSingleResultAffineMinMaxOp : public OpRewritePattern<T> {
   using OpRewritePattern<T>::OpRewritePattern;
@@ -2737,7 +2812,8 @@ void AffineMinOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
   patterns.add<CanonicalizeSingleResultAffineMinMaxOp<AffineMinOp>,
                DeduplicateAffineMinMaxExpressions<AffineMinOp>,
-               MergeAffineMinMaxOp<AffineMinOp>, SimplifyAffineOp<AffineMinOp>>(
+               MergeAffineMinMaxOp<AffineMinOp>, SimplifyAffineOp<AffineMinOp>,
+               CanonicalizeAffineMinMaxOpExprAndTermOrder<AffineMinOp>>(
       context);
 }
 
@@ -2764,7 +2840,8 @@ void AffineMaxOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                               MLIRContext *context) {
   patterns.add<CanonicalizeSingleResultAffineMinMaxOp<AffineMaxOp>,
                DeduplicateAffineMinMaxExpressions<AffineMaxOp>,
-               MergeAffineMinMaxOp<AffineMaxOp>, SimplifyAffineOp<AffineMaxOp>>(
+               MergeAffineMinMaxOp<AffineMaxOp>, SimplifyAffineOp<AffineMaxOp>,
+               CanonicalizeAffineMinMaxOpExprAndTermOrder<AffineMaxOp>>(
       context);
 }
 
