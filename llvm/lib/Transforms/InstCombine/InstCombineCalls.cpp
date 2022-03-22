@@ -1349,6 +1349,24 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *IIOperand = II->getArgOperand(0);
     Value *X = nullptr;
 
+    // Try to canonicalize bswap-of-logical-shift-by-8-bit-multiple as
+    // inverse-shift-of-bswap:
+    // bswap (shl X, C) --> lshr (bswap X), C
+    // bswap (lshr X, C) --> shl (bswap X), C
+    // TODO: Use knownbits to allow variable shift and non-splat vector match.
+    BinaryOperator *BO;
+    if (match(IIOperand, m_OneUse(m_BinOp(BO)))) {
+      const APInt *C;
+      if (match(BO, m_LogicalShift(m_Value(X), m_APIntAllowUndef(C))) &&
+          (*C & 7) == 0) {
+        Value *NewSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
+        BinaryOperator::BinaryOps InverseShift =
+            BO->getOpcode() == Instruction::Shl ? Instruction::LShr
+                                                : Instruction::Shl;
+        return BinaryOperator::Create(InverseShift, NewSwap, BO->getOperand(1));
+      }
+    }
+
     KnownBits Known = computeKnownBits(IIOperand, 0, II);
     uint64_t LZ = alignDown(Known.countMinLeadingZeros(), 8);
     uint64_t TZ = alignDown(Known.countMinTrailingZeros(), 8);
