@@ -1883,7 +1883,9 @@ Error BitcodeReader::parseTypeTableBody() {
     case bitc::TYPE_CODE_OPAQUE_POINTER: { // OPAQUE_POINTER: [addrspace]
       if (Record.size() != 1)
         return error("Invalid opaque pointer record");
-      if (Context.supportsTypedPointers())
+      if (LLVM_UNLIKELY(!Context.hasSetOpaquePointersValue())) {
+        Context.enableOpaquePointers();
+      } else if (Context.supportsTypedPointers())
         return error(
             "Opaque pointers are only supported in -opaque-pointers mode");
       unsigned AddressSpace = Record[0];
