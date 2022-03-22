@@ -860,6 +860,7 @@ std::unique_ptr<lto::LTO> createLTO(
   // TODO: Handle index-only thin-LTO
   Backend = lto::createInProcessThinBackend(
       llvm::heavyweight_hardware_concurrency(1));
+  Conf.UseDefaultPipeline = true;
 
   Conf.CPU = Arch.str();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(TheTriple);
