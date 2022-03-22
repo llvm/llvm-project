@@ -22,31 +22,30 @@ s_sendmsg sendmsg(MSG_INTERRUPT, 0, 0)
 
 s_sendmsg sendmsg(MSG_GS)
 // PREGFX11: error: missing message operation
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_NOP)
 // PREGFX11: error: invalid operation id
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS, SYSMSG_OP_ECC_ERR_INTERRUPT)
-// PREGFX11: error: expected an operation name or an absolute expression
-// GFX11: error: expected a message name or an absolute expression
+// GCN: error: expected an operation name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, 0)
 // PREGFX11: error: invalid operation id
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS, -1)
 // PREGFX11: error: invalid operation id
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS, 4)
 // PREGFX11: error: invalid operation id
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS, 8)
 // PREGFX11: error: invalid operation id
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(15, -1)
 // GCN: error: invalid operation id
@@ -55,27 +54,23 @@ s_sendmsg sendmsg(15, 8)
 // GCN: error: invalid operation id
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0, 0)
-// PREGFX11: error: expected a closing parenthesis
-// GFX11: error: expected a message name or an absolute expression
+// GCN: error: expected a closing parenthesis
 
 s_sendmsg sendmsg(MSG_GSX, GS_OP_CUT, 0)
 // GCN: error: expected a message name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUTX, 0)
-// PREGFX11: error: expected an operation name or an absolute expression
-// GFX11: error: expected a message name or an absolute expression
+// GCN: error: expected an operation name or an absolute expression
 
 s_sendmsg sendmsg(MSG_GS, 1 -)
-// PREGFX11: error: unknown token in expression
-// GFX11: error: expected a message name or an absolute expression
+// GCN: error: unknown token in expression
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 4)
 // PREGFX11: error: invalid message stream id
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 1 -)
-// PREGFX11: error: unknown token in expression
-// GFX11: error: expected a message name or an absolute expression
+// GCN: error: unknown token in expression
 
 s_sendmsg sendmsg(2, 3, 0, 0)
 // GCN: error: expected a closing parenthesis
@@ -91,99 +86,98 @@ s_sendmsg sendmsg(2, 2, 0, 0)
 
 s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP, 0)
 // PREGFX11: error: message operation does not support streams
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS_DONE, 0, 0)
 // PREGFX11: error: message operation does not support streams
-// GFX11: error: expected a message name or an absolute expression
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_HS_TESSFACTOR)
-// SICI: error: expected a message name or an absolute expression
-// VI: error: expected a message name or an absolute expression
-// GFX10: error: expected a message name or an absolute expression
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-// SICI: error: expected a message name or an absolute expression
-// VI: error: expected a message name or an absolute expression
-// GFX10: error: expected a message name or an absolute expression
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_SAVEWAVE)
-// SICI: error: invalid message id
-// GFX11: error: expected a message name or an absolute expression
+// SICI: error: specified message id is not supported on this GPU
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_STALL_WAVE_GEN)
-// SICI: error: invalid message id
-// VI: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_HALT_WAVES)
-// SICI: error: invalid message id
-// VI: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_ORDERED_PS_DONE)
-// SICI: error: invalid message id
-// VI: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_EARLY_PRIM_DEALLOC)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX10: error: invalid message id
-// GFX11: error: expected a message name or an absolute expression
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS_ALLOC_REQ)
-// VI: error: invalid message id
-// SICI: error: invalid message id
+// VI: error: specified message id is not supported on this GPU
+// SICI: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GS_ALLOC_REQ, 0)
-// VI: error: invalid message id
-// SICI: error: invalid message id
+// VI: error: specified message id is not supported on this GPU
+// SICI: error: specified message id is not supported on this GPU
 // GFX10: error: message does not support operations
 // GFX11: error: message does not support operations
 
 s_sendmsg sendmsg(MSG_GET_DOORBELL)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX11: error: expected a message name or an absolute expression
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_GET_DDID)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX11: error: expected a message name or an absolute expression
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX11: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_RTN_GET_DOORBELL)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX10: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_RTN_GET_DDID)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX10: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_RTN_GET_TMA)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX10: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_RTN_GET_REALTIME)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX10: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_RTN_SAVE_WAVE)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX10: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(MSG_RTN_GET_TBA)
-// SICI: error: invalid message id
-// VI: error: invalid message id
-// GFX10: error: invalid message id
+// SICI: error: specified message id is not supported on this GPU
+// VI: error: specified message id is not supported on this GPU
+// GFX10: error: specified message id is not supported on this GPU
 
 s_sendmsg sendmsg(-1)
 // GCN: error: invalid message id
 
 s_sendmsg sendmsg(16)
-// GCN: error: invalid message id
+// PREGFX11: error: invalid message id
 
 s_sendmsg sendmsg(MSG_SYSMSG)
 // GCN: error: missing message operation

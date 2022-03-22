@@ -315,7 +315,6 @@ enum CPol {
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
 enum Id { // Message ID, width(4) [3:0].
-  ID_UNKNOWN_ = -1,
   ID_INTERRUPT = 1,
 
   ID_GS_PreGFX11 = 2,      // replaced in GFX11
@@ -333,23 +332,16 @@ enum Id { // Message ID, width(4) [3:0].
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
   ID_GET_DDID = 11,          // added in GFX10, removed in GFX11
   ID_SYSMSG = 15,
-  ID_GAPS_LAST_, // Indicate that sequence has gaps.
-  ID_GAPS_FIRST_ = ID_INTERRUPT,
-  ID_SHIFT_ = 0,
-  ID_WIDTH_ = 4,
-  // Note that this mask includes IdRtn values enumerated below.
-  ID_MASK_ = 1 << 7 | ((1 << ID_WIDTH_) - 1) << ID_SHIFT_
-};
 
-enum IdRtn { // Message ID, width(4) [3:0] but with bit 7 set.
   ID_RTN_GET_DOORBELL = 128,
   ID_RTN_GET_DDID = 129,
   ID_RTN_GET_TMA = 130,
   ID_RTN_GET_REALTIME = 131,
   ID_RTN_SAVE_WAVE = 132,
   ID_RTN_GET_TBA = 133,
-  ID_RTN_LAST_,
-  ID_RTN_FIRST_ = ID_RTN_GET_DOORBELL
+
+  ID_MASK_PreGFX11_ = 0xF,
+  ID_MASK_GFX11Plus_ = 0xFF
 };
 
 enum Op { // Both GS and SYS operation IDs.

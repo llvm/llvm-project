@@ -14,35 +14,20 @@
 ; Constant Bit Indices
 ;
 
-define i32 @test_i32_add_add_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_add_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_add_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $30, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    btl $30, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
-; NOTBM-LABEL: test_i32_add_add_idx:
-; NOTBM:       # %bb.0:
-; NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; NOTBM-NEXT:    # kill: def $edi killed $edi def $rdi
-; NOTBM-NEXT:    leal (%rdi,%rsi), %eax
-; NOTBM-NEXT:    shrl $30, %edx
-; NOTBM-NEXT:    andl $1, %edx
-; NOTBM-NEXT:    addl %edx, %eax
-; NOTBM-NEXT:    retq
-;
-; TBM-LABEL: test_i32_add_add_idx:
-; TBM:       # %bb.0:
-; TBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; TBM-NEXT:    # kill: def $edi killed $edi def $rdi
-; TBM-NEXT:    bextrl $286, %edx, %eax # imm = 0x11E
-; TBM-NEXT:    addl %edi, %eax
-; TBM-NEXT:    addl %esi, %eax
-; TBM-NEXT:    retq
+; X64-LABEL: test_i32_add_add_idx:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    btl $30, %edx
+; X64-NEXT:    adcl %esi, %eax
+; X64-NEXT:    retq
   %add = add i32 %y, %x
   %shift = lshr i32 %z, 30
   %mask = and i32 %shift, 1
@@ -50,35 +35,20 @@ define i32 @test_i32_add_add_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_add_commute_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_add_commute_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_add_commute_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $2, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    btl $2, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
-; NOTBM-LABEL: test_i32_add_add_commute_idx:
-; NOTBM:       # %bb.0:
-; NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; NOTBM-NEXT:    # kill: def $edi killed $edi def $rdi
-; NOTBM-NEXT:    leal (%rdi,%rsi), %eax
-; NOTBM-NEXT:    shrl $2, %edx
-; NOTBM-NEXT:    andl $1, %edx
-; NOTBM-NEXT:    addl %edx, %eax
-; NOTBM-NEXT:    retq
-;
-; TBM-LABEL: test_i32_add_add_commute_idx:
-; TBM:       # %bb.0:
-; TBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; TBM-NEXT:    # kill: def $edi killed $edi def $rdi
-; TBM-NEXT:    bextrl $258, %edx, %eax # imm = 0x102
-; TBM-NEXT:    addl %edi, %eax
-; TBM-NEXT:    addl %esi, %eax
-; TBM-NEXT:    retq
+; X64-LABEL: test_i32_add_add_commute_idx:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    btl $2, %edx
+; X64-NEXT:    adcl %esi, %eax
+; X64-NEXT:    retq
   %add = add i32 %y, %x
   %shift = lshr i32 %z, 2
   %mask = and i32 %shift, 1
@@ -86,7 +56,7 @@ define i32 @test_i32_add_add_commute_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_add_idx0:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -110,7 +80,7 @@ define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_sub_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_sub_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_sub_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -135,33 +105,22 @@ define i32 @test_i32_add_sub_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add
 }
 
-define i32 @test_i32_add_sub_commute_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_add_sub_commute_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_add_sub_commute_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    shrl $8, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %ecx, %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btl $8, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    retl
 ;
-; NOTBM-LABEL: test_i32_add_sub_commute_idx:
-; NOTBM:       # %bb.0:
-; NOTBM-NEXT:    # kill: def $edx killed $edx def $rdx
-; NOTBM-NEXT:    # kill: def $edi killed $edi def $rdi
-; NOTBM-NEXT:    subl %esi, %edi
-; NOTBM-NEXT:    shrl $8, %edx
-; NOTBM-NEXT:    andl $1, %edx
-; NOTBM-NEXT:    leal (%rdx,%rdi), %eax
-; NOTBM-NEXT:    retq
-;
-; TBM-LABEL: test_i32_add_sub_commute_idx:
-; TBM:       # %bb.0:
-; TBM-NEXT:    subl %esi, %edi
-; TBM-NEXT:    bextrl $264, %edx, %eax # imm = 0x108
-; TBM-NEXT:    addl %edi, %eax
-; TBM-NEXT:    retq
+; X64-LABEL: test_i32_add_sub_commute_idx:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    btl $8, %edx
+; X64-NEXT:    adcl $0, %eax
+; X64-NEXT:    retq
   %sub = sub i32 %x, %y
   %shift = lshr i32 %z, 8
   %mask = and i32 %shift, 1
@@ -169,35 +128,23 @@ define i32 @test_i32_add_sub_commute_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %add
 }
 
-define i32 @test_i32_sub_add_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_sub_add_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_sub_add_idx:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl %ecx
-; X86-NEXT:    andl $1, %ecx
-; X86-NEXT:    subl %ecx, %eax
+; X86-NEXT:    btl $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    retl
 ;
-; NOTBM-LABEL: test_i32_sub_add_idx:
-; NOTBM:       # %bb.0:
-; NOTBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; NOTBM-NEXT:    # kill: def $edi killed $edi def $rdi
-; NOTBM-NEXT:    leal (%rdi,%rsi), %eax
-; NOTBM-NEXT:    shrl %edx
-; NOTBM-NEXT:    andl $1, %edx
-; NOTBM-NEXT:    subl %edx, %eax
-; NOTBM-NEXT:    retq
-;
-; TBM-LABEL: test_i32_sub_add_idx:
-; TBM:       # %bb.0:
-; TBM-NEXT:    # kill: def $esi killed $esi def $rsi
-; TBM-NEXT:    # kill: def $edi killed $edi def $rdi
-; TBM-NEXT:    leal (%rdi,%rsi), %eax
-; TBM-NEXT:    bextrl $257, %edx, %ecx # imm = 0x101
-; TBM-NEXT:    subl %ecx, %eax
-; TBM-NEXT:    retq
+; X64-LABEL: test_i32_sub_add_idx:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rsi), %eax
+; X64-NEXT:    btl $1, %edx
+; X64-NEXT:    sbbl $0, %eax
+; X64-NEXT:    retq
   %add = add i32 %y, %x
   %shift = lshr i32 %z, 1
   %mask = and i32 %shift, 1
@@ -205,7 +152,7 @@ define i32 @test_i32_sub_add_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %sub
 }
 
-define i32 @test_i32_sub_sub_idx(i32 %x, i32 %y, i32 %z) {
+define i32 @test_i32_sub_sub_idx(i32 %x, i32 %y, i32 %z) nounwind {
 ; X86-LABEL: test_i32_sub_sub_idx:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -238,31 +185,46 @@ define i32 @test_i32_sub_sub_idx(i32 %x, i32 %y, i32 %z) {
   ret i32 %sub1
 }
 
+define i32 @test_i32_sub_sub_commute_idx(i32 %x, i32 %y, i32 %z) nounwind {
+; X86-LABEL: test_i32_sub_sub_commute_idx:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btl $15, {{[0-9]+}}(%esp)
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i32_sub_sub_commute_idx:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    btl $15, %edx
+; X64-NEXT:    sbbl %esi, %eax
+; X64-NEXT:    retq
+  %shift = lshr i32 %z, 15
+  %mask = and i32 %shift, 1
+  %sub0 = sub i32 %x, %y
+  %sub1 = sub i32 %sub0, %mask
+  ret i32 %sub1
+}
+
 ;
 ; Variable Bit Indices
 ;
 
-define i32 @test_i32_add_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_add_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_add_var:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i32_add_add_var:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rsi), %eax
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %edx
-; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    adcl %esi, %eax
 ; X64-NEXT:    retq
   %add = add i32 %y, %x
   %shift = lshr i32 %z, %w
@@ -271,27 +233,21 @@ define i32 @test_i32_add_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_add_commute_var:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i32_add_add_commute_var:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rsi), %eax
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %edx
-; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    adcl %esi, %eax
 ; X64-NEXT:    retq
   %add = add i32 %y, %x
   %shift = lshr i32 %z, %w
@@ -300,27 +256,23 @@ define i32 @test_i32_add_add_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add1
 }
 
-define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_sub_var:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i32_add_sub_var:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edx killed $edx def $rdx
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    subl %esi, %edi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %edx
-; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    leal (%rdx,%rdi), %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    adcl $0, %eax
 ; X64-NEXT:    retq
   %sub = sub i32 %x, %y
   %shift = lshr i32 %z, %w
@@ -329,27 +281,23 @@ define i32 @test_i32_add_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add
 }
 
-define i32 @test_i32_add_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_add_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_add_sub_commute_var:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    subl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shrl %cl, %eax
-; X86-NEXT:    andl $1, %eax
-; X86-NEXT:    addl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i32_add_sub_commute_var:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edx killed $edx def $rdx
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    subl %esi, %edi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %edx
-; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    leal (%rdx,%rdi), %eax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subl %esi, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    adcl $0, %eax
 ; X64-NEXT:    retq
   %sub = sub i32 %x, %y
   %shift = lshr i32 %z, %w
@@ -358,16 +306,15 @@ define i32 @test_i32_add_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %add
 }
 
-define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_add_var:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrl %cl, %edx
-; X86-NEXT:    andl $1, %edx
-; X86-NEXT:    subl %edx, %eax
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_i32_sub_add_var:
@@ -375,10 +322,8 @@ define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    leal (%rdi,%rsi), %eax
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shrl %cl, %edx
-; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    subl %edx, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    sbbl $0, %eax
 ; X64-NEXT:    retq
   %add = add i32 %y, %x
   %shift = lshr i32 %z, %w
@@ -387,7 +332,7 @@ define i32 @test_i32_sub_add_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   ret i32 %sub
 }
 
-define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
+define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
 ; X86-LABEL: test_i32_sub_sub_var:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
@@ -412,5 +357,28 @@ define i32 @test_i32_sub_sub_var(i32 %x, i32 %y, i32 %z, i32 %w) {
   %mask = and i32 %shift, 1
   %sub0 = sub i32 %y, %mask
   %sub1 = sub i32 %x, %sub0
+  ret i32 %sub1
+}
+
+define i32 @test_i32_sub_sub_commute_var(i32 %x, i32 %y, i32 %z, i32 %w) nounwind {
+; X86-LABEL: test_i32_sub_sub_commute_var:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    btl %ecx, %edx
+; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i32_sub_sub_commute_var:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    btl %ecx, %edx
+; X64-NEXT:    sbbl %esi, %eax
+; X64-NEXT:    retq
+  %shift = lshr i32 %z, %w
+  %mask = and i32 %shift, 1
+  %sub0 = sub i32 %x, %y
+  %sub1 = sub i32 %sub0, %mask
   ret i32 %sub1
 }

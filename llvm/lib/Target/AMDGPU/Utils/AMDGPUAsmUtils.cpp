@@ -13,55 +13,36 @@ namespace llvm {
 namespace AMDGPU {
 namespace SendMsg {
 
-// This must be in sync with llvm::AMDGPU::SendMsg::Id enum members, see SIDefines.h.
-const char *const IdSymbolic_PreGFX11[ID_GAPS_LAST_] = {
-  nullptr,
-  "MSG_INTERRUPT",
-  "MSG_GS",
-  "MSG_GS_DONE",
-  "MSG_SAVEWAVE",
-  "MSG_STALL_WAVE_GEN",
-  "MSG_HALT_WAVES",
-  "MSG_ORDERED_PS_DONE",
-  "MSG_EARLY_PRIM_DEALLOC",
-  "MSG_GS_ALLOC_REQ",
-  "MSG_GET_DOORBELL",
-  "MSG_GET_DDID",
-  nullptr,
-  nullptr,
-  nullptr,
-  "MSG_SYSMSG"
+// Disable lint checking for this block since it makes the table unreadable.
+// NOLINTBEGIN
+const CustomOperand<const MCSubtargetInfo &> Msg[] = {
+  {{""}},
+  {{"MSG_INTERRUPT"},           ID_INTERRUPT},
+  {{"MSG_GS"},                  ID_GS_PreGFX11,             isNotGFX11Plus},
+  {{"MSG_GS_DONE"},             ID_GS_DONE_PreGFX11,        isNotGFX11Plus},
+  {{"MSG_SAVEWAVE"},            ID_SAVEWAVE,                isGFX8_GFX9_GFX10},
+  {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,          isGFX9Plus},
+  {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,              isGFX9Plus},
+  {{"MSG_ORDERED_PS_DONE"},     ID_ORDERED_PS_DONE,         isGFX9Plus},
+  {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,      isGFX9_GFX10},
+  {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,            isGFX9Plus},
+  {{"MSG_GET_DOORBELL"},        ID_GET_DOORBELL,            isGFX9_GFX10},
+  {{"MSG_GET_DDID"},            ID_GET_DDID,                isGFX10},
+  {{"MSG_HS_TESSFACTOR"},       ID_HS_TESSFACTOR_GFX11Plus, isGFX11Plus},
+  {{"MSG_DEALLOC_VGPRS"},       ID_DEALLOC_VGPRS_GFX11Plus, isGFX11Plus},
+  {{""}},
+  {{"MSG_SYSMSG"},              ID_SYSMSG},
+  {{"MSG_RTN_GET_DOORBELL"},    ID_RTN_GET_DOORBELL,        isGFX11Plus},
+  {{"MSG_RTN_GET_DDID"},        ID_RTN_GET_DDID,            isGFX11Plus},
+  {{"MSG_RTN_GET_TMA"},         ID_RTN_GET_TMA,             isGFX11Plus},
+  {{"MSG_RTN_GET_REALTIME"},    ID_RTN_GET_REALTIME,        isGFX11Plus},
+  {{"MSG_RTN_SAVE_WAVE"},       ID_RTN_SAVE_WAVE,           isGFX11Plus},
+  {{"MSG_RTN_GET_TBA"},         ID_RTN_GET_TBA,             isGFX11Plus},
 };
+// NOLINTEND
 
-// This must be in sync with llvm::AMDGPU::SendMsg::Id enum members, see SIDefines.h.
-const char *const IdSymbolic_GFX11Plus[ID_GAPS_LAST_] = {
-  nullptr,
-  "MSG_INTERRUPT",
-  "MSG_HS_TESSFACTOR",
-  "MSG_DEALLOC_VGPRS",
-  nullptr,
-  "MSG_STALL_WAVE_GEN",
-  "MSG_HALT_WAVES",
-  "MSG_ORDERED_PS_DONE",
-  nullptr,
-  "MSG_GS_ALLOC_REQ",
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  nullptr,
-  "MSG_SYSMSG"
-};
-
-// This must be in sync with llvm::AMDGPU::SendMsg::IdRtn enum members, see SIDefines.h.
-const char *const IdRtnSymbolic[ID_RTN_LAST_ - ID_RTN_FIRST_] = {
-  "MSG_RTN_GET_DOORBELL",
-  "MSG_RTN_GET_DDID",
-  "MSG_RTN_GET_TMA",
-  "MSG_RTN_GET_REALTIME",
-  "MSG_RTN_SAVE_WAVE",
-  "MSG_RTN_GET_TBA",
-};
+const int MSG_SIZE = static_cast<int>(
+    sizeof(Msg) / sizeof(CustomOperand<const MCSubtargetInfo &>));
 
 // These two must be in sync with llvm::AMDGPU::SendMsg::Op enum members, see SIDefines.h.
 const char *const OpSysSymbolic[OP_SYS_LAST_] = {
@@ -90,11 +71,7 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_MODE"},          ID_MODE},
   {{"HW_REG_STATUS"},        ID_STATUS},
   {{"HW_REG_TRAPSTS"},       ID_TRAPSTS},
-  {{"HW_REG_HW_ID"},         ID_HW_ID,
-                                     [](const MCSubtargetInfo &STI) {
-                                       return isSI(STI) || isCI(STI) ||
-                                              isVI(STI) || isGFX9(STI);
-                                     }},
+  {{"HW_REG_HW_ID"},         ID_HW_ID,       isNotGFX10Plus},
   {{"HW_REG_GPR_ALLOC"},     ID_GPR_ALLOC},
   {{"HW_REG_LDS_ALLOC"},     ID_LDS_ALLOC},
   {{"HW_REG_IB_STS"},        ID_IB_STS},
@@ -112,11 +89,7 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_TMA_HI"},        ID_TMA_HI,      isGFX9_GFX10},
   {{"HW_REG_FLAT_SCR_LO"},   ID_FLAT_SCR_LO, isGFX10Plus},
   {{"HW_REG_FLAT_SCR_HI"},   ID_FLAT_SCR_HI, isGFX10Plus},
-  {{"HW_REG_XNACK_MASK"},    ID_XNACK_MASK,
-                                     [](const MCSubtargetInfo &STI) {
-                                       return isGFX10(STI) &&
-                                              !AMDGPU::isGFX10_BEncoding(STI);
-                                     }},
+  {{"HW_REG_XNACK_MASK"},    ID_XNACK_MASK,  isGFX10Before1030},
   {{"HW_REG_HW_ID1"},        ID_HW_ID1,      isGFX10Plus},
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},

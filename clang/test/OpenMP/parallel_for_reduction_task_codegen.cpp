@@ -335,9 +335,9 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK1-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK1-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK1-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK1-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-// CHECK1-NEXT:    store i32 0, i32* [[TMP3]], align 8
+// CHECK1-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to i32**
+// CHECK1-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[TMP2]], align 8
+// CHECK1-NEXT:    store i32 0, i32* [[TMP3]], align 4
 // CHECK1-NEXT:    ret void
 //
 //
@@ -859,9 +859,9 @@ int main(int argc, char **argv) {
 // CHECK2-NEXT:    [[DOTADDR1:%.*]] = alloca i8*, align 8
 // CHECK2-NEXT:    store i8* [[TMP0]], i8** [[DOTADDR]], align 8
 // CHECK2-NEXT:    store i8* [[TMP1]], i8** [[DOTADDR1]], align 8
-// CHECK2-NEXT:    [[TMP2:%.*]] = load i8*, i8** [[DOTADDR]], align 8
-// CHECK2-NEXT:    [[TMP3:%.*]] = bitcast i8* [[TMP2]] to i32*
-// CHECK2-NEXT:    store i32 0, i32* [[TMP3]], align 8
+// CHECK2-NEXT:    [[TMP2:%.*]] = bitcast i8** [[DOTADDR]] to i32**
+// CHECK2-NEXT:    [[TMP3:%.*]] = load i32*, i32** [[TMP2]], align 8
+// CHECK2-NEXT:    store i32 0, i32* [[TMP3]], align 4
 // CHECK2-NEXT:    ret void
 //
 //
