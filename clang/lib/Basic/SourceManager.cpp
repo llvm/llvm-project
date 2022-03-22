@@ -33,6 +33,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ConvertUTF.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -96,6 +97,33 @@ const char *ContentCache::getInvalidBOM(StringRef BufStr) {
           .Default(nullptr);
 
   return InvalidBOM;
+}
+
+// Check buffer is UTF16
+bool ContentCache::checkBufUTF16(StringRef BufStr) {
+    const char *Result = llvm::StringSwitch<const char *>(BufStr)
+                             .StartsWith("\xFE\xFF", "UTF-16 (BE)")
+                             .StartsWith("\xFF\xFE", "UTF-16 (LE)")
+                             .Default(nullptr);
+    if (Result) {
+        return true;
+    }
+    return false;
+}
+
+// Check buffer is UTF32
+bool ContentCache::checkBufUTF32(StringRef BufStr) {
+    const char *Result =
+        llvm::StringSwitch<const char *>(BufStr)
+            .StartsWith(llvm::StringLiteral::withInnerNUL("\x00\x00\xFE\xFF"),
+                        "UTF-32 (BE)")
+            .StartsWith(llvm::StringLiteral::withInnerNUL("\xFF\xFE\x00\x00"),
+                        "UTF-32 (LE)")
+            .Default(nullptr);
+    if (Result) {
+        return true;
+    }
+    return false;
 }
 
 llvm::Optional<llvm::MemoryBufferRef>
@@ -175,6 +203,21 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // http://en.wikipedia.org/wiki/Byte_order_mark for more information.
   StringRef BufStr = Buffer->getBuffer();
   const char *InvalidBOM = getInvalidBOM(BufStr);
+  
+  // [MSVC Compatibility] Trying to convert UTF16 to UTF8.
+  if (InvalidBOM && checkBufUTF16(BufStr)) {
+    std::string StrUtf8;
+    if (llvm::convertUTF16ToUTF8String(
+            llvm::makeArrayRef(BufStr.data(), BufStr.size()), StrUtf8)) {
+      char *NewBuf = new char[StrUtf8.size() + 4]{0};
+      memcpy(NewBuf, StrUtf8.data(), StrUtf8.size());
+      Buffer->BufferStart = NewBuf;
+      Buffer->BufferEnd = NewBuf + StrUtf8.size();
+      BufStr = Buffer->getBuffer();
+      // Verify it again.
+      InvalidBOM = getInvalidBOM(BufStr);
+    }
+  }
 
   if (InvalidBOM) {
     Diag.Report(Loc, diag::err_unsupported_bom)
