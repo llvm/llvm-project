@@ -235,6 +235,9 @@ import lldbtest
 # testFormat: The test format to use to interpret tests.
 config.test_format = lldbtest.LLDBTest(dotest_cmd)
 
+# Propagate TERM or default to vt100.
+config.environment['TERM'] = os.getenv('TERM', default='vt100')
+
 # Propagate FREEBSD_LEGACY_PLUGIN
 if 'FREEBSD_LEGACY_PLUGIN' in os.environ:
   config.environment['FREEBSD_LEGACY_PLUGIN'] = os.environ[
