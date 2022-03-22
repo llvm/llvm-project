@@ -1411,14 +1411,14 @@ public:
                                     bool HasCancel = false);
 
   /// Emits reduction function.
-  /// \param ArgsType Array type containing pointers to reduction variables.
+  /// \param ArgsElemType Array type containing pointers to reduction variables.
   /// \param Privates List of private copies for original reduction arguments.
   /// \param LHSExprs List of LHS in \a ReductionOps reduction operations.
   /// \param RHSExprs List of RHS in \a ReductionOps reduction operations.
   /// \param ReductionOps List of reduction operations in form 'LHS binop RHS'
   /// or 'operator binop(LHS, RHS)'.
   llvm::Function *emitReductionFunction(SourceLocation Loc,
-                                        llvm::Type *ArgsType,
+                                        llvm::Type *ArgsElemType,
                                         ArrayRef<const Expr *> Privates,
                                         ArrayRef<const Expr *> LHSExprs,
                                         ArrayRef<const Expr *> RHSExprs,
