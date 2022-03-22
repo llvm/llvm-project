@@ -2721,9 +2721,9 @@ def ext_constexpr_static_var : ExtWarn<
   "definition of a %select{static|thread_local}1 variable "
   "in a constexpr %select{function|constructor}0 "
   "is a C++2b extension">, InGroup<CXX2b>;
-def warn_cxx20_compat_constexpr_static_var : Warning<
-  "definition of a %select{static|thread_local}1 variable "
-  "in a constexpr %select{function|constructor}0 "
+def warn_cxx20_compat_constexpr_var : Warning<
+  "definition of a %select{static variable|thread_local variable|variable "
+  "of non-literal type}1 in a constexpr %select{function|constructor}0 "
   "is incompatible with C++ standards before C++2b">,
   InGroup<CXXPre2bCompat>, DefaultIgnore;
 def err_constexpr_local_var_non_literal_type : Error<
