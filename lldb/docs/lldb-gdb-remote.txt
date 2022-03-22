@@ -451,7 +451,12 @@ read packet: OK/E<error code>;AAAAAAAAA
 //        "size": <decimal integer>,
 //            Size in bytes of this thread data.
 //      },
-//    }]
+//    ],
+//    "counters"?: {
+//      "info_kind": {...parameters specific to the provided counter info kind},
+//          Each entry includes information related to counters associated with the trace.
+//          They are described below.
+//    }
 //  }
 //
 // NOTES
@@ -463,6 +468,26 @@ read packet: OK/E<error code>;AAAAAAAAA
 //  Binary data kinds:
 //    - threadTraceBuffer: trace buffer for a thread.
 //    - cpuInfo: contents of the /proc/cpuinfo file.
+//
+//  Counter info kinds:
+//    tsc-perf-zero-conversion:
+//
+//    This field allows converting Intel processor's TSC values to a wall time.
+//    It is available through the Linux perf_event API when cap_user_time and cap_user_time_zero
+//    are set.
+//    See the documentation of time_zero in
+//    https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more information about
+//    the calculation and the meaning of the values in the schema below.
+///
+//    Sub-schema for this field:
+//
+//    {
+//      "tsc-perf-zero-conversion": {
+//        "time_mult": <decimal integer>,
+//        "time_shift": <decimal integer>,
+//        "time_zero": <decimal integer>,
+//      }
+//    }
 //----------------------------------------------------------------------
 
 send packet: jLLDBTraceGetState:{"type":<type>}]

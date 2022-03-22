@@ -185,7 +185,7 @@ private:
 /// Main class that manages intel-pt process and thread tracing.
 class IntelPTCollector {
 public:
-  IntelPTCollector(lldb::pid_t pid) : m_pid(pid), m_thread_traces(pid) {}
+  IntelPTCollector(lldb::pid_t pid);
 
   static bool IsSupported();
 
@@ -235,6 +235,8 @@ private:
   /// Threads traced due to "process tracing". Only one active "process tracing"
   /// instance is assumed for a single process.
   llvm::Optional<IntelPTProcessTrace> m_process_trace;
+  /// TSC to wall time conversion.
+  TraceTscConversionUP m_tsc_conversion;
 };
 
 } // namespace process_linux

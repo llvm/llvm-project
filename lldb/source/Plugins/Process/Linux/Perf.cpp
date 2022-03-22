@@ -8,15 +8,9 @@
 
 #include "Perf.h"
 
-#include "lldb/lldb-types.h"
-
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <chrono>
-#include <cstdint>
-#include <linux/perf_event.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -25,8 +19,8 @@ using namespace lldb_private;
 using namespace process_linux;
 using namespace llvm;
 
-Expected<PerfTscConversionParameters>
-lldb_private::process_linux::FetchPerfTscConversionParameters() {
+Expected<LinuxPerfZeroTscConversion>
+lldb_private::process_linux::LoadPerfTscConversionParameters() {
   lldb::pid_t pid = getpid();
   perf_event_attr attr;
   memset(&attr, 0, sizeof(attr));
@@ -43,7 +37,7 @@ lldb_private::process_linux::FetchPerfTscConversionParameters() {
 
   perf_event_mmap_page &mmap_metada = perf_event->GetMetadataPage();
   if (mmap_metada.cap_user_time && mmap_metada.cap_user_time_zero) {
-    return PerfTscConversionParameters{
+    return LinuxPerfZeroTscConversion{
         mmap_metada.time_mult, mmap_metada.time_shift, mmap_metada.time_zero};
   } else {
     auto err_cap =
@@ -54,16 +48,6 @@ lldb_private::process_linux::FetchPerfTscConversionParameters() {
                       err_cap);
     return llvm::createStringError(llvm::inconvertibleErrorCode(), err_msg);
   }
-}
-
-std::chrono::nanoseconds PerfTscConversionParameters::ToWallTime(uint64_t tsc) {
-  // See 'time_zero' section of
-  // https://man7.org/linux/man-pages/man2/perf_event_open.2.html
-  uint64_t quot = tsc >> m_time_shift;
-  uint64_t rem_flag = (((uint64_t)1 << m_time_shift) - 1);
-  uint64_t rem = tsc & rem_flag;
-  return std::chrono::nanoseconds{m_time_zero + quot * m_time_mult +
-                                  ((rem * m_time_mult) >> m_time_shift)};
 }
 
 void resource_handle::MmapDeleter::operator()(void *ptr) {

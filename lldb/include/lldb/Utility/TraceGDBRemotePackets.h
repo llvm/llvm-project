@@ -10,6 +10,7 @@
 #define LLDB_UTILITY_TRACEGDBREMOTEPACKETS_H
 
 #include "llvm/Support/JSON.h"
+#include <chrono>
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -115,6 +116,31 @@ bool fromJSON(const llvm::json::Value &value, TraceThreadState &packet,
               llvm::json::Path path);
 
 llvm::json::Value toJSON(const TraceThreadState &packet);
+
+/// Interface for different algorithms used to convert trace
+/// counters into different units.
+template <typename ToType> class TraceCounterConversion {
+public:
+  virtual ~TraceCounterConversion() = default;
+
+  /// Convert from raw counter value to the target type.
+  ///
+  /// \param[in] raw_counter_value
+  ///   The raw counter value to be converted.
+  ///
+  /// \return
+  ///   The converted counter value.
+  virtual ToType Convert(uint64_t raw_counter_value) = 0;
+
+  /// Serialize trace counter conversion values to JSON.
+  ///
+  /// \return
+  ///   \a llvm::json::Value representing the trace counter conversion object.
+  virtual llvm::json::Value toJSON() = 0;
+};
+
+using TraceTscConversionUP =
+    std::unique_ptr<TraceCounterConversion<std::chrono::nanoseconds>>;
 
 struct TraceGetStateResponse {
   std::vector<TraceThreadState> tracedThreads;
