@@ -408,6 +408,23 @@ TEST_F(FormatTestTextProto, UnderstandsHashComments) {
                    "dd: 100\n"
                    "#### another quadriple-hash comment\n",
                    Style));
+
+  // Ensure we support a common pattern for naming sections.
+  EXPECT_EQ("##############\n"
+            "# section name\n"
+            "##############",
+            format("##############\n"
+                   "# section name\n"
+                   "##############",
+                   Style));
+
+  EXPECT_EQ("///////////////\n"
+            "// section name\n"
+            "///////////////",
+            format("///////////////\n"
+                   "// section name\n"
+                   "///////////////",
+                   Style));
 }
 
 TEST_F(FormatTestTextProto, FormatsExtensions) {
