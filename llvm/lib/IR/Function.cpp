@@ -1468,7 +1468,11 @@ static bool matchIntrinsicType(
         return matchIntrinsicType(PT->getNonOpaquePointerElementType(), Infos,
                                   ArgTys, DeferredChecks, IsDeferredCheck);
       // Consume IIT descriptors relating to the pointer element type.
-      while (Infos.front().Kind == IITDescriptor::Pointer)
+      // FIXME: Intrinsic type matching of nested single value types or even
+      // aggregates doesn't work properly with opaque pointers but hopefully
+      // doesn't happen in practice.
+      while (Infos.front().Kind == IITDescriptor::Pointer ||
+             Infos.front().Kind == IITDescriptor::Vector)
         Infos = Infos.slice(1);
       Infos = Infos.slice(1);
       return false;
