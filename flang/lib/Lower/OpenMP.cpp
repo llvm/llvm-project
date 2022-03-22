@@ -202,6 +202,49 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   }
 }
 
+static void
+genOMP(Fortran::lower::AbstractConverter &converter,
+       Fortran::lower::pft::Evaluation &eval,
+       const Fortran::parser::OpenMPCriticalConstruct &criticalConstruct) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+  std::string name;
+  const Fortran::parser::OmpCriticalDirective &cd =
+      std::get<Fortran::parser::OmpCriticalDirective>(criticalConstruct.t);
+  if (std::get<std::optional<Fortran::parser::Name>>(cd.t).has_value()) {
+    name =
+        std::get<std::optional<Fortran::parser::Name>>(cd.t).value().ToString();
+  }
+
+  uint64_t hint = 0;
+  const auto &clauseList = std::get<Fortran::parser::OmpClauseList>(cd.t);
+  for (const Fortran::parser::OmpClause &clause : clauseList.v)
+    if (auto hintClause =
+            std::get_if<Fortran::parser::OmpClause::Hint>(&clause.u)) {
+      const auto *expr = Fortran::semantics::GetExpr(hintClause->v);
+      hint = *Fortran::evaluate::ToInt64(*expr);
+      break;
+    }
+
+  mlir::omp::CriticalOp criticalOp = [&]() {
+    if (name.empty()) {
+      return firOpBuilder.create<mlir::omp::CriticalOp>(currentLocation,
+                                                        FlatSymbolRefAttr());
+    } else {
+      mlir::ModuleOp module = firOpBuilder.getModule();
+      mlir::OpBuilder modBuilder(module.getBodyRegion());
+      auto global = module.lookupSymbol<mlir::omp::CriticalDeclareOp>(name);
+      if (!global)
+        global = modBuilder.create<mlir::omp::CriticalDeclareOp>(
+            currentLocation, name, hint);
+      return firOpBuilder.create<mlir::omp::CriticalOp>(
+          currentLocation, mlir::FlatSymbolRefAttr::get(
+                               firOpBuilder.getContext(), global.sym_name()));
+    }
+  }();
+  createBodyOfOp<omp::CriticalOp>(criticalOp, firOpBuilder, currentLocation);
+}
+
 void Fortran::lower::genOpenMPConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::pft::Evaluation &eval,
@@ -239,7 +282,7 @@ void Fortran::lower::genOpenMPConstruct(
           },
           [&](const Fortran::parser::OpenMPCriticalConstruct
                   &criticalConstruct) {
-            TODO(converter.getCurrentLocation(), "OpenMPCriticalConstruct");
+            genOMP(converter, eval, criticalConstruct);
           },
       },
       ompConstruct.u);
