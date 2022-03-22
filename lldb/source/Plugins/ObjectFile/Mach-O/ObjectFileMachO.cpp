@@ -2201,14 +2201,14 @@ ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
 enum { DebugSymbols = true, NonDebugSymbols = false };
 
 void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
-  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s",
-                     m_file.GetFilename().AsCString(""));
   ModuleSP module_sp(GetModule());
   if (!module_sp)
     return;
 
-  Progress progress(llvm::formatv("Parsing symbol table for {0}",
-                                  m_file.GetFilename().AsCString("<Unknown>")));
+  const FileSpec &file = m_file ? m_file : module_sp->GetFileSpec();
+  const char *file_name = file.GetFilename().AsCString("<Unknown>");
+  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
+  Progress progress(llvm::formatv("Parsing symbol table for {0}", file_name));
 
   llvm::MachO::symtab_command symtab_load_command = {0, 0, 0, 0, 0, 0};
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};

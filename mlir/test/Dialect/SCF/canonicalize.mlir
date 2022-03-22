@@ -556,7 +556,7 @@ func @merge_yielding_nested_if_nv2(%arg0: i1, %arg1: i1) -> i32 {
 // CHECK: %[[PRE0:.*]] = "test.op"() : () -> i32
 // CHECK: %[[PRE1:.*]] = "test.op1"() : () -> i32
 // CHECK: %[[COND:.*]] = arith.andi %[[ARG0]], %[[ARG1]]
-// CHECK: %[[RES:.*]] = arith.select %[[COND]], %[[PRE0]], %[[PRE1]]
+// CHECK: %[[RES:.*]] = arith.select %[[ARG0]], %[[PRE0]], %[[PRE1]]
 // CHECK: scf.if %[[COND]] 
 // CHECK:   "test.run"() : () -> ()
 // CHECK: }
@@ -596,6 +596,7 @@ func @merge_fail_yielding_nested_if(%arg0: i1, %arg1: i1) -> (i32, f32, i32, i8)
   }
   return %r#0, %r#1, %r#2, %r#3 : i32, f32, i32, i8
 }
+
 // -----
 
 // CHECK-LABEL:   func @if_condition_swap

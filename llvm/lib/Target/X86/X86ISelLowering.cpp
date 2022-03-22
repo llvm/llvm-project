@@ -18942,7 +18942,18 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     Offset += NumElts; // Increment for next iteration.
   }
 
-
+  // If we're broadcasting a SETCC result, try to broadcast the ops instead.
+  // TODO: What other unary shuffles would benefit from this?
+  if (isBroadcastShuffleMask(Mask) && V1.getOpcode() == ISD::SETCC &&
+      V1->hasOneUse()) {
+    SDValue Op0 = V1.getOperand(0);
+    SDValue Op1 = V1.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(V1.getOperand(2))->get();
+    EVT OpVT = Op0.getValueType();
+    return DAG.getSetCC(
+        DL, VT, DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT), Mask),
+        DAG.getVectorShuffle(OpVT, DL, Op1, DAG.getUNDEF(OpVT), Mask), CC);
+  }
 
   MVT ExtVT;
   switch (VT.SimpleTy) {
@@ -23575,8 +23586,12 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
   // that doing a bittest on the i32 value is ok.  We extend to i32 because
   // the encoding for the i16 version is larger than the i32 version.
   // Also promote i16 to i32 for performance / code size reason.
-  if (Src.getValueType() == MVT::i8 || Src.getValueType() == MVT::i16)
+  if (Src.getValueType().getScalarSizeInBits() < 32)
     Src = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Src);
+
+  // No legal type found, give up.
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(Src.getValueType()))
+    return SDValue();
 
   // See if we can use the 32-bit instruction instead of the 64-bit one for a
   // shorter encoding. Since the former takes the modulo 32 of BitNo and the
@@ -52288,6 +52303,9 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
 static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                                          SDValue X, SDValue Y,
                                          SelectionDAG &DAG) {
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
   // Look through a one-use zext.
   if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
     Y = Y.getOperand(0);
@@ -52474,9 +52492,13 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
 
-  // If this is an add, commute and try again.
-  if (!IsSub)
-    return combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG);
+  // Commute and try again (negate the result for subtracts).
+  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG)) {
+    if (IsSub)
+      ADCOrSBB =
+          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), ADCOrSBB);
+    return ADCOrSBB;
+  }
 
   return SDValue();
 }
@@ -52963,6 +52985,16 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal subs from subs of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
+
+  // Fold SUB(X,SBB(Y,Z,W)) -> SUB(ADC(X,Z,W),Y)
+  // Don't fold to ADC(0,0,W)/SETCC_CARRY pattern which will prevent more folds.
+  if (Op1.getOpcode() == X86ISD::SBB && Op1->hasOneUse() &&
+      !(X86::isZeroNode(Op0) && X86::isZeroNode(Op1.getOperand(1)))) {
+    SDValue ADC = DAG.getNode(X86ISD::ADC, SDLoc(Op1), Op1->getVTList(), Op0,
+                              Op1.getOperand(1), Op1.getOperand(2));
+    return DAG.getNode(ISD::SUB, SDLoc(N), Op0.getValueType(), ADC.getValue(0),
+                       Op1.getOperand(0));
+  }
 
   return combineAddOrSubToADCOrSBB(N, DAG);
 }

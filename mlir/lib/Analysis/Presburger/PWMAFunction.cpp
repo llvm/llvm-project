@@ -99,7 +99,7 @@ void MultiAffineFunction::swapId(unsigned posA, unsigned posB) {
 void MultiAffineFunction::removeIdRange(IdKind kind, unsigned idStart,
                                         unsigned idLimit) {
   output.removeColumns(idStart + getIdKindOffset(kind), idLimit - idStart);
-  IntegerPolyhedron::removeIdRange(idStart, idLimit);
+  IntegerPolyhedron::removeIdRange(kind, idStart, idLimit);
 }
 
 void MultiAffineFunction::eliminateRedundantLocalId(unsigned posA,
@@ -181,3 +181,5 @@ void PWMAFunction::print(raw_ostream &os) const {
   for (const MultiAffineFunction &piece : pieces)
     piece.print(os);
 }
+
+void PWMAFunction::dump() const { print(llvm::errs()); }

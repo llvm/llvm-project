@@ -11,6 +11,7 @@
 #include "SourceCode.h"
 #include "index/SymbolCollector.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "clang/AST/Decl.h"
 
 namespace clang {
@@ -82,7 +83,7 @@ llvm::Optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   llvm::StringMap<int> Candidates; // Target path => score.
   auto AwardTarget = [&](const char *TargetURI) {
     if (auto TargetPath = URI::resolve(TargetURI, OriginalFile)) {
-      if (*TargetPath != OriginalFile) // exclude the original file.
+      if (!pathEqual(*TargetPath, OriginalFile)) // exclude the original file.
         ++Candidates[*TargetPath];
     } else {
       elog("Failed to resolve URI {0}: {1}", TargetURI, TargetPath.takeError());

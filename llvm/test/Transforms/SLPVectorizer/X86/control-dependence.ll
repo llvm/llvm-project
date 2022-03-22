@@ -381,19 +381,19 @@ define void @test10(i64* %a, i64* %b, i64* %c) {
 ; FIXME: This is wrong, we're hoisting a faulting udiv above an infinite loop.
 define void @test11(i64 %x, i64 %y, i64* %b, i64* %c) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64> [[TMP1]], i64 [[Y:%.*]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv <2 x i64> <i64 200, i64 200>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i32 0
-; CHECK-NEXT:    store i64 [[TMP4]], i64* [[B:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @may_inf_loop_ro()
+; CHECK-NEXT:    [[U1:%.*]] = udiv i64 200, [[X:%.*]]
+; CHECK-NEXT:    store i64 [[U1]], i64* [[B:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @may_inf_loop_ro()
+; CHECK-NEXT:    [[U2:%.*]] = udiv i64 200, [[Y:%.*]]
 ; CHECK-NEXT:    [[CA2:%.*]] = getelementptr i64, i64* [[C:%.*]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[C]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[C]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[U1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[U2]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i64> [[TMP5]], [[TMP3]]
 ; CHECK-NEXT:    [[B2:%.*]] = getelementptr i64, i64* [[B]], i32 1
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64* [[B]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP8]], <2 x i64>* [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64* [[B]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP6]], <2 x i64>* [[TMP7]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %u1 = udiv i64 200, %x

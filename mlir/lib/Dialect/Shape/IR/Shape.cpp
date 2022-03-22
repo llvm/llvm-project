@@ -257,7 +257,7 @@ ParseResult AssumingOp::parse(OpAsmParser &parser, OperationState &result) {
   Region *doRegion = result.addRegion();
 
   auto &builder = parser.getBuilder();
-  OpAsmParser::OperandType cond;
+  OpAsmParser::UnresolvedOperand cond;
   if (parser.parseOperand(cond) ||
       parser.resolveOperand(cond, builder.getType<WitnessType>(),
                             result.operands))
@@ -1832,7 +1832,7 @@ LogicalResult ReduceOp::verify() {
 
 ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse operands.
-  SmallVector<OpAsmParser::OperandType, 3> operands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> operands;
   Type shapeOrExtentTensorType;
   if (parser.parseOperandList(operands, /*requiredOperandCount=*/-1,
                               OpAsmParser::Delimiter::Paren) ||

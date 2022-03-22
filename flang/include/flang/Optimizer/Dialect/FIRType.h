@@ -78,9 +78,9 @@ inline bool isa_passbyref_type(mlir::Type t) {
 
 /// Is `t` a type that can conform to be pass-by-reference? Depending on the
 /// context, these types may simply demote to pass-by-reference or a reference
-/// to them may have to be passed instead.
+/// to them may have to be passed instead. Functions are always referent.
 inline bool conformsWithPassByRef(mlir::Type t) {
-  return isa_ref_type(t) || isa_box_type(t);
+  return isa_ref_type(t) || isa_box_type(t) || t.isa<mlir::FunctionType>();
 }
 
 /// Is `t` a derived (record) type?
@@ -162,6 +162,16 @@ inline bool sequenceWithNonConstantShape(fir::SequenceType seqTy) {
 /// Returns true iff the type `t` does not have a constant size.
 bool hasDynamicSize(mlir::Type t);
 
+inline unsigned getRankOfShapeType(mlir::Type t) {
+  if (auto shTy = t.dyn_cast<fir::ShapeType>())
+    return shTy.getRank();
+  if (auto shTy = t.dyn_cast<fir::ShapeShiftType>())
+    return shTy.getRank();
+  if (auto shTy = t.dyn_cast<fir::ShiftType>())
+    return shTy.getRank();
+  return 0;
+}
+
 /// If `t` is a SequenceType return its element type, otherwise return `t`.
 inline mlir::Type unwrapSequenceType(mlir::Type t) {
   if (auto seqTy = t.dyn_cast<fir::SequenceType>())
@@ -181,6 +191,22 @@ inline mlir::Type unwrapPassByRefType(mlir::Type t) {
   if (auto eleTy = dyn_cast_ptrOrBoxEleTy(t))
     return eleTy;
   return t;
+}
+
+/// Unwrap all pointer and box types and return the element type if it is a
+/// sequence type, otherwise return null.
+inline fir::SequenceType unwrapUntilSeqType(mlir::Type t) {
+  while (true) {
+    if (!t)
+      return {};
+    if (auto ty = dyn_cast_ptrOrBoxEleTy(t)) {
+      t = ty;
+      continue;
+    }
+    if (auto seqTy = t.dyn_cast<fir::SequenceType>())
+      return seqTy;
+    return {};
+  }
 }
 
 #ifndef NDEBUG

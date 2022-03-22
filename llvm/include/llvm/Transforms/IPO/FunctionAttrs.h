@@ -18,12 +18,12 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/LazyCallGraph.h"
-#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
-class AAResults;
+class GlobalValueSummary;
+class ModuleSummaryIndex;
 class Function;
 class Module;
 class Pass;

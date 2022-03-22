@@ -2609,52 +2609,6 @@ TEST_F(FormatTest, FormatsSwitchStatement) {
                "}",
                getLLVMStyleWithColumns(34));
 
-  verifyFormat("switch (a) {\n"
-               "[[likely]] case 1:\n"
-               "  return;\n"
-               "}");
-  verifyFormat("switch (a) {\n"
-               "[[likely]] [[other::likely]] case 1:\n"
-               "  return;\n"
-               "}");
-  verifyFormat("switch (x) {\n"
-               "case 1:\n"
-               "  return;\n"
-               "[[likely]] case 2:\n"
-               "  return;\n"
-               "}");
-  verifyFormat("switch (a) {\n"
-               "case 1:\n"
-               "[[likely]] case 2:\n"
-               "  return;\n"
-               "}");
-  FormatStyle Attributes = getLLVMStyle();
-  Attributes.AttributeMacros.push_back("LIKELY");
-  Attributes.AttributeMacros.push_back("OTHER_LIKELY");
-  verifyFormat("switch (a) {\n"
-               "LIKELY case b:\n"
-               "  return;\n"
-               "}",
-               Attributes);
-  verifyFormat("switch (a) {\n"
-               "LIKELY OTHER_LIKELY() case b:\n"
-               "  return;\n"
-               "}",
-               Attributes);
-  verifyFormat("switch (a) {\n"
-               "case 1:\n"
-               "  return;\n"
-               "LIKELY case 2:\n"
-               "  return;\n"
-               "}",
-               Attributes);
-  verifyFormat("switch (a) {\n"
-               "case 1:\n"
-               "LIKELY case 2:\n"
-               "  return;\n"
-               "}",
-               Attributes);
-
   FormatStyle Style = getLLVMStyle();
   Style.IndentCaseLabels = true;
   Style.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Never;

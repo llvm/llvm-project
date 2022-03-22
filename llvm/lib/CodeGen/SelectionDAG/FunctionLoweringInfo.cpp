@@ -54,7 +54,7 @@ static bool isUsedOutsideOfDefiningBlock(const Instruction *I) {
   return false;
 }
 
-static ISD::NodeType getPreferredExtendForValue(const Value *V) {
+static ISD::NodeType getPreferredExtendForValue(const Instruction *I) {
   // For the users of the source value being used for compare instruction, if
   // the number of signed predicate is greater than unsigned predicate, we
   // prefer to use SIGN_EXTEND.
@@ -64,7 +64,7 @@ static ISD::NodeType getPreferredExtendForValue(const Value *V) {
   // can be exposed.
   ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
   unsigned NumOfSigned = 0, NumOfUnsigned = 0;
-  for (const User *U : V->users()) {
+  for (const User *U : I->users()) {
     if (const auto *CI = dyn_cast<CmpInst>(U)) {
       NumOfSigned += CI->isSigned();
       NumOfUnsigned += CI->isUnsigned();

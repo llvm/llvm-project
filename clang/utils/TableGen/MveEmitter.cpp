@@ -212,6 +212,7 @@ public:
   std::string llvmName() const override {
     return "llvm::PointerType::getUnqual(" + Pointee->llvmName() + ")";
   }
+  const Type *getPointeeType() const { return Pointee; }
 
   static bool classof(const Type *T) {
     return T->typeKind() == TypeKind::Pointer;
@@ -702,11 +703,13 @@ public:
 class AddressResult : public Result {
 public:
   Ptr Arg;
+  const Type *Ty;
   unsigned Align;
-  AddressResult(Ptr Arg, unsigned Align) : Arg(Arg), Align(Align) {}
+  AddressResult(Ptr Arg, const Type *Ty, unsigned Align)
+      : Arg(Arg), Ty(Ty), Align(Align) {}
   void genCode(raw_ostream &OS,
                CodeGenParamAllocator &ParamAlloc) const override {
-    OS << "Address::deprecated(" << Arg->varname()
+    OS << "Address(" << Arg->varname() << ", " << Ty->llvmName()
        << ", CharUnits::fromQuantity(" << Align << "))";
   }
   std::string typeName() const override {
@@ -1189,13 +1192,21 @@ Result::Ptr EmitterBase::getCodeForDag(DagInit *D, const Result::Scope &Scope,
     if (D->getNumArgs() != 2)
       PrintFatalError("'address' should have two arguments");
     Result::Ptr Arg = getCodeForDagArg(D, 0, Scope, Param);
+
+    const Type *Ty = nullptr;
+    if (auto *DI = dyn_cast<DagInit>(D->getArg(0)))
+      if (auto *PTy = dyn_cast<PointerType>(getType(DI->getOperator(), Param)))
+        Ty = PTy->getPointeeType();
+    if (!Ty)
+      PrintFatalError("'address' pointer argument should be a pointer");
+
     unsigned Alignment;
     if (auto *II = dyn_cast<IntInit>(D->getArg(1))) {
       Alignment = II->getValue();
     } else {
       PrintFatalError("'address' alignment argument should be an integer");
     }
-    return std::make_shared<AddressResult>(Arg, Alignment);
+    return std::make_shared<AddressResult>(Arg, Ty, Alignment);
   } else if (Op->getName() == "unsignedflag") {
     if (D->getNumArgs() != 1)
       PrintFatalError("unsignedflag should have exactly one argument");

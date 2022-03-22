@@ -83,13 +83,13 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
 /// ssa-id-and-type ::= ssa-id `:` type
 static ParseResult parseAllocateAndAllocator(
     OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::OperandType> &operandsAllocate,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operandsAllocate,
     SmallVectorImpl<Type> &typesAllocate,
-    SmallVectorImpl<OpAsmParser::OperandType> &operandsAllocator,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operandsAllocator,
     SmallVectorImpl<Type> &typesAllocator) {
 
   return parser.parseCommaSeparatedList([&]() -> ParseResult {
-    OpAsmParser::OperandType operand;
+    OpAsmParser::UnresolvedOperand operand;
     Type type;
     if (parser.parseOperand(operand) || parser.parseColonType(type))
       return failure();
@@ -177,16 +177,16 @@ LogicalResult ParallelOp::verify() {
 /// linear-val := ssa-id-and-type `=` ssa-id-and-type
 static ParseResult
 parseLinearClause(OpAsmParser &parser,
-                  SmallVectorImpl<OpAsmParser::OperandType> &vars,
+                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &vars,
                   SmallVectorImpl<Type> &types,
-                  SmallVectorImpl<OpAsmParser::OperandType> &stepVars) {
+                  SmallVectorImpl<OpAsmParser::UnresolvedOperand> &stepVars) {
   if (parser.parseLParen())
     return failure();
 
   do {
-    OpAsmParser::OperandType var;
+    OpAsmParser::UnresolvedOperand var;
     Type type;
-    OpAsmParser::OperandType stepVar;
+    OpAsmParser::UnresolvedOperand stepVar;
     if (parser.parseOperand(var) || parser.parseEqual() ||
         parser.parseOperand(stepVar) || parser.parseColonType(type))
       return failure();
@@ -264,7 +264,7 @@ verifyScheduleModifiers(OpAsmParser &parser,
 static ParseResult
 parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
                     SmallVectorImpl<SmallString<12>> &modifiers,
-                    Optional<OpAsmParser::OperandType> &chunkSize,
+                    Optional<OpAsmParser::UnresolvedOperand> &chunkSize,
                     Type &chunkType) {
   if (parser.parseLParen())
     return failure();
@@ -276,7 +276,7 @@ parseScheduleClause(OpAsmParser &parser, SmallString<8> &schedule,
   schedule = keyword;
   if (keyword == "static" || keyword == "dynamic" || keyword == "guided") {
     if (succeeded(parser.parseOptionalEqual())) {
-      chunkSize = OpAsmParser::OperandType{};
+      chunkSize = OpAsmParser::UnresolvedOperand{};
       if (parser.parseOperand(*chunkSize) || parser.parseColonType(chunkType))
         return failure();
     } else {
@@ -326,9 +326,11 @@ static void printScheduleClause(OpAsmPrinter &p, ClauseScheduleKind sched,
 /// reduction-entry-list ::= reduction-entry
 ///                        | reduction-entry-list `,` reduction-entry
 /// reduction-entry ::= symbol-ref `->` ssa-id `:` type
-static ParseResult parseReductionVarList(
-    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &operands,
-    SmallVectorImpl<Type> &types, ArrayAttr &redcuctionSymbols) {
+static ParseResult
+parseReductionVarList(OpAsmParser &parser,
+                      SmallVectorImpl<OpAsmParser::UnresolvedOperand> &operands,
+                      SmallVectorImpl<Type> &types,
+                      ArrayAttr &redcuctionSymbols) {
   SmallVector<SymbolRefAttr> reductionVec;
   do {
     if (parser.parseAttribute(reductionVec.emplace_back()) ||
@@ -524,20 +526,20 @@ static ParseResult parseClauses(OpAsmParser &parser, OperationState &result,
   StringRef opName = result.name.getStringRef();
 
   // Containers for storing operands, types and attributes for various clauses
-  SmallVector<OpAsmParser::OperandType> allocates, allocators;
+  SmallVector<OpAsmParser::UnresolvedOperand> allocates, allocators;
   SmallVector<Type> allocateTypes, allocatorTypes;
 
   ArrayAttr reductions;
-  SmallVector<OpAsmParser::OperandType> reductionVars;
+  SmallVector<OpAsmParser::UnresolvedOperand> reductionVars;
   SmallVector<Type> reductionVarTypes;
 
-  SmallVector<OpAsmParser::OperandType> linears;
+  SmallVector<OpAsmParser::UnresolvedOperand> linears;
   SmallVector<Type> linearTypes;
-  SmallVector<OpAsmParser::OperandType> linearSteps;
+  SmallVector<OpAsmParser::UnresolvedOperand> linearSteps;
 
   SmallString<8> schedule;
   SmallVector<SmallString<12>> modifiers;
-  Optional<OpAsmParser::OperandType> scheduleChunkSize;
+  Optional<OpAsmParser::UnresolvedOperand> scheduleChunkSize;
   Type scheduleChunkType;
 
   // Compute the position of clauses in operand segments
@@ -746,7 +748,7 @@ LogicalResult SectionsOp::verifyRegions() {
 ///          | reduction
 ParseResult WsLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::OperandType> ivs;
+  SmallVector<OpAsmParser::UnresolvedOperand> ivs;
   if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
                                      OpAsmParser::Delimiter::Paren))
     return failure();
@@ -757,13 +759,13 @@ ParseResult WsLoopOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   // Parse loop bounds.
-  SmallVector<OpAsmParser::OperandType> lower;
+  SmallVector<OpAsmParser::UnresolvedOperand> lower;
   if (parser.parseEqual() ||
       parser.parseOperandList(lower, numIVs, OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(lower, loopVarType, result.operands))
     return failure();
 
-  SmallVector<OpAsmParser::OperandType> upper;
+  SmallVector<OpAsmParser::UnresolvedOperand> upper;
   if (parser.parseKeyword("to") ||
       parser.parseOperandList(upper, numIVs, OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(upper, loopVarType, result.operands))
@@ -775,7 +777,7 @@ ParseResult WsLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   }
 
   // Parse step values.
-  SmallVector<OpAsmParser::OperandType> steps;
+  SmallVector<OpAsmParser::UnresolvedOperand> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, numIVs, OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(steps, loopVarType, result.operands))
@@ -794,7 +796,7 @@ ParseResult WsLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   // Now parse the body.
   Region *body = result.addRegion();
   SmallVector<Type> ivTypes(numIVs, loopVarType);
-  SmallVector<OpAsmParser::OperandType> blockArgs(ivs);
+  SmallVector<OpAsmParser::UnresolvedOperand> blockArgs(ivs);
   if (parser.parseRegion(*body, blockArgs, ivTypes))
     return failure();
   return success();
@@ -851,7 +853,7 @@ void WsLoopOp::print(OpAsmPrinter &p) {
 /// clause ::= TODO
 ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   // Parse an opening `(` followed by induction variables followed by `)`
-  SmallVector<OpAsmParser::OperandType> ivs;
+  SmallVector<OpAsmParser::UnresolvedOperand> ivs;
   if (parser.parseRegionArgumentList(ivs, /*requiredOperandCount=*/-1,
                                      OpAsmParser::Delimiter::Paren))
     return failure();
@@ -860,19 +862,19 @@ ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseColonType(loopVarType))
     return failure();
   // Parse loop bounds.
-  SmallVector<OpAsmParser::OperandType> lower;
+  SmallVector<OpAsmParser::UnresolvedOperand> lower;
   if (parser.parseEqual() ||
       parser.parseOperandList(lower, numIVs, OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(lower, loopVarType, result.operands))
     return failure();
-  SmallVector<OpAsmParser::OperandType> upper;
+  SmallVector<OpAsmParser::UnresolvedOperand> upper;
   if (parser.parseKeyword("to") ||
       parser.parseOperandList(upper, numIVs, OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(upper, loopVarType, result.operands))
     return failure();
 
   // Parse step values.
-  SmallVector<OpAsmParser::OperandType> steps;
+  SmallVector<OpAsmParser::UnresolvedOperand> steps;
   if (parser.parseKeyword("step") ||
       parser.parseOperandList(steps, numIVs, OpAsmParser::Delimiter::Paren) ||
       parser.resolveOperands(steps, loopVarType, result.operands))
@@ -886,7 +888,7 @@ ParseResult SimdLoopOp::parse(OpAsmParser &parser, OperationState &result) {
   // Now parse the body.
   Region *body = result.addRegion();
   SmallVector<Type> ivTypes(numIVs, loopVarType);
-  SmallVector<OpAsmParser::OperandType> blockArgs(ivs);
+  SmallVector<OpAsmParser::UnresolvedOperand> blockArgs(ivs);
   if (parser.parseRegion(*body, blockArgs, ivTypes))
     return failure();
   return success();

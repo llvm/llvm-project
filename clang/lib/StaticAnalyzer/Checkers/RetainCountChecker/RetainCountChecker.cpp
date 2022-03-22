@@ -945,7 +945,8 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
 
       // Assume that output is zero on the other branch.
       NullOutputState = NullOutputState->BindExpr(
-          CE, LCtx, C.getSValBuilder().makeNull(), /*Invalidate=*/false);
+          CE, LCtx, C.getSValBuilder().makeNullWithType(ResultTy),
+          /*Invalidate=*/false);
       C.addTransition(NullOutputState, &getCastFailTag());
 
       // And on the original branch assume that both input and

@@ -498,6 +498,10 @@ func @succeededOilistTrivial() {
   test.oilist_with_keywords_only keyword otherKeyword
   // CHECK: test.oilist_with_keywords_only keyword otherKeyword
   test.oilist_with_keywords_only otherKeyword keyword
+  // CHECK: test.oilist_with_keywords_only thirdKeyword
+  test.oilist_with_keywords_only thirdKeyword
+  // CHECK: test.oilist_with_keywords_only keyword thirdKeyword
+  test.oilist_with_keywords_only keyword thirdKeyword
   return
 }
 
@@ -550,7 +554,7 @@ func @succeededOilistCustom(%arg0: i32, %arg1: i32, %arg2: i32) {
   test.oilist_custom private (%arg0, %arg1 : i32, i32)
   // CHECK: test.oilist_custom private(%[[ARG0]], %[[ARG1]] : i32, i32) nowait
   test.oilist_custom private (%arg0, %arg1 : i32, i32) nowait
-  // CHECK: test.oilist_custom private(%arg0, %arg1 : i32, i32) nowait reduction (%arg1)
+  // CHECK: test.oilist_custom private(%arg0, %arg1 : i32, i32) reduction (%arg1) nowait
   test.oilist_custom nowait reduction (%arg1) private (%arg0, %arg1 : i32, i32)
   return
 }

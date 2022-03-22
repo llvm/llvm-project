@@ -108,9 +108,9 @@ int bar(int n){
 // CHECK: [[ALGVER:%.+]] = load i16, i16* {{.+}}, align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to double**
+// CHECK: [[ELT:%.+]] = load double*, double** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
 //
 // CHECK: [[ELT_CAST:%.+]] = bitcast double* [[ELT]] to i64*
 // CHECK: [[REMOTE_ELT_CAST:%.+]] = bitcast double* [[REMOTE_ELT]] to i64*
@@ -159,11 +159,11 @@ int bar(int n){
 //
 // CHECK: [[DO_COPY]]
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to double**
+// CHECK: [[REMOTE_ELT:%.+]] = load double*, double** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to double*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to double*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to double**
+// CHECK: [[ELT:%.+]] = load double*, double** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load double, double* [[REMOTE_ELT]], align
 // CHECK: store double [[REMOTE_ELT_VAL]], double* [[ELT]], align
 // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -329,9 +329,9 @@ int bar(int n){
 // CHECK: store i8* [[REMOTE_ELT1]], i8** [[REMOTE_ELT_REF]], align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to float**
+// CHECK: [[ELT:%.+]] = load float*, float** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
 //
 // CHECK: [[ELT_CAST:%.+]] = bitcast float* [[ELT]] to i32*
 // CHECK: [[REMOTE_ELT2_CAST:%.+]] = bitcast float* [[REMOTE_ELT2]] to i32*
@@ -387,11 +387,11 @@ int bar(int n){
 // CHECK: store i8 [[REMOTE_ELT_VAL]], i8* [[ELT_VOID]], align
 //
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to float**
+// CHECK: [[REMOTE_ELT:%.+]] = load float*, float** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to float*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to float*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to float**
+// CHECK: [[ELT:%.+]] = load float*, float** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load float, float* [[REMOTE_ELT]], align
 // CHECK: store float [[REMOTE_ELT_VAL]], float* [[ELT]], align
 // CHECK: br label {{%?}}[[COPY_CONT:.+]]
@@ -612,9 +612,9 @@ int bar(int n){
 // CHECK: [[ALGVER:%.+]] = load i16, i16* {{.+}}, align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i32**
+// CHECK: [[ELT:%.+]] = load i32*, i32** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST:%.+]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
 // CHECK: [[ELT_VAL:%.+]] = load i32, i32* [[ELT]], align
 //
 // CHECK: [[WS32:%.+]] = call i32 @__kmpc_get_warp_size()
@@ -626,9 +626,9 @@ int bar(int n){
 // CHECK: store i8* [[REMOTE_ELT1C]], i8** [[REMOTE_ELT_REF]], align
 //
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i16**
+// CHECK: [[ELT:%.+]] = load i16*, i16** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
 // CHECK: [[ELT_VAL:%.+]] = load i16, i16* [[ELT]], align
 //
 // CHECK: [[ELT_CAST:%.+]] = sext i16 [[ELT_VAL]] to i32
@@ -677,20 +677,20 @@ int bar(int n){
 //
 // CHECK: [[DO_COPY]]
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to i32**
+// CHECK: [[REMOTE_ELT:%.+]] = load i32*, i32** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 0
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i32*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i32*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i32**
+// CHECK: [[ELT:%.+]] = load i32*, i32** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i32, i32* [[REMOTE_ELT]], align
 // CHECK: store i32 [[REMOTE_ELT_VAL]], i32* [[ELT]], align
 //
 // CHECK: [[REMOTE_ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[REMOTE_RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[REMOTE_ELT_VOID:%.+]] = load i8*, i8** [[REMOTE_ELT_REF]],
+// CHECK: [[REMOTE_ELT_REF_CAST:%.+]] = bitcast i8** [[REMOTE_ELT_REF]] to i16**
+// CHECK: [[REMOTE_ELT:%.+]] = load i16*, i16** [[REMOTE_ELT_REF_CAST]],
 // CHECK: [[ELT_REF:%.+]] = getelementptr inbounds [[RLT]], [[RLT]]* [[RED_LIST]], i{{32|64}} 0, i{{32|64}} 1
-// CHECK: [[ELT_VOID:%.+]] = load i8*, i8** [[ELT_REF]],
-// CHECK: [[REMOTE_ELT:%.+]] = bitcast i8* [[REMOTE_ELT_VOID]] to i16*
-// CHECK: [[ELT:%.+]] = bitcast i8* [[ELT_VOID]] to i16*
+// CHECK: [[ELT_REF_CAST:%.+]] = bitcast i8** [[ELT_REF]] to i16**
+// CHECK: [[ELT:%.+]] = load i16*, i16** [[ELT_REF_CAST]],
 // CHECK: [[REMOTE_ELT_VAL:%.+]] = load i16, i16* [[REMOTE_ELT]], align
 // CHECK: store i16 [[REMOTE_ELT_VAL]], i16* [[ELT]], align
 // CHECK: br label {{%?}}[[COPY_CONT:.+]]

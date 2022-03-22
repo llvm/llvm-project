@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
-#define MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
+#ifndef MLIR_ANALYSIS_PRESBURGER_INTEGERRELATION_H
+#define MLIR_ANALYSIS_PRESBURGER_INTEGERRELATION_H
 
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
@@ -94,6 +94,10 @@ public:
   /// Appends constraints from `other` into `this`. This is equivalent to an
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerRelation &other);
+
+  /// Return the intersection of the two sets.
+  /// If there are locals, they will be merged.
+  IntegerRelation intersect(IntegerRelation other) const;
 
   /// Return whether `this` and `other` are equal. This is integer-exact
   /// and somewhat expensive, since it uses the integer emptiness check
@@ -564,4 +568,4 @@ public:
 } // namespace presburger
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
+#endif // MLIR_ANALYSIS_PRESBURGER_INTEGERRELATION_H

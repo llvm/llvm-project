@@ -11,6 +11,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include <cmath>
 using namespace llvm;
 
 #define DEBUG_TYPE "riscvtti"
@@ -174,7 +175,8 @@ InstructionCost RISCVTTIImpl::getSpliceCost(VectorType *Tp, int Index) {
 
 InstructionCost RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                              VectorType *Tp, ArrayRef<int> Mask,
-                                             int Index, VectorType *SubTp) {
+                                             int Index, VectorType *SubTp,
+                                             ArrayRef<Value *> Args) {
   if (Kind == TTI::SK_Splice && isa<ScalableVectorType>(Tp))
     return getSpliceCost(Tp, Index);
   return BaseT::getShuffleCost(Kind, Tp, Mask, Index, SubTp);
@@ -215,6 +217,53 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   InstructionCost MemOpCost =
       getMemoryOpCost(Opcode, VTy->getElementType(), Alignment, 0, CostKind, I);
   return NumLoads * MemOpCost;
+}
+
+InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                               Type *Src,
+                                               TTI::CastContextHint CCH,
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) {
+  if (isa<VectorType>(Dst) && isa<VectorType>(Src)) {
+    // FIXME: Need to compute legalizing cost for illegal types.
+    if (!isTypeLegal(Src) || !isTypeLegal(Dst))
+      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
+    // Skip if element size of Dst or Src is bigger than ELEN.
+    if (Src->getScalarSizeInBits() > ST->getMaxELENForFixedLengthVectors() ||
+        Dst->getScalarSizeInBits() > ST->getMaxELENForFixedLengthVectors())
+      return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
+
+    int ISD = TLI->InstructionOpcodeToISD(Opcode);
+    assert(ISD && "Invalid opcode");
+
+    // FIXME: Need to consider vsetvli and lmul.
+    int PowDiff = (int)Log2_32(Dst->getScalarSizeInBits()) -
+                  (int)Log2_32(Src->getScalarSizeInBits());
+    switch (ISD) {
+    case ISD::SIGN_EXTEND:
+    case ISD::ZERO_EXTEND:
+      return 1;
+    case ISD::TRUNCATE:
+    case ISD::FP_EXTEND:
+    case ISD::FP_ROUND:
+      // Counts of narrow/widen instructions.
+      return std::abs(PowDiff);
+    case ISD::FP_TO_SINT:
+    case ISD::FP_TO_UINT:
+    case ISD::SINT_TO_FP:
+    case ISD::UINT_TO_FP:
+      if (std::abs(PowDiff) <= 1)
+        return 1;
+      // Backend could lower (v[sz]ext i8 to double) to vfcvt(v[sz]ext.f8 i8),
+      // so it only need two conversion.
+      if (Src->isIntOrIntVectorTy())
+        return 2;
+      // Counts of narrow/widen instructions.
+      return std::abs(PowDiff);
+    }
+  }
+  return BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
 }
 
 InstructionCost

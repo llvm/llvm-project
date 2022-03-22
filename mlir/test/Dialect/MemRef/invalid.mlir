@@ -677,15 +677,6 @@ func @invalid_rank_reducing_subview(%arg0 : memref<?x?xf32>, %arg1 : index, %arg
 
 // -----
 
-func @static_stride_to_dynamic_stride(%arg0 : memref<?x?x?xf32>, %arg1 : index,
-    %arg2 : index) -> memref<?x?xf32, offset:?, strides: [?, ?]> {
-  // expected-error @+1 {{expected result type to be 'memref<1x?x?xf32, affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2)>>' or a rank-reduced version. (mismatch of result layout)}}
-  %0 = memref.subview %arg0[0, 0, 0] [1, %arg1, %arg2] [1, 1, 1] : memref<?x?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
-  return %0 : memref<?x?xf32, offset: ?, strides: [?, ?]>
-}
-
-// -----
-
 #map0 = affine_map<(d0, d1)[s0] -> (d0 * 16 + d1)>
 
 func @subview_bad_offset_1(%arg0: memref<16x16xf32>) {

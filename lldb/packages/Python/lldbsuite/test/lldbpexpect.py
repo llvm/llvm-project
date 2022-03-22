@@ -47,6 +47,8 @@ class PExpectTest(TestBase):
         self.child = pexpect.spawn(
                 args[0], args=args[1:], logfile=logfile,
                 timeout=timeout, dimensions=dimensions, env=env)
+        self.child.ptyproc.delayafterclose = timeout/10
+        self.child.ptyproc.delayafterterminate = timeout/10
 
         if post_spawn is not None:
             post_spawn()
