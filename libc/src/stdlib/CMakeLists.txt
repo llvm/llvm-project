@@ -46,7 +46,6 @@ add_entrypoint_object(
     getenv.h
   DEPENDS
     libc.config.linux.app_h
-    libc.src.string.strncmp
 )
 
 add_entrypoint_object(
