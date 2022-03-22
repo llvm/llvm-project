@@ -223,6 +223,9 @@ end
   as if they were comment lines, even if not begun with `!`.
 * Commas are required in FORMAT statements and character variables
   only when they prevent ambiguity.
+* Legacy names `AND`, `OR`, and `XOR` are accepted as aliases for
+  the standard intrinsic functions `IAND`, `IOR`, and `IEOR`
+  respectively.
 
 ### Extensions supported when enabled by options
 

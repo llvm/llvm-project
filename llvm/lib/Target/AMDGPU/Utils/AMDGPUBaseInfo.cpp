@@ -1386,58 +1386,22 @@ unsigned getDefaultFormatEncoding(const MCSubtargetInfo &STI) {
 
 namespace SendMsg {
 
-int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI) {
-  if (isGFX11Plus(STI)) {
-    for (int i = 0; i < ID_GAPS_LAST_; ++i) {
-      if (Name == IdSymbolic_GFX11Plus[i])
-        return i;
-    }
-  } else {
-    for (int i = 0; i < ID_GAPS_LAST_; ++i) {
-      if (Name == IdSymbolic_PreGFX11[i])
-        return i;
-    }
-  }
-  for (int i = ID_RTN_FIRST_; i < ID_RTN_LAST_; ++i) {
-    if (Name == IdRtnSymbolic[i - ID_RTN_FIRST_])
-      return i;
-  }
-  return ID_UNKNOWN_;
+static uint64_t getMsgIdMask(const MCSubtargetInfo &STI) {
+  return isGFX11Plus(STI) ? ID_MASK_GFX11Plus_ : ID_MASK_PreGFX11_;
 }
 
-bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
-  if (Strict) {
-    switch (MsgId) {
-    case ID_SAVEWAVE:
-      return isVI(STI) || isGFX9(STI) || isGFX10(STI);
-    case ID_STALL_WAVE_GEN:
-    case ID_HALT_WAVES:
-    case ID_ORDERED_PS_DONE:
-    case ID_GS_ALLOC_REQ:
-      return isGFX9Plus(STI);
-    case ID_EARLY_PRIM_DEALLOC:
-      return isGFX9(STI);
-    case ID_GET_DOORBELL:
-      return isGFX9(STI) || isGFX10(STI);
-    case ID_GET_DDID:
-      return isGFX10(STI);
-    default:
-      if (0 <= MsgId && MsgId < ID_GAPS_LAST_)
-        return (isGFX11Plus(STI) ? IdSymbolic_GFX11Plus : IdSymbolic_PreGFX11)[MsgId];
-      return isGFX11Plus(STI) && ID_RTN_FIRST_ <= MsgId && MsgId < ID_RTN_LAST_;
-    }
-  } else {
-    return 0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
-  }
+int64_t getMsgId(const StringRef Name, const MCSubtargetInfo &STI) {
+  int Idx = getOprIdx<const MCSubtargetInfo &>(Name, Msg, MSG_SIZE, STI);
+  return (Idx < 0) ? Idx : Msg[Idx].Encoding;
+}
+
+bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI) {
+  return (MsgId & ~(getMsgIdMask(STI))) == 0;
 }
 
 StringRef getMsgName(int64_t MsgId, const MCSubtargetInfo &STI) {
-  if (MsgId >= ID_RTN_FIRST_) {
-    assert(MsgId < ID_RTN_LAST_);
-    return IdRtnSymbolic[MsgId - ID_RTN_FIRST_];
-  }
-  assert(0 <= MsgId && MsgId < ID_GAPS_LAST_);
-  return (isGFX11Plus(STI) ? IdSymbolic_GFX11Plus : IdSymbolic_PreGFX11)[MsgId];
+  int Idx = getOprIdx<const MCSubtargetInfo &>(MsgId, Msg, MSG_SIZE, STI);
+  return (Idx < 0) ? "" : Msg[Idx].Name;
 }
 
 int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
@@ -1454,7 +1418,7 @@ int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
 
 bool isValidMsgOp(int64_t MsgId, int64_t OpId, const MCSubtargetInfo &STI,
                   bool Strict) {
-  assert(isValidMsgId(MsgId, STI, Strict));
+  assert(isValidMsgId(MsgId, STI));
 
   if (!Strict)
     return 0 <= OpId && isUInt<OP_WIDTH_>(OpId);
@@ -1511,21 +1475,22 @@ bool msgSupportsStream(int64_t MsgId, int64_t OpId,
       OpId != OP_GS_NOP;
 }
 
-void decodeMsg(unsigned Val,
-               uint16_t &MsgId,
-               uint16_t &OpId,
-               uint16_t &StreamId) {
-  MsgId = Val & ID_MASK_;
-  OpId = (Val & OP_MASK_) >> OP_SHIFT_;
-  StreamId = (Val & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
+void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
+               uint16_t &StreamId, const MCSubtargetInfo &STI) {
+  MsgId = Val & getMsgIdMask(STI);
+  if (isGFX11Plus(STI)) {
+    OpId = 0;
+    StreamId = 0;
+  } else {
+    OpId = (Val & OP_MASK_) >> OP_SHIFT_;
+    StreamId = (Val & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
+  }
 }
 
 uint64_t encodeMsg(uint64_t MsgId,
                    uint64_t OpId,
                    uint64_t StreamId) {
-  return (MsgId << ID_SHIFT_) |
-         (OpId << OP_SHIFT_) |
-         (StreamId << STREAM_ID_SHIFT_);
+  return MsgId | (OpId << OP_SHIFT_) | (StreamId << STREAM_ID_SHIFT_);
 }
 
 } // namespace SendMsg
@@ -1646,6 +1611,14 @@ bool isGFX9_GFX10(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10(STI);
 }
 
+bool isGFX8_GFX9_GFX10(const MCSubtargetInfo &STI) {
+  return isVI(STI) || isGFX9(STI) || isGFX10(STI);
+}
+
+bool isGFX8Plus(const MCSubtargetInfo &STI) {
+  return isVI(STI) || isGFX9Plus(STI);
+}
+
 bool isGFX9Plus(const MCSubtargetInfo &STI) {
   return isGFX9(STI) || isGFX10Plus(STI);
 }
@@ -1664,6 +1637,16 @@ bool isGFX11(const MCSubtargetInfo &STI) {
 
 bool isGFX11Plus(const MCSubtargetInfo &STI) {
   return isGFX11(STI);
+}
+
+bool isNotGFX11Plus(const MCSubtargetInfo &STI) { return !isGFX11Plus(STI); }
+
+bool isNotGFX10Plus(const MCSubtargetInfo &STI) {
+  return isSI(STI) || isCI(STI) || isVI(STI) || isGFX9(STI);
+}
+
+bool isGFX10Before1030(const MCSubtargetInfo &STI) {
+  return isGFX10(STI) && !AMDGPU::isGFX10_BEncoding(STI);
 }
 
 bool isGCN3Encoding(const MCSubtargetInfo &STI) {

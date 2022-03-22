@@ -1806,7 +1806,7 @@ OpFoldResult arith::SelectOp::fold(ArrayRef<Attribute> operands) {
 
 ParseResult SelectOp::parse(OpAsmParser &parser, OperationState &result) {
   Type conditionType, resultType;
-  SmallVector<OpAsmParser::OperandType, 3> operands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> operands;
   if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(resultType))
@@ -1867,6 +1867,36 @@ OpFoldResult arith::ShLIOp::fold(ArrayRef<Attribute> operands) {
       operands, [&](const APInt &a, const APInt &b) {
         bounded = b.ule(b.getBitWidth());
         return std::move(a).shl(b);
+      });
+  return bounded ? result : Attribute();
+}
+
+//===----------------------------------------------------------------------===//
+// ShRUIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ShRUIOp::fold(ArrayRef<Attribute> operands) {
+  // Don't fold if shifting more than the bit width.
+  bool bounded = false;
+  auto result = constFoldBinaryOp<IntegerAttr>(
+      operands, [&](const APInt &a, const APInt &b) {
+        bounded = b.ule(b.getBitWidth());
+        return std::move(a).lshr(b);
+      });
+  return bounded ? result : Attribute();
+}
+
+//===----------------------------------------------------------------------===//
+// ShRSIOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult arith::ShRSIOp::fold(ArrayRef<Attribute> operands) {
+  // Don't fold if shifting more than the bit width.
+  bool bounded = false;
+  auto result = constFoldBinaryOp<IntegerAttr>(
+      operands, [&](const APInt &a, const APInt &b) {
+        bounded = b.ule(b.getBitWidth());
+        return std::move(a).ashr(b);
       });
   return bounded ? result : Attribute();
 }

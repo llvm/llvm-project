@@ -1,5 +1,5 @@
 ; RUN: %llc_dwarf %s -filetype=obj -o - | llvm-objdump -h - | FileCheck %s
-; REQUIRES: default_triple, object-emission
+; REQUIRES: object-emission
 
 ; CHECK-NOT: .debug_
 

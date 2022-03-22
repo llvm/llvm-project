@@ -345,7 +345,7 @@ vwcvt.x.x.v v8, v4, v0.t
 # CHECK-UNKNOWN: 57 64 40 c4 <unknown>
 
 vwcvt.x.x.v v8, v4
-# CHECK-INST: vwadd.vx v8, v4, zero
+# CHECK-INST: vwcvt.x.x.v v8, v4
 # CHECK-ENCODING: [0x57,0x64,0x40,0xc6]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
 # CHECK-UNKNOWN: 57 64 40 c6 <unknown>
@@ -357,7 +357,7 @@ vwcvtu.x.x.v v8, v4, v0.t
 # CHECK-UNKNOWN: 57 64 40 c0 <unknown>
 
 vwcvtu.x.x.v v8, v4
-# CHECK-INST: vwaddu.vx v8, v4, zero
+# CHECK-INST: vwcvtu.x.x.v v8, v4
 # CHECK-ENCODING: [0x57,0x64,0x40,0xc2]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors)
 # CHECK-UNKNOWN: 57 64 40 c2 <unknown>

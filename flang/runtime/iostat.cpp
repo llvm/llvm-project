@@ -69,6 +69,14 @@ const char *IostatErrorString(int iostat) {
     return "Child input from output parent unit";
   case IostatChildOutputToInputParent:
     return "Child output to input parent unit";
+  case IostatShortRead:
+    return "Read from external unit returned insufficient data";
+  case IostatMissingTerminator:
+    return "Sequential record missing its terminator";
+  case IostatBadUnformattedRecord:
+    return "Erroneous unformatted sequential file record structure";
+  case IostatUTF8Decoding:
+    return "UTF-8 decoding error";
   default:
     return nullptr;
   }

@@ -16,7 +16,7 @@
 
 /* Indicate that this is LLVM compiled from the amd-gfx branch. */
 #define LLVM_HAVE_BRANCH_AMD_GFX
-#define LLVM_MAIN_REVISION 418401
+#define LLVM_MAIN_REVISION 418787
 
 /* Define if LLVM_ENABLE_DUMP is enabled */
 #cmakedefine LLVM_ENABLE_DUMP
@@ -115,5 +115,9 @@
 
 /* Define if building LLVM with LLVM_FORCE_USE_OLD_TOOLCHAIN_LIBS */
 #cmakedefine LLVM_FORCE_USE_OLD_TOOLCHAIN ${LLVM_FORCE_USE_OLD_TOOLCHAIN}
+
+/* Define if llvm_unreachable should be optimized with undefined behavior
+ * in non assert builds */
+#cmakedefine01 LLVM_UNREACHABLE_OPTIMIZE
 
 #endif

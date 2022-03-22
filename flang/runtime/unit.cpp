@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "unit.h"
-#include "environment.h"
 #include "io-error.h"
 #include "lock.h"
 #include "unit-map.h"
@@ -233,7 +232,6 @@ UnitMap &ExternalFileUnit::GetUnitMap() {
   error.isUnformatted = false;
   errorOutput = &error;
 
-  // TODO: Set UTF-8 mode from the environment
   unitMap = newUnitMap;
   return *unitMap;
 }
@@ -372,18 +370,6 @@ std::size_t ExternalFileUnit::GetNextInputBytes(
   }
   p = FrameNextInput(handler, length);
   return p ? length : 0;
-}
-
-std::optional<char32_t> ExternalFileUnit::GetCurrentChar(
-    IoErrorHandler &handler) {
-  const char *p{nullptr};
-  std::size_t bytes{GetNextInputBytes(p, handler)};
-  if (bytes == 0) {
-    return std::nullopt;
-  } else {
-    // TODO: UTF-8 decoding; may have to get more bytes in a loop
-    return *p;
-  }
 }
 
 const char *ExternalFileUnit::FrameNextInput(
@@ -762,10 +748,16 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
   // checked informatively in NextSequentialVariableUnformattedInputRecord().
   std::size_t got{
       ReadFrame(frameOffsetInFile_ - headerBytes, headerBytes, handler)};
-  RUNTIME_CHECK(handler, got >= sizeof footer);
+  if (static_cast<std::int64_t>(got) < headerBytes) {
+    handler.SignalError(IostatShortRead);
+    return;
+  }
   std::memcpy(&footer, Frame(), sizeof footer);
   recordLength = footer;
-  RUNTIME_CHECK(handler, frameOffsetInFile_ >= *recordLength + 2 * headerBytes);
+  if (frameOffsetInFile_ < *recordLength + 2 * headerBytes) {
+    handler.SignalError(IostatBadUnformattedRecord);
+    return;
+  }
   frameOffsetInFile_ -= *recordLength + 2 * headerBytes;
   if (frameOffsetInFile_ >= headerBytes) {
     frameOffsetInFile_ -= headerBytes;
@@ -774,9 +766,15 @@ void ExternalFileUnit::BackspaceVariableUnformattedRecord(
   auto need{static_cast<std::size_t>(
       recordOffsetInFrame_ + sizeof header + *recordLength)};
   got = ReadFrame(frameOffsetInFile_, need, handler);
-  RUNTIME_CHECK(handler, got >= need);
+  if (got < need) {
+    handler.SignalError(IostatShortRead);
+    return;
+  }
   std::memcpy(&header, Frame() + recordOffsetInFrame_, sizeof header);
-  RUNTIME_CHECK(handler, header == *recordLength);
+  if (header != *recordLength) {
+    handler.SignalError(IostatBadUnformattedRecord);
+    return;
+  }
 }
 
 // There's no portable memrchr(), unfortunately, and strrchr() would
@@ -816,9 +814,15 @@ void ExternalFileUnit::BackspaceVariableFormattedRecord(
     frameOffsetInFile_ -= std::min<std::int64_t>(frameOffsetInFile_, 1024);
     auto need{static_cast<std::size_t>(prevNL + 1 - frameOffsetInFile_)};
     auto got{ReadFrame(frameOffsetInFile_, need, handler)};
-    RUNTIME_CHECK(handler, got >= need);
+    if (got < need) {
+      handler.SignalError(IostatShortRead);
+      return;
+    }
   }
-  RUNTIME_CHECK(handler, Frame()[recordOffsetInFrame_ + *recordLength] == '\n');
+  if (Frame()[recordOffsetInFrame_ + *recordLength] != '\n') {
+    handler.SignalError(IostatMissingTerminator);
+    return;
+  }
   if (*recordLength > 0 &&
       Frame()[recordOffsetInFrame_ + *recordLength - 1] == '\r') {
     --*recordLength;

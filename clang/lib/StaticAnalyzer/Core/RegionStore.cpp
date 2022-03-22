@@ -2410,7 +2410,7 @@ RegionStoreManager::setImplicitDefaultValue(RegionBindingsConstRef B,
   SVal V;
 
   if (Loc::isLocType(T))
-    V = svalBuilder.makeNull();
+    V = svalBuilder.makeNullWithType(T);
   else if (T->isIntegralOrEnumerationType())
     V = svalBuilder.makeZeroVal(T);
   else if (T->isStructureOrClassType() || T->isArrayType()) {

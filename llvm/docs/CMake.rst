@@ -300,6 +300,12 @@ enabled sub-projects. Nearly all of these variable names begin with
   enabled or not.  A version of LLVM built with ABI breaking checks
   is not ABI compatible with a version built without it.
 
+**LLVM_UNREACHABLE_OPTIMIZE**:BOOL
+  This flag controls the behavior of `llvm_unreachable()` in release build
+  (when assertions are disabled in general). When ON (default) then
+  `llvm_unreachable()` is considered "undefined behavior" and optimized as
+  such. When OFF it is instead replaced with a guaranteed "trap".
+
 **LLVM_APPEND_VC_REV**:BOOL
   Embed version control revision info (Git revision id).
   The version info is provided by the ``LLVM_REVISION`` macro in

@@ -245,7 +245,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   const FeatureBitset &Bits = getFeatureBits();
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
       (Options.UnsafeFPMath || isTargetDarwin()))
-    UseNEONForSinglePrecisionFP = true;
+    HasNEONForFP = true;
 
   if (isRWPI())
     ReserveR9 = true;
@@ -410,8 +410,6 @@ bool ARMSubtarget::enablePostRAMachineScheduler() const {
     return false;
   return !isThumb1Only();
 }
-
-bool ARMSubtarget::enableAtomicExpand() const { return hasAnyDataBarrier(); }
 
 bool ARMSubtarget::useStride4VFPs() const {
   // For general targets, the prologue can grow when VFPs are allocated with

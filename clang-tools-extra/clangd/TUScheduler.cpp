@@ -98,6 +98,33 @@ namespace clangd {
 using std::chrono::steady_clock;
 
 namespace {
+// Tracks latency (in seconds) of FS operations done during a preamble build.
+// build_type allows to split by expected VFS cache state (cold on first
+// preamble, somewhat warm after that when building first preamble for new file,
+// likely ~everything cached on preamble rebuild.
+constexpr trace::Metric
+    PreambleBuildFilesystemLatency("preamble_fs_latency",
+                                   trace::Metric::Distribution, "build_type");
+// Tracks latency of FS operations done during a preamble build as a ratio of
+// preamble build time. build_type is same as above.
+constexpr trace::Metric PreambleBuildFilesystemLatencyRatio(
+    "preamble_fs_latency_ratio", trace::Metric::Distribution, "build_type");
+
+void reportPreambleBuild(const PreambleBuildStats &Stats,
+                         bool IsFirstPreamble) {
+  static llvm::once_flag OnceFlag;
+  llvm::call_once(OnceFlag, [&] {
+    PreambleBuildFilesystemLatency.record(Stats.FileSystemTime, "first_build");
+  });
+
+  const std::string Label =
+      IsFirstPreamble ? "first_build_for_file" : "rebuild";
+  PreambleBuildFilesystemLatency.record(Stats.FileSystemTime, Label);
+  if (Stats.TotalBuildTime > 0) // Avoid division by zero.
+    PreambleBuildFilesystemLatencyRatio.record(
+        Stats.FileSystemTime / Stats.TotalBuildTime, Label);
+}
+
 class ASTWorker;
 } // namespace
 
@@ -975,13 +1002,19 @@ void PreambleThread::build(Request Req) {
     crashDumpParseInputs(llvm::errs(), Inputs);
   });
 
+  PreambleBuildStats Stats;
+  bool IsFirstPreamble = !LatestBuild;
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
       [this, Version(Inputs.Version)](ASTContext &Ctx, Preprocessor &PP,
                                       const CanonicalIncludes &CanonIncludes) {
         Callbacks.onPreambleAST(FileName, Version, Ctx, PP, CanonIncludes);
-      });
-  if (LatestBuild && isReliable(LatestBuild->CompileCommand))
+      },
+      &Stats);
+  if (!LatestBuild)
+    return;
+  reportPreambleBuild(Stats, IsFirstPreamble);
+  if (isReliable(LatestBuild->CompileCommand))
     HeaderIncluders.update(FileName, LatestBuild->Includes.allHeaders());
 }
 

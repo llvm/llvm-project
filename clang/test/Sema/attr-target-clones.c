@@ -86,3 +86,35 @@ int useage(void) {
 // expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
 int __attribute__((target_clones("sse4.2", "default"))) mv_after_use(void) { return 1; }
 
+void bad_overload1(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+void bad_overload1(int p) {}
+
+void bad_overload2(int p) {}
+// expected-error@+2 {{conflicting types for 'bad_overload2'}}
+// expected-note@-2 {{previous definition is here}}
+void bad_overload2(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+
+void bad_overload3(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+// expected-error@+2 {{conflicting types for 'bad_overload3'}}
+// expected-note@-2 {{previous declaration is here}}
+void bad_overload3(int) __attribute__((target_clones("mmx", "sse4.2", "default")));
+
+void good_overload1(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+void __attribute__((__overloadable__)) good_overload1(int p) {}
+
+// expected-error@+1 {{attribute 'target_clones' multiversioning cannot be combined with attribute 'overloadable'}}
+void __attribute__((__overloadable__)) good_overload2(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+void good_overload2(int p) {}
+
+// expected-error@+1 {{attribute 'target_clones' multiversioning cannot be combined with attribute 'overloadable'}}
+void __attribute__((__overloadable__)) good_overload3(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+// expected-error@+1 {{attribute 'target_clones' multiversioning cannot be combined with attribute 'overloadable'}}
+void __attribute__((__overloadable__)) good_overload3(int) __attribute__((target_clones("mmx", "sse4.2", "default")));
+
+void good_overload4(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+// expected-error@+1 {{attribute 'target_clones' multiversioning cannot be combined with attribute 'overloadable'}}
+void __attribute__((__overloadable__)) good_overload4(int) __attribute__((target_clones("mmx", "sse4.2", "default")));
+
+// expected-error@+1 {{attribute 'target_clones' multiversioning cannot be combined with attribute 'overloadable'}}
+void __attribute__((__overloadable__)) good_overload5(void) __attribute__((target_clones("mmx", "sse4.2", "default")));
+void good_overload5(int) __attribute__((target_clones("mmx", "sse4.2", "default")));

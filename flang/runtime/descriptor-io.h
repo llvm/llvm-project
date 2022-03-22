@@ -168,17 +168,17 @@ inline bool FormattedCharacterIO(
   for (std::size_t j{0}; j < numElements; ++j) {
     A *x{&ExtractElement<A>(io, descriptor, subscripts)};
     if (listOutput) {
-      if (!ListDirectedDefaultCharacterOutput(io, *listOutput, x, length)) {
+      if (!ListDirectedCharacterOutput(io, *listOutput, x, length)) {
         return false;
       }
     } else if (auto edit{io.GetNextDataEdit()}) {
       if constexpr (DIR == Direction::Output) {
-        if (!EditDefaultCharacterOutput(io, *edit, x, length)) {
+        if (!EditCharacterOutput(io, *edit, x, length)) {
           return false;
         }
       } else {
         if (edit->descriptor != DataEdit::ListDirectedNullValue) {
-          if (EditDefaultCharacterInput(io, *edit, x, length)) {
+          if (EditCharacterInput(io, *edit, x, length)) {
             anyInput = true;
           } else {
             return anyInput && edit->IsNamelist();
@@ -372,6 +372,10 @@ static bool UnformattedDescriptorIO(
 
 template <Direction DIR>
 static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
+  IoErrorHandler &handler{io.GetIoErrorHandler()};
+  if (handler.InError()) {
+    return false;
+  }
   if (!io.get_if<IoDirectionState<DIR>>()) {
     io.GetIoErrorHandler().Crash(
         "DescriptorIO() called for wrong I/O direction");
@@ -385,7 +389,6 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
   if (!io.get_if<FormattedIoStatementState<DIR>>()) {
     return UnformattedDescriptorIO<DIR>(io, descriptor);
   }
-  IoErrorHandler &handler{io.GetIoErrorHandler()};
   if (auto catAndKind{descriptor.type().GetCategoryAndKind()}) {
     TypeCategory cat{catAndKind->first};
     int kind{catAndKind->second};
@@ -453,7 +456,10 @@ static bool DescriptorIO(IoStatementState &io, const Descriptor &descriptor) {
       switch (kind) {
       case 1:
         return FormattedCharacterIO<char, DIR>(io, descriptor);
-      // TODO cases 2, 4
+      case 2:
+        return FormattedCharacterIO<char16_t, DIR>(io, descriptor);
+      case 4:
+        return FormattedCharacterIO<char32_t, DIR>(io, descriptor);
       default:
         handler.Crash(
             "DescriptorIO: Unimplemented CHARACTER kind (%d) in descriptor",

@@ -2,6 +2,9 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 module alloc_assign
+  type t
+    integer :: i
+  end type
 contains
 
 ! -----------------------------------------------------------------------------
@@ -174,7 +177,10 @@ end subroutine
 subroutine test_dyn_char_scalar(x, n)
   integer :: n
   character(n), allocatable  :: x
-! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
+! CHECK:  %[[VAL_2A:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
+! CHECK:  %[[c0_i32:.*]] = arith.constant 0 : i32
+! CHECK:  %[[VAL_2B:.*]] = arith.cmpi sgt, %[[VAL_2A]], %[[c0_i32]] : i32
+! CHECK:  %[[VAL_2:.*]] = arith.select %[[VAL_2B]], %[[VAL_2A]], %[[c0_i32]] : i32
 ! CHECK:  %[[VAL_3:.*]] = fir.address_of(@_QQcl.48656C6C6F20776F726C6421) : !fir.ref<!fir.char<1,12>>
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 12 : index
 ! CHECK:  %[[VAL_5:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
@@ -213,6 +219,46 @@ subroutine test_dyn_char_scalar(x, n)
 ! CHECK:    fir.store %[[VAL_40]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
 ! CHECK:  }
   x = "Hello world!"
+end subroutine
+
+! CHECK-LABEL: func @_QMalloc_assignPtest_derived_scalar(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>>>{{.*}},
+! CHECK-SAME:  %[[VAL_1:.*]]: !fir.ref<!fir.type<_QMalloc_assignTt{i:i32}>>{{.*}}) {
+subroutine test_derived_scalar(x, s)
+  type(t), allocatable  :: x
+  type(t) :: s
+  x = s
+! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>>>
+! CHECK:  %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>>) -> !fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>
+! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>) -> i64
+! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : i64
+! CHECK:  %[[VAL_6:.*]] = arith.cmpi ne, %[[VAL_4]], %[[VAL_5]] : i64
+! CHECK:  %[[VAL_7:.*]]:2 = fir.if %[[VAL_6]] -> (i1, !fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>) {
+! CHECK:    %[[VAL_8:.*]] = arith.constant false
+! CHECK:    %[[VAL_9:.*]] = fir.if %[[VAL_8]] -> (!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>) {
+! CHECK:      %[[VAL_10:.*]] = fir.allocmem !fir.type<_QMalloc_assignTt{i:i32}> {uniq_name = ".auto.alloc"}
+! CHECK:      fir.result %[[VAL_10]] : !fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>
+! CHECK:    } else {
+! CHECK:      fir.result %[[VAL_3]] : !fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>
+! CHECK:    }
+! CHECK:    fir.result %[[VAL_8]], %[[VAL_11:.*]] : i1, !fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>
+! CHECK:  } else {
+! CHECK:    %[[VAL_12:.*]] = arith.constant true
+! CHECK:    %[[VAL_13:.*]] = fir.allocmem !fir.type<_QMalloc_assignTt{i:i32}> {uniq_name = ".auto.alloc"}
+! CHECK:    fir.result %[[VAL_12]], %[[VAL_13]] : i1, !fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>
+! CHECK:  }
+! CHECK:  %[[VAL_14:.*]] = fir.field_index i, !fir.type<_QMalloc_assignTt{i:i32}>
+! CHECK:  %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_14]] : (!fir.ref<!fir.type<_QMalloc_assignTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[VAL_16:.*]] = fir.coordinate_of %[[VAL_7]]#1, %[[VAL_14]] : (!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:  %[[VAL_17:.*]] = fir.load %[[VAL_15]] : !fir.ref<i32>
+! CHECK:  fir.store %[[VAL_17]] to %[[VAL_16]] : !fir.ref<i32
+! CHECK:  fir.if %[[VAL_7]]#0 {
+! CHECK:    fir.if %[[VAL_6]] {
+! CHECK:      fir.freemem %[[VAL_3]]
+! CHECK:    }
+! CHECK:    %[[VAL_19:.*]] = fir.embox %[[VAL_7]]#1 : (!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>) -> !fir.box<!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>>
+! CHECK:    fir.store %[[VAL_19]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.type<_QMalloc_assignTt{i:i32}>>>>
+! CHECK:  }
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -385,6 +431,76 @@ subroutine test_with_lbounds(x, y)
   x = y
 end subroutine
 
+! CHECK-LABEL: func @_QMalloc_assignPtest_runtime_shape(
+! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>{{.*}}) {
+subroutine test_runtime_shape(x)
+  real, allocatable  :: x(:, :)
+  interface
+   function return_pointer()
+     real, pointer :: return_pointer(:, :)
+   end function
+  end interface
+! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x?xf32>>> {bindc_name = ".result"}
+! CHECK:  %[[VAL_2:.*]] = fir.call @_QPreturn_pointer() : () -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
+! CHECK:  fir.save_result %[[VAL_2]] to %[[VAL_1]] : !fir.box<!fir.ptr<!fir.array<?x?xf32>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
+! CHECK:  %[[VAL_4:.*]] = arith.constant 0 : index
+! CHECK:  %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK:  %[[VAL_6:.*]] = arith.constant 1 : index
+! CHECK:  %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK:  %[[VAL_8:.*]] = fir.shift %[[VAL_5]]#0, %[[VAL_7]]#0 : (index, index) -> !fir.shift<2>
+! CHECK:  %[[VAL_10:.*]] = arith.constant 0 : index
+! CHECK:  %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK:  %[[VAL_12:.*]] = arith.constant 1 : index
+! CHECK:  %[[VAL_13:.*]]:3 = fir.box_dims %[[VAL_3]], %[[VAL_12]] : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK:  %[[VAL_9:.*]] = fir.array_load %[[VAL_3]](%[[VAL_8]]) : (!fir.box<!fir.ptr<!fir.array<?x?xf32>>>, !fir.shift<2>) -> !fir.array<?x?xf32>
+! CHECK:  %[[VAL_14:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK:  %[[VAL_15:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>) -> !fir.heap<!fir.array<?x?xf32>>
+! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (!fir.heap<!fir.array<?x?xf32>>) -> i64
+! CHECK:  %[[VAL_17:.*]] = arith.constant 0 : i64
+! CHECK:  %[[VAL_18:.*]] = arith.cmpi ne, %[[VAL_16]], %[[VAL_17]] : i64
+! CHECK:  %[[VAL_19:.*]]:2 = fir.if %[[VAL_18]] -> (i1, !fir.heap<!fir.array<?x?xf32>>) {
+! CHECK:    %[[VAL_20:.*]] = arith.constant false
+! CHECK:    %[[VAL_21:.*]] = arith.constant 0 : index
+! CHECK:    %[[VAL_22:.*]]:3 = fir.box_dims %[[VAL_14]], %[[VAL_21]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK:    %[[VAL_23:.*]] = arith.constant 1 : index
+! CHECK:    %[[VAL_24:.*]]:3 = fir.box_dims %[[VAL_14]], %[[VAL_23]] : (!fir.box<!fir.heap<!fir.array<?x?xf32>>>, index) -> (index, index, index)
+! CHECK:    %[[VAL_25:.*]] = arith.cmpi ne, %[[VAL_22]]#1, %[[VAL_11]]#1 : index
+! CHECK:    %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_25]], %[[VAL_20]] : i1
+! CHECK:    %[[VAL_27:.*]] = arith.cmpi ne, %[[VAL_24]]#1, %[[VAL_13]]#1 : index
+! CHECK:    %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_27]], %[[VAL_26]] : i1
+! CHECK:    %[[VAL_29:.*]] = fir.if %[[VAL_28]] -> (!fir.heap<!fir.array<?x?xf32>>) {
+! CHECK:      %[[VAL_30:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_11]]#1, %[[VAL_13]]#1 {uniq_name = ".auto.alloc"}
+! CHECK:      fir.result %[[VAL_30]] : !fir.heap<!fir.array<?x?xf32>>
+! CHECK:    } else {
+! CHECK:      fir.result %[[VAL_15]] : !fir.heap<!fir.array<?x?xf32>>
+! CHECK:    }
+! CHECK:    fir.result %[[VAL_28]], %[[VAL_31:.*]] : i1, !fir.heap<!fir.array<?x?xf32>>
+! CHECK:  } else {
+! CHECK:    %[[VAL_32:.*]] = arith.constant true
+! CHECK:    %[[VAL_33:.*]] = fir.allocmem !fir.array<?x?xf32>, %[[VAL_11]]#1, %[[VAL_13]]#1 {uniq_name = ".auto.alloc"}
+! CHECK:    fir.result %[[VAL_32]], %[[VAL_33]] : i1, !fir.heap<!fir.array<?x?xf32>>
+! CHECK:  }
+
+! CHECK-NOT: fir.call @_QPreturn_pointer()
+! CHECK:  %[[VAL_34:.*]] = fir.shape %[[VAL_11]]#1, %[[VAL_13]]#1 : (index, index) -> !fir.shape<2>
+! CHECK:  %[[VAL_35:.*]] = fir.array_load %[[VAL_19]]#1(%[[VAL_34]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
+! normal array assignment ....
+! CHECK-NOT: fir.call @_QPreturn_pointer()
+! CHECK:  fir.array_merge_store %{{.*}}, %{{.*}} to %[[VAL_19]]#1 : !fir.array<?x?xf32>, !fir.array<?x?xf32>, !fir.heap<!fir.array<?x?xf32>>
+! CHECK-NOT: fir.call @_QPreturn_pointer()
+
+! CHECK:  fir.if %[[VAL_19]]#0 {
+! CHECK:    fir.if %[[VAL_18]] {
+! CHECK:      fir.freemem %[[VAL_15]]
+! CHECK:    }
+! CHECK:    %[[VAL_56:.*]] = fir.shape %[[VAL_11]]#1, %[[VAL_13]]#1 : (index, index) -> !fir.shape<2>
+! CHECK:    %[[VAL_57:.*]] = fir.embox %[[VAL_19]]#1(%[[VAL_56]]) : (!fir.heap<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.heap<!fir.array<?x?xf32>>>
+! CHECK:    fir.store %[[VAL_57]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
+! CHECK:  }
+  x = return_pointer()
+end subroutine
+
 ! CHECK-LABEL: func @_QMalloc_assignPtest_scalar_rhs(
 subroutine test_scalar_rhs(x, y)
   real, allocatable  :: x(:)
@@ -405,6 +521,13 @@ end subroutine
 !            Test character array RHS
 ! -----------------------------------------------------------------------------
 
+
+! Hit TODO: gathering lhs length in array expression
+!subroutine test_deferred_char_rhs_scalar(x)
+!  character(:), allocatable  :: x(:)
+!  x = "Hello world!"
+!end subroutine
+
 ! CHECK: func @_QMalloc_assignPtest_cst_char_rhs_scalar(
 subroutine test_cst_char_rhs_scalar(x)
   character(10), allocatable  :: x(:)
@@ -413,7 +536,7 @@ subroutine test_cst_char_rhs_scalar(x)
   ! CHECK:   fir.if %false -> {{.*}} {
   ! CHECK:   }
   ! CHECK: } else {
-  ! CHECK: fir.call @_FortranAReportFatalUserError
+  ! TODO: runtime error if unallocated
   ! CHECK-NOT: allocmem
   ! CHECK: }
 end subroutine
@@ -427,10 +550,17 @@ subroutine test_dyn_char_rhs_scalar(x, n)
   ! CHECK:   fir.if %false -> {{.*}} {
   ! CHECK:   }
   ! CHECK: } else {
-  ! CHECK: fir.call @_FortranAReportFatalUserError
+  ! TODO: runtime error if unallocated
   ! CHECK-NOT: allocmem
   ! CHECK: }
 end subroutine
+
+! Hit TODO: gathering lhs length in array expression
+!subroutine test_deferred_char(x, c)
+!  character(:), allocatable  :: x(:)
+!  character(12) :: c(20)
+!  x = "Hello world!"
+!end subroutine
 
 ! CHECK-LABEL: func @_QMalloc_assignPtest_cst_char(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>{{.*}},
@@ -490,7 +620,10 @@ subroutine test_dyn_char(x, n, c)
 ! CHECK:  %[[VAL_3:.*]]:2 = fir.unboxchar %[[VAL_2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:  %[[VAL_4:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<20x!fir.char<1,?>>>
 ! CHECK:  %[[VAL_5_0:.*]] = arith.constant 20 : index
-! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
+! CHECK:  %[[VAL_6A:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
+! CHECK:  %[[c0_i32:.*]] = arith.constant 0 : i32
+! CHECK:  %[[VAL_6B:.*]] = arith.cmpi sgt, %[[VAL_6A]], %[[c0_i32]] : i32
+! CHECK:  %[[VAL_6:.*]] = arith.select %[[VAL_6B]], %[[VAL_6A]], %[[c0_i32]] : i32
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 20 : index
 ! CHECK:  %[[VAL_7:.*]] = fir.shape %[[VAL_5_0]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_9:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
@@ -536,4 +669,84 @@ subroutine test_dyn_char(x, n, c)
   x = c
 end subroutine
 
+! CHECK-LABEL: func @_QMalloc_assignPtest_derived_with_init
+subroutine test_derived_with_init(x, y)
+  type t 
+    integer, allocatable :: a(:)
+  end type                                                                                     
+  type(t), allocatable :: x                                                                    
+  type(t) :: y                                                                                 
+  ! The allocatable component of `x` need to be initialized
+  ! during the automatic allocation (setting its rank and allocation
+  ! status) before it is assigned with the component of `y` 
+  x = y
+! CHECK:  fir.if %{{.*}} {
+! CHECK:    %[[VAL_11:.*]] = fir.allocmem !fir.type<_QMalloc_assignFtest_derived_with_initTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {uniq_name = ".auto.alloc"}
+! CHECK:    %[[VAL_12:.*]] = fir.embox %[[VAL_11]] : (!fir.heap<!fir.type<_QMalloc_assignFtest_derived_with_initTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.box<!fir.heap<!fir.type<_QMalloc_assignFtest_derived_with_initTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>
+! CHECK:    %[[VAL_15:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.heap<!fir.type<_QMalloc_assignFtest_derived_with_initTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>) -> !fir.box<none>
+! CHECK:    fir.call @_FortranAInitialize(%[[VAL_15]], %{{.*}}, %{{.*}}) : (!fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:    fir.result %[[VAL_11]] : !fir.heap<!fir.type<_QMalloc_assignFtest_derived_with_initTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+! CHECK:  } else {
+! CHECK:    fir.result %{{.*}} : !fir.heap<!fir.type<_QMalloc_assignFtest_derived_with_initTt{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>
+! CHECK:  }
+end subroutine
+
+! CHECK-LABEL: func @_QMalloc_assignPtest_vector_subscript(
+! CHECK-SAME: %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {fir.bindc_name = "x"},
+! CHECK-SAME: %[[VAL_1:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "y"},
+! CHECK-SAME: %[[VAL_2:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "v"}) {
+subroutine test_vector_subscript(x, y, v)
+  ! Test that the new shape is computed correctly in presence of
+  ! vector subscripts on the RHS and that it is used to allocate
+  ! the new storage and to drive the implicit loop.
+  integer, allocatable :: x(:)
+  integer :: y(:), v(:)
+  x = y(v)
+! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_4:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_1]], %[[VAL_4]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! CHECK:         %[[VAL_6:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_6]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
+! CHECK:         %[[VAL_8:.*]] = fir.array_load %[[VAL_2]] : (!fir.box<!fir.array<?xi32>>) -> !fir.array<?xi32>
+! CHECK:         %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_7]]#1, %[[VAL_5]]#1 : index
+! CHECK:         %[[VAL_10:.*]] = arith.select %[[VAL_9]], %[[VAL_5]]#1, %[[VAL_7]]#1 : index
+! CHECK:         fir.if {{.*}} {
+! CHECK:           %[[VAL_18:.*]] = arith.constant false
+! CHECK:           %[[VAL_20:.*]]:3 = fir.box_dims %{{.*}}, %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_21:.*]] = arith.cmpi ne, %[[VAL_20]]#1, %[[VAL_10]] : index
+! CHECK:           %[[VAL_22:.*]] = arith.select %[[VAL_21]], %[[VAL_21]], %[[VAL_18]] : i1
+! CHECK:           fir.if %[[VAL_22]] {{.*}} {
+! CHECK:             %[[VAL_24:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_10]] {uniq_name = ".auto.alloc"}
+! CHECK:             fir.result %[[VAL_24]] : !fir.heap<!fir.array<?xi32>>
+! CHECK:           } else {
+! CHECK:             fir.result %{{.*}} : !fir.heap<!fir.array<?xi32>>
+! CHECK:           }
+! CHECK:           fir.result %{{.*}}, %{{.*}}
+! CHECK:         } else {
+! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_10]] {uniq_name = ".auto.alloc"}
+! CHECK:           fir.result %{{.*}}, %[[VAL_27]] : i1, !fir.heap<!fir.array<?xi32>>
+! CHECK:         }
+! CHECK:         %[[VAL_28:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
+! CHECK:         %[[VAL_29:.*]] = fir.array_load %[[VAL_30:.*]]#1(%[[VAL_28]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.array<?xi32>
+! CHECK:         %[[VAL_31:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_32:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_33:.*]] = arith.subi %[[VAL_10]], %[[VAL_31]] : index
+! CHECK:         %[[VAL_34:.*]] = fir.do_loop %[[VAL_35:.*]] = %[[VAL_32]] to %[[VAL_33]] step %[[VAL_31]] {{.*}} {
+! CHECK:         }
+end subroutine
+
+! CHECK: fir.global linkonce @[[error_message]] constant : !fir.char<1,76> {
+! CHECK:   %[[msg:.*]] = fir.string_lit "array left hand side must be allocated when the right hand side is a scalar\00"(76) : !fir.char<1,76>
+! CHECK:   fir.has_value %[[msg:.*]] : !fir.char<1,76>
+! CHECK: }
+
 end module
+
+!  use alloc_assign
+!  real :: y(2, 3) = reshape([1,2,3,4,5,6], [2,3])
+!  real, allocatable :: x (:, :)
+!  allocate(x(2,2))
+!  call test_with_lbounds(x, y) 
+!  print *, x(10, 20)
+!  print *, x
+!end

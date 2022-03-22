@@ -32,12 +32,12 @@ GlobalRecord *APISet::addGlobal(GVKind Kind, StringRef Name, StringRef USR,
                                 FunctionSignature Signature) {
   auto Result = Globals.insert({Name, nullptr});
   if (Result.second) {
-    GlobalRecord *Record = new (Allocator)
-        GlobalRecord{Kind,    Name,    USR,       Loc,        Availability,
-                     Linkage, Comment, Fragments, SubHeading, Signature};
-    Result.first->second = Record;
+    auto Record = APIRecordUniquePtr<GlobalRecord>(new (Allocator) GlobalRecord{
+        Kind, Name, USR, Loc, Availability, Linkage, Comment, Fragments,
+        SubHeading, Signature});
+    Result.first->second = std::move(Record);
   }
-  return Result.first->second;
+  return Result.first->second.get();
 }
 
 GlobalRecord *

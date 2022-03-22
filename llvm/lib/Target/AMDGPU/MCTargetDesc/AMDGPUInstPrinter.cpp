@@ -558,6 +558,18 @@ void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
   if (!Imm)
     return;
 
+  if (AMDGPU::isGFX940(STI)) {
+    switch (MI->getOpcode()) {
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_16X16X4F64_gfx940_vcd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_acd:
+    case AMDGPU::V_MFMA_F64_4X4X4F64_gfx940_vcd:
+      O << " neg:[" << (Imm & 1) << ',' << ((Imm >> 1) & 1) << ','
+        << ((Imm >> 2) & 1) << ']';
+      return;
+    }
+  }
+
   O << " blgp:" << Imm;
 }
 
@@ -1337,12 +1349,13 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
   uint16_t MsgId;
   uint16_t OpId;
   uint16_t StreamId;
-  decodeMsg(Imm16, MsgId, OpId, StreamId);
+  decodeMsg(Imm16, MsgId, OpId, StreamId, STI);
 
-  if (isValidMsgId(MsgId, STI) &&
-      isValidMsgOp(MsgId, OpId, STI) &&
+  StringRef MsgName = getMsgName(MsgId, STI);
+
+  if (!MsgName.empty() && isValidMsgOp(MsgId, OpId, STI) &&
       isValidMsgStream(MsgId, OpId, StreamId, STI)) {
-    O << "sendmsg(" << getMsgName(MsgId, STI);
+    O << "sendmsg(" << MsgName;
     if (msgRequiresOp(MsgId, STI)) {
       O << ", " << getMsgOpName(MsgId, OpId, STI);
       if (msgSupportsStream(MsgId, OpId, STI)) {

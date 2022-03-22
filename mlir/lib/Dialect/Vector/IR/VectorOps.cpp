@@ -416,7 +416,7 @@ LogicalResult ReductionOp::verify() {
 }
 
 ParseResult ReductionOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 2> operandsInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> operandsInfo;
   Type redType;
   Type resType;
   CombiningKindAttr kindAttr;
@@ -526,10 +526,10 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
 }
 
 ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType lhsInfo;
-  OpAsmParser::OperandType rhsInfo;
-  OpAsmParser::OperandType accInfo;
-  SmallVector<OpAsmParser::OperandType, 2> masksInfo;
+  OpAsmParser::UnresolvedOperand lhsInfo;
+  OpAsmParser::UnresolvedOperand rhsInfo;
+  OpAsmParser::UnresolvedOperand accInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> masksInfo;
   SmallVector<Type, 2> types;
   Type resultType;
   auto loc = parser.getCurrentLocation();
@@ -2097,7 +2097,7 @@ void OuterProductOp::print(OpAsmPrinter &p) {
 }
 
 ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 3> operandsInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> operandsInfo;
   Type tLHS, tRHS;
   if (parser.parseOperandList(operandsInfo) ||
       parser.parseOptionalAttrDict(result.attributes) ||
@@ -2736,11 +2736,11 @@ void TransferReadOp::print(OpAsmPrinter &p) {
 ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
   SMLoc typesLoc;
-  OpAsmParser::OperandType sourceInfo;
-  SmallVector<OpAsmParser::OperandType, 8> indexInfo;
-  OpAsmParser::OperandType paddingInfo;
+  OpAsmParser::UnresolvedOperand sourceInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> indexInfo;
+  OpAsmParser::UnresolvedOperand paddingInfo;
   SmallVector<Type, 2> types;
-  OpAsmParser::OperandType maskInfo;
+  OpAsmParser::UnresolvedOperand maskInfo;
   // Parsing with support for paddingValue.
   if (parser.parseOperand(sourceInfo) ||
       parser.parseOperandList(indexInfo, OpAsmParser::Delimiter::Square) ||
@@ -3115,10 +3115,10 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   auto &builder = parser.getBuilder();
   SMLoc typesLoc;
-  OpAsmParser::OperandType vectorInfo, sourceInfo;
-  SmallVector<OpAsmParser::OperandType, 8> indexInfo;
+  OpAsmParser::UnresolvedOperand vectorInfo, sourceInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> indexInfo;
   SmallVector<Type, 2> types;
-  OpAsmParser::OperandType maskInfo;
+  OpAsmParser::UnresolvedOperand maskInfo;
   if (parser.parseOperand(vectorInfo) || parser.parseComma() ||
       parser.parseOperand(sourceInfo) ||
       parser.parseOperandList(indexInfo, OpAsmParser::Delimiter::Square))

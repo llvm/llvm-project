@@ -61,6 +61,10 @@ Bug Fixes
   size expression. This was fixed and ``::getArraySize()`` will now always
   either return ``None`` or a ``llvm::Optional`` wrapping a valid ``Expr*``.
   This fixes `Issue 53742 <https://github.com/llvm/llvm-project/issues/53742>`_.
+- We now ignore full expressions when traversing cast subexpressions. This
+  fixes `Issue 53044 <https://github.com/llvm/llvm-project/issues/53044>`_.
+- Allow `-Wno-gnu` to silence GNU extension diagnostics for pointer arithmetic
+  diagnostics. Fixes `Issue 54444 <https://github.com/llvm/llvm-project/issues/54444>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -143,6 +147,7 @@ C++2b Feature Support
 
 - Implemented `P2128R6: Multidimensional subscript operator <https://wg21.link/P2128R6>`_.
 - Implemented `P0849R8: auto(x): decay-copy in the language <https://wg21.link/P0849R8>`_.
+- Implemented `P2242R3: Non-literal variables (and labels and gotos) in constexpr functions	<https://wg21.link/P2242R3>`_.
 
 CUDA Language Changes in Clang
 ------------------------------

@@ -23,9 +23,23 @@ int f0(void) {
   int a;
   w = (a = 0);
 
+  int j = 0; // expected-warning{{variable 'j' set but not used}}
+  for (int i = 0; i < 1000; i++)
+    j += 1;
+
   // Following gcc, warn for a volatile variable.
   volatile int b; // expected-warning{{variable 'b' set but not used}}
   b = 0;
+
+  // volatile variable k is used, no warning.
+  volatile int k = 0;
+  for (int i = 0; i < 1000; i++)
+    k += 1;
+
+  // typedef of volatile type, no warning.
+  typedef volatile int volint;
+  volint l = 0;
+  l += 1;
 
   int x;
   x = 0;

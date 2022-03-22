@@ -8,6 +8,7 @@
 
 #include "edit-input.h"
 #include "namelist.h"
+#include "utf.h"
 #include "flang/Common/real.h"
 #include "flang/Common/uint128.h"
 #include <algorithm>
@@ -61,7 +62,6 @@ static bool ScanNumericPrefix(IoStatementState &io, const DataEdit &edit,
   if (next) {
     negative = *next == '-';
     if (negative || *next == '+') {
-      io.GotChar();
       io.SkipSpaces(remaining);
       next = io.NextInField(remaining, edit);
     }
@@ -88,8 +88,7 @@ bool EditIntegerInput(
   case 'Z':
     return EditBOZInput(io, edit, n, 16, kind << 3);
   case 'A': // legacy extension
-    return EditDefaultCharacterInput(
-        io, edit, reinterpret_cast<char *>(n), kind);
+    return EditCharacterInput(io, edit, reinterpret_cast<char *>(n), kind);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
@@ -260,9 +259,10 @@ static int ScanRealInput(char *buffer, int bufferSize, IoStatementState &io,
       next = io.NextInField(remaining, edit);
     }
     if (!next) { // NextInField fails on separators like ')'
-      next = io.GetCurrentChar();
+      std::size_t byteCount{0};
+      next = io.GetCurrentChar(byteCount);
       if (next && *next == ')') {
-        io.HandleRelativePosition(1);
+        io.HandleRelativePosition(byteCount);
       }
     }
   } else if (remaining) {
@@ -427,8 +427,7 @@ bool EditRealInput(IoStatementState &io, const DataEdit &edit, void *n) {
     return EditBOZInput(
         io, edit, n, 16, common::BitsForBinaryPrecision(binaryPrecision));
   case 'A': // legacy extension
-    return EditDefaultCharacterInput(
-        io, edit, reinterpret_cast<char *>(n), KIND);
+    return EditCharacterInput(io, edit, reinterpret_cast<char *>(n), KIND);
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used for REAL input",
@@ -487,11 +486,13 @@ bool EditLogicalInput(IoStatementState &io, const DataEdit &edit, bool &x) {
 }
 
 // See 13.10.3.1 paragraphs 7-9 in Fortran 2018
+template <typename CHAR>
 static bool EditDelimitedCharacterInput(
-    IoStatementState &io, char *x, std::size_t length, char32_t delimiter) {
+    IoStatementState &io, CHAR *x, std::size_t length, char32_t delimiter) {
   bool result{true};
   while (true) {
-    auto ch{io.GetCurrentChar()};
+    std::size_t byteCount{0};
+    auto ch{io.GetCurrentChar(byteCount)};
     if (!ch) {
       if (io.AdvanceRecord()) {
         continue;
@@ -500,12 +501,12 @@ static bool EditDelimitedCharacterInput(
         break;
       }
     }
-    io.HandleRelativePosition(1);
+    io.HandleRelativePosition(byteCount);
     if (*ch == delimiter) {
-      auto next{io.GetCurrentChar()};
+      auto next{io.GetCurrentChar(byteCount)};
       if (next && *next == delimiter) {
         // Repeated delimiter: use as character value
-        io.HandleRelativePosition(1);
+        io.HandleRelativePosition(byteCount);
       } else {
         break; // closing delimiter
       }
@@ -519,19 +520,23 @@ static bool EditDelimitedCharacterInput(
   return result;
 }
 
-static bool EditListDirectedDefaultCharacterInput(
-    IoStatementState &io, char *x, std::size_t length, const DataEdit &edit) {
-  auto ch{io.GetCurrentChar()};
+template <typename CHAR>
+static bool EditListDirectedCharacterInput(
+    IoStatementState &io, CHAR *x, std::size_t length, const DataEdit &edit) {
+  std::size_t byteCount{0};
+  auto ch{io.GetCurrentChar(byteCount)};
   if (ch && (*ch == '\'' || *ch == '"')) {
-    io.HandleRelativePosition(1);
+    io.HandleRelativePosition(byteCount);
     return EditDelimitedCharacterInput(io, x, length, *ch);
   }
   if (IsNamelistName(io) || io.GetConnectionState().IsAtEOF()) {
     return false;
   }
   // Undelimited list-directed character input: stop at a value separator
-  // or the end of the current record.
-  std::optional<int> remaining{length};
+  // or the end of the current record.  Subtlety: the "remaining" count
+  // here is a dummy that's used to avoid the interpretation of separators
+  // in NextInField.
+  std::optional<int> remaining{maxUTF8Bytes};
   while (std::optional<char32_t> next{io.NextInField(remaining, edit)}) {
     switch (*next) {
     case ' ':
@@ -544,17 +549,19 @@ static bool EditListDirectedDefaultCharacterInput(
     default:
       *x++ = *next;
       --length;
+      remaining = maxUTF8Bytes;
     }
   }
   std::fill_n(x, length, ' ');
   return true;
 }
 
-bool EditDefaultCharacterInput(
-    IoStatementState &io, const DataEdit &edit, char *x, std::size_t length) {
+template <typename CHAR>
+bool EditCharacterInput(
+    IoStatementState &io, const DataEdit &edit, CHAR *x, std::size_t length) {
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
-    return EditListDirectedDefaultCharacterInput(io, x, length, edit);
+    return EditListDirectedCharacterInput(io, x, length, edit);
   case 'A':
   case 'G':
     break;
@@ -564,7 +571,8 @@ bool EditDefaultCharacterInput(
         edit.descriptor);
     return false;
   }
-  if (io.GetConnectionState().IsAtEOF()) {
+  const ConnectionState &connection{io.GetConnectionState()};
+  if (connection.IsAtEOF()) {
     return false;
   }
   std::size_t remaining{length};
@@ -577,26 +585,9 @@ bool EditDefaultCharacterInput(
   const char *input{nullptr};
   std::size_t ready{0};
   bool hitEnd{false};
-  if (remaining > length) {
-    // Discard leading bytes.
-    // These bytes don't count towards INQUIRE(IOLENGTH=).
-    std::size_t skip{remaining - length};
-    do {
-      if (ready == 0) {
-        ready = io.GetNextInputBytes(input);
-        if (ready == 0) {
-          hitEnd = true;
-          break;
-        }
-      }
-      std::size_t chunk{std::min<std::size_t>(skip, ready)};
-      io.HandleRelativePosition(chunk);
-      ready -= chunk;
-      input += chunk;
-      skip -= chunk;
-    } while (skip > 0);
-    remaining = length;
-  }
+  // Skip leading bytes.
+  // These bytes don't count towards INQUIRE(IOLENGTH=).
+  std::size_t skip{remaining > length ? remaining - length : 0};
   // Transfer payload bytes; these do count.
   while (remaining > 0) {
     if (ready == 0) {
@@ -606,18 +597,41 @@ bool EditDefaultCharacterInput(
         break;
       }
     }
-    std::size_t chunk{std::min<std::size_t>(remaining, ready)};
-    std::memcpy(x, input, chunk);
-    x += chunk;
+    std::size_t chunk;
+    bool skipping{skip > 0};
+    if (connection.isUTF8) {
+      chunk = MeasureUTF8Bytes(*input);
+      if (skipping) {
+        --skip;
+      } else if (auto ucs{DecodeUTF8(input)}) {
+        *x++ = *ucs;
+        --length;
+      } else if (chunk == 0) {
+        // error recovery: skip bad encoding
+        chunk = 1;
+      }
+      --remaining;
+    } else {
+      if (skipping) {
+        chunk = std::min<std::size_t>(skip, ready);
+        skip -= chunk;
+      } else {
+        chunk = std::min<std::size_t>(remaining, ready);
+        std::memcpy(x, input, chunk);
+        x += chunk;
+        length -= chunk;
+      }
+      remaining -= chunk;
+    }
     input += chunk;
-    io.GotChar(chunk);
+    if (!skipping) {
+      io.GotChar(chunk);
+    }
     io.HandleRelativePosition(chunk);
     ready -= chunk;
-    remaining -= chunk;
-    length -= chunk;
   }
   // Pad the remainder of the input variable, if any.
-  std::memset(x, ' ', length);
+  std::fill_n(x, length, ' ');
   if (hitEnd) {
     io.CheckForEndOfRecord(); // signal any needed error
   }
@@ -631,4 +645,12 @@ template bool EditRealInput<8>(IoStatementState &, const DataEdit &, void *);
 template bool EditRealInput<10>(IoStatementState &, const DataEdit &, void *);
 // TODO: double/double
 template bool EditRealInput<16>(IoStatementState &, const DataEdit &, void *);
+
+template bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char *, std::size_t);
+template bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char16_t *, std::size_t);
+template bool EditCharacterInput(
+    IoStatementState &, const DataEdit &, char32_t *, std::size_t);
+
 } // namespace Fortran::runtime::io

@@ -303,9 +303,6 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
     // catch instruction pushes values whose types are specified in the tag's
     // "params" part
     Stack.insert(Stack.end(), Sig->Params.begin(), Sig->Params.end());
-  } else if (Name == "ref.null") {
-    auto VT = static_cast<wasm::ValType>(Inst.getOperand(0).getImm());
-    Stack.push_back(VT);
   } else if (Name == "unreachable") {
     Unreachable = true;
   } else {

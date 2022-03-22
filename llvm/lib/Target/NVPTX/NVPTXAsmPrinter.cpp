@@ -888,17 +888,18 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
 
   clearAnnotationCache(&M);
 
-  // Close the last emitted section
-  if (HasDebugInfo) {
-    static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
-        ->closeLastSection();
-    // Emit empty .debug_loc section for better support of the empty files.
-    OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
-  }
+  if (auto *TS = static_cast<NVPTXTargetStreamer *>(
+          OutStreamer->getTargetStreamer())) {
+    // Close the last emitted section
+    if (HasDebugInfo) {
+      TS->closeLastSection();
+      // Emit empty .debug_loc section for better support of the empty files.
+      OutStreamer->emitRawText("\t.section\t.debug_loc\t{\t}");
+    }
 
-  // Output last DWARF .file directives, if any.
-  static_cast<NVPTXTargetStreamer *>(OutStreamer->getTargetStreamer())
-      ->outputDwarfFileDirectives();
+    // Output last DWARF .file directives, if any.
+    TS->outputDwarfFileDirectives();
+  }
 
   return ret;
 

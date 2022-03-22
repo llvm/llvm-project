@@ -644,6 +644,32 @@ func @scopeMerge4() {
 // CHECK:     return
 // CHECK:   }
 
+func @scopeMerge5() {
+  "test.region"() ({
+    memref.alloca_scope {
+      affine.parallel (%arg) = (0) to (64) {
+        %a = memref.alloca(%arg) : memref<?xi64>
+        "test.use"(%a) : (memref<?xi64>) -> ()
+      }
+    }
+    "test.op"() : () -> ()
+    "test.terminator"() : () -> ()
+  }) : () -> ()
+  return
+}
+
+// CHECK:   func @scopeMerge5() {
+// CHECK:     "test.region"() ({
+// CHECK:       affine.parallel (%[[cnt:.+]]) = (0) to (64) {
+// CHECK:         %[[alloc:.+]] = memref.alloca(%[[cnt]]) : memref<?xi64>
+// CHECK:         "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
+// CHECK:       }
+// CHECK:       "test.op"() : () -> ()
+// CHECK:       "test.terminator"() : () -> ()
+// CHECK:     }) : () -> ()
+// CHECK:     return
+// CHECK:   }
+
 func @scopeInline(%arg : memref<index>) {
   %cnt = "test.count"() : () -> index
   "test.region"() ({
@@ -693,3 +719,19 @@ func @reinterpret_of_subview(%arg : memref<?xi8>, %size1: index, %size2: index) 
   %1 = memref.reinterpret_cast %0 to offset: [0], sizes: [%size2], strides: [1] : memref<?xi8> to memref<?xi8>
   return %1 : memref<?xi8>
 }
+
+// -----
+
+func @canonicalize_rank_reduced_subview(%arg0 : memref<8x?xf32>,
+    %arg1 : index) -> memref<?xf32, offset : ?, strides : [?]> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = memref.subview %arg0[%c0, %c0] [1, %arg1] [%c1, %c1] : memref<8x?xf32> to memref<?xf32, offset : ?, strides : [?]>
+  return %0 :  memref<?xf32, offset : ?, strides : [?]>
+}
+//  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0)[s0] -> (d0 + s0)>
+//      CHECK: func @canonicalize_rank_reduced_subview
+// CHECK-SAME:     %[[ARG0:.+]]: memref<8x?xf32>
+// CHECK-SAME:     %[[ARG1:.+]]: index
+//      CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG0]][0, 0] [1, %[[ARG1]]] [1, 1]
+// CHECK-SAME:       memref<8x?xf32> to memref<?xf32, #[[MAP]]>

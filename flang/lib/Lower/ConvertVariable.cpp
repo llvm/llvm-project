@@ -1119,7 +1119,11 @@ lowerExplicitCharLen(Fortran::lower::AbstractConverter &converter,
   if (llvm::Optional<int64_t> len = box.getCharLenConst())
     return builder.createIntegerConstant(loc, lenTy, *len);
   if (llvm::Optional<Fortran::lower::SomeExpr> lenExpr = box.getCharLenExpr())
-    return genScalarValue(converter, loc, *lenExpr, symMap, stmtCtx);
+    // If the length expression is negative, the length is zero. See F2018
+    // 7.4.4.2 point 5.
+    return Fortran::lower::genMaxWithZero(
+        builder, loc,
+        genScalarValue(converter, loc, *lenExpr, symMap, stmtCtx));
   return mlir::Value{};
 }
 

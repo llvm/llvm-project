@@ -9,10 +9,7 @@ set(LLVM_ENABLE_RUNTIMES "compiler-rt;libcxx;libcxxabi;libunwind" CACHE STRING "
 
 set(LLVM_ENABLE_BACKTRACES OFF CACHE BOOL "")
 set(LLVM_ENABLE_DIA_SDK OFF CACHE BOOL "")
-if(NOT APPLE)
-  # TODO: Remove this once we switch to ld64.lld.
-  set(LLVM_ENABLE_LLD ON CACHE BOOL "")
-endif()
+set(LLVM_ENABLE_LLD ON CACHE BOOL "")
 set(LLVM_ENABLE_LTO ON CACHE BOOL "")
 set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
 set(LLVM_ENABLE_LIBCXX ON CACHE BOOL "")
@@ -31,11 +28,8 @@ if(WIN32)
 endif()
 
 set(CLANG_DEFAULT_CXX_STDLIB libc++ CACHE STRING "")
-if(NOT APPLE)
-  # TODO: Remove this once we switch to ld64.lld.
-  set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
-  set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
-endif()
+set(CLANG_DEFAULT_LINKER lld CACHE STRING "")
+set(CLANG_DEFAULT_OBJCOPY llvm-objcopy CACHE STRING "")
 set(CLANG_DEFAULT_RTLIB compiler-rt CACHE STRING "")
 set(CLANG_ENABLE_ARCMT OFF CACHE BOOL "")
 set(CLANG_ENABLE_STATIC_ANALYZER ON CACHE BOOL "")
@@ -70,9 +64,6 @@ if(APPLE)
   set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
   set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
-  set(DARWIN_ios_ARCHS arm64 CACHE STRING "")
-  set(DARWIN_iossim_ARCHS arm64 CACHE STRING "")
-  set(DARWIN_osx_ARCHS arm64;x86_64 CACHE STRING "")
 endif()
 
 if(WIN32)
@@ -287,6 +278,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-size
   llvm-strip
   llvm-symbolizer
+  llvm-undname
   llvm-xray
   sancov
   scan-build-py

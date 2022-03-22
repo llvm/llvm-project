@@ -75,3 +75,42 @@ bb:
 bar:
   ret i32 %b
 }
+
+; The code that inserts AssertZExt based on predecessor information assumes
+; constants are zero extended for phi incoming values so an AssertZExt is
+; created in 'merge' allowing the zext to be removed.
+; SelectionDAG::getNode treats any_extend of i32 constants as sext for RISCV.
+; This code used to miscompile because the code that creates phi incoming values
+; in the predecessors created any_extend for the constants which then gets
+; treated as a sext by getNode. This made the removal of the zext incorrect.
+; SelectionDAGBuilder now creates a zero_extend instead of an any_extend to
+; match the assumption.
+; FIXME: RISCV would prefer constant inputs to phis to be sign extended.
+define i64 @miscompile(i32 %c) {
+; RV64I-LABEL: miscompile:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    beqz a0, .LBB2_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    li a0, -1
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB2_2: # %iffalse
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    addi a0, a0, -2
+; RV64I-NEXT:    ret
+  %a = icmp ne i32 %c, 0
+  br i1 %a, label %iftrue, label %iffalse
+
+iftrue:
+  br label %merge
+
+iffalse:
+  br label %merge
+
+merge:
+  %b = phi i32 [-1, %iftrue], [-2, %iffalse]
+  %d = zext i32 %b to i64
+  ret i64 %d
+}

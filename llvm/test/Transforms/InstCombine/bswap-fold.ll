@@ -3,25 +3,160 @@
 
 ; rdar://5992453
 ; A & 255
-define i32 @test4(i32 %a) nounwind  {
+define i32 @test4(i32 %a) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[A:%.*]], 255
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
-  %t2 = tail call i32 @llvm.bswap.i32( i32 %a )
+  %t2 = call i32 @llvm.bswap.i32( i32 %a )
   %t4 = lshr i32 %t2, 24
   ret i32 %t4
 }
 
 ; a >> 24
-define i32 @test6(i32 %a) nounwind {
+define i32 @test6(i32 %a) {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[T2:%.*]] = lshr i32 [[A:%.*]], 24
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
-  %t2 = tail call i32 @llvm.bswap.i32( i32 %a )
+  %t2 = call i32 @llvm.bswap.i32( i32 %a )
   %t4 = and i32 %t2, 255
   ret i32 %t4
+}
+
+define i32 @lshr8_i32(i32 %x) {
+; CHECK-LABEL: @lshr8_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shl i32 [[TMP1]], 8
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i32 %x, 8
+  %r = call i32 @llvm.bswap.i32(i32 %s)
+  ret i32 %r
+}
+
+define <2 x i32> @lshr16_v2i32(<2 x i32> %x) {
+; CHECK-LABEL: @lshr16_v2i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = shl <2 x i32> [[TMP1]], <i32 16, i32 16>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %s = lshr <2 x i32> %x, <i32 16, i32 16>
+  %r = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %s)
+  ret <2 x i32> %r
+}
+
+define i32 @lshr24_i32(i32 %x) {
+; CHECK-LABEL: @lshr24_i32(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -16777216
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %s = lshr i32 %x, 24
+  %r = call i32 @llvm.bswap.i32(i32 %s)
+  ret i32 %r
+}
+
+; negative test - need shift-by-8-bit-multiple
+
+define i32 @lshr12_i32(i32 %x) {
+; CHECK-LABEL: @lshr12_i32(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 12
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bswap.i32(i32 [[S]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i32 %x, 12
+  %r = call i32 @llvm.bswap.i32(i32 %s)
+  ret i32 %r
+}
+
+; negative test - uses
+
+define i32 @lshr8_i32_use(i32 %x, i32* %p) {
+; CHECK-LABEL: @lshr8_i32_use(
+; CHECK-NEXT:    [[S:%.*]] = lshr i32 [[X:%.*]], 12
+; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bswap.i32(i32 [[S]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = lshr i32 %x, 12
+  store i32 %s, i32* %p
+  %r = call i32 @llvm.bswap.i32(i32 %s)
+  ret i32 %r
+}
+
+define i64 @shl16_i64(i64 %x) {
+; CHECK-LABEL: @shl16_i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.bswap.i64(i64 [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = lshr i64 [[TMP1]], 16
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %s = shl i64 %x, 16
+  %r = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %r
+}
+
+; poison vector element propagates
+
+define <2 x i64> @shl16_v2i64(<2 x i64> %x) {
+; CHECK-LABEL: @shl16_v2i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[X:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i64> [[TMP1]], <i64 poison, i64 24>
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %s = shl <2 x i64> %x, <i64 poison, i64 24>
+  %r = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %s)
+  ret <2 x i64> %r
+}
+
+define i64 @shl56_i64(i64 %x) {
+; CHECK-LABEL: @shl56_i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[X:%.*]], 255
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %s = shl i64 %x, 56
+  %r = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %r
+}
+
+; negative test - need shift-by-8-bit-multiple
+
+define i64 @shl42_i64(i64 %x) {
+; CHECK-LABEL: @shl42_i64(
+; CHECK-NEXT:    [[S:%.*]] = shl i64 [[X:%.*]], 42
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.bswap.i64(i64 [[S]])
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %s = shl i64 %x, 42
+  %r = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %r
+}
+
+; negative test - uses
+
+define i32 @shl8_i32_use(i32 %x, i32* %p) {
+; CHECK-LABEL: @shl8_i32_use(
+; CHECK-NEXT:    [[S:%.*]] = shl i32 [[X:%.*]], 8
+; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bswap.i32(i32 [[S]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %s = shl i32 %x, 8
+  store i32 %s, i32* %p
+  %r = call i32 @llvm.bswap.i32(i32 %s)
+  ret i32 %r
+}
+
+; swaps cancel
+
+define i64 @swap_shl16_i64(i64 %x) {
+; CHECK-LABEL: @swap_shl16_i64(
+; CHECK-NEXT:    [[R:%.*]] = lshr i64 [[X:%.*]], 16
+; CHECK-NEXT:    ret i64 [[R]]
+;
+  %b = call i64 @llvm.bswap.i64(i64 %x)
+  %s = shl i64 %b, 16
+  %r = call i64 @llvm.bswap.i64(i64 %s)
+  ret i64 %r
 }
 
 ; PR5284
@@ -411,11 +546,11 @@ define <2 x i64> @bs_active_high_different_negative(<2 x i64> %0) {
   ret <2 x i64> %3
 }
 
-; negative test
+; TODO: This should fold to 'and'.
 define <2 x i64> @bs_active_high_undef(<2 x i64> %0) {
 ; CHECK-LABEL: @bs_active_high_undef(
-; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i64> [[TMP0:%.*]], <i64 56, i64 undef>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[TMP2]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[TMP0:%.*]])
+; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i64> [[TMP2]], <i64 56, i64 undef>
 ; CHECK-NEXT:    ret <2 x i64> [[TMP3]]
 ;
   %2 = shl <2 x i64> %0, <i64 56, i64 undef>

@@ -26,7 +26,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
-#include <map>
 #include <set>
 #include <vector>
 
@@ -278,13 +277,29 @@ void OutlinableRegion::splitCandidate() {
   // We iterate over the instructions in the region, if we find a PHINode, we
   // check if there are predecessors outside of the region, if there are,
   // we ignore this region since we are unable to handle the severing of the
-  // phi node right now. 
+  // phi node right now.
+
+  // TODO: Handle extraneous inputs for PHINodes through variable number of
+  // inputs, similar to how outputs are handled.
   BasicBlock::iterator It = StartInst->getIterator();
+  EndBB = BackInst->getParent();
+  BasicBlock *IBlock;
+  bool EndBBTermAndBackInstDifferent = EndBB->getTerminator() != BackInst;
   while (PHINode *PN = dyn_cast<PHINode>(&*It)) {
     unsigned NumPredsOutsideRegion = 0;
-    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-      if (!BBSet.contains(PN->getIncomingBlock(i)))
+    for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+      if (!BBSet.contains(PN->getIncomingBlock(i))) {
         ++NumPredsOutsideRegion;
+        continue;
+      }
+
+      // We must consider the case there the incoming block to the PHINode is
+      // the same as the final block of the OutlinableRegion.  If this is the
+      // case, the branch from this block must also be outlined to be valid.
+      IBlock = PN->getIncomingBlock(i);
+      if (IBlock == EndBB && EndBBTermAndBackInstDifferent)
+        ++NumPredsOutsideRegion;
+    }
 
     if (NumPredsOutsideRegion > 1)
       return;
@@ -299,11 +314,9 @@ void OutlinableRegion::splitCandidate() {
   
   // If the region ends with a PHINode, but does not contain all of the phi node
   // instructions of the region, we ignore it for now.
-  if (isa<PHINode>(BackInst)) {
-    EndBB = BackInst->getParent();
-    if (BackInst != &*std::prev(EndBB->getFirstInsertionPt()))
-      return;
-  }
+  if (isa<PHINode>(BackInst) &&
+      BackInst != &*std::prev(EndBB->getFirstInsertionPt()))
+    return;
 
   // The basic block gets split like so:
   // block:                 block:
@@ -1594,12 +1607,12 @@ static void findCanonNumsForPHI(
 /// function.
 ///
 /// \param PN [in] - The PHINode that we are finding the canonical numbers for.
-/// \param Region [in] - The OutlinableRegion containing \p PN. 
+/// \param Region [in] - The OutlinableRegion containing \p PN.
 /// \param OverallPhiBlock [in] - The overall PHIBlock we are trying to find
 /// \p PN in.
 /// \param OutputMappings [in] - The mapping of output values from outlined
 /// region to their original values.
-/// \param UsedPhis [in, out] - The PHINodes in the block that have already been
+/// \param UsedPHIs [in, out] - The PHINodes in the block that have already been
 /// matched.
 /// \return the newly found or created PHINode in \p OverallPhiBlock.
 static PHINode*
@@ -2363,6 +2376,9 @@ void IROutliner::pruneIncompatibleRegions(
     if (BBHasAddressTaken)
       continue;
 
+    if (IRSC.getFunction()->hasOptNone())
+      continue;
+
     if (IRSC.front()->Inst->getFunction()->hasLinkOnceODRLinkage() &&
         !OutlineFromLinkODRs)
       continue;
@@ -2958,7 +2974,7 @@ bool IROutlinerLegacyPass::runOnModule(Module &M) {
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
   auto GORE = [&ORE](Function &F) -> OptimizationRemarkEmitter & {
     ORE.reset(new OptimizationRemarkEmitter(&F));
-    return *ORE.get();
+    return *ORE;
   };
 
   auto GTTI = [this](Function &F) -> TargetTransformInfo & {
@@ -2989,7 +3005,7 @@ PreservedAnalyses IROutlinerPass::run(Module &M, ModuleAnalysisManager &AM) {
   std::function<OptimizationRemarkEmitter &(Function &)> GORE =
       [&ORE](Function &F) -> OptimizationRemarkEmitter & {
     ORE.reset(new OptimizationRemarkEmitter(&F));
-    return *ORE.get();
+    return *ORE;
   };
 
   if (IROutliner(GTTI, GIRSI, GORE).run(M))

@@ -1404,7 +1404,7 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
   if (isa<PHINode>(In) || (To != Block.end() && isa<PHINode>(*To)))
     return false;
 
-  if (!mayBeMemoryDependent(In))
+  if (!mayHaveNonDefUseDependency(In))
     return true;
   bool MayWrite = In.mayWriteToMemory();
   auto MaybeLoc = getLocOrNone(In);

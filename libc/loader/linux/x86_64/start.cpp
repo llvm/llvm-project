@@ -8,7 +8,7 @@
 
 #include "config/linux/app.h"
 #include "src/__support/OSUtil/syscall.h"
-#include "src/string/memcpy.h"
+#include "src/string/memory_utils/memcpy_implementations.h"
 
 #include <asm/prctl.h>
 #include <linux/auxvec.h>
@@ -64,8 +64,9 @@ void initTLS() {
   uintptr_t endPtr = reinterpret_cast<uintptr_t>(tlsAddr) + tlsSize;
   *reinterpret_cast<uintptr_t *>(endPtr) = endPtr;
 
-  __llvm_libc::memcpy(tlsAddr, reinterpret_cast<const void *>(app.tls.address),
-                      app.tls.size);
+  __llvm_libc::inline_memcpy(reinterpret_cast<char *>(tlsAddr),
+                             reinterpret_cast<const char *>(app.tls.address),
+                             app.tls.size);
   if (__llvm_libc::syscall(SYS_arch_prctl, ARCH_SET_FS, endPtr) == -1)
     __llvm_libc::syscall(SYS_exit, 1);
 }

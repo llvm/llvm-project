@@ -1,7 +1,6 @@
 # RUN: llc -mtriple riscv32 -mattr=+v -start-after riscv-expand-pseudo -o - %s | FileCheck %s
 # RUN: llc -mtriple riscv64 -mattr=+v -start-after riscv-expand-pseudo -o - %s | FileCheck %s
 
-# FIXME: These should all use the 'vnot' alias despite some not having mask operands
 --- |
   define void @vnot_mask_1() {
     ret void
@@ -45,7 +44,7 @@ body:             |
     liveins: $v25
 
     ; CHECK-LABEL: vnot_no_mask_1:
-    ; CHECK: vxor.vi v25, v25, -1
+    ; CHECK: vnot.v v25, v25
 
     $v25 = VXOR_VI killed $v25, -1, $noreg, implicit $vtype, implicit $vl
 ...
@@ -56,7 +55,7 @@ body:             |
     liveins: $v25
 
     ; CHECK-LABEL: vnot_no_mask_2:
-    ; CHECK: vxor.vi v1, v25, -1
+    ; CHECK: vnot.v v1, v25
 
     $v1 = VXOR_VI killed $v25, -1, $noreg, implicit $vtype, implicit $vl
 ...

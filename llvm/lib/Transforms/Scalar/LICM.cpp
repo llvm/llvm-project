@@ -270,8 +270,8 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  LoopInvariantCodeMotion LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
-                               LicmAllowSpeculation);
+  LoopInvariantCodeMotion LICM(Opts.MssaOptCap, Opts.MssaNoAccForPromotionCap,
+                               Opts.AllowSpeculation);
   if (!LICM.runOnLoop(&L, &AR.AA, &AR.LI, &AR.DT, AR.BFI, &AR.TLI, &AR.TTI,
                       &AR.SE, AR.MSSA, &ORE))
     return PreservedAnalyses::all();
@@ -285,6 +285,16 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   return PA;
 }
 
+void LICMPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LICMPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+
+  OS << "<";
+  OS << (Opts.AllowSpeculation ? "" : "no-") << "allowspeculation";
+  OS << ">";
+}
+
 PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &) {
@@ -296,8 +306,8 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(LN.getParent());
 
-  LoopInvariantCodeMotion LICM(LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
-                               LicmAllowSpeculation);
+  LoopInvariantCodeMotion LICM(Opts.MssaOptCap, Opts.MssaNoAccForPromotionCap,
+                               Opts.AllowSpeculation);
 
   Loop &OutermostLoop = LN.getOutermostLoop();
   bool Changed = LICM.runOnLoop(&OutermostLoop, &AR.AA, &AR.LI, &AR.DT, AR.BFI,
@@ -313,6 +323,16 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
   PA.preserve<MemorySSAAnalysis>();
 
   return PA;
+}
+
+void LNICMPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LNICMPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+
+  OS << "<";
+  OS << (Opts.AllowSpeculation ? "" : "no-") << "allowspeculation";
+  OS << ">";
 }
 
 char LegacyLICMPass::ID = 0;
@@ -2041,9 +2061,9 @@ bool llvm::promoteLoopAccessesToScalars(
   // different sizes.  While we are at it, collect alignment and AA info.
   Type *AccessTy = nullptr;
   for (Value *ASIV : PointerMustAliases) {
-    for (User *U : ASIV->users()) {
+    for (Use &U : ASIV->uses()) {
       // Ignore instructions that are outside the loop.
-      Instruction *UI = dyn_cast<Instruction>(U);
+      Instruction *UI = dyn_cast<Instruction>(U.getUser());
       if (!UI || !CurLoop->contains(UI))
         continue;
 
@@ -2073,7 +2093,7 @@ bool llvm::promoteLoopAccessesToScalars(
       } else if (const StoreInst *Store = dyn_cast<StoreInst>(UI)) {
         // Stores *of* the pointer are not interesting, only stores *to* the
         // pointer.
-        if (UI->getOperand(1) != ASIV)
+        if (U.getOperandNo() != StoreInst::getPointerOperandIndex())
           continue;
         if (!Store->isUnordered())
           return false;

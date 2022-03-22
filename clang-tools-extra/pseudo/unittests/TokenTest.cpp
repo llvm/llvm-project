@@ -180,7 +180,8 @@ TEST(TokenTest, SplitGreaterGreater) {
 >
 >>= // not split
 )cpp";
-  TokenStream Split = stripComments(cook(lex(Code, Opts), Opts));
+  TokenStream Cook = cook(lex(Code, Opts), Opts);
+  TokenStream Split = stripComments(Cook);
   EXPECT_THAT(Split.tokens(), ElementsAreArray({
                                   token(">", tok::greater),
                                   token(">", tok::greater),

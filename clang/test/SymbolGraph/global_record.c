@@ -1,11 +1,9 @@
-// FIXME: disable the test to unblock build bots
-// UNSUPPORTED: true
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
 // RUN: %t/reference.output.json
 // RUN: %clang -extract-api -target arm64-apple-macosx \
-// RUN: %t/input.c -o %t/output.json | FileCheck -allow-empty %s
+// RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
 // Generator version is not consistent across test runs, normalize it.
 // RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
@@ -15,7 +13,7 @@
 // CHECK-NOT: error:
 // CHECK-NOT: warning:
 
-//--- input.c
+//--- input.h
 int num;
 
 /**
@@ -82,7 +80,7 @@ char unavailable __attribute__((unavailable));
       "location": {
         "character": 5,
         "line": 1,
-        "uri": "file://INPUT_DIR/input.c"
+        "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
         "subHeading": [
@@ -274,7 +272,7 @@ char unavailable __attribute__((unavailable));
       "location": {
         "character": 6,
         "line": 9,
-        "uri": "file://INPUT_DIR/input.c"
+        "uri": "file://INPUT_DIR/input.h"
       },
       "names": {
         "subHeading": [

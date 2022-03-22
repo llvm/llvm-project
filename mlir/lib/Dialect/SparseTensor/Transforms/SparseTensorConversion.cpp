@@ -177,7 +177,7 @@ static Value genAllocaScalar(ConversionPatternRewriter &rewriter, Location loc,
 
 /// Generates a temporary buffer of the given type and given contents.
 static Value genBuffer(ConversionPatternRewriter &rewriter, Location loc,
-                       ArrayRef<Value> values) {
+                       ValueRange values) {
   unsigned sz = values.size();
   assert(sz >= 1);
   Value buffer = genAlloca(rewriter, loc, sz, values[0].getType());
@@ -205,10 +205,7 @@ static void newParams(ConversionPatternRewriter &rewriter,
   params.push_back(genBuffer(rewriter, loc, attrs));
   // Dimension sizes array of the enveloping tensor. Useful for either
   // verification of external data, or for construction of internal data.
-  SmallVector<Value, 4> sizes;
-  for (Value s : szs)
-    sizes.push_back(s);
-  params.push_back(genBuffer(rewriter, loc, sizes));
+  params.push_back(genBuffer(rewriter, loc, szs));
   // Dimension order permutation array. This is the "identity" permutation by
   // default, or otherwise the "reverse" permutation of a given ordering, so
   // that indices can be mapped quickly to the right position.

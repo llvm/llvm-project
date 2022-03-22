@@ -101,6 +101,10 @@ void Matrix::swapColumns(unsigned column, unsigned otherColumn) {
     std::swap(at(row, column), at(row, otherColumn));
 }
 
+MutableArrayRef<int64_t> Matrix::getRow(unsigned row) {
+  return {&data[row * nReservedColumns], nColumns};
+}
+
 ArrayRef<int64_t> Matrix::getRow(unsigned row) const {
   return {&data[row * nReservedColumns], nColumns};
 }

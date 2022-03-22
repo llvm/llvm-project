@@ -116,8 +116,7 @@ Optional<SmallVector<ReassociationIndices>> mlir::composeReassociationIndices(
   for (ReassociationIndicesRef consumerIndices : consumerReassociations) {
     ReassociationIndices reassociations;
     for (int64_t consumerIndex : consumerIndices) {
-      for (int64_t producerIndex : producerReassociations[consumerIndex])
-        reassociations.push_back(producerIndex);
+      llvm::append_range(reassociations, producerReassociations[consumerIndex]);
     }
     composedIndices.push_back(std::move(reassociations));
   }

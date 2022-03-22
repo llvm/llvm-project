@@ -685,6 +685,7 @@ class VPseudoUSLoadMask<VReg RetClass, int EEW, bit isFF> :
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -733,6 +734,7 @@ class VPseudoSLoadMask<VReg RetClass, int EEW>:
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -787,6 +789,7 @@ class VPseudoILoadMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -904,7 +907,7 @@ class VPseudoNullaryNoMaskTU<VReg RegClass>:
 class VPseudoNullaryMask<VReg RegClass>:
       Pseudo<(outs GetVRegNoV0<RegClass>.R:$rd),
              (ins GetVRegNoV0<RegClass>.R:$merge, VMaskOp:$vm, AVL:$vl,
-              ixlenimm:$sew), []>, RISCVVPseudo {
+              ixlenimm:$sew, ixlenimm:$policy), []>, RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;
@@ -912,6 +915,8 @@ class VPseudoNullaryMask<VReg RegClass>:
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
+  let UsesMaskPolicy = 1;
+  let HasVecPolicyOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -961,21 +966,6 @@ class VPseudoUnaryNoMaskTU<DAGOperand RetClass, VReg OpClass, string Constraint 
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
-class VPseudoUnaryMask<VReg RetClass, VReg OpClass, string Constraint = ""> :
-        Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
-               (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
-                    VMaskOp:$vm, AVL:$vl, ixlenimm:$sew), []>,
-        RISCVVPseudo {
-  let mayLoad = 0;
-  let mayStore = 0;
-  let hasSideEffects = 0;
-  let Constraints = Join<[Constraint, "$rd = $merge"], ",">.ret;
-  let HasVLOp = 1;
-  let HasSEWOp = 1;
-  let HasMergeOp = 1;
-  let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
-}
-
 class VPseudoUnaryMaskTA<VReg RetClass, VReg OpClass, string Constraint = ""> :
         Pseudo<(outs GetVRegNoV0<RetClass>.R:$rd),
                (ins GetVRegNoV0<RetClass>.R:$merge, OpClass:$rs2,
@@ -989,6 +979,7 @@ class VPseudoUnaryMaskTA<VReg RetClass, VReg OpClass, string Constraint = ""> :
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1164,6 +1155,7 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1175,7 +1167,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
         Pseudo<(outs RetClass:$rd),
                 (ins RetClass:$merge,
                      Op1Class:$rs2, Op2Class:$rs1,
-                     VMaskOp:$vm, AVL:$vl, ixlenimm:$sew), []>,
+                     VMaskOp:$vm, AVL:$vl, ixlenimm:$sew, ixlenimm:$policy), []>,
         RISCVVPseudo {
   let mayLoad = 0;
   let mayStore = 0;
@@ -1184,6 +1176,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
+  let HasVecPolicyOp = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1206,6 +1199,7 @@ class VPseudoTiedBinaryMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasMergeOp = 0; // Merge is also rs2.
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1325,6 +1319,7 @@ class VPseudoUSSegLoadMask<VReg RetClass, int EEW, bits<4> NF, bit isFF>:
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1358,6 +1353,7 @@ class VPseudoSSegLoadMask<VReg RetClass, int EEW, bits<4> NF>:
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1397,6 +1393,7 @@ class VPseudoISegLoadMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1681,7 +1678,8 @@ multiclass VPseudoVSFS_M {
     let VLMul = mti.LMul.value in {
       def "_M_" # mti.BX : VPseudoUnaryNoMask<VR, VR, constraint>,
                            Sched<[WriteVMSFSV, ReadVMSFSV, ReadVMask]>;
-      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMask<VR, VR, constraint>,
+      let ForceTailAgnostic = 1 in
+      def "_M_" # mti.BX # "_MASK" : VPseudoUnaryMaskTA<VR, VR, constraint>,
                                      Sched<[WriteVMSFSV, ReadVMSFSV, ReadVMask]>;
     }
   }
@@ -1716,7 +1714,7 @@ multiclass VPseudoVIOT_M {
                        Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
       def "_" # m.MX # "_TU" : VPseudoUnaryNoMaskTU<m.vrclass, VR, constraint>,
                                Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
-      def "_" # m.MX # "_MASK" : VPseudoUnaryMask<m.vrclass, VR, constraint>,
+      def "_" # m.MX # "_MASK" : VPseudoUnaryMaskTA<m.vrclass, VR, constraint>,
                                  Sched<[WriteVMIotV, ReadVMIotV, ReadVMask]>;
     }
   }
@@ -1754,7 +1752,6 @@ multiclass VPseudoBinaryM<VReg RetClass,
   let VLMul = MInfo.value in {
     def "_" # MInfo.MX : VPseudoBinaryNoMask<RetClass, Op1Class, Op2Class,
                                              Constraint>;
-    let ForceTailAgnostic = true in
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMOutMask<RetClass, Op1Class,
                                                          Op2Class, Constraint>;
   }
@@ -2467,7 +2464,6 @@ multiclass VPseudoTernaryNoMaskNoPolicy<VReg RetClass,
     def "_" # MInfo.MX : VPseudoTernaryNoMask<RetClass, Op1Class, Op2Class, Constraint>;
     def "_" # MInfo.MX # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                            Constraint>;
-                                   
   }
 }
 
@@ -2881,26 +2877,6 @@ class VPatUnaryNoMaskTU<string intrinsic_name,
                    (op2_type op2_reg_class:$rs2),
                    GPR:$vl, sew)>;
 
-class VPatUnaryMask<string intrinsic_name,
-                    string inst,
-                    string kind,
-                    ValueType result_type,
-                    ValueType op2_type,
-                    ValueType mask_type,
-                    int sew,
-                    LMULInfo vlmul,
-                    VReg result_reg_class,
-                    VReg op2_reg_class> :
-  Pat<(result_type (!cast<Intrinsic>(intrinsic_name#"_mask")
-                   (result_type result_reg_class:$merge),
-                   (op2_type op2_reg_class:$rs2),
-                   (mask_type V0),
-                   VLOpFrag)),
-                   (!cast<Instruction>(inst#"_"#kind#"_"#vlmul.MX#"_MASK")
-                   (result_type result_reg_class:$merge),
-                   (op2_type op2_reg_class:$rs2),
-                   (mask_type V0), GPR:$vl, sew)>;
-
 class VPatUnaryMaskTA<string intrinsic_name,
                       string inst,
                       string kind,
@@ -2938,11 +2914,11 @@ class VPatMaskUnaryMask<string intrinsic_name,
                 (mti.Mask VR:$merge),
                 (mti.Mask VR:$rs2),
                 (mti.Mask V0),
-                VLOpFrag)),
+                VLOpFrag, (XLenVT timm:$policy))),
                 (!cast<Instruction>(inst#"_M_"#mti.BX#"_MASK")
                 (mti.Mask VR:$merge),
                 (mti.Mask VR:$rs2),
-                (mti.Mask V0), GPR:$vl, mti.Log2SEW)>;
+                (mti.Mask V0), GPR:$vl, mti.Log2SEW, (XLenVT timm:$policy))>;
 
 class VPatUnaryAnyMask<string intrinsic,
                        string inst,
@@ -3098,12 +3074,12 @@ class VPatBinaryMaskSwapped<string intrinsic_name,
                    (op2_type op2_kind:$rs2),
                    (op1_type op1_reg_class:$rs1),
                    (mask_type V0),
-                   VLOpFrag)),
+                   VLOpFrag, (XLenVT timm:$policy))),
                    (!cast<Instruction>(inst#"_MASK")
                    (result_type result_reg_class:$merge),
                    (op1_type op1_reg_class:$rs1),
                    (op2_type op2_kind:$rs2),
-                   (mask_type V0), GPR:$vl, sew)>;
+                   (mask_type V0), GPR:$vl, sew, (XLenVT timm:$policy))>;
 
 class VPatTiedBinaryNoMask<string intrinsic_name,
                            string inst,
@@ -3293,8 +3269,8 @@ multiclass VPatUnaryV_M<string intrinsic, string instruction>
                           vti.Log2SEW, vti.LMul, VR>;
     def : VPatUnaryNoMaskTU<intrinsic, instruction, "M", vti.Vector, vti.Mask,
                             vti.Log2SEW, vti.LMul, vti.RegClass,VR>;
-    def : VPatUnaryMask<intrinsic, instruction, "M", vti.Vector, vti.Mask,
-                        vti.Mask, vti.Log2SEW, vti.LMul, vti.RegClass, VR>;
+    def : VPatUnaryMaskTA<intrinsic, instruction, "M", vti.Vector, vti.Mask,
+                          vti.Mask, vti.Log2SEW, vti.LMul, vti.RegClass, VR>;
   }
 }
 
@@ -3347,10 +3323,10 @@ multiclass VPatNullaryV<string intrinsic, string instruction>
                           vti.RegClass:$merge, GPR:$vl, vti.Log2SEW)>;
     def : Pat<(vti.Vector (!cast<Intrinsic>(intrinsic # "_mask")
                           (vti.Vector vti.RegClass:$merge),
-                          (vti.Mask V0), VLOpFrag)),
+                          (vti.Mask V0), VLOpFrag, (XLenVT timm:$policy))),
                           (!cast<Instruction>(instruction#"_V_" # vti.LMul.MX # "_MASK")
                           vti.RegClass:$merge, (vti.Mask V0),
-                          GPR:$vl, vti.Log2SEW)>;
+                          GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
   }
 }
 
@@ -3375,9 +3351,9 @@ multiclass VPatBinaryM<string intrinsic,
 {
   def : VPatBinaryM<intrinsic, inst, result_type, op1_type, op2_type,
                     sew, op1_reg_class, op2_kind>;
-  def : VPatBinaryMask<intrinsic, inst, result_type, op1_type, op2_type,
-                       mask_type, sew, result_reg_class, op1_reg_class,
-                       op2_kind>;
+  def : VPatBinaryMaskTA<intrinsic, inst, result_type, op1_type, op2_type,
+                         mask_type, sew, result_reg_class, op1_reg_class,
+                         op2_kind>;
 }
 
 multiclass VPatBinaryTA<string intrinsic,
@@ -4189,9 +4165,9 @@ multiclass VPatCompare_VI<string intrinsic, string inst,
                                   (vti.Vector vti.RegClass:$rs1),
                                   (vti.Scalar ImmType:$rs2),
                                   (vti.Mask V0),
-                                  VLOpFrag)),
+                                  VLOpFrag, (XLenVT timm:$policy))),
               (PseudoMask VR:$merge, vti.RegClass:$rs1, (DecImm ImmType:$rs2),
-                          (vti.Mask V0), GPR:$vl, vti.Log2SEW)>;
+                          (vti.Mask V0), GPR:$vl, vti.Log2SEW, timm:$policy)>;
   }
 }
 

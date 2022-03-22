@@ -9,11 +9,11 @@
 #ifndef liblldb_IntelPTCollector_H_
 #define liblldb_IntelPTCollector_H_
 
+#include "Perf.h"
+
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 
 #include <linux/perf_event.h>
 #include <sys/mman.h>
@@ -31,41 +31,14 @@ class IntelPTThreadTrace;
 typedef std::unique_ptr<IntelPTThreadTrace> IntelPTThreadTraceUP;
 
 class IntelPTThreadTrace {
-
-  class munmap_delete {
-    size_t m_length;
-
-  public:
-    munmap_delete(size_t length) : m_length(length) {}
-    void operator()(void *ptr) {
-      if (m_length)
-        munmap(ptr, m_length);
-    }
-  };
-
-  class file_close {
-
-  public:
-    file_close() = default;
-    void operator()(int *ptr) {
-      if (ptr == nullptr)
-        return;
-      if (*ptr == -1)
-        return;
-      close(*ptr);
-      std::default_delete<int>()(ptr);
-    }
-  };
-
-  std::unique_ptr<perf_event_mmap_page, munmap_delete> m_mmap_meta;
-  std::unique_ptr<uint8_t, munmap_delete> m_mmap_aux;
-  std::unique_ptr<int, file_close> m_fd;
-  lldb::tid_t m_tid;
-
-  /// Start tracing a thread
+public:
+  /// Create a new \a IntelPTThreadTrace and start tracing the thread.
   ///
   /// \param[in] pid
   ///     The pid of the process whose thread will be traced.
+  ///
+  /// \param[in] tid
+  ///     The tid of the thread to be traced.
   ///
   /// \param[in] buffer_size
   ///     Size of the thread buffer in bytes.
@@ -79,32 +52,21 @@ class IntelPTThreadTrace {
   ///     More information in TraceIntelPT::GetStartConfigurationHelp().
   ///
   /// \return
-  ///     \a llvm::Error::success if tracing was successful, or an
-  ///     \a llvm::Error otherwise.
-  llvm::Error StartTrace(lldb::pid_t pid, lldb::tid_t tid, uint64_t buffer_size,
-                         bool enable_tsc, llvm::Optional<size_t> psb_period);
-
-  llvm::MutableArrayRef<uint8_t> GetAuxBuffer() const;
-  llvm::MutableArrayRef<uint8_t> GetDataBuffer() const;
-
-  IntelPTThreadTrace()
-      : m_mmap_meta(nullptr, munmap_delete(0)),
-        m_mmap_aux(nullptr, munmap_delete(0)), m_fd(nullptr, file_close()) {}
-
-public:
-  /// Get the content of /proc/cpuinfo that can be later used to decode traces.
-  static llvm::Expected<llvm::ArrayRef<uint8_t>> GetCPUInfo();
-
-  /// Start tracing a thread.
-  ///
-  /// See \a StartTrace.
-  ///
-  /// \return
   ///   A \a IntelPTThreadTrace instance if tracing was successful, or
   ///   an \a llvm::Error otherwise.
   static llvm::Expected<IntelPTThreadTraceUP>
   Create(lldb::pid_t pid, lldb::tid_t tid, size_t buffer_size, bool enable_tsc,
          llvm::Optional<size_t> psb_period);
+
+  /// Create a \a perf_event_attr configured for
+  /// an IntelPT event.
+  ///
+  /// \return
+  ///   A \a perf_event_attr if successful,
+  ///   or an \a llvm::Error otherwise.
+  static llvm::Expected<perf_event_attr>
+  CreateIntelPTPerfEventConfiguration(bool enable_tsc,
+                                      llvm::Optional<size_t> psb_period);
 
   /// Read the trace buffer of the currently traced thread.
   ///
@@ -146,11 +108,29 @@ public:
   /// \param[in] offset
   ///     The offset to begin reading the data in the cyclic buffer.
   static void ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
-                               llvm::MutableArrayRef<uint8_t> src,
+                               llvm::ArrayRef<uint8_t> src,
                                size_t src_cyc_index, size_t offset);
 
   /// Return the thread-specific part of the jLLDBTraceGetState packet.
   TraceThreadState GetState() const;
+
+private:
+  /// Construct new \a IntelPTThreadTrace. Users are supposed to create
+  /// instances of this class via the \a Create() method and not invoke this one
+  /// directly.
+  ///
+  /// \param[in] perf_event
+  ///   perf event configured for IntelPT.
+  ///
+  /// \param[in] tid
+  ///   The thread being traced.
+  IntelPTThreadTrace(PerfEvent &&perf_event, lldb::tid_t tid)
+      : m_perf_event(std::move(perf_event)), m_tid(tid) {}
+
+  /// perf event configured for IntelPT.
+  PerfEvent m_perf_event;
+  /// The thread being traced.
+  lldb::tid_t m_tid;
 };
 
 /// Manages a list of thread traces.

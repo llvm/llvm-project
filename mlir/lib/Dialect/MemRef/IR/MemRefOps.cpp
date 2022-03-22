@@ -311,24 +311,27 @@ struct AllocaScopeInliner : public OpRewritePattern<AllocaScopeOp> {
 
   LogicalResult matchAndRewrite(AllocaScopeOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op->getParentOp()->hasTrait<OpTrait::AutomaticAllocationScope>()) {
-      bool hasPotentialAlloca =
-          op->walk([&](Operation *alloc) {
-              if (alloc == op)
-                return WalkResult::advance();
-              if (isOpItselfPotentialAutomaticAllocation(alloc))
-                return WalkResult::interrupt();
+    bool hasPotentialAlloca =
+        op->walk<WalkOrder::PreOrder>([&](Operation *alloc) {
+            if (alloc == op)
               return WalkResult::advance();
-            }).wasInterrupted();
-      if (hasPotentialAlloca)
+            if (isOpItselfPotentialAutomaticAllocation(alloc))
+              return WalkResult::interrupt();
+            if (alloc->hasTrait<OpTrait::AutomaticAllocationScope>())
+              return WalkResult::skip();
+            return WalkResult::advance();
+          }).wasInterrupted();
+
+    // If this contains no potential allocation, it is always legal to
+    // inline. Otherwise, consider two conditions:
+    if (hasPotentialAlloca) {
+      // If the parent isn't an allocation scope, or we are not the last
+      // non-terminator op in the parent, we will extend the lifetime.
+      if (!op->getParentOp()->hasTrait<OpTrait::AutomaticAllocationScope>())
+        return failure();
+      if (!lastNonTerminatorInRegion(op))
         return failure();
     }
-
-    // Only apply to if this is this last non-terminator
-    // op in the block (lest lifetime be extended) of a one
-    // block region
-    if (!lastNonTerminatorInRegion(op))
-      return failure();
 
     Block *block = &op.getRegion().front();
     Operation *terminator = block->getTerminator();
@@ -756,6 +759,11 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
       if (attr.cast<IntegerAttr>().getInt() == 1)
         unusedDims.set(dim.index());
 
+  // Early exit for the case where the number of unused dims matches the number
+  // of ranks reduced.
+  if (unusedDims.count() + reducedType.getRank() == originalType.getRank())
+    return unusedDims;
+
   SmallVector<int64_t> originalStrides, candidateStrides;
   int64_t originalOffset, candidateOffset;
   if (failed(
@@ -956,14 +964,14 @@ void DmaStartOp::print(OpAsmPrinter &p) {
 //                       memref<1 x i32>
 //
 ParseResult DmaStartOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType srcMemRefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> srcIndexInfos;
-  OpAsmParser::OperandType dstMemRefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> dstIndexInfos;
-  OpAsmParser::OperandType numElementsInfo;
-  OpAsmParser::OperandType tagMemrefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> tagIndexInfos;
-  SmallVector<OpAsmParser::OperandType, 2> strideInfo;
+  OpAsmParser::UnresolvedOperand srcMemRefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> srcIndexInfos;
+  OpAsmParser::UnresolvedOperand dstMemRefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> dstIndexInfos;
+  OpAsmParser::UnresolvedOperand numElementsInfo;
+  OpAsmParser::UnresolvedOperand tagMemrefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> tagIndexInfos;
+  SmallVector<OpAsmParser::UnresolvedOperand, 2> strideInfo;
 
   SmallVector<Type, 3> types;
   auto indexType = parser.getBuilder().getIndexType();
@@ -1150,9 +1158,9 @@ LogicalResult GenericAtomicRMWOp::verify() {
 
 ParseResult GenericAtomicRMWOp::parse(OpAsmParser &parser,
                                       OperationState &result) {
-  OpAsmParser::OperandType memref;
+  OpAsmParser::UnresolvedOperand memref;
   Type memrefType;
-  SmallVector<OpAsmParser::OperandType, 4> ivs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> ivs;
 
   Type indexType = parser.getBuilder().getIndexType();
   if (parser.parseOperand(memref) ||
@@ -1338,8 +1346,8 @@ void PrefetchOp::print(OpAsmPrinter &p) {
 }
 
 ParseResult PrefetchOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType memrefInfo;
-  SmallVector<OpAsmParser::OperandType, 4> indexInfo;
+  OpAsmParser::UnresolvedOperand memrefInfo;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> indexInfo;
   IntegerAttr localityHint;
   MemRefType type;
   StringRef readOrWrite, cacheType;
@@ -1664,18 +1672,6 @@ computeReshapeCollapsedType(MemRefType type,
   return canonicalizeStridedLayout(
       MemRefType::Builder(type).setShape(newSizes).setLayout(
           AffineMapAttr::get(layout)));
-}
-
-void ExpandShapeOp::build(OpBuilder &b, OperationState &result, Value src,
-                          ArrayRef<ReassociationIndices> reassociation,
-                          ArrayRef<NamedAttribute> attrs) {
-  auto memRefType = src.getType().cast<MemRefType>();
-  auto resultType = computeReshapeCollapsedType(
-      memRefType, getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
-                      b.getContext(), reassociation)));
-  build(b, result, resultType, src, attrs);
-  result.addAttribute(getReassociationAttrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
 }
 
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
@@ -2431,7 +2427,7 @@ void TransposeOp::print(OpAsmPrinter &p) {
 }
 
 ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType in;
+  OpAsmParser::UnresolvedOperand in;
   AffineMap permutation;
   MemRefType srcType, dstType;
   if (parser.parseOperand(in) || parser.parseAffineMap(permutation) ||

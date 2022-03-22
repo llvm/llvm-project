@@ -1022,3 +1022,83 @@ func @nofoldShl2() -> i64 {
   %r = arith.shli %c1, %cm32 : i64
   return %r : i64
 }
+
+// CHECK-LABEL: @foldShru(
+// CHECK: %[[res:.+]] = arith.constant 2 : i64
+// CHECK: return %[[res]]
+func @foldShru() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c32 = arith.constant 2 : i64
+  %r = arith.shrui %c1, %c32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @foldShru2(
+// CHECK: %[[res:.+]] = arith.constant 9223372036854775807 : i64
+// CHECK: return %[[res]]
+func @foldShru2() -> i64 {
+  %c1 = arith.constant -2 : i64
+  %c32 = arith.constant 1 : i64
+  %r = arith.shrui %c1, %c32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShru(
+// CHECK: %[[res:.+]] = arith.shrui
+// CHECK: return %[[res]]
+func @nofoldShru() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c132 = arith.constant 132 : i64
+  %r = arith.shrui %c1, %c132 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShru2(
+// CHECK: %[[res:.+]] = arith.shrui
+// CHECK: return %[[res]]
+func @nofoldShru2() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %cm32 = arith.constant -32 : i64
+  %r = arith.shrui %c1, %cm32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @foldShrs(
+// CHECK: %[[res:.+]] = arith.constant 2 : i64
+// CHECK: return %[[res]]
+func @foldShrs() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c32 = arith.constant 2 : i64
+  %r = arith.shrsi %c1, %c32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @foldShrs2(
+// CHECK: %[[res:.+]] = arith.constant -1 : i64
+// CHECK: return %[[res]]
+func @foldShrs2() -> i64 {
+  %c1 = arith.constant -2 : i64
+  %c32 = arith.constant 1 : i64
+  %r = arith.shrsi %c1, %c32 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShrs(
+// CHECK: %[[res:.+]] = arith.shrsi
+// CHECK: return %[[res]]
+func @nofoldShrs() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %c132 = arith.constant 132 : i64
+  %r = arith.shrsi %c1, %c132 : i64
+  return %r : i64
+}
+
+// CHECK-LABEL: @nofoldShrs2(
+// CHECK: %[[res:.+]] = arith.shrsi
+// CHECK: return %[[res]]
+func @nofoldShrs2() -> i64 {
+  %c1 = arith.constant 8 : i64
+  %cm32 = arith.constant -32 : i64
+  %r = arith.shrsi %c1, %cm32 : i64
+  return %r : i64
+}

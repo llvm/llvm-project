@@ -32,6 +32,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LegacyPassNameParser.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
@@ -858,13 +859,13 @@ int main(int argc, char **argv) {
   // the (-check)-debugify passes.
   DebugifyCustomPassManager Passes;
   DebugifyStatsMap DIStatsMap;
-  DebugInfoPerPassMap DIPreservationMap;
+  DebugInfoPerPass DebugInfoBeforePass;
   if (DebugifyEach) {
     Passes.setDebugifyMode(DebugifyMode::SyntheticDebugInfo);
     Passes.setDIStatsMap(DIStatsMap);
   } else if (VerifyEachDebugInfoPreserve) {
     Passes.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
-    Passes.setDIPreservationMap(DIPreservationMap);
+    Passes.setDebugInfoBeforePass(DebugInfoBeforePass);
     if (!VerifyDIPreserveExport.empty())
       Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
   }
@@ -884,10 +885,10 @@ int main(int argc, char **argv) {
       Passes.setDIStatsMap(DIStatsMap);
       Passes.add(createDebugifyModulePass());
     } else if (VerifyDebugInfoPreserve) {
-      Passes.setDIPreservationMap(DIPreservationMap);
+      Passes.setDebugInfoBeforePass(DebugInfoBeforePass);
       Passes.add(createDebugifyModulePass(
           DebugifyMode::OriginalDebugInfo, "",
-          &(Passes.getDebugInfoPerPassMap())));
+          &(Passes.getDebugInfoPerPass())));
     }
   }
 
@@ -1026,7 +1027,7 @@ int main(int argc, char **argv) {
         Passes.setOrigDIVerifyBugsReportFilePath(VerifyDIPreserveExport);
       Passes.add(createCheckDebugifyModulePass(
           false, "", nullptr, DebugifyMode::OriginalDebugInfo,
-          &(Passes.getDebugInfoPerPassMap()), VerifyDIPreserveExport));
+          &(Passes.getDebugInfoPerPass()), VerifyDIPreserveExport));
     }
   }
 

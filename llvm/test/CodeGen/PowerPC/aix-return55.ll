@@ -5,9 +5,7 @@
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
 ; RUN: llvm-readobj -S %t.o | FileCheck --check-prefix=CHECKSECT %s
 
-; RUN: not --crash llc -mtriple powerpc64-ibm-aix-xcoff -filetype=obj < %s 2>&1 | \
-; RUN: FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 @a = global i64 320255973571806, align 8
 @d = global double 5.000000e+00, align 8

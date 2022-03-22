@@ -97,37 +97,12 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
                             getNumSymbolIds());
   for (const IntegerRelation &csA : integerRelations) {
     for (const IntegerRelation &csB : set.integerRelations) {
-      IntegerRelation csACopy = csA, csBCopy = csB;
-      csACopy.mergeLocalIds(csBCopy);
-      csACopy.append(csBCopy);
-      if (!csACopy.isEmpty())
-        result.unionInPlace(csACopy);
+      IntegerRelation intersection = csA.intersect(csB);
+      if (!intersection.isEmpty())
+        result.unionInPlace(intersection);
     }
   }
   return result;
-}
-
-/// Return `coeffs` with all the elements negated.
-static SmallVector<int64_t, 8> getNegatedCoeffs(ArrayRef<int64_t> coeffs) {
-  SmallVector<int64_t, 8> negatedCoeffs;
-  negatedCoeffs.reserve(coeffs.size());
-  for (int64_t coeff : coeffs)
-    negatedCoeffs.emplace_back(-coeff);
-  return negatedCoeffs;
-}
-
-/// Return the complement of the given inequality.
-///
-/// The complement of a_1 x_1 + ... + a_n x_ + c >= 0 is
-/// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
-/// since all the variables are constrained to be integers.
-static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
-  SmallVector<int64_t, 8> coeffs;
-  coeffs.reserve(ineq.size());
-  for (int64_t coeff : ineq)
-    coeffs.emplace_back(-coeff);
-  --coeffs.back();
-  return coeffs;
 }
 
 /// Return the set difference b \ s and accumulate the result into `result`.
@@ -437,9 +412,9 @@ private:
   /// within `a`.
   bool isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp);
 
-  /// Adds `disjunct` to `disjuncts` and removes the disjuncts at position `i`
-  /// and `j`. Updates `simplices` to reflect the changes. `i` and `j` cannot
-  /// be equal.
+  /// Removes redundant constraints from `disjunct`, adds it to `disjuncts` and
+  /// removes the disjuncts at position `i` and `j`. Updates `simplices` to
+  /// reflect the changes. `i` and `j` cannot be equal.
   void addCoalescedDisjunct(unsigned i, unsigned j,
                             const IntegerRelation &disjunct);
 
@@ -488,6 +463,7 @@ SetCoalescer::SetCoalescer(const PresburgerRelation &s) {
   simplices.reserve(s.getNumDisjuncts());
   // Note that disjuncts.size() changes during the loop.
   for (unsigned i = 0; i < disjuncts.size();) {
+    disjuncts[i].removeRedundantConstraints();
     Simplex simp(disjuncts[i]);
     if (simp.isEmpty()) {
       disjuncts[i] = disjuncts[disjuncts.size() - 1];
@@ -569,10 +545,11 @@ void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,
     disjuncts[i] = disjuncts[n - 2];
     disjuncts.pop_back();
     disjuncts[n - 2] = disjunct;
+    disjuncts[n - 2].removeRedundantConstraints();
 
     simplices[i] = simplices[n - 2];
     simplices.pop_back();
-    simplices[n - 2] = Simplex(disjunct);
+    simplices[n - 2] = Simplex(disjuncts[n - 2]);
 
   } else {
     // Other possible edge cases are correct since for `j` or `i` == `n` -
@@ -584,11 +561,12 @@ void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,
     disjuncts[j] = disjuncts[n - 2];
     disjuncts.pop_back();
     disjuncts[n - 2] = disjunct;
+    disjuncts[n - 2].removeRedundantConstraints();
 
     simplices[i] = simplices[n - 1];
     simplices[j] = simplices[n - 2];
     simplices.pop_back();
-    simplices[n - 2] = Simplex(disjunct);
+    simplices[n - 2] = Simplex(disjuncts[n - 2]);
   }
 }
 
