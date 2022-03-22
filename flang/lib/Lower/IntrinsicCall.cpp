@@ -1036,6 +1036,8 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"sign", "llvm.copysign.f64", genF64F64F64FuncType},
     {"sign", "llvm.copysign.f80", genF80F80F80FuncType},
     {"sign", "llvm.copysign.f128", genF128F128F128FuncType},
+    {"sqrt", "llvm.sqrt.f32", genF32F32FuncType},
+    {"sqrt", "llvm.sqrt.f64", genF64F64FuncType},
 };
 
 // This helper class computes a "distance" between two function types.
