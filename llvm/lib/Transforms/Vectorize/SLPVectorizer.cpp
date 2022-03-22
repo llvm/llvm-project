@@ -778,12 +778,13 @@ static bool areAllOperandsNonInsts(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
-  return !mayBeMemoryDependent(*I) && all_of(I->operands(), [I](Value *V) {
-    auto *IO = dyn_cast<Instruction>(V);
-    if (!IO)
-      return true;
-    return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-  });
+  return !mayHaveNonDefUseDependency(*I) &&
+    all_of(I->operands(), [I](Value *V) {
+      auto *IO = dyn_cast<Instruction>(V);
+      if (!IO)
+        return true;
+      return isa<PHINode>(IO) || IO->getParent() != I->getParent();
+    });
 }
 
 /// Checks if the provided value does not require scheduling. It does not

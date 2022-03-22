@@ -4643,7 +4643,7 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
   }
 }
 
-bool llvm::mayBeMemoryDependent(const Instruction &I) {
+bool llvm::mayHaveNonDefUseDependency(const Instruction &I) {
   return I.mayReadOrWriteMemory() || !isSafeToSpeculativelyExecute(&I);
 }
 
