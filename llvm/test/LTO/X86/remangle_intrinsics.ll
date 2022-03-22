@@ -1,8 +1,6 @@
-; UNSUPPORTED: powerpc64-ibm-aix
 ; RUN: llvm-as < %s > %t1
 ; RUN: llvm-as < %p/Inputs/remangle_intrinsics.ll > %t2
 ; RUN: llvm-lto %t1 %t2 | FileCheck %s
-; REQUIRES: default_triple
 
 ; We have "struct.rtx_def" type in both modules being LTOed. Both modules use
 ; an overloaded intrinsic which has this type in its signature/name. When
@@ -11,6 +9,8 @@
 ; If we didn't do that verifier would complain.
 
 ; CHECK: Wrote native object file
+
+target triple = "x86_64-unknown-linux-gnu"
 
 %struct.rtx_def = type { i16 }
 

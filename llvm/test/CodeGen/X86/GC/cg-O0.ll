@@ -1,5 +1,4 @@
-; RUN: llc < %s -O0
-; REQUIRES: default_triple
+; RUN: llc -mtriple=x86_64 < %s -O0
 
 define i32 @main() {
 entry:

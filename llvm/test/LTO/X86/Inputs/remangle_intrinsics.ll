@@ -1,3 +1,5 @@
+target triple = "x86_64-unknown-linux-gnu"
+
 %struct.rtx_def = type { i16, i16 }
 
 define void @bar(%struct.rtx_def* %a, i8 %b, i32 %c) {

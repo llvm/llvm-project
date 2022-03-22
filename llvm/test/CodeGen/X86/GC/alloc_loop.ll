@@ -1,6 +1,4 @@
-; RUN: llc < %s
-; REQUIRES: default_triple
-
+; RUN: llc -mtriple=x86_64 < %s
 
 declare i8* @llvm_gc_allocate(i32)
 declare void @llvm_gc_initialize(i32)
