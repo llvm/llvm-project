@@ -116,6 +116,9 @@ Changes in existing checks
   <clang-tidy/checks/readability-const-return-type>` when a pure virtual function
   overrided has a const return type. Removed the fix for a virtual function.
 
+- Fixed a false positive in :doc:`misc-redundant-expression <clang-tidy/checks/misc-redundant-expression>`
+  involving overloaded comparison operators.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
