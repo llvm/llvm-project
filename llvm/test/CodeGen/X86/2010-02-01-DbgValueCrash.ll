@@ -1,5 +1,4 @@
-; RUN: llc -O1 < %s
-; REQUIRES: default_triple
+; RUN: llc -mtriple=x86_64 -O1 < %s
 
 ; ModuleID = 'pr6157.bc'
 ; formerly crashed in SelectionDAGBuilder

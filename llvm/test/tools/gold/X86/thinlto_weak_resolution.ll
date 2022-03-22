@@ -17,6 +17,7 @@
 ; set linkage of odr functions to available_externally, and convert
 ; linkonce and weak to declarations).
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck --check-prefix=OPT2 %s
+; OPT2: target triple =
 ; OPT2-NOT: @
 
 ; RUN: llvm-dis %t.o.3.import.bc -o - | FileCheck --check-prefix=IMPORT %s
