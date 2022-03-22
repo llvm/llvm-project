@@ -568,8 +568,8 @@ define void @store_extractelt_v4i32(<4 x i32>* %x, i32* %p) nounwind {
 }
 
 ; FIXME: Use vse64.v on RV32 to avoid two scalar extracts and two scalar stores.
-define void @store_extractelt_v4i64(<2 x i64>* %x, i64* %p) nounwind {
-; RV32-LABEL: store_extractelt_v4i64:
+define void @store_extractelt_v2i64(<2 x i64>* %x, i64* %p) nounwind {
+; RV32-LABEL: store_extractelt_v2i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV32-NEXT:    vle64.v v8, (a0)
@@ -583,7 +583,7 @@ define void @store_extractelt_v4i64(<2 x i64>* %x, i64* %p) nounwind {
 ; RV32-NEXT:    sw a0, 4(a1)
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: store_extractelt_v4i64:
+; RV64-LABEL: store_extractelt_v2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; RV64-NEXT:    vle64.v v8, (a0)
@@ -597,8 +597,8 @@ define void @store_extractelt_v4i64(<2 x i64>* %x, i64* %p) nounwind {
   ret void
 }
 
-define void @store_extractelt_v4f64(<2 x double>* %x, double* %p) nounwind {
-; CHECK-LABEL: store_extractelt_v4f64:
+define void @store_extractelt_v2f64(<2 x double>* %x, double* %p) nounwind {
+; CHECK-LABEL: store_extractelt_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)

@@ -103,7 +103,7 @@ define void @buildvec_vid_step2_add1_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x i8>
 ; FIXME: This could generate vrsub.vi but the (ISD::MUL X, -1) we generate
 ; while lowering ISD::BUILD_VECTOR is custom-lowered to RISCVISD::MUL_VL before
 ; being combined.
-define void @buildvec_vid_stepn1_add0_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x
+define void @buildvec_vid_stepn1_add0_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x i8>* %z2, <4 x i8>* %z3) {
 ; CHECK-LABEL: buildvec_vid_stepn1_add0_v4i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
@@ -114,7 +114,6 @@ define void @buildvec_vid_stepn1_add0_v4i8(<4 x i8>* %z0, <4 x i8>* %z1, <4 x
 ; CHECK-NEXT:    vse8.v v8, (a2)
 ; CHECK-NEXT:    vse8.v v8, (a3)
 ; CHECK-NEXT:    ret
-i8>* %z2, <4 x i8>* %z3) {
   store <4 x i8> <i8 0, i8 -1, i8 -2, i8 -3>, <4 x i8>* %z0
   store <4 x i8> <i8 undef, i8 -1, i8 -2, i8 -3>, <4 x i8>* %z1
   store <4 x i8> <i8 undef, i8 undef, i8 -2, i8 -3>, <4 x i8>* %z2
