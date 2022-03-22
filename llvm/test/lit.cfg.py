@@ -299,7 +299,7 @@ if config.libcxx_used:
 if config.target_triple:
     config.available_features.add('default_triple')
     # Direct object generation
-    if not 'xcore' in config.target_triple:
+    if not config.target_triple.startswith(("nvptx", "xcore")):
         config.available_features.add('object-emission')
 
 import subprocess

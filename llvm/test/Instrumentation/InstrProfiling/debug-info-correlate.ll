@@ -2,7 +2,7 @@
 ; RUN: FileCheck < %t.ll --implicit-check-not "{{__llvm_prf_data|__llvm_prf_names}}" %s
 ; RUN: %llc_dwarf -O0 -filetype=obj < %t.ll | llvm-dwarfdump - | FileCheck --implicit-check-not "{{DW_TAG|NULL}}" %s --check-prefix CHECK-DWARF
 
-; REQUIRES: system-linux
+; REQUIRES: system-linux, object-emission
 
 @__profn_foo = private constant [3 x i8] c"foo"
 ; CHECK:      @__profc_foo =
