@@ -179,6 +179,41 @@ public:
     return true;
   }
 
+  bool VisitRecordDecl(const RecordDecl *Decl) {
+    if (!Decl->isCompleteDefinition())
+      return true;
+
+    // Skip C++ structs/classes/unions
+    // TODO: support C++ records
+    if (isa<CXXRecordDecl>(Decl))
+      return true;
+
+    // Collect symbol information.
+    StringRef Name = Decl->getName();
+    StringRef USR = API.recordUSR(Decl);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    AvailabilityInfo Availability = getAvailability(Decl);
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the struct.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForStruct(Decl);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+    StructRecord *StructRecord = API.addStruct(
+        Name, USR, Loc, Availability, Comment, Declaration, SubHeading);
+
+    // Now collect information about the fields in this struct.
+    recordStructFields(StructRecord, Decl->fields());
+
+    return true;
+  }
+
 private:
   /// Get availability information of the declaration \p D.
   AvailabilityInfo getAvailability(const Decl *D) const {
@@ -235,6 +270,33 @@ private:
 
       API.addEnumConstant(EnumRecord, Name, USR, Loc, Availability, Comment,
                           Declaration, SubHeading);
+    }
+  }
+
+  /// Collect API information for the struct fields and associate with the
+  /// parent struct.
+  void recordStructFields(StructRecord *StructRecord,
+                          const RecordDecl::field_range Fields) {
+    for (const auto *Field : Fields) {
+      // Collect symbol information.
+      StringRef Name = Field->getName();
+      StringRef USR = API.recordUSR(Field);
+      PresumedLoc Loc =
+          Context.getSourceManager().getPresumedLoc(Field->getLocation());
+      AvailabilityInfo Availability = getAvailability(Field);
+      DocComment Comment;
+      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Field))
+        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                                Context.getDiagnostics());
+
+      // Build declaration fragments and sub-heading for the struct field.
+      DeclarationFragments Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForField(Field);
+      DeclarationFragments SubHeading =
+          DeclarationFragmentsBuilder::getSubHeading(Field);
+
+      API.addStructField(StructRecord, Name, USR, Loc, Availability, Comment,
+                         Declaration, SubHeading);
     }
   }
 

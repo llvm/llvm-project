@@ -84,6 +84,33 @@ EnumRecord *APISet::addEnum(StringRef Name, StringRef USR, PresumedLoc Loc,
   return Result.first->second.get();
 }
 
+StructFieldRecord *APISet::addStructField(StructRecord *Struct, StringRef Name,
+                                          StringRef USR, PresumedLoc Loc,
+                                          const AvailabilityInfo &Availability,
+                                          const DocComment &Comment,
+                                          DeclarationFragments Declaration,
+                                          DeclarationFragments SubHeading) {
+  auto Record =
+      APIRecordUniquePtr<StructFieldRecord>(new (Allocator) StructFieldRecord{
+          Name, USR, Loc, Availability, Comment, Declaration, SubHeading});
+  return Struct->Fields.emplace_back(std::move(Record)).get();
+}
+
+StructRecord *APISet::addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
+                                const AvailabilityInfo &Availability,
+                                const DocComment &Comment,
+                                DeclarationFragments Declaration,
+                                DeclarationFragments SubHeading) {
+  auto Result = Structs.insert({Name, nullptr});
+  if (Result.second) {
+    // Create the record if it does not already exist.
+    auto Record = APIRecordUniquePtr<StructRecord>(new (Allocator) StructRecord{
+        Name, USR, Loc, Availability, Comment, Declaration, SubHeading});
+    Result.first->second = std::move(Record);
+  }
+  return Result.first->second.get();
+}
+
 StringRef APISet::recordUSR(const Decl *D) {
   SmallString<128> USR;
   index::generateUSRForDecl(D, USR);

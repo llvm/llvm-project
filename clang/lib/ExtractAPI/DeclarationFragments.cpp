@@ -430,6 +430,30 @@ DeclarationFragmentsBuilder::getFragmentsForEnum(const EnumDecl *EnumDecl) {
   return Fragments;
 }
 
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
+  DeclarationFragments After;
+  return getFragmentsForType(Field->getType(), Field->getASTContext(), After)
+      .appendSpace()
+      .append(Field->getName(), DeclarationFragments::FragmentKind::Identifier)
+      .append(std::move(After));
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
+  // TODO: After we support typedef records, if there's a typedef for this
+  // struct just use the declaration fragments of the typedef decl.
+
+  DeclarationFragments Fragments;
+  Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
+
+  if (!Record->getName().empty())
+    Fragments.appendSpace().append(
+        Record->getName(), DeclarationFragments::FragmentKind::Identifier);
+
+  return Fragments;
+}
+
 FunctionSignature
 DeclarationFragmentsBuilder::getFunctionSignature(const FunctionDecl *Func) {
   FunctionSignature Signature;

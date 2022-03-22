@@ -110,6 +110,9 @@ private:
   /// Serialize an enum record.
   void serializeEnumRecord(const EnumRecord &Record);
 
+  /// Serialize a struct record.
+  void serializeStructRecord(const StructRecord &Record);
+
 public:
   SymbolGraphSerializer(const APISet &API, StringRef ProductName,
                         APISerializerOption Options = {})
