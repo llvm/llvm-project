@@ -299,7 +299,12 @@ ElementCount VPIntrinsic::getStaticVectorLength() const {
   };
 
   Value *VPMask = getMaskParam();
-  assert(VPMask && "No mask param?");
+  if (!VPMask) {
+    assert((getIntrinsicID() == Intrinsic::vp_merge ||
+            getIntrinsicID() == Intrinsic::vp_select) &&
+           "Unexpected VP intrinsic without mask operand");
+    return GetVectorLengthOfType(getType());
+  }
   return GetVectorLengthOfType(VPMask->getType());
 }
 

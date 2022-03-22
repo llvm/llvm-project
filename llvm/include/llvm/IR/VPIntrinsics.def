@@ -397,6 +397,11 @@ HELPER_REGISTER_REDUCTION_SEQ_VP(vp_reduce_fmul, VP_REDUCE_FMUL,
 
 ///// Shuffles {
 
+// The mask 'cond' operand of llvm.vp.select and llvm.vp.merge are not reported
+// as masks with the BEGIN_REGISTER_VP_* macros.  This is because, unlike other
+// VP intrinsics, these two have a defined result on lanes where the mask is
+// false.
+//
 // llvm.vp.select(cond,on_true,on_false,vlen)
 BEGIN_REGISTER_VP(vp_select, None, 3, VP_SELECT, -1)
 VP_PROPERTY_FUNCTIONAL_OPC(Select)
