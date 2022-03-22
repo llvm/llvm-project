@@ -2,7 +2,7 @@
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad pack-paddings=1,1,0 run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=FILL
 // RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 pad-inputs-only run-enable-pass=false" -cse -canonicalize -split-input-file | FileCheck %s --check-prefix=INPUTS-ONLY
 
-// MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0] -> (7, -s0 + 12)>
+// MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 12, 7)>
 // MATMUL-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 7)>
 #map = affine_map<()[s0] -> (7, -s0 + 12)>
 
@@ -48,7 +48,7 @@ func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
 
 // -----
 
-// MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0] -> (7, -s0 + 25)>
+// MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 25, 7)>
 // MATMUL-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 7)>
 #map = affine_map<()[s0] -> (7, -s0 + 25)>
 
@@ -91,9 +91,9 @@ func @static_sizes_input_divisible(%arg0: tensor<24x12xf32>,
 
 // -----
 
-// MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0, s1] -> (5, -s0 + s1)>
-// MATMUL-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<()[s0, s1] -> (7, -s0 + s1)>
-// MATMUL-DAG: #[[MAP2:[0-9a-z]+]] = affine_map<()[s0, s1] -> (6, -s0 + s1)>
+// MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0, s1] -> (-s0 + s1, 5)>
+// MATMUL-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<()[s0, s1] -> (-s0 + s1, 7)>
+// MATMUL-DAG: #[[MAP2:[0-9a-z]+]] = affine_map<()[s0, s1] -> (-s0 + s1, 6)>
 // MATMUL-DAG: #[[MAP3:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 5)>
 // MATMUL-DAG: #[[MAP4:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 6)>
 
