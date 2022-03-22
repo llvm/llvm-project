@@ -11,10 +11,7 @@
 ; RUN: llvm-readobj --symbols %t.o | \
 ; RUN:   FileCheck --check-prefix=XCOFF32 %s
 
-; RUN: not --crash llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff \
-; RUN:     -mcpu=pwr4 -mattr=-altivec -filetype=obj -o %t.o 2>&1 < %s | \
-; RUN:   FileCheck --check-prefix=XCOFF64 %s
-; XCOFF64: LLVM ERROR: 64-bit XCOFF object files are not supported yet.
+;; FIXME: currently only fileHeader and sectionHeaders are supported in XCOFF64.
 
 @_ZN3Foo1aE = available_externally constant i32 -1
 

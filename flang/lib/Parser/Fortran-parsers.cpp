@@ -65,13 +65,16 @@ constexpr auto namedIntrinsicOperator{
     ".EQV." >> pure(DefinedOperator::IntrinsicOperator::EQV) ||
     ".NEQV." >> pure(DefinedOperator::IntrinsicOperator::NEQV) ||
     extension<LanguageFeature::XOROperator>(
+        "nonstandard usage: .XOR. spelling of .NEQV."_port_en_US,
         ".XOR." >> pure(DefinedOperator::IntrinsicOperator::NEQV)) ||
     extension<LanguageFeature::LogicalAbbreviations>(
+        "nonstandard usage: abbreviated logical operator"_port_en_US,
         ".N." >> pure(DefinedOperator::IntrinsicOperator::NOT) ||
-        ".A." >> pure(DefinedOperator::IntrinsicOperator::AND) ||
-        ".O." >> pure(DefinedOperator::IntrinsicOperator::OR) ||
-        extension<LanguageFeature::XOROperator>(
-            ".X." >> pure(DefinedOperator::IntrinsicOperator::NEQV)))};
+            ".A." >> pure(DefinedOperator::IntrinsicOperator::AND) ||
+            ".O." >> pure(DefinedOperator::IntrinsicOperator::OR) ||
+            extension<LanguageFeature::XOROperator>(
+                "nonstandard usage: .X. spelling of .NEQV."_port_en_US,
+                ".X." >> pure(DefinedOperator::IntrinsicOperator::NEQV)))};
 
 constexpr auto intrinsicOperator{
     "**" >> pure(DefinedOperator::IntrinsicOperator::Power) ||
@@ -83,6 +86,7 @@ constexpr auto intrinsicOperator{
     "-" >> pure(DefinedOperator::IntrinsicOperator::Subtract) ||
     "<=" >> pure(DefinedOperator::IntrinsicOperator::LE) ||
     extension<LanguageFeature::AlternativeNE>(
+        "nonstandard usage: <> spelling of /= or .NE."_port_en_US,
         "<>" >> pure(DefinedOperator::IntrinsicOperator::NE)) ||
     "<" >> pure(DefinedOperator::IntrinsicOperator::LT) ||
     "==" >> pure(DefinedOperator::IntrinsicOperator::EQ) ||
@@ -178,6 +182,7 @@ TYPE_CONTEXT_PARSER("declaration type spec"_en_US,
                        construct<DeclarationTypeSpec>("*" >>
                            construct<DeclarationTypeSpec::ClassStar>())) ||
         extension<LanguageFeature::DECStructures>(
+            "nonstandard usage: STRUCTURE"_port_en_US,
             construct<DeclarationTypeSpec>(
                 // As is also done for the STRUCTURE statement, the name of
                 // the structure includes the surrounding slashes to avoid
@@ -202,9 +207,11 @@ TYPE_CONTEXT_PARSER("intrinsic type spec"_en_US,
             "CHARACTER" >> maybe(Parser<CharSelector>{}))),
         construct<IntrinsicTypeSpec>(construct<IntrinsicTypeSpec::Logical>(
             "LOGICAL" >> maybe(kindSelector))),
-        extension<LanguageFeature::DoubleComplex>(construct<IntrinsicTypeSpec>(
-            "DOUBLE COMPLEX" >> construct<IntrinsicTypeSpec::DoubleComplex>())),
-        extension<LanguageFeature::Byte>(
+        extension<LanguageFeature::DoubleComplex>(
+            "nonstandard usage: DOUBLE COMPLEX"_port_en_US,
+            construct<IntrinsicTypeSpec>("DOUBLE COMPLEX" >>
+                construct<IntrinsicTypeSpec::DoubleComplex>())),
+        extension<LanguageFeature::Byte>("nonstandard usage: BYTE"_port_en_US,
             construct<IntrinsicTypeSpec>(construct<IntegerTypeSpec>(
                 "BYTE" >> construct<std::optional<KindSelector>>(pure(1)))))))
 
@@ -215,8 +222,10 @@ TYPE_PARSER(construct<IntegerTypeSpec>("INTEGER" >> maybe(kindSelector)))
 // Legacy extension: kind-selector -> * digit-string
 TYPE_PARSER(construct<KindSelector>(
                 parenthesized(maybe("KIND ="_tok) >> scalarIntConstantExpr)) ||
-    extension<LanguageFeature::StarKind>(construct<KindSelector>(
-        construct<KindSelector::StarSize>("*" >> digitString64 / spaceCheck))))
+    extension<LanguageFeature::StarKind>(
+        "nonstandard usage: TYPE*KIND syntax"_port_en_US,
+        construct<KindSelector>(construct<KindSelector::StarSize>(
+            "*" >> digitString64 / spaceCheck))))
 
 // R707 signed-int-literal-constant -> [sign] int-literal-constant
 TYPE_PARSER(sourced(construct<SignedIntLiteralConstant>(
@@ -251,7 +260,9 @@ constexpr auto signedRealLiteralConstant{
 // Extension: Q
 // R717 exponent -> signed-digit-string
 constexpr auto exponentPart{
-    ("ed"_ch || extension<LanguageFeature::QuadPrecision>("q"_ch)) >>
+    ("ed"_ch ||
+        extension<LanguageFeature::QuadPrecision>(
+            "nonstandard usage: Q exponent"_port_en_US, "q"_ch)) >>
     SignedDigitString{}};
 
 TYPE_CONTEXT_PARSER("REAL literal constant"_en_US,
@@ -431,6 +442,7 @@ TYPE_CONTEXT_PARSER("component declaration"_en_US,
 // The source field of the Name will be replaced with a distinct generated name.
 TYPE_CONTEXT_PARSER("%FILL item"_en_US,
     extension<LanguageFeature::DECStructures>(
+        "nonstandard usage: %FILL"_port_en_US,
         construct<FillDecl>(space >> sourced("%FILL" >> construct<Name>()),
             maybe(Parser<ComponentArraySpec>{}), maybe("*" >> charLength))))
 TYPE_PARSER(construct<ComponentOrFill>(Parser<ComponentDecl>{}) ||
@@ -475,10 +487,12 @@ constexpr auto initialDataTarget{indirect(designator)};
 TYPE_PARSER(construct<Initialization>("=>" >> nullInit) ||
     construct<Initialization>("=>" >> initialDataTarget) ||
     construct<Initialization>("=" >> constantExpr) ||
-    extension<LanguageFeature::SlashInitialization>(construct<Initialization>(
-        "/" >> nonemptyList("expected values"_err_en_US,
-                   indirect(Parser<DataStmtValue>{})) /
-            "/")))
+    extension<LanguageFeature::SlashInitialization>(
+        "nonstandard usage: /initialization/"_port_en_US,
+        construct<Initialization>(
+            "/" >> nonemptyList("expected values"_err_en_US,
+                       indirect(Parser<DataStmtValue>{})) /
+                "/")))
 
 // R745 private-components-stmt -> PRIVATE
 // R747 binding-private-stmt -> PRIVATE
@@ -608,10 +622,12 @@ TYPE_PARSER(
         nonemptyList("expected entity declarations"_err_en_US,
             entityDeclWithoutEqInit)) ||
     // PGI-only extension: comma in place of doubled colons
-    extension<LanguageFeature::MissingColons>(construct<TypeDeclarationStmt>(
-        declarationTypeSpec, defaulted("," >> nonemptyList(Parser<AttrSpec>{})),
-        withMessage("expected entity declarations"_err_en_US,
-            "," >> nonemptyList(entityDecl)))))
+    extension<LanguageFeature::MissingColons>(
+        "nonstandard usage: ',' in place of '::'"_port_en_US,
+        construct<TypeDeclarationStmt>(declarationTypeSpec,
+            defaulted("," >> nonemptyList(Parser<AttrSpec>{})),
+            withMessage("expected entity declarations"_err_en_US,
+                "," >> nonemptyList(entityDecl)))))
 
 // R802 attr-spec ->
 //        access-spec | ALLOCATABLE | ASYNCHRONOUS |
@@ -841,6 +857,7 @@ TYPE_PARSER(sourced(first(construct<DataStmtConstant>(literalConstant),
     construct<DataStmtConstant>(signedRealLiteralConstant),
     construct<DataStmtConstant>(signedIntLiteralConstant),
     extension<LanguageFeature::SignedComplexLiteral>(
+        "nonstandard usage: signed COMPLEX literal"_port_en_US,
         construct<DataStmtConstant>(Parser<SignedComplexLiteralConstant>{})),
     construct<DataStmtConstant>(nullInit),
     construct<DataStmtConstant>(indirect(designator) / !"("_tok),
@@ -869,8 +886,10 @@ TYPE_CONTEXT_PARSER("PARAMETER statement"_en_US,
     construct<ParameterStmt>(
         "PARAMETER" >> parenthesized(nonemptyList(Parser<NamedConstantDef>{}))))
 TYPE_CONTEXT_PARSER("old style PARAMETER statement"_en_US,
-    extension<LanguageFeature::OldStyleParameter>(construct<OldParameterStmt>(
-        "PARAMETER" >> nonemptyList(Parser<NamedConstantDef>{}))))
+    extension<LanguageFeature::OldStyleParameter>(
+        "nonstandard usage: PARAMETER without parentheses"_port_en_US,
+        construct<OldParameterStmt>(
+            "PARAMETER" >> nonemptyList(Parser<NamedConstantDef>{}))))
 
 // R852 named-constant-def -> named-constant = constant-expr
 TYPE_PARSER(construct<NamedConstantDef>(namedConstant, "=" >> constantExpr))
@@ -1024,6 +1043,7 @@ TYPE_CONTEXT_PARSER("designator"_en_US,
 constexpr auto percentOrDot{"%"_tok ||
     // legacy VAX extension for RECORD field access
     extension<LanguageFeature::DECStructures>(
+        "nonstandard usage: component access with '.' in place of '%'"_port_en_US,
         "."_tok / lookAhead(OldStructureComponentName{}))};
 
 // R902 variable -> designator | function-reference
@@ -1184,10 +1204,12 @@ TYPE_PARSER(beginDirective >>
                           maybe(("="_tok || ":"_tok) >> digitString64))))) /
         endDirective)
 
-TYPE_PARSER(extension<LanguageFeature::CrayPointer>(construct<BasedPointerStmt>(
-    "POINTER" >> nonemptyList("expected POINTER associations"_err_en_US,
-                     construct<BasedPointer>("(" >> objectName / ",",
-                         objectName, maybe(Parser<ArraySpec>{}) / ")")))))
+TYPE_PARSER(extension<LanguageFeature::CrayPointer>(
+    "nonstandard usage: based POINTER"_port_en_US,
+    construct<BasedPointerStmt>(
+        "POINTER" >> nonemptyList("expected POINTER associations"_err_en_US,
+                         construct<BasedPointer>("(" >> objectName / ",",
+                             objectName, maybe(Parser<ArraySpec>{}) / ")")))))
 
 // Subtle: the name includes the surrounding slashes, which avoids
 // clashes with other uses of the name in the same scope.
@@ -1206,10 +1228,12 @@ TYPE_PARSER(construct<StructureField>(statement(StructureComponents{})) ||
     construct<StructureField>(indirect(nestedStructureDef)))
 
 TYPE_CONTEXT_PARSER("STRUCTURE definition"_en_US,
-    extension<LanguageFeature::DECStructures>(construct<StructureDef>(
-        statement(Parser<StructureStmt>{}), many(Parser<StructureField>{}),
-        statement(
-            construct<StructureDef::EndStructureStmt>("END STRUCTURE"_tok)))))
+    extension<LanguageFeature::DECStructures>(
+        "nonstandard usage: STRUCTURE"_port_en_US,
+        construct<StructureDef>(statement(Parser<StructureStmt>{}),
+            many(Parser<StructureField>{}),
+            statement(construct<StructureDef::EndStructureStmt>(
+                "END STRUCTURE"_tok)))))
 
 TYPE_CONTEXT_PARSER("UNION definition"_en_US,
     construct<Union>(statement(construct<Union::UnionStmt>("UNION"_tok)),

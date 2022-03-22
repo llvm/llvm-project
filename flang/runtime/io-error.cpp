@@ -27,7 +27,7 @@ void IoErrorHandler::SignalError(int iostatOrErrno, const char *msg, ...) {
       ioStat_ = IostatEor; // least priority
     }
   } else if (iostatOrErrno != IostatOk) {
-    if (flags_ & (hasIoStat | hasErr)) {
+    if (flags_ & (hasIoStat | hasIoMsg | hasErr)) {
       if (ioStat_ <= 0) {
         ioStat_ = iostatOrErrno; // priority over END=/EOR=
         if (msg && (flags_ & hasIoMsg)) {
@@ -75,41 +75,57 @@ void IoErrorHandler::SignalEnd() { SignalError(IostatEnd); }
 
 void IoErrorHandler::SignalEor() { SignalError(IostatEor); }
 
+void IoErrorHandler::SignalPendingError() {
+  int error{pendingError_};
+  pendingError_ = IostatOk;
+  SignalError(error);
+}
+
 bool IoErrorHandler::GetIoMsg(char *buffer, std::size_t bufferLength) {
   const char *msg{ioMsg_.get()};
   if (!msg) {
-    msg = IostatErrorString(ioStat_);
+    msg = IostatErrorString(ioStat_ == IostatOk ? pendingError_ : ioStat_);
   }
   if (msg) {
     ToFortranDefaultCharacter(buffer, bufferLength, msg);
     return true;
   }
 
-  char *newBuf;
   // Following code is taken from llvm/lib/Support/Errno.cpp
-  // in LLVM v9.0.1
+  // in LLVM v9.0.1 with inadequate modification for Fortran,
+  // since rectified.
+  bool ok{false};
 #if HAVE_STRERROR_R
   // strerror_r is thread-safe.
 #if defined(__GLIBC__) && defined(_GNU_SOURCE)
   // glibc defines its own incompatible version of strerror_r
   // which may not use the buffer supplied.
-  newBuf = ::strerror_r(ioStat_, buffer, bufferLength);
+  msg = ::strerror_r(ioStat_, buffer, bufferLength);
 #else
-  return ::strerror_r(ioStat_, buffer, bufferLength) == 0;
+  ok = ::strerror_r(ioStat_, buffer, bufferLength) == 0;
 #endif
 #elif HAVE_DECL_STRERROR_S // "Windows Secure API"
-  return ::strerror_s(buffer, bufferLength, ioStat_) == 0;
+  ok = ::strerror_s(buffer, bufferLength, ioStat_) == 0;
 #elif HAVE_STRERROR
   // Copy the thread un-safe result of strerror into
   // the buffer as fast as possible to minimize impact
   // of collision of strerror in multiple threads.
-  newBuf = strerror(ioStat_);
+  msg = strerror(ioStat_);
 #else
   // Strange that this system doesn't even have strerror
   return false;
 #endif
-  ::strncpy(buffer, newBuf, bufferLength - 1);
-  buffer[bufferLength - 1] = '\n';
-  return true;
+  if (msg) {
+    ToFortranDefaultCharacter(buffer, bufferLength, msg);
+    return true;
+  } else if (ok) {
+    std::size_t copied{std::strlen(buffer)};
+    if (copied < bufferLength) {
+      std::memset(buffer + copied, ' ', bufferLength - copied);
+    }
+    return true;
+  } else {
+    return false;
+  }
 }
 } // namespace Fortran::runtime::io

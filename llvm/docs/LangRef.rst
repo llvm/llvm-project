@@ -894,6 +894,11 @@ some can only be checked when producing an object file:
 * No global value in the expression can be a declaration, since that
   would require a relocation, which is not possible.
 
+* If either the alias or the aliasee may be replaced by a symbol outside the
+  module at link time or runtime, any optimization cannot replace the alias with
+  the aliasee, since the behavior may be different. The alias may be used as a
+  name guaranteed to point to the content in the current module.
+
 .. _langref_ifunc:
 
 IFuncs
@@ -3957,7 +3962,7 @@ allowing the '``or``' to be folded to -1.
     Safe:
       %A = %X     (or %Y)
       %B = 42     (or %Y)
-      %C = %Y     (if %Y is probably not poison; unsafe otherwise)
+      %C = %Y     (if %Y is provably not poison; unsafe otherwise)
     Unsafe:
       %A = undef
       %B = undef
@@ -4083,7 +4088,7 @@ operations such as :ref:`add <i_add>` with the ``nsw`` flag can produce
 a poison value.
 
 Most instructions return '``poison``' when one of their arguments is
-'``poison``'. A notable expection is the :ref:`select instruction <i_select>`.
+'``poison``'. A notable exception is the :ref:`select instruction <i_select>`.
 Propagation of poison can be stopped with the
 :ref:`freeze instruction <i_freeze>`.
 

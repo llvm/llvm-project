@@ -21,6 +21,7 @@
 #include "mlir/Tools/PDLL/ODS/Constraint.h"
 #include "mlir/Tools/PDLL/ODS/Context.h"
 #include "mlir/Tools/PDLL/ODS/Operation.h"
+#include "mlir/Tools/PDLL/Parser/CodeComplete.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -41,13 +42,15 @@ using namespace mlir::pdll;
 namespace {
 class Parser {
 public:
-  Parser(ast::Context &ctx, llvm::SourceMgr &sourceMgr)
-      : ctx(ctx), lexer(sourceMgr, ctx.getDiagEngine()),
+  Parser(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
+         CodeCompleteContext *codeCompleteContext)
+      : ctx(ctx), lexer(sourceMgr, ctx.getDiagEngine(), codeCompleteContext),
         curToken(lexer.lexToken()), valueTy(ast::ValueType::get(ctx)),
         valueRangeTy(ast::ValueRangeType::get(ctx)),
         typeTy(ast::TypeType::get(ctx)),
         typeRangeTy(ast::TypeRangeType::get(ctx)),
-        attrTy(ast::AttributeType::get(ctx)) {}
+        attrTy(ast::AttributeType::get(ctx)),
+        codeCompleteContext(codeCompleteContext) {}
 
   /// Try to parse a new module. Returns nullptr in the case of failure.
   FailureOr<ast::Module *> parseModule();
@@ -142,7 +145,8 @@ private:
   };
 
   FailureOr<ast::Decl *> parseTopLevelDecl();
-  FailureOr<ast::NamedAttributeDecl *> parseNamedAttributeDecl();
+  FailureOr<ast::NamedAttributeDecl *>
+  parseNamedAttributeDecl(Optional<StringRef> parentOpName);
 
   /// Parse an argument variable as part of the signature of a
   /// UserConstraintDecl or UserRewriteDecl.
@@ -248,10 +252,13 @@ private:
   /// existing constraints that have already been parsed for the same entity
   /// that will be constrained by this constraint. `allowInlineTypeConstraints`
   /// allows the use of inline Type constraints, e.g. `Value<valueType: Type>`.
+  /// If `allowNonCoreConstraints` is true, then complex (e.g. user defined
+  /// constraints) may be used with the variable.
   FailureOr<ast::ConstraintRef>
   parseConstraint(Optional<SMRange> &typeConstraint,
                   ArrayRef<ast::ConstraintRef> existingConstraints,
-                  bool allowInlineTypeConstraints);
+                  bool allowInlineTypeConstraints,
+                  bool allowNonCoreConstraints);
 
   /// Try to parse the constraint for a UserConstraintDecl/UserRewriteDecl
   /// argument or result variable. The constraints for these variables do not
@@ -335,10 +342,12 @@ private:
   /// `inferredType` is the type of the variable inferred by the constraints
   /// within the list, and is updated to the most refined type as determined by
   /// the constraints. Returns success if the constraint list is valid, failure
-  /// otherwise.
+  /// otherwise. If `allowNonCoreConstraints` is true, then complex (e.g. user
+  /// defined constraints) may be used with the variable.
   LogicalResult
   validateVariableConstraints(ArrayRef<ast::ConstraintRef> constraints,
-                              ast::Type &inferredType);
+                              ast::Type &inferredType,
+                              bool allowNonCoreConstraints = true);
   /// Validate a single reference to a constraint. `inferredType` contains the
   /// currently inferred variabled type and is refined within the type defined
   /// by the constraint. Returns success if the constraint is valid, failure
@@ -398,6 +407,29 @@ private:
   FailureOr<ast::RewriteStmt *>
   createRewriteStmt(SMRange loc, ast::Expr *rootOp,
                     ast::CompoundStmt *rewriteBody);
+
+  //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  /// The set of various code completion methods. Every completion method
+  /// returns `failure` to stop the parsing process after providing completion
+  /// results.
+
+  LogicalResult codeCompleteMemberAccess(ast::Expr *parentExpr);
+  LogicalResult codeCompleteAttributeName(Optional<StringRef> opName);
+  LogicalResult codeCompleteConstraintName(ast::Type inferredType,
+                                           bool allowNonCoreConstraints,
+                                           bool allowInlineTypeConstraints);
+  LogicalResult codeCompleteDialectName();
+  LogicalResult codeCompleteOperationName(StringRef dialectName);
+  LogicalResult codeCompletePatternMetadata();
+
+  void codeCompleteCallSignature(ast::Node *parent, unsigned currentNumArgs);
+  void codeCompleteOperationOperandsSignature(Optional<StringRef> opName,
+                                              unsigned currentNumOperands);
+  void codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+                                             unsigned currentNumResults);
 
   //===--------------------------------------------------------------------===//
   // Lexer Utilities
@@ -481,6 +513,9 @@ private:
 
   /// A counter used when naming anonymous constraints and rewrites.
   unsigned anonymousDeclNameCounter = 0;
+
+  /// The optional code completion context.
+  CodeCompleteContext *codeCompleteContext;
 };
 } // namespace
 
@@ -890,7 +925,12 @@ FailureOr<ast::Decl *> Parser::parseTopLevelDecl() {
   return decl;
 }
 
-FailureOr<ast::NamedAttributeDecl *> Parser::parseNamedAttributeDecl() {
+FailureOr<ast::NamedAttributeDecl *>
+Parser::parseNamedAttributeDecl(Optional<StringRef> parentOpName) {
+  // Check for name code completion.
+  if (curToken.is(Token::code_complete))
+    return codeCompleteAttributeName(parentOpName);
+
   std::string attrNameStr;
   if (curToken.isString())
     attrNameStr = curToken.getStringValue();
@@ -1380,6 +1420,10 @@ Parser::parsePatternDeclMetadata(ParsedPatternMetadata &metadata) {
   Optional<SMRange> hasBoundedRecursionLoc;
 
   do {
+    // Handle metadata code completion.
+    if (curToken.is(Token::code_complete))
+      return codeCompletePatternMetadata();
+
     if (curToken.isNot(Token::identifier))
       return emitError("expected pattern metadata identifier");
     StringRef metadataStr = curToken.getSpelling();
@@ -1488,7 +1532,8 @@ LogicalResult Parser::parseVariableDeclConstraintList(
   Optional<SMRange> typeConstraint;
   auto parseSingleConstraint = [&] {
     FailureOr<ast::ConstraintRef> constraint = parseConstraint(
-        typeConstraint, constraints, /*allowInlineTypeConstraints=*/true);
+        typeConstraint, constraints, /*allowInlineTypeConstraints=*/true,
+        /*allowNonCoreConstraints=*/true);
     if (failed(constraint))
       return failure();
     constraints.push_back(*constraint);
@@ -1509,7 +1554,8 @@ LogicalResult Parser::parseVariableDeclConstraintList(
 FailureOr<ast::ConstraintRef>
 Parser::parseConstraint(Optional<SMRange> &typeConstraint,
                         ArrayRef<ast::ConstraintRef> existingConstraints,
-                        bool allowInlineTypeConstraints) {
+                        bool allowInlineTypeConstraints,
+                        bool allowNonCoreConstraints) {
   auto parseTypeConstraint = [&](ast::Expr *&typeExpr) -> LogicalResult {
     if (!allowInlineTypeConstraints) {
       return emitError(
@@ -1611,6 +1657,17 @@ Parser::parseConstraint(Optional<SMRange> &typeConstraint,
         loc, "invalid reference to non-constraint", cstDecl->getLoc(),
         "see the definition of `" + constraintName + "` here");
   }
+    // Handle single entity constraint code completion.
+  case Token::code_complete: {
+    // Try to infer the current type for use by code completion.
+    ast::Type inferredType;
+    if (failed(validateVariableConstraints(existingConstraints, inferredType,
+                                           allowNonCoreConstraints)))
+      return failure();
+
+    return codeCompleteConstraintName(inferredType, allowNonCoreConstraints,
+                                      allowInlineTypeConstraints);
+  }
   default:
     break;
   }
@@ -1618,9 +1675,13 @@ Parser::parseConstraint(Optional<SMRange> &typeConstraint,
 }
 
 FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
+  // Constraint arguments may apply more complex constraints via the arguments.
+  bool allowNonCoreConstraints = parserContext == ParserContext::Constraint;
+
   Optional<SMRange> typeConstraint;
   return parseConstraint(typeConstraint, /*existingConstraints=*/llvm::None,
-                         /*allowInlineTypeConstraints=*/false);
+                         /*allowInlineTypeConstraints=*/false,
+                         allowNonCoreConstraints);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1707,6 +1768,12 @@ FailureOr<ast::Expr *> Parser::parseCallExpr(ast::Expr *parentExpr) {
   SmallVector<ast::Expr *> arguments;
   if (curToken.isNot(Token::r_paren)) {
     do {
+      // Handle code completion for the call arguments.
+      if (curToken.is(Token::code_complete)) {
+        codeCompleteCallSignature(parentExpr, arguments.size());
+        return failure();
+      }
+
       FailureOr<ast::Expr *> argument = parseExpr();
       if (failed(argument))
         return failure();
@@ -1770,6 +1837,10 @@ FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
   SMRange loc = curToken.getLoc();
   consumeToken(Token::dot);
 
+  // Check for code completion of the member name.
+  if (curToken.is(Token::code_complete))
+    return codeCompleteMemberAccess(parentExpr);
+
   // Parse the member name.
   Token memberNameTok = curToken;
   if (memberNameTok.isNot(Token::identifier, Token::integer) &&
@@ -1784,6 +1855,10 @@ FailureOr<ast::Expr *> Parser::parseMemberAccessExpr(ast::Expr *parentExpr) {
 FailureOr<ast::OpNameDecl *> Parser::parseOperationName(bool allowEmptyName) {
   SMRange loc = curToken.getLoc();
 
+  // Check for code completion for the dialect name.
+  if (curToken.is(Token::code_complete))
+    return codeCompleteDialectName();
+
   // Handle the case of an no operation name.
   if (curToken.isNot(Token::identifier) && !curToken.isKeyword()) {
     if (allowEmptyName)
@@ -1796,6 +1871,10 @@ FailureOr<ast::OpNameDecl *> Parser::parseOperationName(bool allowEmptyName) {
   // Otherwise, this is a literal operation name.
   if (failed(parseToken(Token::dot, "expected `.` after dialect namespace")))
     return failure();
+
+  // Check for code completion for the operation name.
+  if (curToken.is(Token::code_complete))
+    return codeCompleteOperationName(name);
 
   if (curToken.isNot(Token::identifier) && !curToken.isKeyword())
     return emitError("expected operation name after dialect namespace");
@@ -1843,6 +1922,7 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
       parseWrappedOperationName(allowEmptyName);
   if (failed(opNameDecl))
     return failure();
+  Optional<StringRef> opName = (*opNameDecl)->getName();
 
   // Functor used to create an implicit range variable, used for implicit "all"
   // operand or results variables.
@@ -1865,6 +1945,12 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
           ast::ValueRangeConstraintDecl::create(ctx, loc), valueRangeTy));
     }
   } else if (!consumeIf(Token::r_paren)) {
+    // Check for operand signature code completion.
+    if (curToken.is(Token::code_complete)) {
+      codeCompleteOperationOperandsSignature(opName, operands.size());
+      return failure();
+    }
+
     // If the operand list was specified and non-empty, parse the operands.
     do {
       FailureOr<ast::Expr *> operand = parseExpr();
@@ -1882,7 +1968,8 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
   SmallVector<ast::NamedAttributeDecl *> attributes;
   if (consumeIf(Token::l_brace)) {
     do {
-      FailureOr<ast::NamedAttributeDecl *> decl = parseNamedAttributeDecl();
+      FailureOr<ast::NamedAttributeDecl *> decl =
+          parseNamedAttributeDecl(opName);
       if (failed(decl))
         return failure();
       attributes.emplace_back(*decl);
@@ -1903,6 +1990,12 @@ FailureOr<ast::Expr *> Parser::parseOperationExpr() {
     // Handle the case of an empty result list.
     if (!consumeIf(Token::r_paren)) {
       do {
+        // Check for result signature code completion.
+        if (curToken.is(Token::code_complete)) {
+          codeCompleteOperationResultsSignature(opName, resultTypes.size());
+          return failure();
+        }
+
         FailureOr<ast::Expr *> resultTypeExpr = parseExpr();
         if (failed(resultTypeExpr))
           return failure();
@@ -2362,9 +2455,11 @@ Parser::createArgOrResultVariableDecl(StringRef name, SMRange loc,
 
 LogicalResult
 Parser::validateVariableConstraints(ArrayRef<ast::ConstraintRef> constraints,
-                                    ast::Type &inferredType) {
+                                    ast::Type &inferredType,
+                                    bool allowNonCoreConstraints) {
   for (const ast::ConstraintRef &ref : constraints)
-    if (failed(validateVariableConstraint(ref, inferredType)))
+    if (failed(validateVariableConstraint(ref, inferredType,
+                                          allowNonCoreConstraints)))
       return failure();
   return success();
 }
@@ -2785,11 +2880,77 @@ Parser::createRewriteStmt(SMRange loc, ast::Expr *rootOp,
 }
 
 //===----------------------------------------------------------------------===//
+// Code Completion
+//===----------------------------------------------------------------------===//
+
+LogicalResult Parser::codeCompleteMemberAccess(ast::Expr *parentExpr) {
+  ast::Type parentType = parentExpr->getType();
+  if (ast::OperationType opType = parentType.dyn_cast<ast::OperationType>())
+    codeCompleteContext->codeCompleteOperationMemberAccess(opType);
+  else if (ast::TupleType tupleType = parentType.dyn_cast<ast::TupleType>())
+    codeCompleteContext->codeCompleteTupleMemberAccess(tupleType);
+  return failure();
+}
+
+LogicalResult Parser::codeCompleteAttributeName(Optional<StringRef> opName) {
+  if (opName)
+    codeCompleteContext->codeCompleteOperationAttributeName(*opName);
+  return failure();
+}
+
+LogicalResult
+Parser::codeCompleteConstraintName(ast::Type inferredType,
+                                   bool allowNonCoreConstraints,
+                                   bool allowInlineTypeConstraints) {
+  codeCompleteContext->codeCompleteConstraintName(
+      inferredType, allowNonCoreConstraints, allowInlineTypeConstraints,
+      curDeclScope);
+  return failure();
+}
+
+LogicalResult Parser::codeCompleteDialectName() {
+  codeCompleteContext->codeCompleteDialectName();
+  return failure();
+}
+
+LogicalResult Parser::codeCompleteOperationName(StringRef dialectName) {
+  codeCompleteContext->codeCompleteOperationName(dialectName);
+  return failure();
+}
+
+LogicalResult Parser::codeCompletePatternMetadata() {
+  codeCompleteContext->codeCompletePatternMetadata();
+  return failure();
+}
+
+void Parser::codeCompleteCallSignature(ast::Node *parent,
+                                       unsigned currentNumArgs) {
+  ast::CallableDecl *callableDecl = tryExtractCallableDecl(parent);
+  if (!callableDecl)
+    return;
+
+  codeCompleteContext->codeCompleteCallSignature(callableDecl, currentNumArgs);
+}
+
+void Parser::codeCompleteOperationOperandsSignature(
+    Optional<StringRef> opName, unsigned currentNumOperands) {
+  codeCompleteContext->codeCompleteOperationOperandsSignature(
+      opName, currentNumOperands);
+}
+
+void Parser::codeCompleteOperationResultsSignature(Optional<StringRef> opName,
+                                                   unsigned currentNumResults) {
+  codeCompleteContext->codeCompleteOperationResultsSignature(opName,
+                                                             currentNumResults);
+}
+
+//===----------------------------------------------------------------------===//
 // Parser
 //===----------------------------------------------------------------------===//
 
-FailureOr<ast::Module *> mlir::pdll::parsePDLAST(ast::Context &ctx,
-                                                 llvm::SourceMgr &sourceMgr) {
-  Parser parser(ctx, sourceMgr);
+FailureOr<ast::Module *>
+mlir::pdll::parsePDLAST(ast::Context &ctx, llvm::SourceMgr &sourceMgr,
+                        CodeCompleteContext *codeCompleteContext) {
+  Parser parser(ctx, sourceMgr, codeCompleteContext);
   return parser.parseModule();
 }

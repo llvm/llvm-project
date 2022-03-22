@@ -463,7 +463,6 @@ FUNCTION_PASS_WITH_PARAMS("print<stack-lifetime>",
 #ifndef LOOPNEST_PASS
 #define LOOPNEST_PASS(NAME, CREATE_PASS)
 #endif
-LOOPNEST_PASS("lnicm", LNICMPass())
 LOOPNEST_PASS("loop-flatten", LoopFlattenPass())
 LOOPNEST_PASS("loop-interchange", LoopInterchangePass())
 LOOPNEST_PASS("loop-unroll-and-jam", LoopUnrollAndJamPass())
@@ -486,7 +485,6 @@ LOOP_ANALYSIS("pass-instrumentation", PassInstrumentationAnalysis(PIC))
 LOOP_PASS("canon-freeze", CanonicalizeFreezeInLoopsPass())
 LOOP_PASS("dot-ddg", DDGDotPrinterPass())
 LOOP_PASS("invalidate<all>", InvalidateAllAnalysesPass())
-LOOP_PASS("licm", LICMPass())
 LOOP_PASS("loop-idiom", LoopIdiomRecognizePass())
 LOOP_PASS("loop-instsimplify", LoopInstSimplifyPass())
 LOOP_PASS("loop-rotate", LoopRotatePass())
@@ -519,4 +517,18 @@ LOOP_PASS_WITH_PARAMS("simple-loop-unswitch",
                       },
                       parseLoopUnswitchOptions,
                       "nontrivial;no-nontrivial;trivial;no-trivial")
+
+LOOP_PASS_WITH_PARAMS("licm", "LICMPass",
+                      [](LICMOptions Params) {
+                        return LICMPass(Params);
+                      },
+                      parseLICMOptions,
+                      "allowspeculation");
+
+LOOP_PASS_WITH_PARAMS("lnicm", "LNICMPass",
+                      [](LICMOptions Params) {
+                        return LNICMPass(Params);
+                      },
+                      parseLICMOptions,
+                      "allowspeculation");
 #undef LOOP_PASS_WITH_PARAMS

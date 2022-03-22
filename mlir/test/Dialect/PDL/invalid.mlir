@@ -8,7 +8,7 @@ pdl.pattern : benefit(1) {
   %op = operation "foo.op"
 
   // expected-error@below {{expected at least one argument}}
-  "pdl.apply_native_constraint"() {name = "foo", params = []} : () -> ()
+  "pdl.apply_native_constraint"() {name = "foo"} : () -> ()
   rewrite %op with "rewriter"
 }
 
@@ -22,7 +22,7 @@ pdl.pattern : benefit(1) {
   %op = operation "foo.op"
   rewrite %op {
     // expected-error@below {{expected at least one argument}}
-    "pdl.apply_native_rewrite"() {name = "foo", params = []} : () -> ()
+    "pdl.apply_native_rewrite"() {name = "foo"} : () -> ()
   }
 }
 
@@ -260,19 +260,6 @@ pdl.pattern : benefit(1) {
   }) {
     operand_segment_sizes = dense<1> : vector<2xi32>
   }: (!pdl.operation, !pdl.operation) -> ()
-}
-
-// -----
-
-pdl.pattern : benefit(1) {
-  %op = operation "foo.op"
-
-  // expected-error@below {{expected no external constant parameters when the rewrite is specified inline}}
-  "pdl.rewrite"(%op) ({
-    ^bb1:
-  }) {
-    operand_segment_sizes = dense<[1,0]> : vector<2xi32>,
-    externalConstParams = []} : (!pdl.operation) -> ()
 }
 
 // -----

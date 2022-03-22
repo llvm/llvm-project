@@ -2032,7 +2032,7 @@ public:
 
     unsigned i = 0;
     for (llvm::StringRef plugin_name =
-             PluginManager::GetTraceExporterPluginNameAtIndex(i++);
+             PluginManager::GetTraceExporterPluginNameAtIndex(i);
          !plugin_name.empty();
          plugin_name = PluginManager::GetTraceExporterPluginNameAtIndex(i++)) {
       if (ThreadTraceExportCommandCreator command_creator =
@@ -2147,6 +2147,10 @@ public:
         m_show_tsc = true;
         break;
       }
+      case 'C': {
+        m_continue = true;
+        break;
+      }
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -2159,6 +2163,7 @@ public:
       m_raw = false;
       m_forwards = false;
       m_show_tsc = false;
+      m_continue = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -2173,6 +2178,7 @@ public:
     bool m_raw;
     bool m_forwards;
     bool m_show_tsc;
+    bool m_continue;
   };
 
   CommandObjectTraceDumpInstructions(CommandInterpreter &interpreter)
@@ -2192,24 +2198,19 @@ public:
 
   llvm::Optional<std::string> GetRepeatCommand(Args &current_command_args,
                                                uint32_t index) override {
-    current_command_args.GetCommandString(m_repeat_command);
-    m_create_repeat_command_just_invoked = true;
-    return m_repeat_command;
+    std::string cmd;
+    current_command_args.GetCommandString(cmd);
+    if (cmd.find("--continue") == std::string::npos)
+      cmd += " --continue";
+    return cmd;
   }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    if (!IsRepeatCommand())
+    if (!m_options.m_continue)
       m_dumpers.clear();
 
-    bool status = CommandObjectIterateOverThreads::DoExecute(args, result);
-
-    m_create_repeat_command_just_invoked = false;
-    return status;
-  }
-
-  bool IsRepeatCommand() {
-    return !m_repeat_command.empty() && !m_create_repeat_command_just_invoked;
+    return CommandObjectIterateOverThreads::DoExecute(args, result);
   }
 
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
@@ -2249,10 +2250,6 @@ protected:
   }
 
   CommandOptions m_options;
-
-  // Repeat command helpers
-  std::string m_repeat_command;
-  bool m_create_repeat_command_just_invoked = false;
   std::map<lldb::tid_t, std::unique_ptr<TraceInstructionDumper>> m_dumpers;
 };
 

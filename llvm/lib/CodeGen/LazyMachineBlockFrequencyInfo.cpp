@@ -88,7 +88,7 @@ LazyMachineBlockFrequencyInfoPass::calculateIfNotAvailable() const {
 
   OwnedMBFI = std::make_unique<MachineBlockFrequencyInfo>();
   OwnedMBFI->calculate(*MF, MBPI, *MLI);
-  return *OwnedMBFI.get();
+  return *OwnedMBFI;
 }
 
 bool LazyMachineBlockFrequencyInfoPass::runOnMachineFunction(

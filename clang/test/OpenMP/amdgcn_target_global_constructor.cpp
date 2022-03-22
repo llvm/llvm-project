@@ -93,13 +93,13 @@ S A;
 // CHECK: attributes #3 = { convergent
 // CHECK: attributes #4 = { convergent
 //.
-// CHECK: !0 = !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_ctor", i32 19, i32 1}
-// CHECK: !1 = !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_dtor", i32 19, i32 2}
-// CHECK: !2 = !{i32 1, !"A", i32 0, i32 0}
-// CHECK: !3 = !{void ()* @__omp_offloading_{{.*}}_ctor, !"kernel", i32 1}
-// CHECK: !4 = !{void ()* @__omp_offloading_{{.*}}_dtor, !"kernel", i32 1}
-// CHECK: !5 = !{i32 1, !"wchar_size", i32 4}
-// CHECK: !6 = !{i32 7, !"openmp", i32 50}
-// CHECK: !7 = !{i32 7, !"openmp-device", i32 50}
-// CHECK: !8 = !{!"clang version
+// CHECK-DAG: !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_ctor", i32 19, i32 1}
+// CHECK-DAG: !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_dtor", i32 19, i32 2}
+// CHECK-DAG: !{i32 1, !"A", i32 0, i32 0}
+// CHECK-DAG: !{void ()* @__omp_offloading_{{.*}}_ctor, !"kernel", i32 1}
+// CHECK-DAG: !{void ()* @__omp_offloading_{{.*}}_dtor, !"kernel", i32 1}
+// CHECK-DAG: !{i32 1, !"wchar_size", i32 4}
+// CHECK-DAG: !{i32 7, !"openmp", i32 50}
+// CHECK-DAG: !{i32 7, !"openmp-device", i32 50}
+// CHECK-DAG: !{!"clang version
 //.

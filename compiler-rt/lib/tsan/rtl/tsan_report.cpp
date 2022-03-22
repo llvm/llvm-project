@@ -306,6 +306,9 @@ void PrintReport(const ReportDesc *rep) {
          (int)internal_getpid());
   Printf("%s", d.Default());
 
+  if (rep->typ == ReportTypeErrnoInSignal)
+    Printf("  Signal %u handler invoked at:\n", rep->signum);
+
   if (rep->typ == ReportTypeDeadlock) {
     char thrbuf[kThreadBufSize];
     Printf("  Cycle in lock order graph: ");

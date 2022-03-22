@@ -15,19 +15,16 @@ using namespace mlir;
 
 /// Custom constraint invoked from PDL.
 static LogicalResult customSingleEntityConstraint(PDLValue value,
-                                                  ArrayAttr constantParams,
                                                   PatternRewriter &rewriter) {
   Operation *rootOp = value.cast<Operation *>();
   return success(rootOp->getName().getStringRef() == "test.op");
 }
 static LogicalResult customMultiEntityConstraint(ArrayRef<PDLValue> values,
-                                                 ArrayAttr constantParams,
                                                  PatternRewriter &rewriter) {
-  return customSingleEntityConstraint(values[1], constantParams, rewriter);
+  return customSingleEntityConstraint(values[1], rewriter);
 }
 static LogicalResult
 customMultiEntityVariadicConstraint(ArrayRef<PDLValue> values,
-                                    ArrayAttr constantParams,
                                     PatternRewriter &rewriter) {
   if (llvm::any_of(values, [](const PDLValue &value) { return !value; }))
     return failure();
@@ -39,32 +36,29 @@ customMultiEntityVariadicConstraint(ArrayRef<PDLValue> values,
 }
 
 // Custom creator invoked from PDL.
-static void customCreate(ArrayRef<PDLValue> args, ArrayAttr constantParams,
-                         PatternRewriter &rewriter, PDLResultList &results) {
+static void customCreate(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
+                         PDLResultList &results) {
   results.push_back(rewriter.createOperation(
       OperationState(args[0].cast<Operation *>()->getLoc(), "test.success")));
 }
 static void customVariadicResultCreate(ArrayRef<PDLValue> args,
-                                       ArrayAttr constantParams,
                                        PatternRewriter &rewriter,
                                        PDLResultList &results) {
   Operation *root = args[0].cast<Operation *>();
   results.push_back(root->getOperands());
   results.push_back(root->getOperands().getTypes());
 }
-static void customCreateType(ArrayRef<PDLValue> args, ArrayAttr constantParams,
-                             PatternRewriter &rewriter,
+static void customCreateType(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
                              PDLResultList &results) {
   results.push_back(rewriter.getF32Type());
 }
 
 /// Custom rewriter invoked from PDL.
-static void customRewriter(ArrayRef<PDLValue> args, ArrayAttr constantParams,
-                           PatternRewriter &rewriter, PDLResultList &results) {
+static void customRewriter(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
+                           PDLResultList &results) {
   Operation *root = args[0].cast<Operation *>();
   OperationState successOpState(root->getLoc(), "test.success");
   successOpState.addOperands(args[1].cast<Value>());
-  successOpState.addAttribute("constantParams", constantParams);
   rewriter.createOperation(successOpState);
   rewriter.eraseOp(root);
 }

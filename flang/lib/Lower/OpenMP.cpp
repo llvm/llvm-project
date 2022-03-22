@@ -217,6 +217,9 @@ void Fortran::lower::genOpenMPConstruct(
                   &sectionsConstruct) {
             TODO(converter.getCurrentLocation(), "OpenMPSectionsConstruct");
           },
+          [&](const Fortran::parser::OpenMPSectionConstruct &sectionConstruct) {
+            TODO(converter.getCurrentLocation(), "OpenMPSectionConstruct");
+          },
           [&](const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
             TODO(converter.getCurrentLocation(), "OpenMPLoopConstruct");
           },

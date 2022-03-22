@@ -532,6 +532,7 @@ def Arith_ShRUIOp : Arith_IntBinaryOp<"shrui"> {
     %3 = arith.shrui %1, %2 : (i8, i8) -> i8   // %3 is 0b00010100
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -556,6 +557,7 @@ def Arith_ShRSIOp : Arith_IntBinaryOp<"shrsi"> {
     %5 = arith.shrsi %4, %2 : (i8, i8) -> i8   // %5 is 0b00001100
     ```
   }];
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

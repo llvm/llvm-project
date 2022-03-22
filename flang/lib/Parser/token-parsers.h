@@ -655,15 +655,20 @@ constexpr auto underscore{"_"_ch};
 // Cray and gfortran accept '$', but not as the first character.
 // Cray accepts '@' as well.
 constexpr auto otherIdChar{underscore / !"'\""_ch ||
-    extension<LanguageFeature::PunctuationInNames>("$@"_ch)};
+    extension<LanguageFeature::PunctuationInNames>(
+        "nonstandard usage: punctuation in name"_port_en_US, "$@"_ch)};
 
 constexpr auto logicalTRUE{
     (".TRUE."_tok ||
-        extension<LanguageFeature::LogicalAbbreviations>(".T."_tok)) >>
+        extension<LanguageFeature::LogicalAbbreviations>(
+            "nonstandard usage: .T. spelling of .TRUE."_port_en_US,
+            ".T."_tok)) >>
     pure(true)};
 constexpr auto logicalFALSE{
     (".FALSE."_tok ||
-        extension<LanguageFeature::LogicalAbbreviations>(".F."_tok)) >>
+        extension<LanguageFeature::LogicalAbbreviations>(
+            "nonstandard usage: .F. spelling of .FALSE."_port_en_US,
+            ".F."_tok)) >>
     pure(false)};
 
 // deprecated: Hollerith literals

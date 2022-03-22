@@ -445,10 +445,9 @@ struct AttributeQuestion
 
 /// Apply a parameterized constraint to multiple position values.
 struct ConstraintQuestion
-    : public PredicateBase<
-          ConstraintQuestion, Qualifier,
-          std::tuple<StringRef, ArrayRef<Position *>, Attribute>,
-          Predicates::ConstraintQuestion> {
+    : public PredicateBase<ConstraintQuestion, Qualifier,
+                           std::tuple<StringRef, ArrayRef<Position *>>,
+                           Predicates::ConstraintQuestion> {
   using Base::Base;
 
   /// Return the name of the constraint.
@@ -457,17 +456,11 @@ struct ConstraintQuestion
   /// Return the arguments of the constraint.
   ArrayRef<Position *> getArgs() const { return std::get<1>(key); }
 
-  /// Return the constant parameters of the constraint.
-  ArrayAttr getParams() const {
-    return std::get<2>(key).dyn_cast_or_null<ArrayAttr>();
-  }
-
   /// Construct an instance with the given storage allocator.
   static ConstraintQuestion *construct(StorageUniquer::StorageAllocator &alloc,
                                        KeyTy key) {
     return Base::construct(alloc, KeyTy{alloc.copyInto(std::get<0>(key)),
-                                        alloc.copyInto(std::get<1>(key)),
-                                        std::get<2>(key)});
+                                        alloc.copyInto(std::get<1>(key))});
   }
 };
 
@@ -667,11 +660,9 @@ public:
   }
 
   /// Create a predicate that applies a generic constraint.
-  Predicate getConstraint(StringRef name, ArrayRef<Position *> pos,
-                          Attribute params) {
-    return {
-        ConstraintQuestion::get(uniquer, std::make_tuple(name, pos, params)),
-        TrueAnswer::get(uniquer)};
+  Predicate getConstraint(StringRef name, ArrayRef<Position *> pos) {
+    return {ConstraintQuestion::get(uniquer, std::make_tuple(name, pos)),
+            TrueAnswer::get(uniquer)};
   }
 
   /// Create a predicate comparing a value with null.

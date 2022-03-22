@@ -85,6 +85,10 @@ SourcePosition OpenMPCounterVisitor::getLocation(const OpenMPConstruct &c) {
                 },
                 c.u);
           },
+          [&](const OpenMPSectionConstruct &c) -> SourcePosition {
+            const CharBlock &source{c.source};
+            return (parsing->allCooked().GetSourcePositionRange(source))->first;
+          },
       },
       c.u);
 }
@@ -133,6 +137,9 @@ std::string OpenMPCounterVisitor::getName(const OpenMPConstruct &c) {
                       normalize_construct_name(source.ToString());
                 },
                 c.u);
+          },
+          [&](const OpenMPSectionConstruct &c) -> std::string {
+            return "section";
           },
           // OpenMPSectionsConstruct, OpenMPLoopConstruct,
           // OpenMPBlockConstruct, OpenMPCriticalConstruct Get the source from

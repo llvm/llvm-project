@@ -381,7 +381,7 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
     std::unique_ptr<AliasSetTracker> CurAST;
     if (!EnableMSSAInLoopSink) {
       CurAST = std::make_unique<AliasSetTracker>(AA);
-      computeAliasSet(L, *Preheader, *CurAST.get());
+      computeAliasSet(L, *Preheader, *CurAST);
     }
 
     // Note that we don't pass SCEV here because it is only used to invalidate
@@ -436,7 +436,7 @@ struct LegacyLoopSinkPass : public LoopPass {
       MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
     else {
       CurAST = std::make_unique<AliasSetTracker>(AA);
-      computeAliasSet(*L, *Preheader, *CurAST.get());
+      computeAliasSet(*L, *Preheader, *CurAST);
     }
 
     bool Changed = sinkLoopInvariantInstructions(

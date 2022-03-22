@@ -70,9 +70,6 @@ if(APPLE)
   set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
   set(LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
   set(LIBCXX_ABI_VERSION 2 CACHE STRING "")
-  set(DARWIN_ios_ARCHS arm64 CACHE STRING "")
-  set(DARWIN_iossim_ARCHS arm64 CACHE STRING "")
-  set(DARWIN_osx_ARCHS arm64;x86_64 CACHE STRING "")
 endif()
 
 if(WIN32)
@@ -287,6 +284,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-size
   llvm-strip
   llvm-symbolizer
+  llvm-undname
   llvm-xray
   sancov
   scan-build-py

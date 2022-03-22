@@ -77,7 +77,15 @@ public:
   // to interact with the state of the I/O statement in progress.
   // This design avoids virtual member functions and function pointers,
   // which may not have good support in some runtime environments.
+
+  // CompleteOperation() is the last opportunity to raise an I/O error.
+  // It is called by EndIoStatement(), but it can be invoked earlier to
+  // catch errors for (e.g.) GetIoMsg() and GetNewUnit().  If called
+  // more than once, it is a no-op.
+  void CompleteOperation();
+  // Completes an I/O statement and reclaims storage.
   int EndIoStatement();
+
   bool Emit(const char *, std::size_t, std::size_t elementBytes);
   bool Emit(const char *, std::size_t);
   bool Emit(const char16_t *, std::size_t chars);
@@ -234,11 +242,16 @@ private:
 };
 
 // Base class for all per-I/O statement state classes.
-struct IoStatementBase : public IoErrorHandler {
+class IoStatementBase : public IoErrorHandler {
+public:
   using IoErrorHandler::IoErrorHandler;
 
+  bool completedOperation() const { return completedOperation_; }
+
+  void CompleteOperation() { completedOperation_ = true; }
+  int EndIoStatement() { return GetIoStat(); }
+
   // These are default no-op backstops that can be overridden by descendants.
-  int EndIoStatement();
   bool Emit(const char *, std::size_t, std::size_t elementBytes);
   bool Emit(const char *, std::size_t);
   bool Emit(const char16_t *, std::size_t chars);
@@ -260,6 +273,9 @@ struct IoStatementBase : public IoErrorHandler {
   bool Inquire(InquiryKeywordHash, std::int64_t &);
 
   void BadInquiryKeywordHashCrash(InquiryKeywordHash);
+
+protected:
+  bool completedOperation_{false};
 };
 
 // Common state for list-directed & NAMELIST I/O, both internal & external
@@ -354,6 +370,7 @@ public:
       std::size_t formatLength, const char *sourceFile = nullptr,
       int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
+  void CompleteOperation();
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
@@ -392,6 +409,7 @@ public:
   ExternalFileUnit &unit() { return unit_; }
   MutableModes &mutableModes();
   ConnectionState &GetConnectionState();
+  void CompleteOperation();
   int EndIoStatement();
   ExternalFileUnit *GetExternalFileUnit() const { return &unit_; }
 
@@ -406,6 +424,7 @@ public:
   ExternalIoStatementState(
       ExternalFileUnit &, const char *sourceFile = nullptr, int sourceLine = 0);
   MutableModes &mutableModes() { return mutableModes_; }
+  void CompleteOperation();
   int EndIoStatement();
   bool Emit(const char *, std::size_t, std::size_t elementBytes);
   bool Emit(const char *, std::size_t);
@@ -435,6 +454,7 @@ public:
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,
       std::size_t formatLength, const char *sourceFile = nullptr,
       int sourceLine = 0);
+  void CompleteOperation();
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(
       IoStatementState &, int maxRepeat = 1) {
@@ -471,6 +491,7 @@ public:
   MutableModes &mutableModes();
   ConnectionState &GetConnectionState();
   ExternalFileUnit *GetExternalFileUnit() const;
+  void CompleteOperation();
   int EndIoStatement();
   bool Emit(const char *, std::size_t, std::size_t elementBytes);
   bool Emit(const char *, std::size_t);
@@ -493,6 +514,7 @@ public:
       std::size_t formatLength, const char *sourceFile = nullptr,
       int sourceLine = 0);
   MutableModes &mutableModes() { return mutableModes_; }
+  void CompleteOperation();
   int EndIoStatement();
   bool AdvanceRecord(int = 1);
   std::optional<DataEdit> GetNextDataEdit(
@@ -535,6 +557,8 @@ public:
   void set_convert(Convert convert) { convert_ = convert; } // CONVERT=
   void set_access(Access access) { access_ = access; } // ACCESS=
   void set_isUnformatted(bool yes = true) { isUnformatted_ = yes; } // FORM=
+
+  void CompleteOperation();
   int EndIoStatement();
 
 private:
@@ -567,6 +591,7 @@ public:
   IoStatementState &ioStatementState() { return ioStatementState_; }
   MutableModes &mutableModes() { return connection_.modes; }
   ConnectionState &GetConnectionState() { return connection_; }
+  void CompleteOperation();
   int EndIoStatement();
 
 protected:
@@ -674,6 +699,7 @@ public:
   ExternalMiscIoStatementState(ExternalFileUnit &unit, Which which,
       const char *sourceFile = nullptr, int sourceLine = 0)
       : ExternalIoStatementBase{unit, sourceFile, sourceLine}, which_{which} {}
+  void CompleteOperation();
   int EndIoStatement();
 
 private:
@@ -684,13 +710,14 @@ class ErroneousIoStatementState : public IoStatementBase {
 public:
   explicit ErroneousIoStatementState(
       Iostat iostat, const char *sourceFile = nullptr, int sourceLine = 0)
-      : IoStatementBase{sourceFile, sourceLine}, iostat_{iostat} {}
+      : IoStatementBase{sourceFile, sourceLine} {
+    SetPendingError(iostat);
+  }
   int EndIoStatement();
   ConnectionState &GetConnectionState() { return connection_; }
   MutableModes &mutableModes() { return connection_.modes; }
 
 private:
-  Iostat iostat_;
   ConnectionState connection_;
 };
 
