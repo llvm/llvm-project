@@ -479,6 +479,59 @@ mlir::SuccessorOperands BrOp::getSuccessorOperands(unsigned index) {
 Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
 
 //===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+ParseResult parseSwitchOp(
+    OpAsmParser &parser,
+    llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regionsRegions,
+    mlir::SmallVectorImpl<::mlir::OpAsmParser::UnresolvedOperand>
+        &case_valsOperands,
+    mlir::SmallVectorImpl<::mlir::OpAsmParser::UnresolvedOperand>
+        &case_kindsOperands) {
+  return ::mlir::success();
+}
+
+void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
+                   mlir::MutableArrayRef<::mlir::Region> regions,
+                   mlir::Operation::operand_range case_vals,
+                   mlir::Operation::operand_range case_kinds) {}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void SwitchOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  // If any index all the underlying regions branch back to the parent
+  // operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // for (auto &r : this->getRegions()) {
+    // If we can figure out the case stmt we are landing, this can be
+    // overly simplified.
+    // bool condition;
+    // if (auto condAttr = operands.front().dyn_cast_or_null<IntegerAttr>()) {
+    //   assert(0 && "not implemented");
+    //   (void)r;
+      // condition = condAttr.getValue().isOneValue();
+      // Add the successor regions using the condition.
+      // regions.push_back(RegionSuccessor(condition ? &thenRegion() :
+      // elseRegion));
+      // return;
+    // }
+  // }
+
+  // If the condition isn't constant, all regions may be executed.
+  for (auto &r : this->getRegions())
+    regions.push_back(RegionSuccessor(&r));
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
