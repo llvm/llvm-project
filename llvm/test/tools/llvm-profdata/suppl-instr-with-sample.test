@@ -93,6 +93,14 @@ MIX5-NEXT: Maximum internal block count: 2000
 MIX5-NEXT: Total number of blocks: 9
 MIX5-NEXT: Total count: 6525
 MIX5-NEXT: Detailed summary:
+MIX5-NEXT: 1 blocks with count >= 3000 account for 1 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 10 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 20 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 30 percentage of the total counts.
+MIX5-NEXT: 1 blocks with count >= 3000 account for 40 percentage of the total counts.
+MIX5-NEXT: 2 blocks with count >= 2000 account for 50 percentage of the total counts.
+MIX5-NEXT: 2 blocks with count >= 2000 account for 60 percentage of the total counts.
+MIX5-NEXT: 2 blocks with count >= 2000 account for 70 percentage of the total counts.
 MIX5-NEXT: 3 blocks with count >= 1000 account for 80 percentage of the total counts.
 MIX5-NEXT: 3 blocks with count >= 1000 account for 90 percentage of the total counts.
 MIX5-NEXT: 4 blocks with count >= 500 account for 95 percentage of the total counts.
@@ -100,3 +108,4 @@ MIX5-NEXT: 4 blocks with count >= 500 account for 99 percentage of the total cou
 MIX5-NEXT: 6 blocks with count >= 12 account for 99.9 percentage of the total counts.
 MIX5-NEXT: 6 blocks with count >= 12 account for 99.99 percentage of the total counts.
 MIX5-NEXT: 6 blocks with count >= 12 account for 99.999 percentage of the total counts.
+MIX5-NEXT: 6 blocks with count >= 12 account for 99.9999 percentage of the total counts.
