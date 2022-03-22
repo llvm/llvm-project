@@ -15,7 +15,9 @@
 #define LLVM_PROFILEDATA_INSTRPROFWRITER_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/Support/Endian.h"
@@ -41,7 +43,7 @@ private:
 
   // A map to hold memprof data per function. The lower 64 bits obtained from
   // the md5 hash of the function name is used to index into the map.
-  memprof::FunctionMemProfMap MemProfData;
+  llvm::MapVector<GlobalValue::GUID, memprof::MemProfRecord> MemProfData;
 
   // An enum describing the attributes of the profile.
   InstrProfKind ProfileKind = InstrProfKind::Unknown;
@@ -63,7 +65,8 @@ public:
     addRecord(std::move(I), 1, Warn);
   }
 
-  void addRecord(const ::llvm::memprof::MemProfRecord &MR,
+  void addRecord(const GlobalValue::GUID Id,
+                 const memprof::MemProfRecord &Record,
                  function_ref<void(Error)> Warn);
 
   /// Merge existing function counts from the given writer.
