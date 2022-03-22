@@ -402,6 +402,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
     llvm_unreachable("target teams loop directive not supported yet.");
     break;
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+    llvm_unreachable("parallel loop directive not supported yet.");
+    break;
   }
 }
 

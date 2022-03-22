@@ -2607,6 +2607,12 @@ void ASTStmtWriter::VisitOMPTargetTeamsGenericLoopDirective(
   Code = serialization::STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPParallelGenericLoopDirective(
+    OMPParallelGenericLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE;
+}
+
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//

@@ -725,3 +725,25 @@ void targetteamsloop(int argc) {
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
+
+// CHECK-LABEL:  void parallelloop(int argc)
+void parallelloop(int argc) {
+  int x, cond, fp, rd;
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#PFB:]]: x
+// CHECK-DAG:  [[#PFB+1]]: [B3.[[#PFB]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PFB+2]]: argc
+// CHECK-DAG:  [[#PFB+3]]: [B3.[[#PFB+2]]] = [B3.[[#PFB+1]]]
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#PF:]]: cond
+// CHECK-DAG:  [[#PF+1]]: [B1.[[#PF]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#PF+2]]: [B1.[[#PF+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-DAG:  [[#PF+3]]: fp
+// CHECK-DAG:  [[#PF+4]]: rd
+// CHECK-DAG:  [[#PF+5]]: #pragma omp parallel loop if(cond) firstprivate(fp) reduction(&: rd)
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#PFB+3]]];
+#pragma omp parallel loop if(cond) firstprivate(fp) reduction(&:rd)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}
