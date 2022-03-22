@@ -818,6 +818,28 @@ void SimplexBase::rollback(unsigned snapshot) {
   }
 }
 
+/// We add the usual floor division constraints:
+/// `0 <= coeffs - denom*q <= denom - 1`, where `q` is the new division
+/// variable.
+///
+/// This constrains the remainder `coeffs - denom*q` to be in the
+/// range `[0, denom - 1]`, which fixes the integer value of the quotient `q`.
+void SimplexBase::addDivisionVariable(ArrayRef<int64_t> coeffs, int64_t denom) {
+  assert(denom != 0 && "Cannot divide by zero!\n");
+  appendVariable();
+
+  SmallVector<int64_t, 8> ineq(coeffs.begin(), coeffs.end());
+  int64_t constTerm = ineq.back();
+  ineq.back() = -denom;
+  ineq.push_back(constTerm);
+  addInequality(ineq);
+
+  for (int64_t &coeff : ineq)
+    coeff = -coeff;
+  ineq.back() += denom - 1;
+  addInequality(ineq);
+}
+
 void SimplexBase::appendVariable(unsigned count) {
   if (count == 0)
     return;

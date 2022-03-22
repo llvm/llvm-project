@@ -185,6 +185,10 @@ public:
   /// Add new variables to the end of the list of variables.
   void appendVariable(unsigned count = 1);
 
+  /// Append a new variable to the simplex and constrain it such that its only
+  /// integer value is the floor div of `coeffs` and `denom`.
+  void addDivisionVariable(ArrayRef<int64_t> coeffs, int64_t denom);
+
   /// Mark the tableau as being empty.
   void markEmpty();
 
