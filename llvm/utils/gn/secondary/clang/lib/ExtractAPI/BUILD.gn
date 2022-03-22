@@ -1,5 +1,5 @@
-static_library("SymbolGraph") {
-  output_name = "clangSymbolGraph"
+static_library("ExtractAPI") {
+  output_name = "clangExtractAPI"
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   deps = [
     "//clang/lib/AST",
@@ -12,6 +12,7 @@ static_library("SymbolGraph") {
     "API.cpp",
     "ExtractAPIConsumer.cpp",
     "DeclarationFragments.cpp",
-    "Serialization.cpp",
+    "Serialization/SerializerBase.cpp",
+    "Serialization/SymbolGraphSerializer.cpp",
   ]
 }
