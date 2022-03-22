@@ -107,6 +107,8 @@ static bool classifyReturnType(const CIRGenCXXABI &CXXABI,
 
 CIRGenCXXABI &ABIInfo::getCXXABI() const { return CGT.getCXXABI(); }
 
+clang::ASTContext &ABIInfo::getContext() const { return CGT.getContext(); }
+
 ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
                                             unsigned freeIntRegs) const {
   assert(false && "NYI");
@@ -253,7 +255,8 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
 ABIInfo::~ABIInfo() {}
 
 bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
-  assert(false && "NYI");
+  if (getContext().isPromotableIntegerType(Ty))
+    return true;
 
   assert(!Ty->getAs<BitIntType>() && "NYI");
 

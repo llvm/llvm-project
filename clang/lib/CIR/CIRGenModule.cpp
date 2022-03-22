@@ -1878,20 +1878,13 @@ mlir::FuncOp CIRGenModule::buildFunction(const FunctionDecl *FD) {
   assert(!MD && "methods not implemented");
   auto fnLoc = getLoc(FD->getSourceRange());
 
-  // Create an MLIR function for the given prototype.
-  llvm::SmallVector<mlir::Type, 4> argTypes;
-
-  for (auto *Param : FD->parameters())
-    argTypes.push_back(getCIRType(Param->getType()));
-
   CurCGF->FnRetQualTy = FD->getReturnType();
   mlir::TypeRange FnTyRange = {};
   if (!CurCGF->FnRetQualTy->isVoidType()) {
     CurCGF->FnRetTy = getCIRType(CurCGF->FnRetQualTy);
-    FnTyRange = mlir::TypeRange{*CurCGF->FnRetTy};
   }
+  auto funcType = getTypes().GetFunctionType(GlobalDecl(FD));
 
-  auto funcType = builder.getFunctionType(argTypes, FnTyRange);
   mlir::FuncOp function = mlir::FuncOp::create(fnLoc, FD->getName(), funcType);
   if (!function)
     return nullptr;

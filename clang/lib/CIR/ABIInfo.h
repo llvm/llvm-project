@@ -30,6 +30,7 @@ public:
   virtual ~ABIInfo();
 
   CIRGenCXXABI &getCXXABI() const;
+  clang::ASTContext &getContext() const;
 
   virtual void computeInfo(CIRGenFunctionInfo &FI) const = 0;
 
