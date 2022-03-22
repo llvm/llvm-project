@@ -511,6 +511,74 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 }
 
 //===----------------------------------------------------------------------===//
+// SwitchOp
+//===----------------------------------------------------------------------===//
+
+// TODO: use this once Variadic<...> supports CaseAttr and CaseOpKind...
+//
+// def CaseOpKind_DT : I32EnumAttrCase<"_default_", 1>;
+// def CaseOpKind_EQ : I32EnumAttrCase<"equal", 2>;
+//
+// def CaseOpKind : I32EnumAttr<
+//     "CaseOpKind",
+//     "case kind",
+//     [CaseOpKind_DT, CaseOpKind_EQ]> {
+//   let cppNamespace = "::mlir::cir";
+// }
+//
+// def CaseAttr : StructAttr<"CaseAttr", CIR_Dialect, [
+//   StructFieldAttr<"match", AnyInteger>,
+//   StructFieldAttr<"kind", CaseOpKind>
+// ]> {}
+
+def SwitchOp : CIR_Op<"switch",
+      [SameVariadicOperandSize, SameTypeOperands,
+       DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+       RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
+  let summary = "a switch operation";
+  let description = [{
+    The `cir.switch` operation represents a C/C++ switch stmt for conditionally
+    executing multiple regions of code. The operand to an switch is an integral
+    value.
+
+    Each region contains only one block and only accepts cir.case instructions.
+    The op body must be terminated with cir.yield, though it's never printed or
+    needed for parsing.
+
+    Examples:
+
+    ```mlir
+    cir.switch %b {
+      cir.case #equal, 20 {
+        ...
+        cir.yield #break
+      },
+      cir.case #default {
+        ...
+        cir.yield #fallthrough
+      },
+    }
+    ```
+  }];
+
+  // TODO: use CaseOpKind
+  let arguments = (ins AnyInteger:$condition,
+                       Variadic<AnyInteger>:$case_vals,
+                       Variadic<AnyInteger>:$case_kinds);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$regions);
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    `(` $condition `:` type($condition) `)` `{`
+    custom<SwitchOp>(
+      $regions, $case_vals, $case_kinds
+    )
+    `}` attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
 
