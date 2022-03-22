@@ -211,7 +211,7 @@ def : InstAlias<"movq.s\t{$src, $dst|$dst, $src}",
                 (MMX_MOVQ64rr_REV VR64:$dst, VR64:$src), 0>;
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
-def MMX_MOVD64from64rm : MMXRI<0x7E, MRMDestMem,
+def MMX_MOVD64from64mr : MMXRI<0x7E, MRMDestMem,
                                (outs), (ins i64mem:$dst, VR64:$src),
                                "movq\t{$src, $dst|$dst, $src}", []>,
                                Sched<[SchedWriteVecMoveLS.MMX.MR]>;
