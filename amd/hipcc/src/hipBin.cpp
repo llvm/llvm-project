@@ -112,6 +112,7 @@ void HipBin::executeHipBin(string filename, int argc, char* argv[]) {
     cout << "Command " << filename
     << " not supported. Name the exe as hipconfig"
     << " or hipcc and then try again ..." << endl;
+    exit(-1);
   }
 }
 
