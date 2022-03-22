@@ -268,52 +268,8 @@ private:
   /// Update the IR box (fir.ref<fir.box<T>>) of the MutableBoxValue.
   void updateIRBox(mlir::Value addr, mlir::ValueRange lbounds,
                    mlir::ValueRange extents, mlir::ValueRange lengths) {
-    mlir::Value shape;
-    if (!extents.empty()) {
-      if (lbounds.empty()) {
-        auto shapeType =
-            fir::ShapeType::get(builder.getContext(), extents.size());
-        shape = builder.create<fir::ShapeOp>(loc, shapeType, extents);
-      } else {
-        llvm::SmallVector<mlir::Value> shapeShiftBounds;
-        for (auto [lb, extent] : llvm::zip(lbounds, extents)) {
-          shapeShiftBounds.emplace_back(lb);
-          shapeShiftBounds.emplace_back(extent);
-        }
-        auto shapeShiftType =
-            fir::ShapeShiftType::get(builder.getContext(), extents.size());
-        shape = builder.create<fir::ShapeShiftOp>(loc, shapeShiftType,
-                                                  shapeShiftBounds);
-      }
-    }
-    mlir::Value emptySlice;
-    // Ignore lengths if already constant in the box type (this would trigger an
-    // error in the embox).
-    llvm::SmallVector<mlir::Value> cleanedLengths;
-    mlir::Value irBox;
-    if (addr.getType().isa<fir::BoxType>()) {
-      // The entity is already boxed.
-      irBox = builder.createConvert(loc, box.getBoxTy(), addr);
-    } else {
-      auto cleanedAddr = addr;
-      if (auto charTy = box.getEleTy().dyn_cast<fir::CharacterType>()) {
-        // Cast address to box type so that both input and output type have
-        // unknown or constant lengths.
-        auto bt = box.getBaseTy();
-        auto addrTy = addr.getType();
-        auto type = addrTy.isa<fir::HeapType>()      ? fir::HeapType::get(bt)
-                    : addrTy.isa<fir::PointerType>() ? fir::PointerType::get(bt)
-                                                     : builder.getRefType(bt);
-        cleanedAddr = builder.createConvert(loc, type, addr);
-        if (charTy.getLen() == fir::CharacterType::unknownLen())
-          cleanedLengths.append(lengths.begin(), lengths.end());
-      } else if (box.isDerivedWithLengthParameters()) {
-        TODO(loc, "updating mutablebox of derived type with length parameters");
-        cleanedLengths = lengths;
-      }
-      irBox = builder.create<fir::EmboxOp>(loc, box.getBoxTy(), cleanedAddr,
-                                           shape, emptySlice, cleanedLengths);
-    }
+    mlir::Value irBox =
+        createNewFirBox(builder, loc, box, addr, lbounds, extents, lengths);
     builder.create<fir::StoreOp>(loc, irBox, box.getAddr());
   }
 
@@ -725,26 +681,19 @@ void fir::factory::genInlinedAllocation(fir::FirOpBuilder &builder,
                                         mlir::ValueRange extents,
                                         mlir::ValueRange lenParams,
                                         llvm::StringRef allocName) {
-  auto idxTy = builder.getIndexType();
-  llvm::SmallVector<mlir::Value> lengths;
-  if (auto charTy = box.getEleTy().dyn_cast<fir::CharacterType>()) {
-    if (charTy.getLen() == fir::CharacterType::unknownLen()) {
-      if (box.hasNonDeferredLenParams())
-        lengths.emplace_back(
-            builder.createConvert(loc, idxTy, box.nonDeferredLenParams()[0]));
-      else if (!lenParams.empty())
-        lengths.emplace_back(builder.createConvert(loc, idxTy, lenParams[0]));
-      else
-        fir::emitFatalError(
-            loc, "could not deduce character lengths in character allocation");
-    }
-  }
-  mlir::Value heap = builder.create<fir::AllocMemOp>(
-      loc, box.getBaseTy(), allocName, lengths, extents);
-  // TODO: run initializer if any. Currently, there is no way to know this is
-  // required here.
+  auto lengths = getNewLengths(builder, loc, box, lenParams);
+  auto heap = builder.create<fir::AllocMemOp>(loc, box.getBaseTy(), allocName,
+                                              lengths, extents);
   MutablePropertyWriter{builder, loc, box}.updateMutableBox(heap, lbounds,
                                                             extents, lengths);
+  if (box.getEleTy().isa<fir::RecordType>()) {
+    // TODO: skip runtime initialization if this is not required. Currently,
+    // there is no way to know here if a derived type needs it or not. But the
+    // information is available at compile time and could be reflected here
+    // somehow.
+    mlir::Value irBox = fir::factory::getMutableIRBox(builder, loc, box);
+    fir::runtime::genDerivedTypeInitialize(builder, loc, irBox);
+  }
 }
 
 void fir::factory::genInlinedDeallocate(fir::FirOpBuilder &builder,

@@ -250,6 +250,16 @@ public:
         .getElementType();
   }
 
+  // fir.boxproc<any>  -->  llvm<"{ any*, i8* }">
+  mlir::Type convertBoxProcType(BoxProcType boxproc) {
+    auto funcTy = convertType(boxproc.getEleTy());
+    auto i8PtrTy = mlir::LLVM::LLVMPointerType::get(
+        mlir::IntegerType::get(&getContext(), 8));
+    llvm::SmallVector<mlir::Type, 2> tuple = {funcTy, i8PtrTy};
+    return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), tuple,
+                                                  /*isPacked=*/false);
+  }
+
   unsigned characterBitsize(fir::CharacterType charTy) {
     return kindMapping.getCharacterBitsize(charTy.getFKind());
   }

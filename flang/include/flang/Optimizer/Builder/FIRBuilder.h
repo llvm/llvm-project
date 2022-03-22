@@ -19,9 +19,10 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/KindMapping.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 
 namespace fir {
 class AbstractArrayBox;
@@ -104,7 +105,7 @@ public:
     return mlir::SymbolRefAttr::get(getContext(), str);
   }
 
-  /// Get the mlir real type that implements fortran REAL(kind).
+  /// Get the mlir float type that implements Fortran REAL(kind).
   mlir::Type getRealType(int kind);
 
   fir::BoxProcType getBoxProcType(mlir::FunctionType funcTy) {
@@ -224,7 +225,6 @@ public:
   mlir::FuncOp getNamedFunction(llvm::StringRef name) {
     return getNamedFunction(getModule(), name);
   }
-
   static mlir::FuncOp getNamedFunction(mlir::ModuleOp module,
                                        llvm::StringRef name);
 
@@ -382,6 +382,9 @@ public:
                                    mlir::Value ub, mlir::Value step,
                                    mlir::Type type);
 
+  /// Dump the current function. (debug)
+  LLVM_DUMP_METHOD void dumpFunc();
+
 private:
   const KindMapping &kindMap;
 };
@@ -462,25 +465,14 @@ llvm::SmallVector<mlir::Value> createExtents(fir::FirOpBuilder &builder,
                                              mlir::Location loc,
                                              fir::SequenceType seqTy);
 
-//===----------------------------------------------------------------------===//
+//===--------------------------------------------------------------------===//
 // Location helpers
-//===----------------------------------------------------------------------===//
+//===--------------------------------------------------------------------===//
 
 /// Generate a string literal containing the file name and return its address
 mlir::Value locationToFilename(fir::FirOpBuilder &, mlir::Location);
-
 /// Generate a constant of the given type with the location line number
 mlir::Value locationToLineNo(fir::FirOpBuilder &, mlir::Location, mlir::Type);
-
-/// Builds and returns the type of a ragged array header used to cache mask
-/// evaluations. RaggedArrayHeader is defined in
-/// flang/include/flang/Runtime/ragged.h.
-mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
-
-/// Create the zero value of a given the numerical or logical \p type (`false`
-/// for logical types).
-mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
-                            mlir::Type type);
 
 //===--------------------------------------------------------------------===//
 // ExtendedValue helpers
@@ -523,6 +515,11 @@ void genRecordAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs);
 
+/// Builds and returns the type of a ragged array header used to cache mask
+/// evaluations. RaggedArrayHeader is defined in
+/// flang/include/flang/Runtime/ragged.h.
+mlir::TupleType getRaggedArrayHeaderType(fir::FirOpBuilder &builder);
+
 /// Generate the, possibly dynamic, LEN of a CHARACTER. \p arrLoad determines
 /// the base array. After applying \p path, the result must be a reference to a
 /// `!fir.char` type object. \p substring must have 0, 1, or 2 members. The
@@ -536,6 +533,11 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
                               llvm::ArrayRef<mlir::Value> typeParams,
                               llvm::ArrayRef<mlir::Value> path,
                               llvm::ArrayRef<mlir::Value> substring);
+
+/// Create the zero value of a given the numerical or logical \p type (`false`
+/// for logical types).
+mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                            mlir::Type type);
 
 } // namespace fir::factory
 

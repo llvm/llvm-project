@@ -1,4 +1,5 @@
 add_flang_library(FIRCodeGen
+  BoxedProcedure.cpp
   CGOps.cpp
   CodeGen.cpp
   PreCGRewrite.cpp

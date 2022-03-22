@@ -3688,6 +3688,15 @@ mlir::Value Fortran::lower::genMax(fir::FirOpBuilder &builder,
                                                               args);
 }
 
+mlir::Value Fortran::lower::genMin(fir::FirOpBuilder &builder,
+                                   mlir::Location loc,
+                                   llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() > 0 && "min requires at least one argument");
+  return IntrinsicLibrary{builder, loc}
+      .genExtremum<Extremum::Min, ExtremumBehavior::MinMaxss>(args[0].getType(),
+                                                              args);
+}
+
 mlir::Value Fortran::lower::genPow(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Type type,
                                    mlir::Value x, mlir::Value y) {

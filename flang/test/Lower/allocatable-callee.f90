@@ -59,7 +59,10 @@ subroutine test_char_scalar_explicit_dynamic(c, n)
   character(n), allocatable :: c
   external foo1
   ! Check that the length expr was evaluated before the execution parts.
-  ! CHECK: %[[len:.*]] = fir.load %arg1 : !fir.ref<i32>
+  ! CHECK: %[[raw_len:.*]] = fir.load %arg1 : !fir.ref<i32>
+  ! CHECK:  %[[c0_i32:.*]] = arith.constant 0 : i32
+  ! CHECK:  %[[cmp:.*]] = arith.cmpi sgt, %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK:  %[[len:.*]] = arith.select %[[cmp]], %[[raw_len]], %[[c0_i32]] : i32
   n = n + 1
   ! CHECK: fir.store {{.*}} to %arg1 : !fir.ref<i32>
   call foo1(c)
@@ -106,7 +109,10 @@ subroutine test_char_array_explicit_dynamic(c, n)
   character(n), allocatable :: c(:)
   external foo1
   ! Check that the length expr was evaluated before the execution parts.
-  ! CHECK: %[[len:.*]] = fir.load %arg1 : !fir.ref<i32>
+  ! CHECK: %[[raw_len:.*]] = fir.load %arg1 : !fir.ref<i32>
+  ! CHECK:  %[[c0_i32:.*]] = arith.constant 0 : i32
+  ! CHECK:  %[[cmp:.*]] = arith.cmpi sgt, %[[raw_len]], %[[c0_i32]] : i32
+  ! CHECK:  %[[len:.*]] = arith.select %[[cmp]], %[[raw_len]], %[[c0_i32]] : i32
   n = n + 1
   ! CHECK: fir.store {{.*}} to %arg1 : !fir.ref<i32>
   call foo1(c(1))
