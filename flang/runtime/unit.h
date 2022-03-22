@@ -13,6 +13,7 @@
 
 #include "buffer.h"
 #include "connection.h"
+#include "environment.h"
 #include "file.h"
 #include "format.h"
 #include "io-error.h"
@@ -34,7 +35,9 @@ class ExternalFileUnit : public ConnectionState,
                          public OpenFile,
                          public FileFrame<ExternalFileUnit> {
 public:
-  explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {}
+  explicit ExternalFileUnit(int unitNumber) : unitNumber_{unitNumber} {
+    isUTF8 = executionEnvironment.defaultUTF8;
+  }
   ~ExternalFileUnit() {}
 
   int unitNumber() const { return unitNumber_; }
@@ -80,7 +83,6 @@ public:
       const char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
   bool Receive(char *, std::size_t, std::size_t elementBytes, IoErrorHandler &);
   std::size_t GetNextInputBytes(const char *&, IoErrorHandler &);
-  std::optional<char32_t> GetCurrentChar(IoErrorHandler &);
   void SetLeftTabLimit();
   bool BeginReadingRecord(IoErrorHandler &);
   void FinishReadingRecord(IoErrorHandler &);

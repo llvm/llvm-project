@@ -553,6 +553,10 @@ TEST(ExternalIOTests, TestNonAvancingInput) {
         << "Input-item value after non advancing read " << j;
     j++;
   }
+  // CLOSE(UNIT=unit)
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
 }
 
 TEST(ExternalIOTests, TestWriteAfterNonAvancingInput) {
@@ -645,9 +649,12 @@ TEST(ExternalIOTests, TestWriteAfterNonAvancingInput) {
       << "InputAscii() ";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
       << "EndIoStatement() for Read ";
-
   ASSERT_EQ(resultRecord, expectedRecord)
       << "Record after non advancing read followed by write";
+  // CLOSE(UNIT=unit)
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
 }
 
 TEST(ExternalIOTests, TestWriteAfterEndfile) {
@@ -707,4 +714,184 @@ TEST(ExternalIOTests, TestWriteAfterEndfile) {
   ASSERT_FALSE(IONAME(InputInteger)(io, eof)) << "InputInteger(eof)";
   ASSERT_EQ(eof, -1) << "READ(eof)";
   ASSERT_EQ(IONAME(EndIoStatement)(io), IostatEnd) << "EndIoStatement for READ";
+  // CLOSE(UNIT=unit)
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
+TEST(ExternalIOTests, TestUTF8Encoding) {
+  // OPEN(FILE="utf8test",NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='FORMATTED',STATUS='REPLACE',ENCODING='UTF-8')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetFile)(io, "utf8test", 8)) << "SetFile(utf8test)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "REPLACE", 7)) << "SetStatus(REPLACE)";
+  ASSERT_TRUE(IONAME(SetEncoding)(io, "UTF-8", 5)) << "SetEncoding(UTF-8)";
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for first OPEN";
+  char buffer[12];
+  std::memcpy(buffer,
+      "abc\x80\xff"
+      "de\0\0\0\0\0",
+      12);
+  // WRITE(unit, *) buffer
+  io = IONAME(BeginExternalListOutput)(unit, __FILE__, __LINE__);
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  desc.Establish(TypeCode{CFI_type_char}, 7, buffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc));
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for WRITE";
+  // REWIND(unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for REWIND";
+  // READ(unit, *) buffer
+  desc.Establish(TypeCode(CFI_type_char), sizeof buffer, buffer, 0);
+  desc.Check();
+  io = IONAME(BeginExternalListInput)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(InputDescriptor)(io, desc));
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for first READ";
+  ASSERT_EQ(std::memcmp(buffer,
+                "abc\x80\xff"
+                "de     ",
+                12),
+      0);
+  // CLOSE(UNIT=unit,STATUS='KEEP')
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "KEEP", 4)) << "SetStatus(KEEP)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for first CLOSE";
+  // OPEN(FILE="utf8test",NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='FORMATTED',STATUS='OLD')
+  io = IONAME(BeginOpenNewUnit)(__FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetFile)(io, "utf8test", 8)) << "SetFile(utf8test)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for second OPEN";
+  // READ(unit, *) buffer
+  io = IONAME(BeginExternalListInput)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(InputDescriptor)(io, desc));
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for second READ";
+  ASSERT_EQ(std::memcmp(buffer,
+                "abc\xc2\x80\xc3\xbf"
+                "de   ",
+                12),
+      0);
+  // CLOSE(UNIT=unit,STATUS='DELETE')
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for second CLOSE";
+}
+
+TEST(ExternalIOTests, TestUCS) {
+  // OPEN(FILE="ucstest',NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='FORMATTED',STATUS='REPLACE',ENCODING='UTF-8')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetFile)(io, "ucstest", 7)) << "SetAction(ucstest)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "REPLACE", 7)) << "SetStatus(REPLACE)";
+  ASSERT_TRUE(IONAME(SetEncoding)(io, "UTF-8", 5)) << "SetEncoding(UTF-8)";
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for first OPEN";
+  char32_t wbuffer[8]{U"abc\u0080\uffff"
+                      "de"};
+  // WRITE(unit, *) wbuffec
+  io = IONAME(BeginExternalListOutput)(unit, __FILE__, __LINE__);
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  desc.Establish(TypeCode{CFI_type_char32_t}, sizeof wbuffer - sizeof(char32_t),
+      wbuffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc));
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for WRITE";
+  // REWIND(unit)
+  io = IONAME(BeginRewind)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for REWIND";
+  // READ(unit, *) buffer
+  io = IONAME(BeginExternalListInput)(unit, __FILE__, __LINE__);
+  desc.Establish(TypeCode{CFI_type_char32_t}, sizeof wbuffer, wbuffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(InputDescriptor)(io, desc));
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for first READ";
+  char dump[80];
+  dump[0] = '\0';
+  for (int j{0}; j < 8; ++j) {
+    std::size_t dumpLen{std::strlen(dump)};
+    std::snprintf(
+        dump + dumpLen, sizeof dump - dumpLen, " %x", (unsigned)wbuffer[j]);
+  }
+  EXPECT_EQ(wbuffer[0], U'a') << dump;
+  EXPECT_EQ(wbuffer[1], U'b') << dump;
+  EXPECT_EQ(wbuffer[2], U'c') << dump;
+  EXPECT_EQ(wbuffer[3], U'\u0080') << dump;
+  EXPECT_EQ(wbuffer[4], U'\uffff') << dump;
+  EXPECT_EQ(wbuffer[5], U'd') << dump;
+  EXPECT_EQ(wbuffer[6], U'e') << dump;
+  EXPECT_EQ(wbuffer[7], U' ') << dump;
+  // CLOSE(UNIT=unit,STATUS='KEEP')
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "KEEP", 4)) << "SetStatus(KEEP)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for first CLOSE";
+  // OPEN(FILE="ucstest",NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='FORMATTED',STATUS='OLD')
+  io = IONAME(BeginOpenNewUnit)(__FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetFile)(io, "ucstest", 7)) << "SetFile(ucstest)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "FORMATTED", 9)) << "SetForm(FORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "OLD", 3)) << "SetStatus(OLD)";
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for second OPEN";
+  char buffer[12];
+  // READ(unit, *) buffer
+  io = IONAME(BeginExternalListInput)(unit, __FILE__, __LINE__);
+  desc.Establish(TypeCode{CFI_type_char}, sizeof buffer, buffer, 0);
+  desc.Check();
+  ASSERT_TRUE(IONAME(InputDescriptor)(io, desc));
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for second READ";
+  dump[0] = '\0';
+  for (int j{0}; j < 12; ++j) {
+    std::size_t dumpLen{std::strlen(dump)};
+    std::snprintf(dump + dumpLen, sizeof dump - dumpLen, " %x",
+        (unsigned)(unsigned char)buffer[j]);
+  }
+  EXPECT_EQ(std::memcmp(buffer,
+                "abc\xc2\x80\xef\xbf\xbf"
+                "de  ",
+                12),
+      0)
+      << dump;
+  // CLOSE(UNIT=unit,STATUS='DELETE')
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for second CLOSE";
 }

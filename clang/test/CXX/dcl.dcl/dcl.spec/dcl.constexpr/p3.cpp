@@ -1,6 +1,7 @@
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++11 -Werror=c++14-extensions -Werror=c++20-extensions %s
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++14 -DCXX14 -Werror=c++20-extensions %s
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++20 -DCXX14 -DCXX20 %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++11 -Werror=c++14-extensions -Werror=c++20-extensions -Werror=c++2b-extensions %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++14 -DCXX14 -Werror=c++20-extensions -Werror=c++2b-extensions %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++20 -DCXX14 -DCXX20 -Werror=c++2b-extensions %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++2b -DCXX14 -DCXX20 -DCXX2b %s
 
 namespace N {
   typedef char C;
@@ -10,7 +11,7 @@ namespace M {
   typedef double D;
 }
 
-struct NonLiteral { // expected-note 3{{no constexpr constructors}}
+struct NonLiteral { // expected-note 2{{no constexpr constructors}}
   NonLiteral() {}
   NonLiteral(int) {}
 };
@@ -150,16 +151,26 @@ constexpr int DisallowedStmtsCXX14_1(bool b) {
 }
 constexpr int DisallowedStmtsCXX14_2() {
   //  - a goto statement
-  goto x; // expected-error {{statement not allowed in constexpr function}}
-x:
+  try {
+  } catch (...) {
+    goto x;
+  x:;
+  }
+#ifndef CXX2b
+  // expected-error@-4 {{use of this statement in a constexpr function is a C++2b extension}}
+#endif
   return 0;
 }
 constexpr int DisallowedStmtsCXX14_2_1() {
   try {
-    return 0;
   } catch (...) {
-  merp: goto merp; // expected-error {{statement not allowed in constexpr function}}
+  merp:
+    goto merp;
+#ifndef CXX2b
+    // expected-error@-3 {{use of this statement in a constexpr function is a C++2b extension}}
+#endif
   }
+  return 0;
 }
 constexpr int DisallowedStmtsCXX14_3() {
   //  - a try-block,
@@ -171,18 +182,35 @@ constexpr int DisallowedStmtsCXX14_3() {
 }
 constexpr int DisallowedStmtsCXX14_4() {
   //  - a definition of a variable of non-literal type
-  NonLiteral nl; // expected-error {{variable of non-literal type 'NonLiteral' cannot be defined in a constexpr function}}
   return 0;
+  NonLiteral nl;
+#ifndef CXX2b
+  // expected-error@-2 {{variable of non-literal type 'NonLiteral' cannot be defined in a constexpr function before C++2b}}
+  // expected-note@14  {{'NonLiteral' is not literal}}
+#endif
 }
+
 constexpr int DisallowedStmtsCXX14_5() {
+  return 0;
   //  - a definition of a variable of static storage duration
-  static constexpr int n = 123; // expected-error {{static variable not permitted in a constexpr function}}
-  return n;
+  static constexpr int n = 123;
+#ifndef CXX2b
+  // expected-error@-2 {{definition of a static variable in a constexpr function is a C++2b extension}}
+#endif
+#if !defined(CXX14)
+  // expected-error@-5 {{variable declaration in a constexpr function is a C++14 extension}}
+#endif
 }
 constexpr int DisallowedStmtsCXX14_6() {
   //  - a definition of a variable of thread storage duration
-  thread_local constexpr int n = 123; // expected-error {{thread_local variable not permitted in a constexpr function}}
-  return n;
+  return 0;
+  thread_local constexpr int n = 123;
+#ifndef CXX2b
+  // expected-error@-2 {{definition of a thread_local variable in a constexpr function is a C++2b extension}}
+#endif
+#if !defined(CXX14)
+  // expected-error@-5 {{variable declaration in a constexpr function is a C++14 extension}}
+#endif
 }
 constexpr int DisallowedStmtsCXX14_7() {
   //  - a definition of a variable for which no initialization is performed
@@ -317,8 +345,14 @@ namespace std_example {
     return x;
   }
   constexpr int first(int n) {
-    static int value = n; // expected-error {{static variable not permitted}}
-    return value;
+    return 0;
+    static int value = n;
+#ifndef CXX2b
+    // expected-error@-2 {{definition of a static variable in a constexpr function is a C++2b extension}}
+#endif
+#ifndef CXX14
+    // expected-error@-5 {{variable declaration in a constexpr function is a C++14 extension}}
+#endif
   }
   constexpr int uninit() {
     int a;

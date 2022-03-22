@@ -6493,7 +6493,7 @@ define void @xor_vi_v16i8(<16 x i8>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, <16 x i8>* %x
@@ -6509,7 +6509,7 @@ define void @xor_vi_v8i16(<8 x i16>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, <8 x i16>* %x
@@ -6525,7 +6525,7 @@ define void @xor_vi_v4i32(<4 x i32>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -6541,7 +6541,7 @@ define void @xor_vi_v2i64(<2 x i64>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, <2 x i64>* %x
