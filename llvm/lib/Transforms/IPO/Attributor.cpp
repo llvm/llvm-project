@@ -46,6 +46,10 @@
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+#ifdef EXPENSIVE_CHECKS
+#include "llvm/IR/Verifier.h"
+#endif
+
 #include <cassert>
 #include <string>
 
