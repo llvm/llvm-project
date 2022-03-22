@@ -6464,9 +6464,9 @@ def warn_sub_ptr_zero_size_types : Warning<
 def warn_pointer_arith_null_ptr : Warning<
   "performing pointer arithmetic on a null pointer has undefined behavior%select{| if the offset is nonzero}0">,
   InGroup<NullPointerArithmetic>, DefaultIgnore;
-def warn_gnu_null_ptr_arith : Warning<
+def warn_gnu_null_ptr_arith : Extension<
   "arithmetic on a null pointer treated as a cast from integer to pointer is a GNU extension">,
-  InGroup<NullPointerArithmetic>, DefaultIgnore;
+  InGroup<GNUNullPointerArithmetic>;
 def warn_pointer_sub_null_ptr : Warning<
   "performing pointer subtraction with a null pointer %select{has|may have}0 undefined behavior">,
   InGroup<NullPointerSubtraction>, DefaultIgnore;
@@ -6612,7 +6612,8 @@ def err_subscript_incomplete_or_sizeless_type : Error<
 def err_dereference_incomplete_type : Error<
   "dereference of pointer to incomplete type %0">;
 def ext_gnu_subscript_void_type : Extension<
-  "subscript of a pointer to void is a GNU extension">, InGroup<PointerArith>;
+  "subscript of a pointer to void is a GNU extension">,
+  InGroup<GNUPointerArith>;
 def err_typecheck_member_reference_struct_union : Error<
   "member reference base type %0 is not a structure or union">;
 def err_typecheck_member_reference_ivar : Error<
@@ -7133,11 +7134,11 @@ def err_duplicate_property : Error<
   "property has a previous declaration">;
 def ext_gnu_void_ptr : Extension<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to void is a GNU extension">,
-  InGroup<PointerArith>;
+  InGroup<GNUPointerArith>;
 def ext_gnu_ptr_func_arith : Extension<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to%select{ the|}2 function "
   "type%select{|s}2 %1%select{| and %3}2 is a GNU extension">,
-  InGroup<PointerArith>;
+  InGroup<GNUPointerArith>;
 def err_readonly_message_assignment : Error<
   "assigning to 'readonly' return result of an Objective-C message not allowed">;
 def ext_integer_increment_complex : Extension<
