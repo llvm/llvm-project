@@ -15,11 +15,11 @@
 #ifndef LLVM_TRANSFORMS_IPO_INFERFUNCTIONATTRS_H
 #define LLVM_TRANSFORMS_IPO_INFERFUNCTIONATTRS_H
 
-#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
 
 namespace llvm {
+class Module;
+class Pass;
 
 /// A pass which infers function attributes from the names and signatures of
 /// function declarations in a module.

@@ -42,8 +42,7 @@ module {
 //   CHECK-DAG:     %[[SV_ARG0:.+]] = memref.subview %[[ARG0]][%[[IV0]], 0]
 //   CHECK-DAG:     %[[SV_ARG1:.+]] = memref.subview %[[ARG1]][0, %[[IV1]]]
 //       CHECK:     %[[SV_TEMP_2:.+]] = memref.subview %[[TEMP]][%[[IV0]], %[[IV1]]]
-//       CHECK:     %[[SV_TEMP_3:.+]] = memref.subview %[[TEMP]][%[[IV0]], %[[IV1]]]
-//       CHECK:     linalg.fill ins(%{{.+}}{{.*}}outs(%[[SV_TEMP_3]]
+//       CHECK:     linalg.fill ins(%{{.+}}{{.*}}outs(%[[SV_TEMP_1]]
 //       CHECK:     linalg.matmul
 //  CHECK-SAME:       ins(%[[SV_ARG0]], %[[SV_ARG1]]
 //  CHECK-SAME:         : memref<?x?xf32, #[[MAP2]]>, memref<?x?xf32, #[[MAP2]]>)
@@ -83,10 +82,9 @@ module {
   }
 }
 
-//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (16, -d0 + s0)>
+//   CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 16)>
 //   CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-//   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0)[s0, s1] -> (-d0 + s0, 16, -d0 + s1)>
-//   CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 16)>
+//   CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0)[s0, s1] -> (-d0 + s1, -d0 + s0, 16)>
 
 
 //       CHECK: func @sequence_of_matmul
@@ -115,11 +113,8 @@ module {
 //       CHECK:     %[[TILE_M_3:.+]] = affine.min #[[MAP2]](%[[IV0]])[%[[M_2]], %[[M]]]
 //       CHECK:     %[[SV_ARG4_2:.+]] = memref.subview %[[ARG4]][%[[IV0]], 0]
 //  CHECK-SAME:       [%[[TILE_M_3]], %[[N3]]]
-//       CHECK:     %[[TILE_M_4:.+]] = affine.min #[[MAP3]](%[[IV0]])[%[[M]]]
 //       CHECK:     %[[SV_ALLOC1:.+]] = memref.subview %[[ALLOC1]][%[[IV0]], 0]
-//  CHECK-SAME:       [%[[TILE_M_4]], %[[N1]]]
-//       CHECK:     %[[SV_ALLOC2:.+]] = memref.subview %[[ALLOC2]][%[[IV0]], 0]
-//  CHECK-SAME:       [%[[TILE_M_4]], %[[N2]]]
+//  CHECK-SAME:       [%[[TILE_M]], %[[N1]]]
 //       CHECK:     %[[TILE_M_5:.+]] = affine.min #[[MAP2]](%[[IV0]])[%[[M]], %[[M]]]
 //       CHECK:     %[[N0:.+]] = memref.dim %[[ARG0]], %[[C1]]
 //       CHECK:     %[[SV_ARG0:.+]] = memref.subview %[[ARG0]][%[[IV0]], 0]
@@ -130,10 +125,10 @@ module {
 //       CHECK:     linalg.matmul ins(%[[SV_ARG0]], %[[ARG1]]
 //  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
 //  CHECK-SAME:        outs(%[[SV_ALLOC4]] : memref<?x?xf32, #[[MAP1]]>)
-//       CHECK:     linalg.fill ins(%{{.+}}{{.*}}outs(%[[SV_ALLOC2]]
+//       CHECK:     linalg.fill ins(%{{.+}}{{.*}}outs(%[[SV_ALLOC3]]
 //       CHECK:     linalg.matmul ins(%[[SV_ALLOC1]], %[[ARG2]]
 //  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
-//  CHECK-SAME:        outs(%[[SV_ALLOC2]] : memref<?x?xf32, #[[MAP1]]>)
+//  CHECK-SAME:        outs(%[[SV_ALLOC3]] : memref<?x?xf32, #[[MAP1]]>)
 //       CHECK:     linalg.fill ins(%{{.+}}{{.*}}outs(%[[SV_ARG4_2]]
 //       CHECK:     linalg.matmul ins(%[[SV_ALLOC3]], %[[ARG3]]
 //  CHECK-SAME:        : memref<?x?xf32, #[[MAP1]]>, memref<?x?xf32>)
@@ -212,8 +207,8 @@ module {
   }
 }
 
-//       CHECK: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (16, -d0 + s0)>
-//       CHECK: #[[MAP1:.+]] = affine_map<(d0)[s0, s1] -> (-d0 + s0, 16, -d0 + s1)>
+//       CHECK: #[[MAP0:.+]] = affine_map<(d0)[s0] -> (-d0 + s0, 16)>
+//       CHECK: #[[MAP1:.+]] = affine_map<(d0)[s0, s1] -> (-d0 + s1, -d0 + s0, 16)>
 
 //       CHECK: func @tensor_matmul_fusion(
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>

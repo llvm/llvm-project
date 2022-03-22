@@ -100,6 +100,10 @@ getUnrestrictedIntrinsicSymbolRefAttr(fir::FirOpBuilder &, mlir::Location,
 mlir::Value genMax(fir::FirOpBuilder &, mlir::Location,
                    llvm::ArrayRef<mlir::Value> args);
 
+/// Generate minimum. Same constraints as genMax.
+mlir::Value genMin(fir::FirOpBuilder &, mlir::Location,
+                   llvm::ArrayRef<mlir::Value> args);
+
 /// Generate power function x**y with the given expected
 /// result type.
 mlir::Value genPow(fir::FirOpBuilder &, mlir::Location, mlir::Type resultType,

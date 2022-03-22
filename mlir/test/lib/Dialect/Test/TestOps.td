@@ -656,9 +656,12 @@ def CustomFormatFallbackOp : TEST_Op<"dialect_custom_format_fallback">;
 
 // Ops related to OIList primitive
 def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
+  let arguments = (ins UnitAttr:$keyword, UnitAttr:$otherKeyword,
+                       UnitAttr:$diffNameUnitAttrKeyword);
   let assemblyFormat = [{
-    oilist( `keyword`
-          | `otherKeyword`) attr-dict
+    oilist( `keyword` $keyword
+          | `otherKeyword` $otherKeyword
+          | `thirdKeyword` $diffNameUnitAttrKeyword) attr-dict
   }];
 }
 
@@ -690,8 +693,8 @@ def OIListCustom : TEST_Op<"oilist_custom", [AttrSizedOperandSegments]> {
                        UnitAttr:$nowait);
   let assemblyFormat = [{
     oilist( `private` `(` $arg0 `:` type($arg0) `)`
-          | `nowait`
           | `reduction` custom<CustomOptionalOperand>($optOperand)
+          | `nowait` $nowait
     ) attr-dict
   }];
 }
