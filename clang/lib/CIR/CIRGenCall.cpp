@@ -133,6 +133,7 @@ void ClangToCIRArgMapping::construct(const ASTContext &Context,
     switch (AI.getKind()) {
     default:
       assert(false && "NYI");
+    case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
       assert(!AI.getCoerceToType().dyn_cast<mlir::cir::StructType>() && "NYI");
       // FIXME: handle sseregparm someday...
@@ -175,6 +176,8 @@ mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
     // TODO: where to get VoidTy?
     resultType = nullptr;
     break;
+
+  case ABIArgInfo::Extend:
   case ABIArgInfo::Direct:
     resultType = retAI.getCoerceToType();
     break;
@@ -205,6 +208,7 @@ mlir::FunctionType CIRGenTypes::GetFunctionType(const CIRGenFunctionInfo &FI) {
     switch (ArgInfo.getKind()) {
     default:
       assert(false && "NYI");
+    case ABIArgInfo::Extend:
     case ABIArgInfo::Direct: {
       mlir::Type argType = ArgInfo.getCoerceToType();
       // TODO: handle the test against llvm::StructType from codegen

@@ -67,6 +67,10 @@ public:
   void classify(clang::QualType T, uint64_t OffsetBase, Class &Lo, Class &Hi,
                 bool isNamedArg) const;
 
+  mlir::Type GetSSETypeAtOffset(mlir::Type CIRType, unsigned CIROffset,
+                                clang::QualType SourceTy,
+                                unsigned SourceOffset) const;
+
   ABIArgInfo classifyReturnType(QualType RetTy) const;
 
   ABIArgInfo classifyArgumentType(clang::QualType Ty, unsigned freeIntRegs,
@@ -175,10 +179,9 @@ mlir::Type X86_64ABIInfo::GetINTEGERTypeAtOffset(mlir::Type CIRType,
                                                  unsigned CIROffset,
                                                  QualType SourceTy,
                                                  unsigned SourceOffset) const {
+  // TODO: entirely stubbed out
   assert(CIROffset == 0 && "NYI");
   assert(SourceOffset == 0 && "NYI");
-  // TODO: this entire function. It's safe to now just to let the integer type
-  // be used as is since we aren't actually generating anything.
   return CIRType;
 }
 
@@ -216,10 +219,22 @@ ABIArgInfo X86_64ABIInfo::classifyArgumentType(QualType Ty,
     // that the parameter gets the right LLVM IR attributes.
     if (Hi == NoClass && ResType.isa<mlir::IntegerType>()) {
       assert(!Ty->getAs<EnumType>() && "NYI");
-      assert(!isPromotableIntegerTypeForABI(Ty) && "NYI");
+      if (Ty->isSignedIntegerOrEnumerationType() &&
+          isPromotableIntegerTypeForABI(Ty))
+        return ABIArgInfo::getExtend(Ty);
     }
 
     break;
+
+    // AMD64-ABI 3.2.3p3: Rule 3. If the class is SSE, the next available SSE
+    // register is used, the registers are taken in the order from %xmm0 to
+    // %xmm7.
+  case SSE: {
+    mlir::Type CIRType = CGT.ConvertType(Ty);
+    ResType = GetSSETypeAtOffset(CIRType, 0, Ty, 0);
+    ++neededSSE;
+    break;
+  }
   }
 
   mlir::Type HighPart = nullptr;
@@ -247,21 +262,60 @@ bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
 
 void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
                              Class &Hi, bool isNamedArg) const {
+  // FIXME: This code can be simplified by introducing a simple value class for
+  // Class pairs with appropriate constructor methods for the various
+  // situations.
+
+  // FIXME: Some of the split computations are wrong; unaligned vectors
+  // shouldn't be passed in registers for example, so there is no chance they
+  // can straddle an eightbyte. Verify & simplify.
+
   Lo = Hi = NoClass;
   Class &Current = OffsetBase < 64 ? Lo : Hi;
   Current = Memory;
 
-  auto *BT = Ty->getAs<BuiltinType>();
-  assert(BT && "Only builtin types implemented.");
-  BuiltinType::Kind k = BT->getKind();
-  if (k == BuiltinType::Void)
-    Current = NoClass;
-  else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
-    Current = Integer;
-  } else {
-    assert(false && "Only void and Integer supported so far");
+  if (const auto *BT = Ty->getAs<BuiltinType>()) {
+    BuiltinType::Kind k = BT->getKind();
+    if (k == BuiltinType::Void) {
+      Current = NoClass;
+    } else if (k == BuiltinType::Int128 || k == BuiltinType::UInt128) {
+      assert(false && "NYI");
+      Lo = Integer;
+      Hi = Integer;
+    } else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
+      Current = Integer;
+    } else if (k == BuiltinType::Float || k == BuiltinType::Double ||
+               k == BuiltinType::Float16) {
+      Current = SSE;
+    } else if (k == BuiltinType::LongDouble) {
+      assert(false && "NYI");
+    } else
+      assert(false &&
+             "Only void and Integer supported so far for builtin types");
+    // FIXME: _Decimal32 and _Decimal64 are SSE.
+    // FIXME: _float128 and _Decimal128 are (SSE, SSEUp).
+    return;
   }
-  return;
+
+  assert(!Ty->getAs<EnumType>() && "Enums NYI");
+  if (Ty->hasPointerRepresentation()) {
+    Current = Integer;
+    return;
+  }
+
+  assert(false && "Nothing else implemented yet");
+}
+
+/// GetSSETypeAtOffset - Return a type that will be passed by the backend in the
+/// low 8 bytes of an XMM register, corresponding to the SSE class.
+mlir::Type X86_64ABIInfo::GetSSETypeAtOffset(mlir::Type CIRType,
+                                             unsigned int CIROffset,
+                                             clang::QualType SourceTy,
+                                             unsigned int SourceOffset) const {
+  // TODO: entirely stubbed out
+  assert(CIROffset == 0 && "NYI");
+  assert(SourceOffset == 0 && "NYI");
+  return CIRType;
 }
 
 ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
@@ -275,8 +329,8 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
   assert((Hi != SSEUp || Lo == SSE) && "Invalid SSEUp classification.");
 
   mlir::Type ResType = nullptr;
-  assert(Lo == NoClass ||
-         Lo == Integer && "Only NoClass and Integer supported so far");
+  assert(Lo == NoClass || Lo == Integer ||
+         Lo == SSE && "Only NoClass and Integer supported so far");
 
   switch (Lo) {
   case NoClass:
@@ -298,11 +352,17 @@ ABIArgInfo X86_64ABIInfo::classifyReturnType(QualType RetTy) const {
 
       if (RetTy->isIntegralOrEnumerationType() &&
           isPromotableIntegerTypeForABI(RetTy)) {
-        assert(false && "extended types NYI");
+        return ABIArgInfo::getExtend(RetTy);
       }
-      break;
     }
-    llvm_unreachable("ResType as intenger is only case currently implemented.");
+    break;
+
+    // AMD64-ABI 3.2.3p4: Rule 4. If the class is SSE, the next available SSE
+    // register of the sequence %xmm0, %xmm1 is used.
+  case SSE:
+    ResType = GetSSETypeAtOffset(CGT.ConvertType(RetTy), 0, RetTy, 0);
+    break;
+
   default:
     llvm_unreachable("NYI");
   }

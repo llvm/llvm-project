@@ -102,6 +102,7 @@ private:
   };
   Kind TheKind;
   bool CanBeFlattened : 1; // isDirect()
+  bool SignExt : 1;        // isExtend()
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
@@ -128,6 +129,37 @@ public:
     AI.setDirectAlign(Align);
     AI.setCanBeFlattened(CanBeFlattened);
     return AI;
+  }
+
+  static ABIArgInfo getSignExtend(clang::QualType Ty, mlir::Type T = nullptr) {
+    assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
+    auto AI = ABIArgInfo(Extend);
+    AI.setCoerceToType(T);
+    AI.setPaddingType(nullptr);
+    AI.setDirectOffset(0);
+    AI.setDirectAlign(0);
+    AI.setSignExt(true);
+    return AI;
+  }
+
+  static ABIArgInfo getZeroExtend(clang::QualType Ty, mlir::Type T = nullptr) {
+    assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
+    auto AI = ABIArgInfo(Extend);
+    AI.setCoerceToType(T);
+    AI.setPaddingType(nullptr);
+    AI.setDirectOffset(0);
+    AI.setDirectAlign(0);
+    AI.setSignExt(false);
+    return AI;
+  }
+
+  // ABIArgInfo will record the argument as being extended based on the sign of
+  // it's type.
+  static ABIArgInfo getExtend(clang::QualType Ty, mlir::Type T = nullptr) {
+    assert(Ty->isIntegralOrEnumerationType() && "Unexpected QualType");
+    if (Ty->hasSignedIntegerRepresentation())
+      return getSignExtend(Ty, T);
+    return getZeroExtend(Ty, T);
   }
 
   static ABIArgInfo getIgnore() { return ABIArgInfo(Ignore); }
@@ -159,6 +191,11 @@ public:
   void setDirectAlign(unsigned Align) {
     assert((isDirect() || isExtend()) && "Not a direct or extend kind");
     DirectAttr.Align = Align;
+  }
+
+  void setSignExt(bool SExt) {
+    assert(isExtend() && "Invalid kind!");
+    SignExt = SExt;
   }
 
   void setCanBeFlattened(bool Flatten) {
