@@ -128,8 +128,7 @@ namespace __end {
       { _LIBCPP_AUTO_CAST(end(__t)) } -> sentinel_for<iterator_t<_Tp>>;
     };
 
-  class __fn {
-  public:
+  struct __fn {
     template <class _Tp, size_t _Np>
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
       requires (sizeof(_Tp) >= 0)  // Disallow incomplete element types.
