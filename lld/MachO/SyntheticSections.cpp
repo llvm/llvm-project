@@ -770,7 +770,7 @@ static std::vector<MachO::data_in_code_entry> collectDataInCodeEntries() {
             [](const MachO::data_in_code_entry &entry, uint64_t addr) {
               return entry.offset < addr;
             });
-        const uint64_t endAddr = beginAddr + isec->getFileSize();
+        const uint64_t endAddr = beginAddr + isec->getSize();
         for (const auto end = entries.end();
              it != end && it->offset + it->length <= endAddr; ++it)
           dataInCodeEntries.push_back(
