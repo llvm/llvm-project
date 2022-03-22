@@ -641,8 +641,8 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         // Store new_vl.
         clang::CharUnits Align =
             CGM.getNaturalPointeeTypeAlignment(E->getArg(1)->getType());
-        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
-                            Address::deprecated(NewVL, Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {1});
+        Builder.CreateStore(Val, Address(NewVL, Val->getType(), Align));
         return V;
       }
       }],
@@ -661,8 +661,8 @@ multiclass RVVVLEFFBuiltin<list<string> types> {
         // Store new_vl.
         clang::CharUnits Align =
             CGM.getNaturalPointeeTypeAlignment(E->getArg(3)->getType());
-        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {1}),
-                            Address::deprecated(NewVL, Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {1});
+        Builder.CreateStore(Val, Address(NewVL, Val->getType(), Align));
         return V;
       }
       }] in {
@@ -879,8 +879,8 @@ multiclass RVVUnitStridedSegLoad<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
-        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        V = Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       return V;
     }
@@ -905,8 +905,8 @@ multiclass RVVUnitStridedSegLoad<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
-        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        V = Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       return V;
     }
@@ -950,12 +950,12 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       clang::CharUnits Align =
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       for (unsigned I = 0; I < NF; ++I) {
-        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                            Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       // Store new_vl.
-      return Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {NF}),
-                                 Address::deprecated(NewVL, Align));
+      llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {NF});
+      return Builder.CreateStore(Val, Address(NewVL, Val->getType(), Align));
     }
             }],
             ManualCodegenMask = [{
@@ -978,12 +978,12 @@ multiclass RVVUnitStridedSegLoadFF<string op> {
       clang::CharUnits Align =
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       for (unsigned I = 0; I < NF; ++I) {
-        Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                            Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       // Store new_vl.
-      return Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {NF}),
-                                 Address::deprecated(NewVL, Align));
+      llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {NF});
+      return Builder.CreateStore(Val, Address(NewVL, Val->getType(), Align));
     }
             }] in {
           defvar PV = PVString<nf, /*signed=*/true>.S;
@@ -1025,8 +1025,8 @@ multiclass RVVStridedSegLoad<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
-        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        V = Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       return V;
     }
@@ -1052,8 +1052,8 @@ multiclass RVVStridedSegLoad<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
-        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        V = Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       return V;
     }
@@ -1092,8 +1092,8 @@ multiclass RVVIndexedSegLoad<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
-        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        V = Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       return V;
     }
@@ -1119,8 +1119,8 @@ multiclass RVVIndexedSegLoad<string op> {
           CGM.getNaturalPointeeTypeAlignment(E->getArg(0)->getType());
       llvm::Value *V;
       for (unsigned I = 0; I < NF; ++I) {
-        V = Builder.CreateStore(Builder.CreateExtractValue(LoadValue, {I}),
-                                Address::deprecated(Ops[I], Align));
+        llvm::Value *Val = Builder.CreateExtractValue(LoadValue, {I});
+        V = Builder.CreateStore(Val, Address(Ops[I], Val->getType(), Align));
       }
       return V;
     }
