@@ -130,6 +130,8 @@ public:
 
   void mangleLambdaSig(const CXXRecordDecl *Lambda, raw_ostream &) override;
 
+  void mangleModuleInitializer(const Module *Module, raw_ostream &) override;
+
   bool getNextDiscriminator(const NamedDecl *ND, unsigned &disc) {
     // Lambda closure types are already numbered.
     if (isLambda(ND))
@@ -438,7 +440,7 @@ public:
   void mangleType(QualType T);
   void mangleNameOrStandardSubstitution(const NamedDecl *ND);
   void mangleLambdaSig(const CXXRecordDecl *Lambda);
-  void mangleModuleNamePrefix(StringRef Name);
+  void mangleModuleNamePrefix(StringRef Name, bool IsPartition = false);
 
 private:
 
@@ -1057,8 +1059,8 @@ void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
 //		 ::= <module-name> <module-subname>
 //	 	 ::= <substitution>
 // <module-subname> ::= W <source-name>
-//		    ::= W P <source-name> # not (yet) needed
-void CXXNameMangler::mangleModuleNamePrefix(StringRef Name) {
+//		    ::= W P <source-name>
+void CXXNameMangler::mangleModuleNamePrefix(StringRef Name, bool IsPartition) {
   //  <substitution> ::= S <seq-id> _
   auto It = ModuleSubstitutions.find(Name);
   if (It != ModuleSubstitutions.end()) {
@@ -1072,10 +1074,14 @@ void CXXNameMangler::mangleModuleNamePrefix(StringRef Name) {
   auto Parts = Name.rsplit('.');
   if (Parts.second.empty())
     Parts.second = Parts.first;
-  else
-    mangleModuleNamePrefix(Parts.first);
+  else {
+    mangleModuleNamePrefix(Parts.first, IsPartition);
+    IsPartition = false;
+  }
 
   Out << 'W';
+  if (IsPartition)
+    Out << 'P';
   Out << Parts.second.size() << Parts.second;
   ModuleSubstitutions.insert({Name, SeqID++});
 }
@@ -6531,6 +6537,21 @@ void ItaniumMangleContextImpl::mangleLambdaSig(const CXXRecordDecl *Lambda,
                                                raw_ostream &Out) {
   CXXNameMangler Mangler(*this, Out);
   Mangler.mangleLambdaSig(Lambda);
+}
+
+void ItaniumMangleContextImpl::mangleModuleInitializer(const Module *M,
+                                                       raw_ostream &Out) {
+  // <special-name> ::= GI <module-name>  # module initializer function
+  CXXNameMangler Mangler(*this, Out);
+  Mangler.getStream() << "_ZGI";
+  Mangler.mangleModuleNamePrefix(M->getPrimaryModuleInterfaceName());
+  if (M->isModulePartition()) {
+    // The partition needs including, as partitions can have them too.
+    auto Partition = M->Name.find(':');
+    Mangler.mangleModuleNamePrefix(
+        StringRef(&M->Name[Partition + 1], M->Name.size() - Partition - 1),
+        /*IsPartition*/ true);
+  }
 }
 
 ItaniumMangleContext *ItaniumMangleContext::create(ASTContext &Context,
