@@ -480,6 +480,33 @@ cond.end:
   ret i32 %r
 }
 
+define i32 @sub_abs_lt_min_not_poison(i32 %x, i32 %y) {
+; CHECK-LABEL: @sub_abs_lt_min_not_poison(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
+; CHECK:       cond.true:
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    br label [[COND_END]]
+; CHECK:       cond.end:
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP0]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+entry:
+  %cmp = icmp slt i32 %x, %y
+  br i1 %cmp, label %cond.true, label %cond.end
+
+cond.true:
+  %sub = sub nsw i32 %x, %y
+  %0 = call i32 @llvm.abs.i32(i32 %sub, i1 false)
+  br label %cond.end
+
+cond.end:
+  %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
+  ret i32 %r
+}
+
 define i32 @sub_abs_wrong_pred(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_abs_wrong_pred(
 ; CHECK-NEXT:  entry:
