@@ -13,7 +13,7 @@
 # REPORT: {{^}}bar.h{{.*}}
 # REPORT: {{^}}TOTAL{{.*}}100.00%
 
-# LCOV: SF:.{{/|\\+}}bar.h
+# LCOV: SF:bar.h
 # LCOV-NOT: SF
 
 Instructions for regenerating the test:
