@@ -106,19 +106,29 @@ bool operator==(const MemInfoBlock& Other) const {
   return IsEqual;
 }
 
-MemInfoBlock() : AllocCount(0) {}
+MemInfoBlock() {
+#define MIBEntryDef(NameTag, Name, Type) Name = Type();
+#include "MIBEntryDef.inc"
+#undef MIBEntryDef
+}
 
-MemInfoBlock(uint32_t size, uint64_t access_count, uint32_t alloc_timestamp,
-             uint32_t dealloc_timestamp, uint32_t alloc_cpu, uint32_t dealloc_cpu)
-    : AllocCount(1), TotalAccessCount(access_count),
-      MinAccessCount(access_count), MaxAccessCount(access_count),
-      TotalSize(size), MinSize(size), MaxSize(size),
-      AllocTimestamp(alloc_timestamp), DeallocTimestamp(dealloc_timestamp),
-      TotalLifetime(dealloc_timestamp - alloc_timestamp),
-      MinLifetime(TotalLifetime), MaxLifetime(TotalLifetime),
-      AllocCpuId(alloc_cpu), DeallocCpuId(dealloc_cpu),
-      NumLifetimeOverlaps(0), NumSameAllocCpu(0),
-      NumSameDeallocCpu(0) {
+MemInfoBlock(uint32_t Size, uint64_t AccessCount, uint32_t AllocTs,
+             uint32_t DeallocTs, uint32_t AllocCpu, uint32_t DeallocCpu)
+    : MemInfoBlock() {
+  AllocCount = 1U;
+  TotalAccessCount = AccessCount;
+  MinAccessCount = AccessCount;
+  MaxAccessCount = AccessCount;
+  TotalSize = Size;
+  MinSize = Size;
+  MaxSize = Size;
+  AllocTimestamp = AllocTs;
+  DeallocTimestamp = DeallocTs;
+  TotalLifetime = DeallocTimestamp - AllocTimestamp;
+  MinLifetime = TotalLifetime;
+  MaxLifetime = TotalLifetime;
+  AllocCpuId = AllocCpu;
+  DeallocCpuId = DeallocCpu;
   NumMigratedCpu = AllocCpuId != DeallocCpuId;
 }
 
