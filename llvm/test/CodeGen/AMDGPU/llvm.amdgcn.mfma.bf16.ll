@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN %s
-; RUN: llc -march=amdgcn -mcpu=gfx908 -mattr=-mfma-inline-literal-bug -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX908 %s
+; RUN: llc -march=amdgcn -mcpu=gfx908 -mattr=-mfma-inline-literal-bug -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX908 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope --check-prefixes=GCN,GFX90A %s
 
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x2bf16(<2 x i16>, <2 x i16>, <32 x float>, i32, i32, i32)
@@ -14,38 +14,39 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GCN-DAG:         v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN-DAG:         s_load_dwordx16
 ; GCN-DAG:         s_load_dwordx16
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
-; GCN-DAG:         v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX90A-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GCN:             v_mfma_f32_32x32x2bf16 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX908-COUNT-32: v_accvgpr_read_b32
 ; GFX908:          global_store_dwordx4
@@ -65,7 +66,8 @@ bb:
 ; GCN-DAG:         v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN-DAG:         v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN:             s_load_dwordx16
-; GCN-COUNT-16:    v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX90A-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GCN:             v_mfma_f32_16x16x2bf16 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX908-COUNT-16: v_accvgpr_read_b32
 ; GFX908:          global_store_dwordx4
@@ -85,7 +87,8 @@ bb:
 ; GCN-DAG:        v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN-DAG:        v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN:            s_load_dwordx4
-; GCN-COUNT-4:    v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX90A-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GCN:            v_mfma_f32_4x4x2bf16 [[RES:a\[[0-9]+:[0-9]+\]]], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX908-COUNT-4: v_accvgpr_read_b32
 ; GFX908:         global_store_dwordx4
@@ -105,7 +108,8 @@ bb:
 ; GCN-DAG:         v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN-DAG:         v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN:             s_load_dwordx16
-; GCN-COUNT-16:    v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX90A-COUNT-4:  v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GCN:             v_mfma_f32_32x32x4bf16 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX908-COUNT-16: v_accvgpr_read_b32
 ; GFX908:          global_store_dwordx4
@@ -125,7 +129,8 @@ bb:
 ; GCN-DAG:        v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN-DAG:        v_mov_b32_e32 [[ONE:v[0-9]+]], 1
 ; GCN:            s_load_dwordx4
-; GCN-COUNT-4:    v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX908-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GFX90A-COUNT-4: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GCN:            v_mfma_f32_16x16x8bf16 [[RES:a\[[0-9]+:[0-9]+\]]], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX908-COUNT-4: v_accvgpr_read_b32
 ; GFX908:         global_store_dwordx4

@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx908 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX908,GFX908_A %s
-; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,GFX908_A %s
-; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX940 %s
+; RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX90A,GFX908_A,GFX940_A %s
+; RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX940,GFX940_A %s
 
 ; GCN-LABEL: {{^}}test_mfma_loop_zeroinit:
 
@@ -47,8 +47,8 @@ exit:
 ; 3 vgprs are needed to avoid wait states between writes.
 ; Check that we do not use 32 temp sgprs as well.
 
-; GFX908_A:        v_mov_b32_e32 [[TMP:v[0-9]+]], 0x42f60000
-; GFX940:          s_mov_b32 [[TMP:s[0-9]+]], 0x42f60000
+; GFX908:          v_mov_b32_e32 [[TMP:v[0-9]+]], 0x42f60000
+; GFX940_A:        s_mov_b32 [[TMP:s[0-9]+]], 0x42f60000
 ; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 ; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], [[TMP]]
 ; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
@@ -188,73 +188,8 @@ exit:
 ; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP2]]
 ; GFX908: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP3]]
 
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A: v_mov_b32_e32 [[TMP:v[0-9]+]], 0x4{{[0-9a-f]+}}
-; GFX90A: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-
-; GFX940-COUNT-32: s_mov_b32 s{{[0-9]+}}, 0x4{{[0-9a-f]+}}
-; GFX940-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
+; GFX940_A-COUNT-32: s_mov_b32 s{{[0-9]+}}, 0x4{{[0-9a-f]+}}
+; GFX940_A-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
 ; GCN-NOT:  v_accvgpr
@@ -355,10 +290,9 @@ exit:
 
 ; GCN-LABEL: {{^}}test_mfma_loop_sgpr_init:
 
-; GFX908_A:        v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
+; GFX908:          v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
 ; GFX908-COUNT-32: v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
-; GFX90A:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], [[TMP]]
-; GFX940:          v_accvgpr_write_b32 [[LEAD:a[0-9]+]], s{{[0-9]+}}
+; GFX940_A:        v_accvgpr_write_b32 [[LEAD:a[0-9]+]], s{{[0-9]+}}
 ; GFX90A-COUNT-31: v_accvgpr_mov_b32 a{{[0-9]+}}, [[LEAD]]
 
 ; GCN: [[LOOP:.LBB[0-9_]+]]:
@@ -426,8 +360,8 @@ exit:
 ; GCN-LABEL: {{^}}test_mfma_loop_mixed_init:
 
 ; GCN-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, v0
-; GFX908_A-DAG: v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
-; GFX940-DAG:   s_load_dword [[TMP:s[0-9]+]],
+; GFX908-DAG:   v_mov_b32_e32 [[TMP:v[0-9]+]], s{{[0-9]+}}
+; GFX940_A-DAG: s_load_dword [[TMP:s[0-9]+]],
 ; GCN-DAG:      v_accvgpr_write_b32 a{{[0-9]+}}, [[TMP]]
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
 ; GFX908-DAG:   v_accvgpr_write_b32 a{{[0-9]+}}, 0{{$}}
