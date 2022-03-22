@@ -199,7 +199,7 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
                 $allocate_vars, type($allocate_vars),
                 $allocators_vars, type($allocators_vars)
               ) `)`
-          | `nowait`
+          | `nowait` $nowait
     ) $region attr-dict
   }];
 
@@ -438,7 +438,7 @@ def TargetOp : OpenMP_Op<"target",[AttrSizedOperandSegments]> {
     oilist( `if` `(` $if_expr `)`
           | `device` `(` $device `:` type($device) `)`
           | `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
-          | `nowait`
+          | `nowait` $nowait
     ) $region attr-dict
   }];
 }
