@@ -2272,7 +2272,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         } else {
           MachineInstrBuilder MIB;
           if (!IsSALU) {
-            if (MIB = TII->getAddNoCarry(*MBB, MI, DL, ResultReg, *RS)) {
+            if ((MIB = TII->getAddNoCarry(*MBB, MI, DL, ResultReg, *RS)) !=
+                nullptr) {
               // Reuse ResultReg in intermediate step.
               Register ScaledReg = ResultReg;
 
