@@ -442,9 +442,8 @@ TEST(SetTest, divisions) {
   EXPECT_TRUE(setA.subtract(setB).isEqual(setA));
 }
 
-/// Coalesce `set` and check that the `newSet` is equal to `set and that
+/// Coalesce `set` and check that the `newSet` is equal to `set` and that
 /// `expectedNumPoly` matches the number of Poly in the coalesced set.
-/// If one of the two
 void expectCoalesce(size_t expectedNumPoly, const PresburgerSet &set) {
   PresburgerSet newSet = set.coalesce();
   EXPECT_TRUE(set.isEqual(newSet));

@@ -103,21 +103,6 @@ std::size_t InternalDescriptorUnit<DIR>::GetNextInputBytes(
 }
 
 template <Direction DIR>
-std::optional<char32_t> InternalDescriptorUnit<DIR>::GetCurrentChar(
-    IoErrorHandler &handler) {
-  const char *p{nullptr};
-  std::size_t bytes{GetNextInputBytes(p, handler)};
-  if (bytes == 0) {
-    return std::nullopt;
-  } else {
-    if (isUTF8) {
-      // TODO: UTF-8 decoding
-    }
-    return *p;
-  }
-}
-
-template <Direction DIR>
 bool InternalDescriptorUnit<DIR>::AdvanceRecord(IoErrorHandler &handler) {
   if (currentRecordNumber >= endfileRecordNumber.value_or(0)) {
     handler.SignalEnd();
