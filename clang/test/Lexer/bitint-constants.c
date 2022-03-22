@@ -142,3 +142,18 @@ void ValidSuffixInvalidValue(void) {
   0xFFFF'FFFF'FFFF'FFFF'FFFF'FFFF'FFFF'FFFF'1wb; // expected-error {{integer literal is too large to be represented in any signed integer type}}
   0xFFFF'FFFF'FFFF'FFFF'FFFF'FFFF'FFFF'FFFF'1uwb; // expected-error {{integer literal is too large to be represented in any integer type}}
 }
+
+void TestTypes(void) {
+  // 2 value bits, one sign bit
+  _Static_assert(__builtin_types_compatible_p(__typeof__(3wb), _BitInt(3)));
+  // 2 value bits, one sign bit
+  _Static_assert(__builtin_types_compatible_p(__typeof__(-3wb), _BitInt(3)));
+  // 2 value bits, no sign bit
+  _Static_assert(__builtin_types_compatible_p(__typeof__(3uwb), unsigned _BitInt(2)));
+  // 4 value bits, one sign bit
+  _Static_assert(__builtin_types_compatible_p(__typeof__(0xFwb), _BitInt(5)));
+  // 4 value bits, one sign bit
+  _Static_assert(__builtin_types_compatible_p(__typeof__(-0xFwb), _BitInt(5)));
+  // 4 value bits, no sign bit
+  _Static_assert(__builtin_types_compatible_p(__typeof__(0xFuwb), unsigned _BitInt(4)));
+}

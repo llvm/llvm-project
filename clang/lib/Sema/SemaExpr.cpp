@@ -3979,8 +3979,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       if (Literal.isBitInt) {
         // The signed version has one more bit for the sign value. There are no
         // zero-width bit-precise integers, even if the literal value is 0.
-        Width = Literal.isUnsigned ? std::max(ResultVal.getActiveBits(), 1u)
-                                   : std::max(ResultVal.getMinSignedBits(), 2u);
+        Width = std::max(ResultVal.getActiveBits(), 1u) +
+                (Literal.isUnsigned ? 0u : 1u);
 
         // Diagnose if the width of the constant is larger than BITINT_MAXWIDTH,
         // and reset the type to the largest supported width.
