@@ -869,13 +869,13 @@ types::ID MachO::LookupTypeForExtension(StringRef Ext) const {
 bool MachO::HasNativeLLVMSupport() const { return true; }
 
 ToolChain::CXXStdlibType Darwin::GetDefaultCXXStdlibType() const {
-  // Default to use libc++ on OS X 10.9+ and iOS 7+.
-  if ((isTargetMacOSBased() && !isMacosxVersionLT(10, 9)) ||
-      (isTargetIOSBased() && !isIPhoneOSVersionLT(7, 0)) ||
-      isTargetWatchOSBased())
-    return ToolChain::CST_Libcxx;
+  // Use libstdc++ on old targets (OSX < 10.9 and iOS < 7)
+  if ((isTargetMacOSBased() && isMacosxVersionLT(10, 9)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(7, 0)))
+    return ToolChain::CST_Libstdcxx;
 
-  return ToolChain::CST_Libstdcxx;
+  // On all other targets, use libc++
+  return ToolChain::CST_Libcxx;
 }
 
 /// Darwin provides an ARC runtime starting in MacOS X 10.7 and iOS 5.0.
