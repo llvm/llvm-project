@@ -4621,13 +4621,11 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
   assert(XLenVT == MVT::i32 && OpVT == MVT::i64 &&
          VT.getVectorElementType() == MVT::i64 && "Unexpected VTs!");
 
-  // If this is a sign-extended 32-bit constant, we can truncate it and rely
-  // on the instruction to sign-extend since SEW>XLEN.
-  if (auto *CVal = dyn_cast<ConstantSDNode>(ScalarOp)) {
-    if (isInt<32>(CVal->getSExtValue())) {
-      ScalarOp = DAG.getConstant(CVal->getSExtValue(), DL, MVT::i32);
-      return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
-    }
+  // If this is a sign-extended 32-bit value, we can truncate it and rely on the
+  // instruction to sign-extend since SEW>XLEN.
+  if (DAG.ComputeNumSignBits(ScalarOp) > 32) {
+    ScalarOp = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, ScalarOp);
+    return DAG.getNode(Op->getOpcode(), DL, Op->getVTList(), Operands);
   }
 
   switch (IntNo) {
@@ -4749,8 +4747,6 @@ static SDValue lowerVectorIntrinsicScalars(SDValue Op, SelectionDAG &DAG,
   }
 
   // We need to convert the scalar to a splat vector.
-  // FIXME: Can we implicitly truncate the scalar if it is known to
-  // be sign extended?
   SDValue VL = getVLOperand(Op);
   assert(VL.getValueType() == XLenVT);
   ScalarOp = splatSplitI64WithVL(DL, VT, SDValue(), ScalarOp, VL, DAG);
