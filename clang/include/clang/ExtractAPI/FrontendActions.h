@@ -1,4 +1,4 @@
-//===- SymbolGraph/FrontendActions.h -----------------------*- C++ -*-===//
+//===- ExtractAPI/FrontendActions.h -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,17 +7,18 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines SymbolGraph frontend actions.
+/// This file defines the ExtractAPIAction frontend action.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SYMBOLGRAPH_FRONTEND_ACTIONS_H
-#define LLVM_CLANG_SYMBOLGRAPH_FRONTEND_ACTIONS_H
+#ifndef LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H
+#define LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H
 
 #include "clang/Frontend/FrontendAction.h"
 
 namespace clang {
 
+/// ExtractAPIAction sets up the output file and creates the ExtractAPIVisitor.
 class ExtractAPIAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -30,4 +31,4 @@ public:
 
 } // namespace clang
 
-#endif // LLVM_CLANG_SYMBOLGRAPH_FRONTEND_ACTIONS_H
+#endif // LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H

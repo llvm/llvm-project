@@ -27,6 +27,9 @@ v_accvgpr_write a2, v255
 v_accvgpr_mov_b32 a1, a2
 // GFX90A: v_accvgpr_mov_b32 a1, a2        ; encoding: [0x02,0xa5,0x02,0x7e]
 
+v_accvgpr_write_b32 a10, s20
+// GFX940: v_accvgpr_write_b32 a10, s20    ; encoding: [0x0a,0x40,0xd9,0xd3,0x14,0x00,0x00,0x18]
+
 v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[34:65]
 // GFX90A: v_mfma_f32_32x32x1f32 a[0:31], v0, v1, a[34:65] ; encoding: [0x00,0x80,0xc0,0xd3,0x00,0x03,0x8a,0x04]
 

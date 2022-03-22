@@ -2,11 +2,12 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangSymbolGraph
+add_clang_library(clangExtractAPI
   API.cpp
   ExtractAPIConsumer.cpp
   DeclarationFragments.cpp
-  Serialization.cpp
+  Serialization/SerializerBase.cpp
+  Serialization/SymbolGraphSerializer.cpp
 
   LINK_LIBS
   clangAST
