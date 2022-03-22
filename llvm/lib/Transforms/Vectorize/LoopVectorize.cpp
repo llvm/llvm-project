@@ -641,7 +641,6 @@ protected:
   /// block, the \p AdditionalBypass pair provides information about the bypass
   /// block and the end value on the edge from bypass to this loop.
   void createInductionResumeValues(
-      Loop *L,
       std::pair<BasicBlock *, Value *> AdditionalBypass = {nullptr, nullptr});
 
   /// Complete the loop skeleton by adding debug MDs, creating appropriate
@@ -3155,13 +3154,13 @@ Loop *InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
 }
 
 void InnerLoopVectorizer::createInductionResumeValues(
-    Loop *L, std::pair<BasicBlock *, Value *> AdditionalBypass) {
+    std::pair<BasicBlock *, Value *> AdditionalBypass) {
   assert(((AdditionalBypass.first && AdditionalBypass.second) ||
           (!AdditionalBypass.first && !AdditionalBypass.second)) &&
          "Inconsistent information about additional bypass.");
 
-  Value *VectorTripCount = getOrCreateVectorTripCount(L->getLoopPreheader());
-  assert(VectorTripCount && L && "Expected valid arguments");
+  Value *VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
+  assert(VectorTripCount && "Expected valid arguments");
   // We are going to resume the execution of the scalar loop.
   // Go over all of the induction variables that we found and fix the
   // PHIs that are left in the scalar version of the loop.
@@ -3186,7 +3185,7 @@ void InnerLoopVectorizer::createInductionResumeValues(
       // We know what the end value is.
       EndValue = VectorTripCount;
     } else {
-      IRBuilder<> B(L->getLoopPreheader()->getTerminator());
+      IRBuilder<> B(LoopVectorPreHeader->getTerminator());
 
       // Fast-math-flags propagate from the original induction instruction.
       if (II.getInductionBinOp() && isa<FPMathOperator>(II.getInductionBinOp()))
@@ -3338,7 +3337,7 @@ InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   createHeaderBranch(Lp);
 
   // Emit phis for the new starting index of the scalar loop.
-  createInductionResumeValues(Lp);
+  createInductionResumeValues();
 
   return {completeLoopSkeleton(OrigLoopID), nullptr};
 }
@@ -8065,8 +8064,8 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
   // check, then the resume value for the induction variable comes from
   // the trip count of the main vector loop, hence passing the AdditionalBypass
   // argument.
-  createInductionResumeValues(Lp, {VecEpilogueIterationCountCheck,
-                                   EPI.VectorTripCount} /* AdditionalBypass */);
+  createInductionResumeValues({VecEpilogueIterationCountCheck,
+                               EPI.VectorTripCount} /* AdditionalBypass */);
 
   return {completeLoopSkeleton(OrigLoopID), EPResumeVal};
 }
