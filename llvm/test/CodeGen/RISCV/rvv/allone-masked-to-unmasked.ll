@@ -31,14 +31,12 @@ entry:
   ret <vscale x 1 x i8> %a
 }
 
-; FIXME: Use an unmasked TAIL_AGNOSTIC instruction if the tie operand is IMPLICIT_DEF
+; Use an unmasked TAIL_AGNOSTIC instruction if the tie operand is IMPLICIT_DEF
 define <vscale x 1 x i8> @test1(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
-; CHECK-NEXT:    vmset.m v0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
   %allone = call <vscale x 1 x i1> @llvm.riscv.vmset.nxv1i1(
@@ -53,14 +51,12 @@ entry:
   ret <vscale x 1 x i8> %a
 }
 
-; FIXME: Use an unmasked TU instruction because of the policy operand
+; Use an unmasked TU instruction because of the policy operand
 define <vscale x 1 x i8> @test2(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, <vscale x 1 x i8> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
-; CHECK-NEXT:    vmset.m v0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf8, tu, mu
-; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
 entry:
   %allone = call <vscale x 1 x i1> @llvm.riscv.vmset.nxv1i1(
