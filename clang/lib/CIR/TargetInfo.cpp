@@ -114,7 +114,37 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   assert(false && "NYI");
 }
 
+static bool testIfIsVoidTy(QualType Ty) {
+  const auto *BT = Ty->getAs<BuiltinType>();
+  if (!BT)
+    return false;
+
+  BuiltinType::Kind k = BT->getKind();
+  return k == BuiltinType::Void;
+}
+
 void X86_64ABIInfo::computeInfo(CIRGenFunctionInfo &FI) const {
+  // Top leevl CIR has unlimited arguments and return types. Lowering for ABI
+  // specific concerns should happen during a lowering phase. Assume everything
+  // is direct for now.
+  for (CIRGenFunctionInfo::arg_iterator it = FI.arg_begin(), ie = FI.arg_end();
+       it != ie; ++it) {
+    if (testIfIsVoidTy(it->type))
+      it->info = ABIArgInfo::getIgnore();
+    else
+      it->info = ABIArgInfo::getDirect(CGT.ConvertType(it->type));
+  }
+  auto RetTy = FI.getReturnType();
+  if (testIfIsVoidTy(RetTy))
+    FI.getReturnInfo() = ABIArgInfo::getIgnore();
+  else
+    FI.getReturnInfo() = ABIArgInfo::getDirect(CGT.ConvertType(RetTy));
+
+  return;
+
+  // TODO:
+  llvm_unreachable("Everything below here is from codegen. We shouldn't be "
+                   "computing ABI info until lowering");
   const unsigned CallingConv = FI.getCallingConvention();
 
   assert(CallingConv == cir::CallingConv::C && "C is the only supported CC");
