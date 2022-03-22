@@ -8506,8 +8506,9 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
   SmallVector<unsigned, 4> Regs;
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
 
-  // No work to do for memory operations.
-  if (OpInfo.ConstraintType == TargetLowering::C_Memory)
+  // No work to do for memory/address operands.
+  if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
+      OpInfo.ConstraintType == TargetLowering::C_Address)
     return None;
 
   // If this is a constraint for a single physreg, or a constraint for a
@@ -8765,8 +8766,9 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
     // Compute the constraint code and ConstraintType to use.
     TLI.ComputeConstraintToUse(OpInfo, OpInfo.CallOperand, &DAG);
 
-    if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
-        OpInfo.Type == InlineAsm::isClobber)
+    if ((OpInfo.ConstraintType == TargetLowering::C_Memory &&
+         OpInfo.Type == InlineAsm::isClobber) ||
+        OpInfo.ConstraintType == TargetLowering::C_Address)
       continue;
 
     // If this is a memory input, and if the operand is not indirect, do what we
@@ -8841,6 +8843,10 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
       }
       return false;
     };
+    assert((OpInfo.ConstraintType != TargetLowering::C_Address ||
+            (OpInfo.Type == InlineAsm::isInput &&
+             !OpInfo.isMatchingInputConstraint())) &&
+           "Only address as input operand is allowed.");
 
     switch (OpInfo.Type) {
     case InlineAsm::isOutput:
@@ -8973,8 +8979,11 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       }
 
-      if (OpInfo.ConstraintType == TargetLowering::C_Memory) {
-        assert(OpInfo.isIndirect && "Operand must be indirect to be a mem!");
+      if (OpInfo.ConstraintType == TargetLowering::C_Memory ||
+          OpInfo.ConstraintType == TargetLowering::C_Address) {
+        assert((OpInfo.isIndirect ||
+                OpInfo.ConstraintType != TargetLowering::C_Memory) &&
+               "Operand must be indirect to be a mem!");
         assert(InOperandVal.getValueType() ==
                    TLI.getPointerTy(DAG.getDataLayout()) &&
                "Memory operands expect pointer values");
@@ -9112,6 +9121,8 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
         break;
       case TargetLowering::C_Memory:
         break; // Already handled.
+      case TargetLowering::C_Address:
+        break; // Silence warning.
       case TargetLowering::C_Unknown:
         assert(false && "Unexpected unknown constraint");
       }

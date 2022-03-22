@@ -4658,6 +4658,8 @@ Some constraint codes are typically supported by all targets:
 - ``m``: A memory address operand. It is target-specific what addressing modes
   are supported, typical examples are register, or register + register offset,
   or register + immediate offset (of some target-specific size).
+- ``p``: An address operand. Similar to ``m``, but used by "load address"
+  type instructions without touching memory.
 - ``i``: An integer constant (of target-specific width). Allows either a simple
   immediate, or a relocatable value.
 - ``n``: An integer constant -- *not* including relocatable values.

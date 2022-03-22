@@ -1490,8 +1490,8 @@ std::string X86TargetInfo::convertConstraint(const char *&Constraint) const {
     return std::string("{si}");
   case 'D':
     return std::string("{di}");
-  case 'p': // address
-    return std::string("im");
+  case 'p': // Keep 'p' constraint (address).
+    return std::string("p");
   case 't': // top of floating point stack.
     return std::string("{st}");
   case 'u':                        // second from top of floating point stack.

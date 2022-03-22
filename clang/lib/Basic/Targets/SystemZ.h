@@ -82,6 +82,16 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
+  std::string convertConstraint(const char *&Constraint) const override {
+    switch (Constraint[0]) {
+    case 'p': // Keep 'p' constraint.
+      return std::string("p");
+    default:
+      break;
+    }
+    return TargetInfo::convertConstraint(Constraint);
+  }
+
   const char *getClobbers() const override {
     // FIXME: Is this really right?
     return "";
