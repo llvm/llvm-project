@@ -105,10 +105,10 @@ void mlir::printOperandsOrIntegersSizesList(OpAsmPrinter &p, Operation *op,
 }
 
 template <int64_t dynVal>
-static ParseResult
-parseOperandsOrIntegersImpl(OpAsmParser &parser,
-                            SmallVectorImpl<OpAsmParser::OperandType> &values,
-                            ArrayAttr &integers) {
+static ParseResult parseOperandsOrIntegersImpl(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    ArrayAttr &integers) {
   if (failed(parser.parseLSquare()))
     return failure();
   // 0-D.
@@ -119,7 +119,7 @@ parseOperandsOrIntegersImpl(OpAsmParser &parser,
 
   SmallVector<int64_t, 4> attrVals;
   while (true) {
-    OpAsmParser::OperandType operand;
+    OpAsmParser::UnresolvedOperand operand;
     auto res = parser.parseOptionalOperand(operand);
     if (res.hasValue() && succeeded(res.getValue())) {
       values.push_back(operand);
@@ -143,14 +143,16 @@ parseOperandsOrIntegersImpl(OpAsmParser &parser,
 }
 
 ParseResult mlir::parseOperandsOrIntegersOffsetsOrStridesList(
-    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &values,
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     ArrayAttr &integers) {
   return parseOperandsOrIntegersImpl<ShapedType::kDynamicStrideOrOffset>(
       parser, values, integers);
 }
 
 ParseResult mlir::parseOperandsOrIntegersSizesList(
-    OpAsmParser &parser, SmallVectorImpl<OpAsmParser::OperandType> &values,
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     ArrayAttr &integers) {
   return parseOperandsOrIntegersImpl<ShapedType::kDynamicSize>(parser, values,
                                                                integers);

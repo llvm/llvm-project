@@ -193,7 +193,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: | | |-ParmVarDecl [[ADDR_43:0x[a-z0-9]*]] <col:6, col:12> col:12 used __t 'float &'
 // CHECK-NEXT: | | `-CompoundStmt [[ADDR_44:0x[a-z0-9]*]] <col:17, line:14:1>
 // CHECK-NEXT: | |   |-DeclStmt [[ADDR_45:0x[a-z0-9]*]] <line:12:3, col:51>
-// CHECK-NEXT: | |   | `-TypedefDecl [[ADDR_46:0x[a-z0-9]*]] <col:3, col:48> col:48 _Up 'typename remove_reference<float &>::type':'float'
+// CHECK-NEXT: | |   | `-TypedefDecl [[ADDR_46:0x[a-z0-9]*]] <col:3, col:48> col:48 referenced _Up 'typename remove_reference<float &>::type':'float'
 // CHECK-NEXT: | |   |   `-ElaboratedType [[ADDR_47:0x[a-z0-9]*]] 'typename remove_reference<float &>::type' sugar
 // CHECK-NEXT: | |   |     `-TypedefType [[ADDR_48:0x[a-z0-9]*]] 'remove_reference<float &>::type' sugar
 // CHECK-NEXT: | |   |       |-Typedef [[ADDR_10]] 'type'
@@ -211,7 +211,7 @@ int test(float &&f, short &&s) {
 // CHECK-NEXT: |   |-ParmVarDecl [[ADDR_53:0x[a-z0-9]*]] <col:6, col:12> col:12 used __t 'short &'
 // CHECK-NEXT: |   `-CompoundStmt [[ADDR_54:0x[a-z0-9]*]] <col:17, line:14:1>
 // CHECK-NEXT: |     |-DeclStmt [[ADDR_55:0x[a-z0-9]*]] <line:12:3, col:51>
-// CHECK-NEXT: |     | `-TypedefDecl [[ADDR_56:0x[a-z0-9]*]] <col:3, col:48> col:48 _Up 'typename remove_reference<short &>::type':'short'
+// CHECK-NEXT: |     | `-TypedefDecl [[ADDR_56:0x[a-z0-9]*]] <col:3, col:48> col:48 referenced _Up 'typename remove_reference<short &>::type':'short'
 // CHECK-NEXT: |     |   `-ElaboratedType [[ADDR_57:0x[a-z0-9]*]] 'typename remove_reference<short &>::type' sugar
 // CHECK-NEXT: |     |     `-TypedefType [[ADDR_58:0x[a-z0-9]*]] 'remove_reference<short &>::type' sugar
 // CHECK-NEXT: |     |       |-Typedef [[ADDR_18]] 'type'

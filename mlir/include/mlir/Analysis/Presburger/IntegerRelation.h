@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
-#define MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
+#ifndef MLIR_ANALYSIS_PRESBURGER_INTEGERRELATION_H
+#define MLIR_ANALYSIS_PRESBURGER_INTEGERRELATION_H
 
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
@@ -564,4 +564,4 @@ public:
 } // namespace presburger
 } // namespace mlir
 
-#endif // MLIR_ANALYSIS_PRESBURGER_INTEGERPOLYHEDRON_H
+#endif // MLIR_ANALYSIS_PRESBURGER_INTEGERRELATION_H

@@ -305,7 +305,6 @@ enum CPol {
 namespace SendMsg { // Encoding of SIMM16 used in s_sendmsg* insns.
 
 enum Id { // Message ID, width(4) [3:0].
-  ID_UNKNOWN_ = -1,
   ID_INTERRUPT = 1,
   ID_GS = 2,
   ID_GS_DONE = 3,
@@ -318,8 +317,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_GET_DOORBELL = 10,      // added in GFX9
   ID_GET_DDID = 11,          // added in GFX10
   ID_SYSMSG = 15,
-  ID_GAPS_LAST_, // Indicate that sequence has gaps.
-  ID_GAPS_FIRST_ = ID_INTERRUPT,
+
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 4,
   ID_MASK_ = (((1 << ID_WIDTH_) - 1) << ID_SHIFT_)

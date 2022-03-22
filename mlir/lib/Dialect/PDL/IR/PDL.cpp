@@ -142,14 +142,15 @@ LogicalResult OperandsOp::verify() { return verifyHasBindingUse(*this); }
 //===----------------------------------------------------------------------===//
 
 static ParseResult parseOperationOpAttributes(
-    OpAsmParser &p, SmallVectorImpl<OpAsmParser::OperandType> &attrOperands,
+    OpAsmParser &p,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &attrOperands,
     ArrayAttr &attrNamesAttr) {
   Builder &builder = p.getBuilder();
   SmallVector<Attribute, 4> attrNames;
   if (succeeded(p.parseOptionalLBrace())) {
     do {
       StringAttr nameAttr;
-      OpAsmParser::OperandType operand;
+      OpAsmParser::UnresolvedOperand operand;
       if (p.parseAttribute(nameAttr) || p.parseEqual() ||
           p.parseOperand(operand))
         return failure();

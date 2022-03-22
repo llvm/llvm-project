@@ -18942,7 +18942,18 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     Offset += NumElts; // Increment for next iteration.
   }
 
-
+  // If we're broadcasting a SETCC result, try to broadcast the ops instead.
+  // TODO: What other unary shuffles would benefit from this?
+  if (isBroadcastShuffleMask(Mask) && V1.getOpcode() == ISD::SETCC &&
+      V1->hasOneUse()) {
+    SDValue Op0 = V1.getOperand(0);
+    SDValue Op1 = V1.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(V1.getOperand(2))->get();
+    EVT OpVT = Op0.getValueType();
+    return DAG.getSetCC(
+        DL, VT, DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT), Mask),
+        DAG.getVectorShuffle(OpVT, DL, Op1, DAG.getUNDEF(OpVT), Mask), CC);
+  }
 
   MVT ExtVT;
   switch (VT.SimpleTy) {
@@ -23512,9 +23523,8 @@ X86TargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 /// Result of 'and' is compared against zero. Change to a BT node if possible.
 /// Returns the BT node and the condition code needed to use it.
-static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
-                            const SDLoc &dl, SelectionDAG &DAG,
-                            SDValue &X86CC) {
+static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC, const SDLoc &dl,
+                            SelectionDAG &DAG, X86::CondCode &X86CC) {
   assert(And.getOpcode() == ISD::AND && "Expected AND node!");
   SDValue Op0 = And.getOperand(0);
   SDValue Op1 = And.getOperand(1);
@@ -23576,8 +23586,12 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
   // that doing a bittest on the i32 value is ok.  We extend to i32 because
   // the encoding for the i16 version is larger than the i32 version.
   // Also promote i16 to i32 for performance / code size reason.
-  if (Src.getValueType() == MVT::i8 || Src.getValueType() == MVT::i16)
+  if (Src.getValueType().getScalarSizeInBits() < 32)
     Src = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i32, Src);
+
+  // No legal type found, give up.
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(Src.getValueType()))
+    return SDValue();
 
   // See if we can use the 32-bit instruction instead of the 64-bit one for a
   // shorter encoding. Since the former takes the modulo 32 of BitNo and the
@@ -23592,8 +23606,7 @@ static SDValue LowerAndToBT(SDValue And, ISD::CondCode CC,
   if (Src.getValueType() != BitNo.getValueType())
     BitNo = DAG.getNode(ISD::ANY_EXTEND, dl, Src.getValueType(), BitNo);
 
-  X86CC = DAG.getTargetConstant(CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B,
-                                dl, MVT::i8);
+  X86CC = CC == ISD::SETEQ ? X86::COND_AE : X86::COND_B;
   return DAG.getNode(X86ISD::BT, dl, MVT::i32, Src, BitNo);
 }
 
@@ -24299,8 +24312,11 @@ SDValue X86TargetLowering::emitFlagsForSetcc(SDValue Op0, SDValue Op1,
   // Lower ((X >>s N) & 1) != 0 to BT(X, N).
   if (Op0.getOpcode() == ISD::AND && Op0.hasOneUse() && isNullConstant(Op1) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
-    if (SDValue BT = LowerAndToBT(Op0, CC, dl, DAG, X86CC))
+    X86::CondCode X86CondCode;
+    if (SDValue BT = LowerAndToBT(Op0, CC, dl, DAG, X86CondCode)) {
+      X86CC = DAG.getTargetConstant(X86CondCode, dl, MVT::i8);
       return BT;
+    }
   }
 
   // Try to use PTEST/PMOVMSKB for a tree ORs equality compared with 0.
@@ -24772,9 +24788,9 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     // We know the result of AND is compared against zero. Try to match
     // it to BT.
     if (Cond.getOpcode() == ISD::AND && Cond.hasOneUse()) {
-      SDValue BTCC;
-      if (SDValue BT = LowerAndToBT(Cond, ISD::SETNE, DL, DAG, BTCC)) {
-        CC = BTCC;
+      X86::CondCode X86CondCode;
+      if (SDValue BT = LowerAndToBT(Cond, ISD::SETNE, DL, DAG, X86CondCode)) {
+        CC = DAG.getTargetConstant(X86CondCode, DL, MVT::i8);
         Cond = BT;
         AddTest = false;
       }
@@ -52283,18 +52299,31 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
 /// then try to convert it to an ADC or SBB. This replaces TEST+SET+{ADD/SUB}
 /// with CMP+{ADC, SBB}.
+/// Also try (ADD/SUB)+(AND(SRL,1)) bit extraction pattern with BT+{ADC, SBB}.
 static SDValue combineAddOrSubToADCOrSBB(bool IsSub, const SDLoc &DL, EVT VT,
                                          SDValue X, SDValue Y,
                                          SelectionDAG &DAG) {
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
+    return SDValue();
+
   // Look through a one-use zext.
   if (Y.getOpcode() == ISD::ZERO_EXTEND && Y.hasOneUse())
     Y = Y.getOperand(0);
 
-  if (Y.getOpcode() != X86ISD::SETCC || !Y.hasOneUse())
+  if (!Y.hasOneUse())
     return SDValue();
 
-  X86::CondCode CC = (X86::CondCode)Y.getConstantOperandVal(0);
-  SDValue EFLAGS = Y.getOperand(1);
+  X86::CondCode CC;
+  SDValue EFLAGS;
+  if (Y.getOpcode() == X86ISD::SETCC) {
+    CC = (X86::CondCode)Y.getConstantOperandVal(0);
+    EFLAGS = Y.getOperand(1);
+  } else if (Y.getOpcode() == ISD::AND && isOneConstant(Y.getOperand(1))) {
+    EFLAGS = LowerAndToBT(Y, ISD::SETNE, DL, DAG, CC);
+  }
+
+  if (!EFLAGS)
+    return SDValue();
 
   // If X is -1 or 0, then we have an opportunity to avoid constants required in
   // the general case below.
@@ -52463,9 +52492,13 @@ static SDValue combineAddOrSubToADCOrSBB(SDNode *N, SelectionDAG &DAG) {
   if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, X, Y, DAG))
     return ADCOrSBB;
 
-  // If this is an add, commute and try again.
-  if (!IsSub)
-    return combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG);
+  // Commute and try again (negate the result for subtracts).
+  if (SDValue ADCOrSBB = combineAddOrSubToADCOrSBB(IsSub, DL, VT, Y, X, DAG)) {
+    if (IsSub)
+      ADCOrSBB =
+          DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), ADCOrSBB);
+    return ADCOrSBB;
+  }
 
   return SDValue();
 }
@@ -52952,6 +52985,16 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   // Try to synthesize horizontal subs from subs of shuffles.
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
+
+  // Fold SUB(X,SBB(Y,Z,W)) -> SUB(ADC(X,Z,W),Y)
+  // Don't fold to ADC(0,0,W)/SETCC_CARRY pattern which will prevent more folds.
+  if (Op1.getOpcode() == X86ISD::SBB && Op1->hasOneUse() &&
+      !(X86::isZeroNode(Op0) && X86::isZeroNode(Op1.getOperand(1)))) {
+    SDValue ADC = DAG.getNode(X86ISD::ADC, SDLoc(Op1), Op1->getVTList(), Op0,
+                              Op1.getOperand(1), Op1.getOperand(2));
+    return DAG.getNode(ISD::SUB, SDLoc(N), Op0.getValueType(), ADC.getValue(0),
+                       Op1.getOperand(0));
+  }
 
   return combineAddOrSubToADCOrSBB(N, DAG);
 }

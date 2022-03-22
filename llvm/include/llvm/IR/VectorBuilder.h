@@ -36,7 +36,7 @@ public:
   };
 
 private:
-  IRBuilder<> &Builder;
+  IRBuilderBase &Builder;
   Behavior ErrorHandling;
 
   // Explicit mask parameter.
@@ -58,7 +58,7 @@ private:
   }
 
 public:
-  VectorBuilder(IRBuilder<> &Builder,
+  VectorBuilder(IRBuilderBase &Builder,
                 Behavior ErrorHandling = Behavior::ReportAndAbort)
       : Builder(Builder), ErrorHandling(ErrorHandling), Mask(nullptr),
         ExplicitVectorLength(nullptr),

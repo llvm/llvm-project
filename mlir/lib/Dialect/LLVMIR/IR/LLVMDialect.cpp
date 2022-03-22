@@ -113,7 +113,7 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
   Builder &builder = parser.getBuilder();
 
   StringAttr predicateAttr;
-  OpAsmParser::OperandType lhs, rhs;
+  OpAsmParser::UnresolvedOperand lhs, rhs;
   Type type;
   SMLoc predicateLoc, trailingTypeLoc;
   if (parser.getCurrentLocation(&predicateLoc) ||
@@ -200,7 +200,7 @@ void AllocaOp::print(OpAsmPrinter &p) {
 // <operation> ::= `llvm.alloca` ssa-use `x` type attribute-dict?
 //                 `:` type `,` type
 ParseResult AllocaOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType arraySize;
+  OpAsmParser::UnresolvedOperand arraySize;
   Type type, elemType;
   SMLoc trailingTypeLoc;
   if (parser.parseOperand(arraySize) || parser.parseKeyword("x") ||
@@ -283,7 +283,7 @@ void SwitchOp::build(OpBuilder &builder, OperationState &result, Value value,
 static ParseResult parseSwitchOpCases(
     OpAsmParser &parser, Type flagType, ElementsAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
-    SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &caseOperands,
+    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &caseOperands,
     SmallVectorImpl<SmallVector<Type>> &caseOperandTypes) {
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
@@ -298,7 +298,7 @@ static ParseResult parseSwitchOpCases(
     values.push_back(APInt(bitWidth, value));
 
     Block *destination;
-    SmallVector<OpAsmParser::OperandType> operands;
+    SmallVector<OpAsmParser::UnresolvedOperand> operands;
     SmallVector<Type> operandTypes;
     if (parser.parseColon() || parser.parseSuccessor(destination))
       return failure();
@@ -489,7 +489,7 @@ void GEPOp::build(OpBuilder &builder, OperationState &result, Type resultType,
 
 static ParseResult
 parseGEPIndices(OpAsmParser &parser,
-                SmallVectorImpl<OpAsmParser::OperandType> &indices,
+                SmallVectorImpl<OpAsmParser::UnresolvedOperand> &indices,
                 DenseIntElementsAttr &structIndices) {
   SmallVector<int32_t> constantIndices;
   do {
@@ -657,7 +657,7 @@ static Type getLoadStoreElementType(OpAsmParser &parser, Type type,
 
 // <operation> ::= `llvm.load` `volatile` ssa-use attribute-dict? `:` type
 ParseResult LoadOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType addr;
+  OpAsmParser::UnresolvedOperand addr;
   Type type;
   SMLoc trailingTypeLoc;
 
@@ -707,7 +707,7 @@ void StoreOp::print(OpAsmPrinter &p) {
 // <operation> ::= `llvm.store` `volatile` ssa-use `,` ssa-use
 //                 attribute-dict? `:` type
 ParseResult StoreOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType addr, value;
+  OpAsmParser::UnresolvedOperand addr, value;
   Type type;
   SMLoc trailingTypeLoc;
 
@@ -788,7 +788,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
 ///                  `unwind` bb-id (`[` ssa-use-and-type-list `]`)?
 ///                  attribute-dict? `:` function-type
 ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> operands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
   FunctionType funcType;
   SymbolRefAttr funcAttr;
   SMLoc trailingTypeLoc;
@@ -948,7 +948,7 @@ ParseResult LandingpadOp::parse(OpAsmParser &parser, OperationState &result) {
   while (succeeded(parser.parseOptionalLParen()) &&
          (succeeded(parser.parseOptionalKeyword("filter")) ||
           succeeded(parser.parseOptionalKeyword("catch")))) {
-    OpAsmParser::OperandType operand;
+    OpAsmParser::UnresolvedOperand operand;
     Type ty;
     if (parser.parseOperand(operand) || parser.parseColon() ||
         parser.parseType(ty) ||
@@ -1075,7 +1075,7 @@ void CallOp::print(OpAsmPrinter &p) {
 // <operation> ::= `llvm.call` (function-id | ssa-use) `(` ssa-use-list `)`
 //                 attribute-dict? `:` function-type
 ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
-  SmallVector<OpAsmParser::OperandType, 8> operands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> operands;
   Type type;
   SymbolRefAttr funcAttr;
   SMLoc trailingTypeLoc;
@@ -1137,7 +1137,7 @@ ParseResult CallOp::parse(OpAsmParser &parser, OperationState &result) {
     auto wrappedFuncType = LLVM::LLVMPointerType::get(llvmFuncType);
 
     auto funcArguments =
-        ArrayRef<OpAsmParser::OperandType>(operands).drop_front();
+        ArrayRef<OpAsmParser::UnresolvedOperand>(operands).drop_front();
 
     // Make sure that the first operand (indirect callee) matches the wrapped
     // LLVM IR function type, and that the types of the other call operands
@@ -1180,7 +1180,7 @@ void ExtractElementOp::print(OpAsmPrinter &p) {
 ParseResult ExtractElementOp::parse(OpAsmParser &parser,
                                     OperationState &result) {
   SMLoc loc;
-  OpAsmParser::OperandType vector, position;
+  OpAsmParser::UnresolvedOperand vector, position;
   Type type, positionType;
   if (parser.getCurrentLocation(&loc) || parser.parseOperand(vector) ||
       parser.parseLSquare() || parser.parseOperand(position) ||
@@ -1315,7 +1315,7 @@ static Type getInsertExtractValueElementType(Type containerType,
 //                 `[` integer-literal (`,` integer-literal)* `]`
 //                 attribute-dict? `:` type
 ParseResult ExtractValueOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType container;
+  OpAsmParser::UnresolvedOperand container;
   Type containerType;
   ArrayAttr positionAttr;
   SMLoc attributeLoc, trailingTypeLoc;
@@ -1400,7 +1400,7 @@ void InsertElementOp::print(OpAsmPrinter &p) {
 ParseResult InsertElementOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   SMLoc loc;
-  OpAsmParser::OperandType vector, value, position;
+  OpAsmParser::UnresolvedOperand vector, value, position;
   Type vectorType, positionType;
   if (parser.getCurrentLocation(&loc) || parser.parseOperand(value) ||
       parser.parseComma() || parser.parseOperand(vector) ||
@@ -1449,7 +1449,7 @@ void InsertValueOp::print(OpAsmPrinter &p) {
 //                 `[` integer-literal (`,` integer-literal)* `]`
 //                 attribute-dict? `:` type
 ParseResult InsertValueOp::parse(OpAsmParser &parser, OperationState &result) {
-  OpAsmParser::OperandType container, value;
+  OpAsmParser::UnresolvedOperand container, value;
   Type containerType;
   ArrayAttr positionAttr;
   SMLoc attributeLoc, trailingTypeLoc;
@@ -1917,7 +1917,7 @@ void ShuffleVectorOp::print(OpAsmPrinter &p) {
 ParseResult ShuffleVectorOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   SMLoc loc;
-  OpAsmParser::OperandType v1, v2;
+  OpAsmParser::UnresolvedOperand v1, v2;
   ArrayAttr maskAttr;
   Type typeV1, typeV2;
   if (parser.getCurrentLocation(&loc) || parser.parseOperand(v1) ||
@@ -2046,7 +2046,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
                            parser, result, LLVM::Linkage::External)));
 
   StringAttr nameAttr;
-  SmallVector<OpAsmParser::OperandType> entryArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand> entryArgs;
   SmallVector<NamedAttrList> argAttrs;
   SmallVector<NamedAttrList> resultAttrs;
   SmallVector<Type> argTypes;
@@ -2287,7 +2287,7 @@ void AtomicRMWOp::print(OpAsmPrinter &p) {
 //                 attribute-dict? `:` type
 ParseResult AtomicRMWOp::parse(OpAsmParser &parser, OperationState &result) {
   Type type;
-  OpAsmParser::OperandType ptr, val;
+  OpAsmParser::UnresolvedOperand ptr, val;
   if (parseAtomicBinOp(parser, result, "bin_op") || parser.parseOperand(ptr) ||
       parser.parseComma() || parser.parseOperand(val) ||
       parseAtomicOrdering(parser, result, "ordering") ||
@@ -2359,7 +2359,7 @@ ParseResult AtomicCmpXchgOp::parse(OpAsmParser &parser,
                                    OperationState &result) {
   auto &builder = parser.getBuilder();
   Type type;
-  OpAsmParser::OperandType ptr, cmp, val;
+  OpAsmParser::UnresolvedOperand ptr, cmp, val;
   if (parser.parseOperand(ptr) || parser.parseComma() ||
       parser.parseOperand(cmp) || parser.parseComma() ||
       parser.parseOperand(val) ||

@@ -20,8 +20,8 @@ size_t ReadCylicBufferWrapper(void *buf, size_t buf_size, void *cyc_buf,
                               size_t offset) {
   llvm::MutableArrayRef<uint8_t> dst(reinterpret_cast<uint8_t *>(buf),
                                      buf_size);
-  llvm::MutableArrayRef<uint8_t> src(reinterpret_cast<uint8_t *>(cyc_buf),
-                                     cyc_buf_size);
+  llvm::ArrayRef<uint8_t> src(reinterpret_cast<uint8_t *>(cyc_buf),
+                              cyc_buf_size);
   IntelPTThreadTrace::ReadCyclicBuffer(dst, src, cyc_start, offset);
   return dst.size();
 }

@@ -8844,7 +8844,7 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
     RecipeBuilder.recordRecipeOf(Phi);
     for (auto &R : ReductionOperations) {
       RecipeBuilder.recordRecipeOf(R);
-      // For min/max reducitons, where we have a pair of icmp/select, we also
+      // For min/max reductions, where we have a pair of icmp/select, we also
       // need to record the ICmp recipe, so it can be removed later.
       assert(!RecurrenceDescriptor::isSelectCmpRecurrenceKind(Kind) &&
              "Only min/max recurrences allowed for inloop reductions");

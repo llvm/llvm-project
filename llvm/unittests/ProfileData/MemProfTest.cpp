@@ -4,6 +4,7 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Value.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
@@ -133,6 +134,13 @@ MemProfSchema getFullSchema() {
 TEST(MemProf, FillsValue) {
   std::unique_ptr<MockSymbolizer> Symbolizer(new MockSymbolizer());
 
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x1000},
+                                                specifier(), false))
+      .Times(1) // Only once since we remember invalid PCs.
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"new", 70, 57, 3, "memprof/memprof_new_delete.cpp"},
+      })));
+
   EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x2000},
                                                 specifier(), false))
       .Times(1) // Only once since we cache the result for future lookups.
@@ -141,41 +149,98 @@ TEST(MemProf, FillsValue) {
           {"bar", 201, 150, 20},
       })));
 
-  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x6000},
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x3000},
                                                 specifier(), false))
       .Times(1)
       .WillRepeatedly(Return(makeInliningInfo({
-          {"baz", 10, 5, 30},
-          {"qux.llvm.12345", 75, 70, 10},
+          {"xyz", 10, 5, 30},
+          {"abc", 10, 5, 30},
       })));
 
   CallStackMap CSM;
-  CSM[0x1] = {0x2000};
-  CSM[0x2] = {0x6000, 0x2000};
+  CSM[0x1] = {0x1000, 0x2000, 0x3000};
 
   llvm::MapVector<uint64_t, MemInfoBlock> Prof;
   Prof[0x1].AllocCount = 1;
-  Prof[0x2].AllocCount = 2;
 
   auto Seg = makeSegments();
 
   RawMemProfReader Reader(std::move(Symbolizer), Seg, Prof, CSM);
 
-  std::vector<MemProfRecord> Records;
-  for (const MemProfRecord &R : Reader) {
-    Records.push_back(R);
+  llvm::DenseMap<llvm::GlobalValue::GUID, MemProfRecord> Records;
+  for (const auto &Pair : Reader) {
+    Records.insert({Pair.first, Pair.second});
   }
-  EXPECT_EQ(Records.size(), 2U);
 
-  EXPECT_EQ(Records[0].Info.getAllocCount(), 1U);
-  EXPECT_EQ(Records[1].Info.getAllocCount(), 2U);
-  EXPECT_THAT(Records[0].CallStack[0], FrameContains("foo", 5U, 30U, false));
-  EXPECT_THAT(Records[0].CallStack[1], FrameContains("bar", 51U, 20U, true));
+  // Mock program psuedocode and expected memprof record contents.
+  //
+  //                              AllocSite       CallSite
+  // inline foo() { new(); }         Y               N
+  // bar() { foo(); }                Y               Y
+  // inline xyz() { bar(); }         N               Y
+  // abc() { xyz(); }                N               Y
 
-  EXPECT_THAT(Records[1].CallStack[0], FrameContains("baz", 5U, 30U, false));
-  EXPECT_THAT(Records[1].CallStack[1], FrameContains("qux", 5U, 10U, true));
-  EXPECT_THAT(Records[1].CallStack[2], FrameContains("foo", 5U, 30U, false));
-  EXPECT_THAT(Records[1].CallStack[3], FrameContains("bar", 51U, 20U, true));
+  // We expect 4 records. We attach alloc site data to foo and bar, i.e.
+  // all frames bottom up until we find a non-inline frame. We attach call site
+  // data to bar, xyz and abc.
+  ASSERT_EQ(Records.size(), 4U);
+
+  // Check the memprof record for foo.
+  const llvm::GlobalValue::GUID FooId = MemProfRecord::getGUID("foo");
+  ASSERT_EQ(Records.count(FooId), 1U);
+  const MemProfRecord &Foo = Records[FooId];
+  ASSERT_EQ(Foo.AllocSites.size(), 1U);
+  EXPECT_EQ(Foo.AllocSites[0].Info.getAllocCount(), 1U);
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[0],
+              FrameContains("foo", 5U, 30U, true));
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[1],
+              FrameContains("bar", 51U, 20U, false));
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[2],
+              FrameContains("xyz", 5U, 30U, true));
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[3],
+              FrameContains("abc", 5U, 30U, false));
+  EXPECT_TRUE(Foo.CallSites.empty());
+
+  // Check the memprof record for bar.
+  const llvm::GlobalValue::GUID BarId = MemProfRecord::getGUID("bar");
+  ASSERT_EQ(Records.count(BarId), 1U);
+  const MemProfRecord &Bar = Records[BarId];
+  ASSERT_EQ(Bar.AllocSites.size(), 1U);
+  EXPECT_EQ(Bar.AllocSites[0].Info.getAllocCount(), 1U);
+  EXPECT_THAT(Bar.AllocSites[0].CallStack[0],
+              FrameContains("foo", 5U, 30U, true));
+  EXPECT_THAT(Bar.AllocSites[0].CallStack[1],
+              FrameContains("bar", 51U, 20U, false));
+  EXPECT_THAT(Bar.AllocSites[0].CallStack[2],
+              FrameContains("xyz", 5U, 30U, true));
+  EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
+              FrameContains("abc", 5U, 30U, false));
+
+  ASSERT_EQ(Bar.CallSites.size(), 1U);
+  ASSERT_EQ(Bar.CallSites[0].size(), 2U);
+  EXPECT_THAT(Bar.CallSites[0][0], FrameContains("foo", 5U, 30U, true));
+  EXPECT_THAT(Bar.CallSites[0][1], FrameContains("bar", 51U, 20U, false));
+
+  // Check the memprof record for xyz.
+  const llvm::GlobalValue::GUID XyzId = MemProfRecord::getGUID("xyz");
+  ASSERT_EQ(Records.count(XyzId), 1U);
+  const MemProfRecord &Xyz = Records[XyzId];
+  ASSERT_EQ(Xyz.CallSites.size(), 1U);
+  ASSERT_EQ(Xyz.CallSites[0].size(), 2U);
+  // Expect the entire frame even though in practice we only need the first
+  // entry here.
+  EXPECT_THAT(Xyz.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
+  EXPECT_THAT(Xyz.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
+
+  // Check the memprof record for abc.
+  const llvm::GlobalValue::GUID AbcId = MemProfRecord::getGUID("abc");
+  ASSERT_EQ(Records.count(AbcId), 1U);
+  const MemProfRecord &Abc = Records[AbcId];
+  EXPECT_TRUE(Abc.AllocSites.empty());
+  ASSERT_EQ(Abc.CallSites.size(), 1U);
+  ASSERT_EQ(Abc.CallSites[0].size(), 2U);
+  EXPECT_THAT(Abc.CallSites[0][0], FrameContains("xyz", 5U, 30U, true));
+  EXPECT_THAT(Abc.CallSites[0][1], FrameContains("abc", 5U, 30U, false));
 }
 
 TEST(MemProf, PortableWrapper) {
@@ -206,36 +271,33 @@ TEST(MemProf, PortableWrapper) {
 TEST(MemProf, RecordSerializationRoundTrip) {
   const MemProfSchema Schema = getFullSchema();
 
-  llvm::SmallVector<MemProfRecord, 3> Records;
-  MemProfRecord MR;
-
   MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
                     /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
                     /*dealloc_cpu=*/4);
 
-  MR.Info = PortableMemInfoBlock(Info);
-  MR.CallStack.push_back({0x123, 1, 2, false});
-  MR.CallStack.push_back({0x345, 3, 4, false});
-  Records.push_back(MR);
+  llvm::SmallVector<llvm::SmallVector<MemProfRecord::Frame>> AllocCallStacks = {
+      {{0x123, 1, 2, false}, {0x345, 3, 4, false}},
+      {{0x123, 1, 2, false}, {0x567, 5, 6, false}}};
 
-  MR.clear();
-  MR.Info = PortableMemInfoBlock(Info);
-  MR.CallStack.push_back({0x567, 5, 6, false});
-  MR.CallStack.push_back({0x789, 7, 8, false});
-  Records.push_back(MR);
+  llvm::SmallVector<llvm::SmallVector<MemProfRecord::Frame>> CallSites = {
+      {{0x333, 1, 2, false}, {0x777, 3, 4, true}}};
+
+  MemProfRecord Record;
+  for (const auto &ACS : AllocCallStacks) {
+    // Use the same info block for both allocation sites.
+    Record.AllocSites.emplace_back(ACS, Info);
+  }
+  Record.CallSites.assign(CallSites);
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
-  serializeRecords(Records, Schema, OS);
+  Record.serialize(Schema, OS);
   OS.flush();
 
-  const llvm::SmallVector<MemProfRecord, 4> GotRecords = deserializeRecords(
+  const MemProfRecord GotRecord = MemProfRecord::deserialize(
       Schema, reinterpret_cast<const unsigned char *>(Buffer.data()));
 
-  ASSERT_TRUE(!GotRecords.empty());
-  EXPECT_EQ(GotRecords.size(), Records.size());
-  EXPECT_THAT(GotRecords[0], EqualsRecord(Records[0]));
-  EXPECT_THAT(GotRecords[1], EqualsRecord(Records[1]));
+  EXPECT_THAT(GotRecord, EqualsRecord(Record));
 }
 
 TEST(MemProf, SymbolizationFilter) {
@@ -283,12 +345,15 @@ TEST(MemProf, SymbolizationFilter) {
 
   RawMemProfReader Reader(std::move(Symbolizer), Seg, Prof, CSM);
 
-  std::vector<MemProfRecord> Records;
-  for (const MemProfRecord &R : Reader) {
-    Records.push_back(R);
+  llvm::SmallVector<MemProfRecord, 1> Records;
+  for (const auto &KeyRecordPair : Reader) {
+    Records.push_back(KeyRecordPair.second);
   }
+
   ASSERT_EQ(Records.size(), 1U);
-  ASSERT_EQ(Records[0].CallStack.size(), 1U);
-  EXPECT_THAT(Records[0].CallStack[0], FrameContains("foo", 5U, 30U, false));
+  ASSERT_EQ(Records[0].AllocSites.size(), 1U);
+  ASSERT_EQ(Records[0].AllocSites[0].CallStack.size(), 1U);
+  EXPECT_THAT(Records[0].AllocSites[0].CallStack[0],
+              FrameContains("foo", 5U, 30U, false));
 }
 } // namespace
