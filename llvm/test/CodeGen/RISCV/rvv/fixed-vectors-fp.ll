@@ -201,7 +201,7 @@ define void @fneg_v8f16(<8 x half>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfsgnjn.vv v8, v8, v8
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
@@ -215,7 +215,7 @@ define void @fneg_v4f32(<4 x float>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfsgnjn.vv v8, v8, v8
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
@@ -229,7 +229,7 @@ define void @fneg_v2f64(<2 x double>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfsgnjn.vv v8, v8, v8
+; CHECK-NEXT:    vfneg.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
@@ -243,7 +243,7 @@ define void @fabs_v8f16(<8 x half>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vfsgnjx.vv v8, v8, v8
+; CHECK-NEXT:    vfabs.v v8, v8
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x half>, <8 x half>* %x
@@ -258,7 +258,7 @@ define void @fabs_v4f32(<4 x float>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vfsgnjx.vv v8, v8, v8
+; CHECK-NEXT:    vfabs.v v8, v8
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x float>, <4 x float>* %x
@@ -273,7 +273,7 @@ define void @fabs_v2f64(<2 x double>* %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vfsgnjx.vv v8, v8, v8
+; CHECK-NEXT:    vfabs.v v8, v8
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x double>, <2 x double>* %x
@@ -1191,7 +1191,7 @@ define void @fneg_v16f16(<16 x half>* %x) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
 ; LMULMAX2-NEXT:    vle16.v v8, (a0)
-; LMULMAX2-NEXT:    vfsgnjn.vv v8, v8, v8
+; LMULMAX2-NEXT:    vfneg.v v8, v8
 ; LMULMAX2-NEXT:    vse16.v v8, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
@@ -1201,8 +1201,8 @@ define void @fneg_v16f16(<16 x half>* %x) {
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle16.v v8, (a1)
 ; LMULMAX1-NEXT:    vle16.v v9, (a0)
-; LMULMAX1-NEXT:    vfsgnjn.vv v8, v8, v8
-; LMULMAX1-NEXT:    vfsgnjn.vv v9, v9, v9
+; LMULMAX1-NEXT:    vfneg.v v8, v8
+; LMULMAX1-NEXT:    vfneg.v v9, v9
 ; LMULMAX1-NEXT:    vse16.v v9, (a0)
 ; LMULMAX1-NEXT:    vse16.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
@@ -1217,7 +1217,7 @@ define void @fneg_v8f32(<8 x float>* %x) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
 ; LMULMAX2-NEXT:    vle32.v v8, (a0)
-; LMULMAX2-NEXT:    vfsgnjn.vv v8, v8, v8
+; LMULMAX2-NEXT:    vfneg.v v8, v8
 ; LMULMAX2-NEXT:    vse32.v v8, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
@@ -1227,8 +1227,8 @@ define void @fneg_v8f32(<8 x float>* %x) {
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v8, (a1)
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vfsgnjn.vv v8, v8, v8
-; LMULMAX1-NEXT:    vfsgnjn.vv v9, v9, v9
+; LMULMAX1-NEXT:    vfneg.v v8, v8
+; LMULMAX1-NEXT:    vfneg.v v9, v9
 ; LMULMAX1-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
@@ -1243,7 +1243,7 @@ define void @fneg_v4f64(<4 x double>* %x) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
 ; LMULMAX2-NEXT:    vle64.v v8, (a0)
-; LMULMAX2-NEXT:    vfsgnjn.vv v8, v8, v8
+; LMULMAX2-NEXT:    vfneg.v v8, v8
 ; LMULMAX2-NEXT:    vse64.v v8, (a0)
 ; LMULMAX2-NEXT:    ret
 ;
@@ -1253,8 +1253,8 @@ define void @fneg_v4f64(<4 x double>* %x) {
 ; LMULMAX1-NEXT:    addi a1, a0, 16
 ; LMULMAX1-NEXT:    vle64.v v8, (a1)
 ; LMULMAX1-NEXT:    vle64.v v9, (a0)
-; LMULMAX1-NEXT:    vfsgnjn.vv v8, v8, v8
-; LMULMAX1-NEXT:    vfsgnjn.vv v9, v9, v9
+; LMULMAX1-NEXT:    vfneg.v v8, v8
+; LMULMAX1-NEXT:    vfneg.v v9, v9
 ; LMULMAX1-NEXT:    vse64.v v9, (a0)
 ; LMULMAX1-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
@@ -1971,7 +1971,7 @@ define void @trunc_v8f16(<8 x half>* %x) {
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI91_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI91_0)(a1)
-; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9
@@ -1993,7 +1993,7 @@ define void @trunc_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI92_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI92_0)(a1)
-; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9
@@ -2015,7 +2015,7 @@ define void @trunc_v2f64(<2 x double>* %x) {
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI93_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI93_0)(a1)
-; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8
 ; CHECK-NEXT:    vfcvt.f.x.v v9, v9
@@ -2044,7 +2044,7 @@ define void @ceil_v8f16(<8 x half>* %x) {
 ; CHECK-NEXT:    flh ft1, %lo(.LCPI94_1)(a1)
 ; CHECK-NEXT:    vfadd.vf v10, v9, ft0
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
-; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft1
 ; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -2071,7 +2071,7 @@ define void @ceil_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    flw ft1, %lo(.LCPI95_1)(a1)
 ; CHECK-NEXT:    vfadd.vf v10, v9, ft0
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
-; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft1
 ; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -2098,7 +2098,7 @@ define void @ceil_v2f64(<2 x double>* %x) {
 ; CHECK-NEXT:    fld ft1, %lo(.LCPI96_1)(a1)
 ; CHECK-NEXT:    vfadd.vf v10, v9, ft0
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
-; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft1
 ; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -2125,7 +2125,7 @@ define void @floor_v8f16(<8 x half>* %x) {
 ; CHECK-NEXT:    flh ft1, %lo(.LCPI97_1)(a1)
 ; CHECK-NEXT:    vfsub.vf v10, v9, ft0
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
-; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft1
 ; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -2152,7 +2152,7 @@ define void @floor_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    flw ft1, %lo(.LCPI98_1)(a1)
 ; CHECK-NEXT:    vfsub.vf v10, v9, ft0
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
-; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft1
 ; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -2179,7 +2179,7 @@ define void @floor_v2f64(<2 x double>* %x) {
 ; CHECK-NEXT:    fld ft1, %lo(.LCPI99_1)(a1)
 ; CHECK-NEXT:    vfsub.vf v10, v9, ft0
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v10, v0
-; CHECK-NEXT:    vfsgnjx.vv v10, v8, v8
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, ft1
 ; CHECK-NEXT:    vfsgnj.vv v9, v9, v8
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
@@ -2201,7 +2201,7 @@ define void @round_v8f16(<8 x half>* %x) {
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI100_0)(a1)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI100_1)
 ; CHECK-NEXT:    flh ft1, %lo(.LCPI100_1)(a1)
-; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    vfadd.vf v9, v9, ft1
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9
@@ -2226,7 +2226,7 @@ define void @round_v4f32(<4 x float>* %x) {
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI101_0)(a1)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI101_1)
 ; CHECK-NEXT:    flw ft1, %lo(.LCPI101_1)(a1)
-; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    vfadd.vf v9, v9, ft1
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9
@@ -2251,7 +2251,7 @@ define void @round_v2f64(<2 x double>* %x) {
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI102_0)(a1)
 ; CHECK-NEXT:    lui a1, %hi(.LCPI102_1)
 ; CHECK-NEXT:    fld ft1, %lo(.LCPI102_1)(a1)
-; CHECK-NEXT:    vfsgnjx.vv v9, v8, v8
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, ft0
 ; CHECK-NEXT:    vfadd.vf v9, v9, ft1
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v9

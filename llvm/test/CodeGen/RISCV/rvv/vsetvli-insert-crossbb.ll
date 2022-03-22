@@ -507,7 +507,7 @@ define <vscale x 2 x i32> @test_vsetvli_x0_x0(<vscale x 2 x i32>* %x, <vscale x 
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vwadd.vx v8, v10, zero
+; CHECK-NEXT:    vwcvt.x.x.v v8, v10
 ; CHECK-NEXT:  .LBB9_2: # %if.end
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v8

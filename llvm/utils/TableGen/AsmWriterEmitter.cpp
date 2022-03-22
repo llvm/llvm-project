@@ -867,8 +867,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
       IAPrinter IAP(CGA.Result->getAsString(), FlatAliasAsmString, NumMIOps);
 
-      bool CantHandle = false;
-
       unsigned MIOpNum = 0;
       for (unsigned i = 0, e = LastOpNo; i != e; ++i) {
         // Skip over tied operands as they're not part of an alias declaration.
@@ -968,10 +966,9 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
           break;
         }
         case CodeGenInstAlias::ResultOperand::K_Reg:
-          // If this is zero_reg, something's playing tricks we're not
-          // equipped to handle.
           if (!CGA.ResultOperands[i].getRegister()) {
-            CantHandle = true;
+            IAP.addCond(std::string(formatv(
+                "AliasPatternCond::K_Reg, {0}::NoRegister", Namespace)));
             break;
           }
 
@@ -983,8 +980,6 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
         MIOpNum += RO.getMINumOperands();
       }
-
-      if (CantHandle) continue;
 
       std::vector<Record *> ReqFeatures;
       if (PassSubtarget) {

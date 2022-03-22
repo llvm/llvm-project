@@ -893,6 +893,7 @@ defm VSUB_V : VALU_IV_V_X<"vsub", 0b000010>;
 defm VRSUB_V : VALU_IV_X_I<"vrsub", 0b000011>;
 
 def : InstAlias<"vneg.v $vd, $vs$vm", (VRSUB_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
+def : InstAlias<"vneg.v $vd, $vs", (VRSUB_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 
 // Vector Widening Integer Add/Subtract
 // Refer to 11.2 Widening Vector Arithmetic Instructions
@@ -920,8 +921,12 @@ defm VWSUB_W : VALU_MV_V_X<"vwsub", 0b110111, "w">;
 
 def : InstAlias<"vwcvt.x.x.v $vd, $vs$vm",
                 (VWADD_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
+def : InstAlias<"vwcvt.x.x.v $vd, $vs",
+                (VWADD_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 def : InstAlias<"vwcvtu.x.x.v $vd, $vs$vm",
                 (VWADDU_VX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
+def : InstAlias<"vwcvtu.x.x.v $vd, $vs",
+                (VWADDU_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 
 // Vector Integer Extension
 defm VZEXT_VF8 : VALU_MV_VS2<"vzext.vf8", 0b010010, 0b00010>;
@@ -950,6 +955,8 @@ defm VXOR_V : VALU_IV_V_X_I<"vxor", 0b001011>;
 
 def : InstAlias<"vnot.v $vd, $vs$vm",
                 (VXOR_VI VR:$vd, VR:$vs, -1, VMaskOp:$vm)>;
+def : InstAlias<"vnot.v $vd, $vs",
+                (VXOR_VI VR:$vd, VR:$vs, -1, zero_reg)>;
 
 // Vector Single-Width Bit Shift Instructions
 defm VSLL_V : VSHT_IV_V_X_I<"vsll", 0b100101, uimm5>;
@@ -968,6 +975,8 @@ defm VNSRA_W : VNSHT_IV_V_X_I<"vnsra", 0b101101, uimm5, "w">;
 
 def : InstAlias<"vncvt.x.x.w $vd, $vs$vm",
                 (VNSRL_WX VR:$vd, VR:$vs, X0, VMaskOp:$vm)>;
+def : InstAlias<"vncvt.x.x.w $vd, $vs",
+                (VNSRL_WX VR:$vd, VR:$vs, X0, zero_reg)>;
 
 // Vector Integer Comparison Instructions
 let RVVConstraint = NoConstraint in {
@@ -1186,8 +1195,12 @@ defm VFSGNJX_V : VSGNJ_FV_V_F<"vfsgnjx", 0b001010>;
 
 def : InstAlias<"vfneg.v $vd, $vs$vm",
                 (VFSGNJN_VV VR:$vd, VR:$vs, VR:$vs, VMaskOp:$vm)>;
+def : InstAlias<"vfneg.v $vd, $vs",
+                (VFSGNJN_VV VR:$vd, VR:$vs, VR:$vs, zero_reg)>;
 def : InstAlias<"vfabs.v $vd, $vs$vm",
                 (VFSGNJX_VV VR:$vd, VR:$vs, VR:$vs, VMaskOp:$vm)>;
+def : InstAlias<"vfabs.v $vd, $vs",
+                (VFSGNJX_VV VR:$vd, VR:$vs, VR:$vs, zero_reg)>;
 
 // Vector Floating-Point Compare Instructions
 let RVVConstraint = NoConstraint in {

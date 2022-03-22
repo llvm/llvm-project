@@ -21,7 +21,7 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; RV32-NEXT:    lui a0, 1048568
 ; RV32-NEXT:    vand.vx v8, v8, a0
 ; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vnsrl.wx v8, v8, zero
+; RV32-NEXT:    vncvt.x.x.w v8, v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: fixedlen:
@@ -32,7 +32,7 @@ define <2 x i16> @fixedlen(<2 x i32> %x) {
 ; RV64-NEXT:    slli a0, a0, 3
 ; RV64-NEXT:    vand.vx v8, v8, a0
 ; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vnsrl.wx v8, v8, zero
+; RV64-NEXT:    vncvt.x.x.w v8, v8
 ; RV64-NEXT:    ret
   %v41 = insertelement <2 x i32> poison, i32 16, i32 0
   %v42 = shufflevector <2 x i32> %v41, <2 x i32> poison, <2 x i32> zeroinitializer
