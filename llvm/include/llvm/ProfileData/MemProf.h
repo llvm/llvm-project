@@ -82,9 +82,9 @@ struct PortableMemInfoBlock {
 
   // Print out the contents of the MemInfoBlock in YAML format.
   void printYAML(raw_ostream &OS) const {
-    OS << "      MemInfoBlock:\n";
+    OS << "    MemInfoBlock:\n";
 #define MIBEntryDef(NameTag, Name, Type)                                       \
-  OS << "        " << #Name << ": " << Name << "\n";
+  OS << "      " << #Name << ": " << Name << "\n";
 #include "llvm/ProfileData/MIBEntryDef.inc"
 #undef MIBEntryDef
   }
@@ -133,7 +133,6 @@ private:
 #undef MIBEntryDef
 };
 
-// Holds the memprof profile information for a function.
 struct MemProfRecord {
   // Describes a call frame for a dynamic allocation context. The contents of
   // the frame are populated by symbolizing the stack depot call frame from the
@@ -194,152 +193,64 @@ struct MemProfRecord {
       return sizeof(Frame::Function) + sizeof(Frame::LineOffset) +
              sizeof(Frame::Column) + sizeof(Frame::IsInlineFrame);
     }
-
-    // Print the frame information in YAML format.
-    void printYAML(raw_ostream &OS) const {
-      OS << "      -\n"
-         << "        Function: " << Function << "\n"
-         << "        LineOffset: " << LineOffset << "\n"
-         << "        Column: " << Column << "\n"
-         << "        Inline: " << IsInlineFrame << "\n";
-    }
   };
 
-  struct AllocationInfo {
-    // The dynamic calling context for the allocation.
-    llvm::SmallVector<Frame> CallStack;
-    // The statistics obtained from the runtime for the allocation.
-    PortableMemInfoBlock Info;
-
-    AllocationInfo() = default;
-    AllocationInfo(ArrayRef<Frame> CS, const MemInfoBlock &MB)
-        : CallStack(CS.begin(), CS.end()), Info(MB) {}
-
-    void printYAML(raw_ostream &OS) const {
-      OS << "    -\n";
-      OS << "      Callstack:\n";
-      // TODO: Print out the frame on one line with to make it easier for deep
-      // callstacks once we have a test to check valid YAML is generated.
-      for (const auto &Frame : CallStack)
-        Frame.printYAML(OS);
-      Info.printYAML(OS);
-    }
-
-    size_t serializedSize() const {
-      return sizeof(uint64_t) + // The number of frames to serialize.
-             Frame::serializedSize() *
-                 CallStack.size() + // The contents of the frames.
-             PortableMemInfoBlock::serializedSize(); // The size of the payload.
-    }
-
-    bool operator==(const AllocationInfo &Other) const {
-      if (Other.Info != Info)
-        return false;
-
-      if (Other.CallStack.size() != CallStack.size())
-        return false;
-
-      for (size_t J = 0; J < Other.CallStack.size(); J++) {
-        if (Other.CallStack[J] != CallStack[J])
-          return false;
-      }
-      return true;
-    }
-
-    bool operator!=(const AllocationInfo &Other) const {
-      return !operator==(Other);
-    }
-  };
-
-  // Memory allocation sites in this function for which we have memory profiling
-  // data.
-  llvm::SmallVector<AllocationInfo> AllocSites;
-  // Holds call sites in this function which are part of some memory allocation
-  // context. We store this as a list of locations, each with its list of
-  // inline locations in bottom-up order i.e. from leaf to root. The inline
-  // location list may include additional entries, users should pick the last
-  // entry in the list with the same function GUID.
-  llvm::SmallVector<llvm::SmallVector<Frame>> CallSites;
+  // The dynamic calling context for the allocation.
+  llvm::SmallVector<Frame> CallStack;
+  // The statistics obtained from the runtime for the allocation.
+  PortableMemInfoBlock Info;
 
   void clear() {
-    AllocSites.clear();
-    CallSites.clear();
-  }
-
-  void merge(const MemProfRecord &Other) {
-    // TODO: Filter out duplicates which may occur if multiple memprof profiles
-    // are merged together using llvm-profdata.
-    AllocSites.append(Other.AllocSites);
-    CallSites.append(Other.CallSites);
+    CallStack.clear();
+    Info.clear();
   }
 
   size_t serializedSize() const {
-    size_t Result = sizeof(GlobalValue::GUID);
-    for (const AllocationInfo &N : AllocSites)
-      Result += N.serializedSize();
-
-    // The number of callsites we have information for.
-    Result += sizeof(uint64_t);
-    for (const auto &Frames : CallSites) {
-      // The number of frames to serialize.
-      Result += sizeof(uint64_t);
-      for (const Frame &F : Frames)
-        Result += F.serializedSize();
-    }
-    return Result;
+    return sizeof(uint64_t) + // The number of frames to serialize.
+           Frame::serializedSize() *
+               CallStack.size() + // The contents of the frames.
+           PortableMemInfoBlock::serializedSize(); // The size of the payload.
   }
 
   // Prints out the contents of the memprof record in YAML.
   void print(llvm::raw_ostream &OS) const {
-    if (!AllocSites.empty()) {
-      OS << "    AllocSites:\n";
-      for (const AllocationInfo &N : AllocSites)
-        N.printYAML(OS);
+    OS << "    Callstack:\n";
+    // TODO: Print out the frame on one line with to make it easier for deep
+    // callstacks once we have a test to check valid YAML is generated.
+    for (const auto &Frame : CallStack) {
+      OS << "    -\n"
+         << "      Function: " << Frame.Function << "\n"
+         << "      LineOffset: " << Frame.LineOffset << "\n"
+         << "      Column: " << Frame.Column << "\n"
+         << "      Inline: " << Frame.IsInlineFrame << "\n";
     }
 
-    if (!CallSites.empty()) {
-      OS << "    CallSites:\n";
-      for (const auto &Frames : CallSites) {
-        for (const auto &F : Frames) {
-          OS << "    -\n";
-          F.printYAML(OS);
-        }
-      }
-    }
+    Info.printYAML(OS);
   }
 
   bool operator==(const MemProfRecord &Other) const {
-    if (Other.AllocSites.size() != AllocSites.size())
+    if (Other.Info != Info)
       return false;
 
-    if (Other.CallSites.size() != CallSites.size())
+    if (Other.CallStack.size() != CallStack.size())
       return false;
 
-    for (size_t I = 0; I < AllocSites.size(); I++) {
-      if (AllocSites[I] != Other.AllocSites[I])
-        return false;
-    }
-
-    for (size_t I = 0; I < CallSites.size(); I++) {
-      if (CallSites[I] != Other.CallSites[I])
+    for (size_t I = 0; I < Other.CallStack.size(); I++) {
+      if (Other.CallStack[I] != CallStack[I])
         return false;
     }
     return true;
   }
-
-  // Serializes the memprof records in \p Records to the ostream \p OS based on
-  // the schema provided in \p Schema.
-  void serialize(const MemProfSchema &Schema, raw_ostream &OS);
-
-  // Deserializes memprof records from the Buffer.
-  static MemProfRecord deserialize(const MemProfSchema &Schema,
-                                   const unsigned char *Buffer);
-
-  // Returns the GUID for the function name after canonicalization. For memprof,
-  // we remove any .llvm suffix added by LTO. MemProfRecords are mapped to
-  // functions using this GUID.
-  static GlobalValue::GUID getGUID(const StringRef FunctionName);
 };
+
+// Serializes the memprof records in \p Records to the ostream \p OS based on
+// the schema provided in \p Schema.
+void serializeRecords(const ArrayRef<MemProfRecord> Records,
+                      const MemProfSchema &Schema, raw_ostream &OS);
+
+// Deserializes memprof records from the Buffer
+SmallVector<MemProfRecord, 4> deserializeRecords(const MemProfSchema &Schema,
+                                                 const unsigned char *Buffer);
 
 // Reads a memprof schema from a buffer. All entries in the buffer are
 // interpreted as uint64_t. The first entry in the buffer denotes the number of
@@ -348,11 +259,14 @@ struct MemProfRecord {
 // byte past the schema contents.
 Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer);
 
+using FunctionMemProfMap =
+    DenseMap<uint64_t, SmallVector<memprof::MemProfRecord, 4>>;
+
 /// Trait for lookups into the on-disk hash table for memprof format in the
 /// indexed profile.
 class MemProfRecordLookupTrait {
 public:
-  using data_type = const MemProfRecord &;
+  using data_type = ArrayRef<MemProfRecord>;
   using internal_key_type = uint64_t;
   using external_key_type = uint64_t;
   using hash_value_type = uint64_t;
@@ -383,15 +297,15 @@ public:
 
   data_type ReadData(uint64_t K, const unsigned char *D,
                      offset_type /*Unused*/) {
-    Record = MemProfRecord::deserialize(Schema, D);
-    return Record;
+    Records = deserializeRecords(Schema, D);
+    return Records;
   }
 
 private:
   // Holds the memprof schema used to deserialize records.
   MemProfSchema Schema;
   // Holds the records from one function deserialized from the indexed format.
-  MemProfRecord Record;
+  llvm::SmallVector<MemProfRecord, 4> Records;
 };
 
 class MemProfRecordWriterTrait {
@@ -399,8 +313,8 @@ public:
   using key_type = uint64_t;
   using key_type_ref = uint64_t;
 
-  using data_type = MemProfRecord;
-  using data_type_ref = MemProfRecord &;
+  using data_type = ArrayRef<MemProfRecord>;
+  using data_type_ref = ArrayRef<MemProfRecord>;
 
   using hash_value_type = uint64_t;
   using offset_type = uint64_t;
@@ -419,9 +333,17 @@ public:
     using namespace support;
 
     endian::Writer LE(Out, little);
+
     offset_type N = sizeof(K);
     LE.write<offset_type>(N);
-    offset_type M = V.serializedSize();
+
+    offset_type M = 0;
+
+    M += sizeof(uint64_t);
+    for (const auto &Record : V) {
+      M += Record.serializedSize();
+    }
+
     LE.write<offset_type>(M);
     return std::make_pair(N, M);
   }
@@ -435,7 +357,7 @@ public:
   void EmitData(raw_ostream &Out, key_type_ref /*Unused*/, data_type_ref V,
                 offset_type /*Unused*/) {
     assert(Schema != nullptr && "MemProf schema is not initialized!");
-    V.serialize(*Schema, Out);
+    serializeRecords(V, *Schema, Out);
   }
 };
 
