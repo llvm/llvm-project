@@ -52,7 +52,7 @@ add_subdirectory(stdio)
 add_subdirectory(threads)
 add_subdirectory(time)
 
-set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_integration_test.cpp)
+set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_api_test.cpp)
 
 set(entrypoints_name_list "")
 foreach(entry IN LISTS TARGET_LLVMLIBC_ENTRYPOINTS)
@@ -66,7 +66,7 @@ list(TRANSFORM entrypoints_name_list PREPEND "-e=")
 
 file(GLOB spec_files ${LIBC_SOURCE_DIR}/spec/*.td)
 
-# Generate integration test souce code.
+# Generate api test souce code.
 add_custom_command(
   OUTPUT ${public_test}
   COMMAND $<TARGET_FILE:libc-prototype-testgen> -o ${public_test}
@@ -80,32 +80,32 @@ add_custom_command(
 )
 
 add_executable(
-  libc-integration-test
+  libc-api-test
   EXCLUDE_FROM_ALL
   ${public_test}
 )
 # Blank out default include directories to prevent accidentally including
 # system headers or our own internal headers.
 set_target_properties(
-  libc-integration-test
+  libc-api-test
   PROPERTIES
   INCLUDE_DIRECTORIES ""
 )
 # Only include we need is the include for cpp::IsSame and our generated
 # public headers.
 target_include_directories(
-  libc-integration-test BEFORE
+  libc-api-test BEFORE
   PRIVATE
     "${LIBC_SOURCE_DIR}/src/__support/CPP"
     "${LIBC_BUILD_DIR}/include"
 )
 target_compile_options(
-  libc-integration-test
+  libc-api-test
   PRIVATE
   -ffreestanding
 )
 target_link_options(
-  libc-integration-test
+  libc-api-test
   PRIVATE "-nostdlib"
 )
 set(library_files)
@@ -116,7 +116,7 @@ endforeach()
 
 if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
   add_custom_target(
-    libc-integration-test-tidy
+    libc-api-test-tidy
     VERBATIM
     COMMAND $<TARGET_FILE:clang-tidy> --system-headers
       --checks=-*,llvmlibc-restrict-system-libc-headers
@@ -130,10 +130,10 @@ if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
     DEPENDS
       clang-tidy ${public_test}
   )
-  add_dependencies(libc-integration-test libc-integration-test-tidy)
+  add_dependencies(libc-api-test libc-api-test-tidy)
 endif()
 
-target_link_libraries(libc-integration-test
+target_link_libraries(libc-api-test
   PRIVATE
   ${library_files}
 )
