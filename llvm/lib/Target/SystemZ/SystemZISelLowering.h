@@ -497,6 +497,19 @@ public:
       case 'T':
         return InlineAsm::Constraint_T;
       }
+    } else if (ConstraintCode.size() == 2 && ConstraintCode[0] == 'Z') {
+      switch (ConstraintCode[1]) {
+      default:
+        break;
+      case 'Q':
+        return InlineAsm::Constraint_ZQ;
+      case 'R':
+        return InlineAsm::Constraint_ZR;
+      case 'S':
+        return InlineAsm::Constraint_ZS;
+      case 'T':
+        return InlineAsm::Constraint_ZT;
+      }
     }
     return TargetLowering::getInlineAsmMemConstraint(ConstraintCode);
   }

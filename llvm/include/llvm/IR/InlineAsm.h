@@ -274,8 +274,12 @@ public:
 
     // Address constraints
     Constraint_p,
+    Constraint_ZQ,
+    Constraint_ZR,
+    Constraint_ZS,
+    Constraint_ZT,
 
-    Constraints_Max = Constraint_p,
+    Constraints_Max = Constraint_ZT,
     Constraints_ShiftAmount = 16,
 
     Flag_MatchingOperand = 0x80000000
@@ -462,6 +466,14 @@ public:
       return "Zy";
     case InlineAsm::Constraint_p:
       return "p";
+    case InlineAsm::Constraint_ZQ:
+      return "ZQ";
+    case InlineAsm::Constraint_ZR:
+      return "ZR";
+    case InlineAsm::Constraint_ZS:
+      return "ZS";
+    case InlineAsm::Constraint_ZT:
+      return "ZT";
     default:
       llvm_unreachable("Unknown memory constraint");
     }
