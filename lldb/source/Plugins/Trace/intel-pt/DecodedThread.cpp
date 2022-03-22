@@ -112,7 +112,7 @@ void DecodedThread::AppendError(llvm::Error &&error) {
   m_errors.try_emplace(m_instruction_ips.size(), toString(std::move(error)));
   m_instruction_ips.emplace_back(LLDB_INVALID_ADDRESS);
   m_instruction_sizes.emplace_back(0);
-  m_instruction_classes.emplace_back(pt_insn_class::ptic_unknown);
+  m_instruction_classes.emplace_back(pt_insn_class::ptic_error);
 }
 
 void DecodedThread::AppendError(llvm::Error &&error, uint64_t tsc) {
@@ -133,8 +133,25 @@ const DecodedThread::LibiptErrors &DecodedThread::GetTscErrors() const {
   return m_tsc_errors;
 }
 
-Optional<DecodedThread::TscRange>
-DecodedThread::CalculateTscRange(size_t insn_index) const {
+Optional<DecodedThread::TscRange> DecodedThread::CalculateTscRange(
+    size_t insn_index,
+    const Optional<DecodedThread::TscRange> &hint_range) const {
+  // We first try to check the given hint range in case we are traversing the
+  // trace in short jumps. If that fails, then we do the more expensive
+  // arbitrary lookup.
+  if (hint_range) {
+    Optional<TscRange> candidate_range;
+    if (insn_index < hint_range->GetStartInstructionIndex())
+      candidate_range = hint_range->Prev();
+    else if (insn_index > hint_range->GetEndInstructionIndex())
+      candidate_range = hint_range->Next();
+    else
+      candidate_range = hint_range;
+
+    if (candidate_range && candidate_range->InRange(insn_index))
+      return candidate_range;
+  }
+  // Now we do a more expensive lookup
   auto it = m_instruction_timestamps.upper_bound(insn_index);
   if (it == m_instruction_timestamps.begin())
     return None;
@@ -199,12 +216,12 @@ size_t DecodedThread::TscRange::GetEndInstructionIndex() const {
   return m_end_index;
 }
 
-bool DecodedThread::TscRange::InRange(size_t insn_index) {
+bool DecodedThread::TscRange::InRange(size_t insn_index) const {
   return GetStartInstructionIndex() <= insn_index &&
          insn_index <= GetEndInstructionIndex();
 }
 
-Optional<DecodedThread::TscRange> DecodedThread::TscRange::Next() {
+Optional<DecodedThread::TscRange> DecodedThread::TscRange::Next() const {
   auto next_it = m_it;
   ++next_it;
   if (next_it == m_decoded_thread->m_instruction_timestamps.end())
@@ -212,7 +229,7 @@ Optional<DecodedThread::TscRange> DecodedThread::TscRange::Next() {
   return TscRange(next_it, *m_decoded_thread);
 }
 
-Optional<DecodedThread::TscRange> DecodedThread::TscRange::Prev() {
+Optional<DecodedThread::TscRange> DecodedThread::TscRange::Prev() const {
   if (m_it == m_decoded_thread->m_instruction_timestamps.begin())
     return None;
   auto prev_it = m_it;

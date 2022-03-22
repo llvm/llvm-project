@@ -18,11 +18,34 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
-TraceInstructionDumper::TraceInstructionDumper(lldb::TraceCursorUP &&cursor_up,
-                                               int initial_index, bool raw,
-                                               bool show_tsc)
-    : m_cursor_up(std::move(cursor_up)), m_index(initial_index), m_raw(raw),
-      m_show_tsc(show_tsc) {}
+TraceInstructionDumper::TraceInstructionDumper(
+    lldb::TraceCursorUP &&cursor_up, Stream &s,
+    const TraceInstructionDumperOptions &options)
+    : m_cursor_up(std::move(cursor_up)), m_options(options), m_s(s) {
+  // We first set the cursor in its initial position
+  if (m_options.id) {
+    if (!m_cursor_up->GoToId(*m_options.id)) {
+      s.PutCString("    invalid instruction id\n");
+      SetNoMoreData();
+      return;
+    }
+  } else if (m_options.forwards) {
+    m_cursor_up->Seek(0, TraceCursor::SeekType::Beginning);
+  } else {
+    m_cursor_up->Seek(0, TraceCursor::SeekType::End);
+  }
+
+  m_cursor_up->SetForwards(m_options.forwards);
+  if (m_options.skip) {
+    uint64_t to_skip = m_options.skip.getValue();
+    if (m_cursor_up->Seek((m_options.forwards ? 1 : -1) * to_skip,
+                          TraceCursor::SeekType::Current) < to_skip) {
+      // This happens when the skip value was more than the number of
+      // available instructions.
+      SetNoMoreData();
+    }
+  }
+}
 
 /// \return
 ///     Return \b true if the cursor could move one step.
@@ -31,17 +54,7 @@ bool TraceInstructionDumper::TryMoveOneStep() {
     SetNoMoreData();
     return false;
   }
-  m_index += m_cursor_up->IsForwards() ? 1 : -1;
   return true;
-}
-
-/// \return
-///     The number of characters that would be needed to print the given
-///     integer.
-static int GetNumberOfChars(int num) {
-  if (num == 0)
-    return 1;
-  return (num < 0 ? 1 : 0) + static_cast<int>(log10(abs(num))) + 1;
 }
 
 /// Helper struct that holds symbol, disassembly and address information of an
@@ -159,36 +172,31 @@ void TraceInstructionDumper::SetNoMoreData() { m_no_more_data = true; }
 
 bool TraceInstructionDumper::HasMoreData() { return !m_no_more_data; }
 
-void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
+Optional<lldb::tid_t> TraceInstructionDumper::DumpInstructions(size_t count) {
   ThreadSP thread_sp = m_cursor_up->GetExecutionContextRef().GetThreadSP();
   if (!thread_sp) {
-    s.Printf("invalid thread");
-    return;
+    m_s.Printf("invalid thread");
+    return None;
   }
 
-  s.Printf("thread #%u: tid = %" PRIu64 "\n", thread_sp->GetIndexID(),
-           thread_sp->GetID());
-
-  int digits_count = GetNumberOfChars(
-      m_cursor_up->IsForwards() ? m_index + count - 1 : m_index - count + 1);
   bool was_prev_instruction_an_error = false;
 
   auto printMissingInstructionsMessage = [&]() {
-    s.Printf("    ...missing instructions\n");
+    m_s.Printf("    ...missing instructions\n");
   };
 
-  auto printInstructionIndex = [&]() {
-    s.Printf("    [%*d] ", digits_count, m_index);
+  auto printInstructionHeader = [&](uint64_t id) {
+    m_s.Printf("    %" PRIu64 ": ", id);
 
-    if (m_show_tsc) {
-      s.Printf("[tsc=");
+    if (m_options.show_tsc) {
+      m_s.Printf("[tsc=");
 
       if (Optional<uint64_t> timestamp = m_cursor_up->GetCounter(lldb::eTraceCounterTSC))
-        s.Printf("0x%016" PRIx64, *timestamp);
+        m_s.Printf("0x%016" PRIx64, *timestamp);
       else
-        s.Printf("unavailable");
+        m_s.Printf("unavailable");
 
-      s.Printf("] ");
+      m_s.Printf("] ");
     }
   };
 
@@ -244,11 +252,13 @@ void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
                                         : InstructionSP());
   };
 
+  Optional<lldb::user_id_t> last_id;
   for (size_t i = 0; i < count; i++) {
     if (!HasMoreData()) {
-      s.Printf("    no more data\n");
+      m_s.Printf("    no more data\n");
       break;
     }
+    last_id = m_cursor_up->GetId();
 
     if (const char *err = m_cursor_up->GetError()) {
       if (!m_cursor_up->IsForwards() && !was_prev_instruction_an_error)
@@ -256,8 +266,8 @@ void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
 
       was_prev_instruction_an_error = true;
 
-      printInstructionIndex();
-      s << err;
+      printInstructionHeader(m_cursor_up->GetId());
+      m_s << err;
     } else {
       if (m_cursor_up->IsForwards() && was_prev_instruction_an_error)
         printMissingInstructionsMessage();
@@ -266,7 +276,7 @@ void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
 
       InstructionSymbolInfo insn_info;
 
-      if (!m_raw) {
+      if (!m_options.raw) {
         insn_info.load_address = m_cursor_up->GetLoadAddress();
         insn_info.exe_ctx = exe_ctx;
         insn_info.address.SetLoadAddress(insn_info.load_address, &target);
@@ -274,19 +284,20 @@ void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
         std::tie(insn_info.disassembler, insn_info.instruction) =
             calculateDisass(insn_info.address, insn_info.sc);
 
-        DumpInstructionSymbolContext(s, prev_insn_info, insn_info);
+        DumpInstructionSymbolContext(m_s, prev_insn_info, insn_info);
       }
 
-      printInstructionIndex();
-      s.Printf("0x%016" PRIx64, m_cursor_up->GetLoadAddress());
+      printInstructionHeader(m_cursor_up->GetId());
+      m_s.Printf("0x%016" PRIx64, m_cursor_up->GetLoadAddress());
 
-      if (!m_raw)
-        DumpInstructionDisassembly(s, insn_info);
+      if (!m_options.raw)
+        DumpInstructionDisassembly(m_s, insn_info);
 
       prev_insn_info = insn_info;
     }
 
-    s.Printf("\n");
+    m_s.Printf("\n");
     TryMoveOneStep();
   }
+  return last_id;
 }

@@ -74,9 +74,10 @@ class TraceCursor {
 public:
   /// Helper enum to indicate the reference point when invoking
   /// \a TraceCursor::Seek().
+  /// The following values are inspired by \a std::istream::seekg.
   enum class SeekType {
     /// The beginning of the trace, i.e the oldest item.
-    Set = 0,
+    Beginning = 0,
     /// The current position in the trace.
     Current,
     /// The end of the trace, i.e the most recent item.
@@ -133,6 +134,51 @@ public:
   ///     \b true if the cursor effectively moved, \b false otherwise.
   virtual bool Next() = 0;
 
+  /// Instruction identifiers:
+  ///
+  /// When building complex higher level tools, fast random accesses in the
+  /// trace might be needed, for which each instruction requires a unique
+  /// identifier within its thread trace. For example, a tool might want to
+  /// repeatedly inspect random consecutive portions of a trace. This means that
+  /// it will need to first move quickly to the beginning of each section and
+  /// then start its iteration. Given that the number of instructions can be in
+  /// the order of hundreds of millions, fast random access is necessary.
+  ///
+  /// An example of such a tool could be an inspector of the call graph of a
+  /// trace, where each call is represented with its start and end instructions.
+  /// Inspecting all the instructions of a call requires moving to its first
+  /// instruction and then iterating until the last instruction, which following
+  /// the pattern explained above.
+  ///
+  /// Instead of using 0-based indices as identifiers, each Trace plug-in can
+  /// decide the nature of these identifiers and thus no assumptions can be made
+  /// regarding their ordering and sequentiality. The reason is that an
+  /// instruction might be encoded by the plug-in in a way that hides its actual
+  /// 0-based index in the trace, but it's still possible to efficiently find
+  /// it.
+  ///
+  /// Requirements:
+  /// - For a given thread, no two instructions have the same id.
+  /// - In terms of efficiency, moving the cursor to a given id should be as
+  ///   fast as possible, but not necessarily O(1). That's why the recommended
+  ///   way to traverse sequential instructions is to use the \a
+  ///   TraceCursor::Next() method and only use \a TraceCursor::GoToId(id)
+  ///   sparingly.
+
+  /// Make the cursor point to the item whose identifier is \p id.
+  ///
+  /// \return
+  ///     \b true if the given identifier exists and the cursor effectively
+  ///     moved. Otherwise, \b false is returned and the cursor doesn't change
+  ///     its position.
+  virtual bool GoToId(lldb::user_id_t id) = 0;
+
+  /// \return
+  ///     A unique identifier for the instruction or error this cursor is
+  ///     pointing to.
+  virtual lldb::user_id_t GetId() const = 0;
+  /// \}
+
   /// Make the cursor point to an item in the trace based on an origin point and
   /// an offset. This API doesn't distinguishes instruction types nor errors in
   /// the trace, unlike the \a TraceCursor::Next() method.
@@ -152,7 +198,7 @@ public:
   ///
   /// \return
   ///     The number of trace items moved from the origin.
-  virtual size_t Seek(ssize_t offset, SeekType origin) = 0;
+  virtual uint64_t Seek(int64_t offset, SeekType origin) = 0;
 
   /// \return
   ///   The \a ExecutionContextRef of the backing thread from the creation time

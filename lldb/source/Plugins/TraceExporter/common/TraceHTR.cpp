@@ -130,7 +130,7 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
 
   // Move cursor to the first instruction in the trace
   cursor.SetForwards(true);
-  cursor.Seek(0, TraceCursor::SeekType::Set);
+  cursor.Seek(0, TraceCursor::SeekType::Beginning);
 
   Target &target = thread.GetProcess()->GetTarget();
   auto function_name_from_load_address =
