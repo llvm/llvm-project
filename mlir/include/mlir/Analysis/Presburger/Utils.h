@@ -130,6 +130,16 @@ void removeDuplicateDivs(
     SmallVectorImpl<unsigned> &denoms, unsigned localOffset,
     llvm::function_ref<bool(unsigned i, unsigned j)> merge);
 
+/// Return `coeffs` with all the elements negated.
+SmallVector<int64_t, 8> getNegatedCoeffs(ArrayRef<int64_t> coeffs);
+
+/// Return the complement of the given inequality.
+///
+/// The complement of a_1 x_1 + ... + a_n x_ + c >= 0 is
+/// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
+/// since all the variables are constrained to be integers.
+SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq);
+
 } // namespace presburger
 } // namespace mlir
 

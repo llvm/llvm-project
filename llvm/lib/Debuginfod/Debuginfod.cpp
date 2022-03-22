@@ -129,6 +129,7 @@ class StreamedHTTPResponseHandler : public HTTPResponseHandler {
 public:
   StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
       : CreateStream(CreateStream), Client(Client) {}
+  virtual ~StreamedHTTPResponseHandler() = default;
 
   Error handleBodyChunk(StringRef BodyChunk) override;
 };
@@ -196,7 +197,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
     HTTPRequest Request(ArtifactUrl);
     Error Err = Client.perform(Request, Handler);
     if (Err)
-      return Err;
+      return std::move(Err);
 
     if (Client.responseCode() != 200)
       continue;

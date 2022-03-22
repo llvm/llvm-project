@@ -51,7 +51,7 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
   auto int32Ty = IntegerType::get(context, 32);
   auto int1Ty = IntegerType::get(context, 1);
 
-  SmallVector<OpAsmParser::OperandType, 8> ops;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
   Type type;
   return failure(parser.parseOperandList(ops) ||
                  parser.parseOptionalAttrDict(result.attributes) ||

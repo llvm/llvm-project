@@ -78,6 +78,8 @@ public:
   }
 
   bool TraverseDecl(Decl *Node) {
+    if (!Node)
+      return true;
     // There is no need to go deeper into nodes that do not enclose selection,
     // since "using" there will not affect selection, nor would it make a good
     // insertion point.

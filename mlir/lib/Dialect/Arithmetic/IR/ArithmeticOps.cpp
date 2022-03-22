@@ -1806,7 +1806,7 @@ OpFoldResult arith::SelectOp::fold(ArrayRef<Attribute> operands) {
 
 ParseResult SelectOp::parse(OpAsmParser &parser, OperationState &result) {
   Type conditionType, resultType;
-  SmallVector<OpAsmParser::OperandType, 3> operands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 3> operands;
   if (parser.parseOperandList(operands, /*requiredOperandCount=*/3) ||
       parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(resultType))

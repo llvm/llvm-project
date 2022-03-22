@@ -80,6 +80,27 @@ define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) nounwind {
   ret i32 %add1
 }
 
+define i24 @test_i24_add_add_idx(i24 %x, i24 %y, i24 %z) nounwind {
+; X86-LABEL: test_i24_add_add_idx:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    btl $15, {{[0-9]+}}(%esp)
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: test_i24_add_add_idx:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    btl $15, %edx
+; X64-NEXT:    adcl %esi, %eax
+; X64-NEXT:    retq
+  %add = add i24 %y, %x
+  %shift = lshr i24 %z, 15
+  %mask = and i24 %shift, 1
+  %add1 = add i24 %add, %mask
+  ret i24 %add1
+}
+
 define i128 @test_i128_add_add_idx(i128 %x, i128 %y, i128 %z) nounwind {
 ; X86-LABEL: test_i128_add_add_idx:
 ; X86:       # %bb.0:
@@ -348,10 +369,10 @@ define i64 @test_i64_add_add_var(i64 %x, i64 %y, i64 %z, i64 %w) nounwind {
 ; X86-NEXT:    shrl %cl, %edi
 ; X86-NEXT:    shrdl %cl, %ebx, %esi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    jne .LBB12_2
+; X86-NEXT:    jne .LBB13_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:  .LBB12_2:
+; X86-NEXT:  .LBB13_2:
 ; X86-NEXT:    andl $1, %edi
 ; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    adcl $0, %edx

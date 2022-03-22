@@ -5,6 +5,7 @@
 # past block prologues which would overwrite their uses.
 
 ---
+# Make sure COPY to $sgpr9 is not sunk after S_AND_SAVEEXEC_B64.
 name:            _amdgpu_ps_main
 alignment:       1
 tracksRegLiveness: true
@@ -17,16 +18,16 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.1(0x80000000)
   ; GFX10-NEXT:   liveins: $sgpr4
   ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   renamable $sgpr9 = COPY $sgpr4
   ; GFX10-NEXT:   renamable $vgpr5 = IMPLICIT_DEF
   ; GFX10-NEXT:   renamable $sgpr0_sgpr1 = nofpexcept V_CMP_NGT_F32_e64 0, 0, 0, $vgpr5, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.1
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.1:
   ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; GFX10-NEXT:   liveins: $sgpr4:0x0000000000000003, $sgpr6, $sgpr0_sgpr1
+  ; GFX10-NEXT:   liveins: $sgpr6, $sgpr9, $sgpr0_sgpr1
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
-  ; GFX10-NEXT:   renamable $sgpr9 = COPY $sgpr4
   ; GFX10-NEXT:   renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; GFX10-NEXT:   S_BRANCH %bb.2
@@ -55,6 +56,146 @@ body:             |
 
     $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
     renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+    S_CBRANCH_EXECZ %bb.8, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.8(0x40000000)
+    liveins: $sgpr6
+
+    $m0 = COPY killed renamable $sgpr6
+    S_BRANCH %bb.8
+
+  bb.8:
+
+    S_ENDPGM 0
+
+...
+---
+# Make sure COPY to $sgpr0_sgpr1 is not sunk after S_AND_SAVEEXEC_B64.
+name:            _amdgpu_ps_main2
+alignment:       1
+tracksRegLiveness: true
+registers:       []
+liveins:
+  - { reg: '$sgpr4', virtual-reg: '' }
+  - { reg: '$sgpr6_sgpr7', virtual-reg: '' }
+body:             |
+  ; GFX10-LABEL: name: _amdgpu_ps_main2
+  ; GFX10: bb.0:
+  ; GFX10-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-NEXT:   liveins: $sgpr4, $sgpr6_sgpr7
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   renamable $sgpr9 = COPY $sgpr4
+  ; GFX10-NEXT:   renamable $vgpr5 = IMPLICIT_DEF
+  ; GFX10-NEXT:   renamable $sgpr0_sgpr1 = COPY $sgpr6_sgpr7
+  ; GFX10-NEXT:   S_BRANCH %bb.1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.1:
+  ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX10-NEXT:   liveins: $sgpr6, $sgpr9, $sgpr0_sgpr1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+  ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
+  ; GFX10-NEXT:   S_BRANCH %bb.2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.2:
+  ; GFX10-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX10-NEXT:   liveins: $sgpr6
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   $m0 = COPY killed renamable $sgpr6
+  ; GFX10-NEXT:   S_BRANCH %bb.3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.3:
+  ; GFX10-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $sgpr4, $sgpr6_sgpr7
+
+    renamable $sgpr9 = COPY $sgpr4
+    renamable $vgpr5 = IMPLICIT_DEF
+    renamable $sgpr0_sgpr1 = COPY $sgpr6_sgpr7
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.8(0x40000000)
+    liveins: $sgpr6, $sgpr9, $sgpr0_sgpr1
+
+    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+    S_CBRANCH_EXECZ %bb.8, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.8(0x40000000)
+    liveins: $sgpr6
+
+    $m0 = COPY killed renamable $sgpr6
+    S_BRANCH %bb.8
+
+  bb.8:
+
+    S_ENDPGM 0
+
+...
+---
+# Make sure COPY to $sgpr2_sgpr3 is not sunk after S_AND_SAVEEXEC_B32.
+name:            _amdgpu_ps_main3
+alignment:       1
+tracksRegLiveness: true
+registers:       []
+liveins:
+  - { reg: '$sgpr6_sgpr7', virtual-reg: '' }
+  - { reg: '$sgpr8', virtual-reg: '' }
+body:             |
+  ; GFX10-LABEL: name: _amdgpu_ps_main3
+  ; GFX10: bb.0:
+  ; GFX10-NEXT:   successors: %bb.1(0x80000000)
+  ; GFX10-NEXT:   liveins: $sgpr6_sgpr7, $sgpr8
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   renamable $vgpr5 = IMPLICIT_DEF
+  ; GFX10-NEXT:   renamable $sgpr0_sgpr1 = IMPLICIT_DEF
+  ; GFX10-NEXT:   renamable $sgpr2_sgpr3 = COPY $sgpr6_sgpr7
+  ; GFX10-NEXT:   S_BRANCH %bb.1
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.1:
+  ; GFX10-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; GFX10-NEXT:   liveins: $sgpr6, $sgpr8, $sgpr0_sgpr1, $sgpr2_sgpr3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   $sgpr2 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX10-NEXT:   renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+  ; GFX10-NEXT:   S_NOP 0, implicit $sgpr2_sgpr3
+  ; GFX10-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
+  ; GFX10-NEXT:   S_BRANCH %bb.2
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.2:
+  ; GFX10-NEXT:   successors: %bb.3(0x80000000)
+  ; GFX10-NEXT:   liveins: $sgpr6
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   $m0 = COPY killed renamable $sgpr6
+  ; GFX10-NEXT:   S_BRANCH %bb.3
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT: bb.3:
+  ; GFX10-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $sgpr6_sgpr7, $sgpr8
+
+    renamable $vgpr5 = IMPLICIT_DEF
+    renamable $sgpr0_sgpr1 = IMPLICIT_DEF
+    renamable $sgpr2_sgpr3 = COPY $sgpr6_sgpr7
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.8(0x40000000)
+    liveins: $sgpr6, $sgpr8, $sgpr0_sgpr1, $sgpr2_sgpr3
+
+    $sgpr2 = S_AND_SAVEEXEC_B32 $sgpr8, implicit-def $exec, implicit-def $scc, implicit $exec
+    $sgpr4_sgpr5 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    renamable $sgpr14_sgpr15 = S_XOR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
+    S_NOP 0, implicit $sgpr2_sgpr3
     S_CBRANCH_EXECZ %bb.8, implicit $exec
     S_BRANCH %bb.2
 

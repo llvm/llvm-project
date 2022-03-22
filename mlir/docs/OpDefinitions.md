@@ -778,11 +778,11 @@ declarative parameter to `parse` method argument is detailed below:
     -   Single: `<Attribute-Storage-Type>(e.g. Attribute) &`
     -   Optional: `<Attribute-Storage-Type>(e.g. Attribute) &`
 *   Operand Variables
-    -   Single: `OpAsmParser::OperandType &`
-    -   Optional: `Optional<OpAsmParser::OperandType> &`
-    -   Variadic: `SmallVectorImpl<OpAsmParser::OperandType> &`
+    -   Single: `OpAsmParser::UnresolvedOperand &`
+    -   Optional: `Optional<OpAsmParser::UnresolvedOperand> &`
+    -   Variadic: `SmallVectorImpl<OpAsmParser::UnresolvedOperand> &`
     -   VariadicOfVariadic:
-        `SmallVectorImpl<SmallVector<OpAsmParser::OperandType>> &`
+        `SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &`
 *   Ref Directives
     -   A reference directive is passed to the parser using the same mapping as
         the input operand. For example, a single region would be passed as a
