@@ -252,7 +252,8 @@ enum IIT_Info {
   IIT_PPCF128 = 52,
   IIT_V3 = 53,
   IIT_EXTERNREF = 54,
-  IIT_FUNCREF = 55
+  IIT_FUNCREF = 55,
+  IIT_ANYPTR_TO_ELT = 56,
 };
 
 static void EncodeFixedValueType(MVT::SimpleValueType VT,
@@ -322,6 +323,13 @@ static void EncodeFixedType(Record *R, std::vector<unsigned char> &ArgCodes,
       Sig.push_back(IIT_PTR_TO_ARG);
     else if (R->isSubClassOf("LLVMVectorOfAnyPointersToElt")) {
       Sig.push_back(IIT_VEC_OF_ANYPTRS_TO_ELT);
+      // Encode overloaded ArgNo
+      Sig.push_back(NextArgCode++);
+      // Encode LLVMMatchType<Number> ArgNo
+      Sig.push_back(Number);
+      return;
+    } else if (R->isSubClassOf("LLVMAnyPointerToElt")) {
+      Sig.push_back(IIT_ANYPTR_TO_ELT);
       // Encode overloaded ArgNo
       Sig.push_back(NextArgCode++);
       // Encode LLVMMatchType<Number> ArgNo
@@ -414,6 +422,9 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
   if (R->isSubClassOf("LLVMMatchType")) {
     if (R->isSubClassOf("LLVMVectorOfAnyPointersToElt")) {
       ArgCodes.push_back(3 /*vAny*/);
+      ++NumInserted;
+    } else if (R->isSubClassOf("LLVMAnyPointerToElt")) {
+      ArgCodes.push_back(4 /*iPTRAny*/);
       ++NumInserted;
     }
     return;
