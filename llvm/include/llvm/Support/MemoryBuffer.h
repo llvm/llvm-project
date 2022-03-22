@@ -48,6 +48,8 @@ using file_t = int;
 /// reading when they encounter a '\0' than to continually check the file
 /// position to see if it has reached the end of the file.
 class MemoryBuffer {
+// hack it
+public:
   const char *BufferStart; // Start of the buffer.
   const char *BufferEnd;   // End of the buffer.
 
