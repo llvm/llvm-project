@@ -545,6 +545,16 @@ struct IntrinsicLibrary {
   using Generator =
       std::variant<ElementalGenerator, ExtendedGenerator, SubroutineGenerator>;
 
+  /// All generators can be outlined. This will build a function named
+  /// "fir."+ <generic name> + "." + <result type code> and generate the
+  /// intrinsic implementation inside instead of at the intrinsic call sites.
+  /// This can be used to keep the FIR more readable. Only one function will
+  /// be generated for all the similar calls in a program.
+  /// If the Generator is nullptr, the wrapper uses genRuntimeCall.
+  template <typename GeneratorType>
+  mlir::Value outlineInWrapper(GeneratorType, llvm::StringRef name,
+                               mlir::Type resultType,
+                               llvm::ArrayRef<mlir::Value> args);
   template <typename GeneratorType>
   fir::ExtendedValue
   outlineInExtendedWrapper(GeneratorType, llvm::StringRef name,
@@ -1007,9 +1017,15 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     // ceil is used for CEILING but is different, it returns a real.
     {"ceil", "llvm.ceil.f32", genF32F32FuncType},
     {"ceil", "llvm.ceil.f64", genF64F64FuncType},
+    {"exp", "llvm.exp.f32", genF32F32FuncType},
+    {"exp", "llvm.exp.f64", genF64F64FuncType},
     // llvm.floor is used for FLOOR, but returns real.
     {"floor", "llvm.floor.f32", genF32F32FuncType},
     {"floor", "llvm.floor.f64", genF64F64FuncType},
+    {"log", "llvm.log.f32", genF32F32FuncType},
+    {"log", "llvm.log.f64", genF64F64FuncType},
+    {"log10", "llvm.log10.f32", genF32F32FuncType},
+    {"log10", "llvm.log10.f64", genF64F64FuncType},
     {"nint", "llvm.lround.i64.f64", genIntF64FuncType<64>},
     {"nint", "llvm.lround.i64.f32", genIntF32FuncType<64>},
     {"nint", "llvm.lround.i32.f64", genIntF64FuncType<32>},
@@ -1349,6 +1365,8 @@ fir::ExtendedValue IntrinsicLibrary::genElementalCall(
       scalarArgs.emplace_back(fir::getBase(arg));
     else
       fir::emitFatalError(loc, "nonscalar intrinsic argument");
+  if (outline)
+    return outlineInWrapper(generator, name, resultType, scalarArgs);
   return invokeGenerator(generator, resultType, scalarArgs);
 }
 
@@ -1559,11 +1577,36 @@ mlir::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
 }
 
 /// Helpers to detect absent optional (not yet supported in outlining).
+bool static hasAbsentOptional(llvm::ArrayRef<mlir::Value> args) {
+  for (const mlir::Value &arg : args)
+    if (!arg)
+      return true;
+  return false;
+}
 bool static hasAbsentOptional(llvm::ArrayRef<fir::ExtendedValue> args) {
   for (const fir::ExtendedValue &arg : args)
     if (!fir::getBase(arg))
       return true;
   return false;
+}
+
+template <typename GeneratorType>
+mlir::Value
+IntrinsicLibrary::outlineInWrapper(GeneratorType generator,
+                                   llvm::StringRef name, mlir::Type resultType,
+                                   llvm::ArrayRef<mlir::Value> args) {
+  if (hasAbsentOptional(args)) {
+    // TODO: absent optional in outlining is an issue: we cannot just ignore
+    // them. Needs a better interface here. The issue is that we cannot easily
+    // tell that a value is optional or not here if it is presents. And if it is
+    // absent, we cannot tell what it type should be.
+    TODO(loc, "cannot outline call to intrinsic " + llvm::Twine(name) +
+                  " with absent optional argument");
+  }
+
+  mlir::FunctionType funcType = getFunctionType(resultType, args, builder);
+  mlir::FuncOp wrapper = getWrapper(generator, name, funcType);
+  return builder.create<fir::CallOp>(loc, wrapper, args).getResult(0);
 }
 
 template <typename GeneratorType>
