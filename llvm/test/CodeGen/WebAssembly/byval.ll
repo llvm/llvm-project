@@ -16,7 +16,7 @@ declare void @ext_byval_func_align8(%SmallStruct* byval(%SmallStruct) align 8)
 declare void @ext_byval_func_alignedstruct(%AlignedStruct* byval(%AlignedStruct))
 declare void @ext_byval_func_empty(%EmptyStruct* byval(%EmptyStruct))
 
-; CHECK-LABEL: byval_arg
+; CHECK-LABEL: byval_arg:
 define void @byval_arg(%SmallStruct* %ptr) {
  ; CHECK: .functype byval_arg (i32) -> ()
  ; Subtract 16 from SP (SP is 16-byte aligned)
@@ -42,7 +42,7 @@ define void @byval_arg(%SmallStruct* %ptr) {
  ret void
 }
 
-; CHECK-LABEL: byval_arg_align8
+; CHECK-LABEL: byval_arg_align8:
 define void @byval_arg_align8(%SmallStruct* %ptr) {
  ; CHECK: .functype byval_arg_align8 (i32) -> ()
  ; Don't check the entire SP sequence, just enough to get the alignment.
@@ -61,7 +61,7 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
  ret void
 }
 
-; CHECK-LABEL: byval_arg_double
+; CHECK-LABEL: byval_arg_double:
 define void @byval_arg_double(%AlignedStruct* %ptr) {
  ; CHECK: .functype byval_arg_double (i32) -> ()
  ; Subtract 16 from SP (SP is 16-byte aligned)
@@ -79,7 +79,7 @@ define void @byval_arg_double(%AlignedStruct* %ptr) {
  ret void
 }
 
-; CHECK-LABEL: byval_param
+; CHECK-LABEL: byval_param:
 define void @byval_param(%SmallStruct* byval(%SmallStruct) align 32 %ptr) {
  ; CHECK: .functype byval_param (i32) -> ()
  ; %ptr is just a pointer to a struct, so pass it directly through
@@ -88,7 +88,7 @@ define void @byval_param(%SmallStruct* byval(%SmallStruct) align 32 %ptr) {
  ret void
 }
 
-; CHECK-LABEL: byval_empty_caller
+; CHECK-LABEL: byval_empty_caller:
 define void @byval_empty_caller(%EmptyStruct* %ptr) {
  ; CHECK: .functype byval_empty_caller (i32) -> ()
  ; CHECK: call ext_byval_func_empty, $0
@@ -96,7 +96,7 @@ define void @byval_empty_caller(%EmptyStruct* %ptr) {
  ret void
 }
 
-; CHECK-LABEL: byval_empty_callee
+; CHECK-LABEL: byval_empty_callee:
 define void @byval_empty_callee(%EmptyStruct* byval(%EmptyStruct) %ptr) {
  ; CHECK: .functype byval_empty_callee (i32) -> ()
  ; CHECK: call ext_func_empty, $0

@@ -18,6 +18,9 @@ entry:
 ; CHECK:              .text
 ; CHECK-NEXT:         .file   "stack-ptr-mclower.ll"
 ; CHECK-NEXT:         .globaltype     __stack_pointer, [[PTR]]
+; CHECK-NEXT:         .functype bar () -> ()
+; CHECK-NEXT:         .functype foo () -> ()
+
 ; CHECK-NEXT:         .section        .text.bar,"",@
 ; CHECK-NEXT:         .hidden bar
 ; CHECK-NEXT:         .globl  bar

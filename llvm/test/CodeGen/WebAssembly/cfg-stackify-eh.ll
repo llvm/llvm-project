@@ -24,7 +24,7 @@ target triple = "wasm32-unknown-unknown"
 ;   }
 ; }
 
-; CHECK-LABEL: test0
+; CHECK-LABEL: test0:
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
@@ -94,7 +94,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ;   }
 ; }
 
-; CHECK-LABEL: test1
+; CHECK-LABEL: test1:
 ; CHECK: try
 ; CHECK:   call  foo
 ; CHECK: catch
@@ -217,7 +217,7 @@ unreachable:                                      ; preds = %rethrow5
 ;   }
 ; }
 
-; CHECK-LABEL: test2
+; CHECK-LABEL: test2:
 ; CHECK: try
 ; CHECK:   call      foo
 ; CHECK: catch
@@ -299,7 +299,7 @@ terminate:                                        ; preds = %ehcleanup
 ; TRY marker should be placed at bb0 because there's a branch from bb0 to bb2,
 ; and scopes cannot be interleaved.
 
-; NOOPT-LABEL: test3
+; NOOPT-LABEL: test3:
 ; NOOPT: try
 ; NOOPT:   block
 ; NOOPT:     block
@@ -390,7 +390,7 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; try-catch with try-delegate that rethrows an exception to the caller to fix
 ; this.
 
-; NOSORT-LABEL: test5
+; NOSORT-LABEL: test5:
 ; NOSORT: try
 ; --- try-delegate starts (catch unwind mismatch)
 ; NOSORT    try
@@ -448,7 +448,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; And the return value of 'baz' should NOT be stackified because the BB is split
 ; during fixing unwind mismatches.
 
-; NOSORT-LABEL: test6
+; NOSORT-LABEL: test6:
 ; NOSORT: try
 ; NOSORT:   call  foo
 ; --- try-delegate starts (call unwind mismatch)
@@ -492,7 +492,7 @@ try.cont:                                         ; preds = %catch.start0
 ; to the caller. IN this case bb1 has two call unwind mismatches: 'call @foo'
 ; unwinds to the caller and 'call @bar' unwinds to catch C0.
 
-; NOSORT-LABEL: test7
+; NOSORT-LABEL: test7:
 ; NOSORT: try
 ; --- try-delegate starts (catch unwind mismatch)
 ; NOSORT    try
@@ -557,7 +557,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; nested 'try' should be placed before `i32.const 5', not between 'i32.const 5'
 ; and 'call @qux'.
 
-; NOSORT-LABEL: test8
+; NOSORT-LABEL: test8:
 ; NOSORT: try       i32
 ; NOSORT:   call  foo
 ; --- try-delegate starts (call unwind mismatch)
@@ -596,7 +596,7 @@ try.cont:                                         ; preds = %catch.start0
 ; Tests the case when TEE stackifies a register in RegStackify but it gets
 ; unstackified in fixCallUnwindMismatches in CFGStackify.
 
-; NOSORT-LOCALS-LABEL: test9
+; NOSORT-LOCALS-LABEL: test9:
 define void @test9(i32 %x) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 bb0:
   invoke void @foo()
@@ -642,7 +642,7 @@ try.cont:                                         ; preds = %catch.start0
 ; first catch because it is a non-C++ exception, it shouldn't unwind to the next
 ; catch, but it should unwind to the caller.
 
-; NOSORT-LABEL: test10
+; NOSORT-LABEL: test10:
 ; NOSORT: try
 ; --- try-delegate starts (catch unwind mismatch)
 ; NOSORT:   try
@@ -711,7 +711,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; (before 'cont' is sorted) and there should not be any unwind destination
 ; mismatches in CFGStackify.
 
-; NOOPT-LABEL: test11
+; NOOPT-LABEL: test11:
 ; NOOPT: block
 ; NOOPT:   try
 ; NOOPT:     call      foo
@@ -755,7 +755,7 @@ if.end:                                           ; preds = %cont, %catch.start,
 ; invoke.cont BB fall within try~end_try, but they shouldn't cause crashes or
 ; unwinding destination mismatches in CFGStackify.
 
-; NOSORT-LABEL: test12
+; NOSORT-LABEL: test12:
 ; NOSORT: try
 ; NOSORT:   call  foo
 ; NOSORT:   call {{.*}} memcpy
@@ -789,7 +789,7 @@ ehcleanup:                                        ; preds = %entry
 ; 'nothrow_i32' and 'fun', because the return value of 'nothrow_i32' is
 ; stackified and pushed onto the stack to be consumed by the call to 'fun'.
 
-; CHECK-LABEL: test13
+; CHECK-LABEL: test13:
 ; CHECK: try
 ; CHECK: call      $push{{.*}}=, nothrow_i32
 ; CHECK: call      fun, $pop{{.*}}
@@ -890,7 +890,7 @@ terminate7:                                       ; preds = %ehcleanup
 ;     ...
 ; bb2:            <- Continuation BB
 ;   end
-; CHECK-LABEL: test15
+; CHECK-LABEL: test15:
 define void @test15(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
   invoke void @foo()
@@ -959,7 +959,7 @@ try.cont:                                         ; preds = %catch.start, %for.e
 ; bb3:            <- Continuation BB
 ;   end
 ;
-; CHECK-LABEL: test16
+; CHECK-LABEL: test16:
 define void @test16() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 ; CHECK: call foo
 entry:
@@ -1007,7 +1007,7 @@ invoke.cont2:                                     ; preds = %catch.start
 ; path back to the loop header), and is placed after the loop latch block
 ; 'invoke.cont' intentionally. This tests if 'end_loop' marker is placed
 ; correctly not right after 'invoke.cont' part but after 'ehcleanup' part,
-; NOSORT-LABEL: test17
+; NOSORT-LABEL: test17:
 ; NOSORT: loop
 ; NOSORT: try
 ; NOSORT: end_try
@@ -1056,7 +1056,7 @@ while.end:                                        ; preds = %while.body, %while.
 ; before its corresponding `catch_all`, because both `try` and `catch_all` body
 ; should satisfy the return type requirements.
 
-; NOSORT-LABEL: test18
+; NOSORT-LABEL: test18:
 ; NOSORT: try i32
 ; NOSORT: loop i32
 ; NOSORT: end_loop
@@ -1101,7 +1101,7 @@ ehcleanup:                                        ; preds = %if.then
 ; because the initial TRY placement for 'call @quux' was done before 'call @baz'
 ; because 'call @baz''s return value is stackified.
 
-; CHECK-LABEL: test19
+; CHECK-LABEL: test19:
 ; CHECK: try
 ; CHECK:   try
 ; CHECK:     call $[[RET:[0-9]+]]=, baz
@@ -1151,7 +1151,7 @@ invoke.cont:                                      ; preds = %entry
 ; becomes invalid because it incorrectly branches into an inner scope. The
 ; destination should change to the BB where (b) points.
 
-; NOSORT-LABEL: test20
+; NOSORT-LABEL: test20:
 ; NOSORT: try
 ; NOSORT:   br_if   0
 define void @test20(i1 %arg) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {

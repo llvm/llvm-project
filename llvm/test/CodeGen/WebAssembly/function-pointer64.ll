@@ -30,6 +30,7 @@ entry:
 ; of pointers the same size, so function pointers (which are 32-bit indices
 ; in Wasm) are represented as 64-bit until called.
 
+; CHECK-LABEL: foo:
 ; CHECK:      .functype foo (i64) -> ()
 ; CHECK-NEXT: i32.const 1
 ; CHECK-NEXT: local.get 0

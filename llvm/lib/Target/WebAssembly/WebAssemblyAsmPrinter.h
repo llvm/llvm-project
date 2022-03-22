@@ -84,7 +84,7 @@ public:
                                        wasm::WasmSignature *Sig,
                                        bool &InvokeDetected);
   MCSymbol *getOrCreateWasmSymbol(StringRef Name);
-  void emitExternalDecls(const Module &M);
+  void emitDecls(const Module &M);
 };
 
 } // end namespace llvm
