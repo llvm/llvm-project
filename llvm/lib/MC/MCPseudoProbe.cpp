@@ -358,8 +358,9 @@ bool MCPseudoProbeDecoder::buildGUID2FuncDescMap(const uint8_t *Start,
   return true;
 }
 
-bool MCPseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
-                                                 std::size_t Size) {
+bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
+    MCDecodedPseudoProbeInlineTree *Cur, uint64_t &LastAddr,
+    std::unordered_set<uint64_t> &GuildFilter) {
   // The pseudo_probe section encodes an inline forest and each tree has a
   // format like:
   //  FUNCTION BODY (one for each uninlined function present in the text
@@ -390,99 +391,108 @@ bool MCPseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
   //           FUNCTION BODY
   //             A FUNCTION BODY entry describing the inlined function.
 
-  Data = Start;
-  End = Data + Size;
-
-  MCDecodedPseudoProbeInlineTree *Root = &DummyInlineRoot;
-  MCDecodedPseudoProbeInlineTree *Cur = &DummyInlineRoot;
-  uint64_t LastAddr = 0;
   uint32_t Index = 0;
-  // A DFS-based decoding
-  while (Data < End) {
-    if (Root == Cur) {
-      // Use a sequential id for top level inliner.
-      Index = Root->getChildren().size();
-    } else {
-      // Read inline site for inlinees
-      auto ErrorOrIndex = readUnsignedNumber<uint32_t>();
-      if (!ErrorOrIndex)
-        return false;
-      Index = std::move(*ErrorOrIndex);
-    }
+  if (Cur == &DummyInlineRoot) {
+    // Use a sequential id for top level inliner.
+    Index = Cur->getChildren().size();
+  } else {
+    // Read inline site for inlinees
+    auto ErrorOrIndex = readUnsignedNumber<uint32_t>();
+    if (!ErrorOrIndex)
+      return false;
+    Index = std::move(*ErrorOrIndex);
+  }
+
+  // Read guid
+  auto ErrorOrCurGuid = readUnencodedNumber<uint64_t>();
+  if (!ErrorOrCurGuid)
+    return false;
+  uint64_t Guid = std::move(*ErrorOrCurGuid);
+
+  // Decide if top-level node should be disgarded.
+  if (Cur == &DummyInlineRoot && !GuildFilter.empty() &&
+      !GuildFilter.count(Guid))
+    Cur = nullptr;
+
+  // If the incoming node is null, all its children nodes should be disgarded.
+  if (Cur) {
     // Switch/add to a new tree node(inlinee)
     Cur = Cur->getOrAddNode(std::make_tuple(Cur->Guid, Index));
-    // Read guid
-    auto ErrorOrCurGuid = readUnencodedNumber<uint64_t>();
-    if (!ErrorOrCurGuid)
+    Cur->Guid = Guid;
+  }
+
+  // Read number of probes in the current node.
+  auto ErrorOrNodeCount = readUnsignedNumber<uint32_t>();
+  if (!ErrorOrNodeCount)
+    return false;
+  uint32_t NodeCount = std::move(*ErrorOrNodeCount);
+  // Read number of direct inlinees
+  auto ErrorOrCurChildrenToProcess = readUnsignedNumber<uint32_t>();
+  if (!ErrorOrCurChildrenToProcess)
+    return false;
+  // Read all probes in this node
+  for (std::size_t I = 0; I < NodeCount; I++) {
+    // Read index
+    auto ErrorOrIndex = readUnsignedNumber<uint32_t>();
+    if (!ErrorOrIndex)
       return false;
-    Cur->Guid = std::move(*ErrorOrCurGuid);
-    // Read number of probes in the current node.
-    auto ErrorOrNodeCount = readUnsignedNumber<uint32_t>();
-    if (!ErrorOrNodeCount)
+    uint32_t Index = std::move(*ErrorOrIndex);
+    // Read type | flag.
+    auto ErrorOrValue = readUnencodedNumber<uint8_t>();
+    if (!ErrorOrValue)
       return false;
-    uint32_t NodeCount = std::move(*ErrorOrNodeCount);
-    // Read number of direct inlinees
-    auto ErrorOrCurChildrenToProcess = readUnsignedNumber<uint32_t>();
-    if (!ErrorOrCurChildrenToProcess)
-      return false;
-    Cur->ChildrenToProcess = std::move(*ErrorOrCurChildrenToProcess);
-    // Read all probes in this node
-    for (std::size_t I = 0; I < NodeCount; I++) {
-      // Read index
-      auto ErrorOrIndex = readUnsignedNumber<uint32_t>();
-      if (!ErrorOrIndex)
+    uint8_t Value = std::move(*ErrorOrValue);
+    uint8_t Kind = Value & 0xf;
+    uint8_t Attr = (Value & 0x70) >> 4;
+    // Read address
+    uint64_t Addr = 0;
+    if (Value & 0x80) {
+      auto ErrorOrOffset = readSignedNumber<int64_t>();
+      if (!ErrorOrOffset)
         return false;
-      uint32_t Index = std::move(*ErrorOrIndex);
-      // Read type | flag.
-      auto ErrorOrValue = readUnencodedNumber<uint8_t>();
-      if (!ErrorOrValue)
+      int64_t Offset = std::move(*ErrorOrOffset);
+      Addr = LastAddr + Offset;
+    } else {
+      auto ErrorOrAddr = readUnencodedNumber<int64_t>();
+      if (!ErrorOrAddr)
         return false;
-      uint8_t Value = std::move(*ErrorOrValue);
-      uint8_t Kind = Value & 0xf;
-      uint8_t Attr = (Value & 0x70) >> 4;
-      // Read address
-      uint64_t Addr = 0;
-      if (Value & 0x80) {
-        auto ErrorOrOffset = readSignedNumber<int64_t>();
-        if (!ErrorOrOffset)
-          return false;
-        int64_t Offset = std::move(*ErrorOrOffset);
-        Addr = LastAddr + Offset;
-      } else {
-        auto ErrorOrAddr = readUnencodedNumber<int64_t>();
-        if (!ErrorOrAddr)
-          return false;
-        Addr = std::move(*ErrorOrAddr);
-      }
+      Addr = std::move(*ErrorOrAddr);
+    }
+
+    if (Cur) {
       // Populate Address2ProbesMap
       auto &Probes = Address2ProbesMap[Addr];
       Probes.emplace_back(Addr, Cur->Guid, Index, PseudoProbeType(Kind), Attr,
                           Cur);
       Cur->addProbes(&Probes.back());
-      LastAddr = Addr;
     }
-
-    // Look for the parent for the next node by subtracting the current
-    // node count from tree counts along the parent chain. The first node
-    // in the chain that has a non-zero tree count is the target.
-    while (Cur != Root) {
-      if (Cur->ChildrenToProcess == 0) {
-        Cur = static_cast<MCDecodedPseudoProbeInlineTree *>(Cur->Parent);
-        if (Cur != Root) {
-          assert(Cur->ChildrenToProcess > 0 &&
-                 "Should have some unprocessed nodes");
-          Cur->ChildrenToProcess -= 1;
-        }
-      } else {
-        break;
-      }
-    }
+    LastAddr = Addr;
   }
 
-  assert(Data == End && "Have unprocessed data in pseudo_probe section");
-  assert(Cur == Root &&
-         " Cur should point to root when the forest is fully built up");
+  uint32_t ChildrenToProcess = std::move(*ErrorOrCurChildrenToProcess);
+  for (uint32_t I = 0; I < ChildrenToProcess; I++) {
+    buildAddress2ProbeMap(Cur, LastAddr, GuildFilter);
+  }
+
   return true;
+}
+
+bool MCPseudoProbeDecoder::buildAddress2ProbeMap(
+    const uint8_t *Start, std::size_t Size,
+    std::unordered_set<uint64_t> &GuildFilter) {
+  Data = Start;
+  End = Data + Size;
+  uint64_t LastAddr = 0;
+  while (Data < End)
+    buildAddress2ProbeMap(&DummyInlineRoot, LastAddr, GuildFilter);
+  assert(Data == End && "Have unprocessed data in pseudo_probe section");
+  return true;
+}
+
+bool MCPseudoProbeDecoder::buildAddress2ProbeMap(const uint8_t *Start,
+                                                 std::size_t Size) {
+  std::unordered_set<uint64_t> GuildFilter;
+  return buildAddress2ProbeMap(Start, Size, GuildFilter);
 }
 
 void MCPseudoProbeDecoder::printGUID2FuncDescMap(raw_ostream &OS) {

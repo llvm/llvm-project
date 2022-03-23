@@ -156,7 +156,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
   for (const auto &ChildNode : ProbeNode.getChildren()) {
     InlineSite Location = ChildNode.first;
     ProbeContext.back().second = std::get<1>(Location);
-    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(), ProbeContext);
+    trackInlineesOptimizedAway(ProbeDecoder, *ChildNode.second.get(),
+                               ProbeContext);
   }
 
   ProbeContext.pop_back();
@@ -208,8 +209,10 @@ void ProfiledBinary::load() {
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
 
-  // Decode pseudo probe related section
-  decodePseudoProbe(Obj);
+  checkPseudoProbe(Obj);
+
+  if (ShowDisassemblyOnly)
+    decodePseudoProbe(Obj);
 
   // Load debug info of subprograms from DWARF section.
   // If path of debug info binary is specified, use the debug info from it,
@@ -287,7 +290,8 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
 }
 
 template <class ELFT>
-void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName) {
+void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
+                                                      StringRef FileName) {
   const auto &PhdrRange = unwrapOrError(Obj.program_headers(), FileName);
   // FIXME: This should be the page size of the system running profiling.
   // However such info isn't available at post-processing time, assuming
@@ -311,7 +315,8 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, 
     exitWithError("no executable segment found", FileName);
 }
 
-void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::setPreferredTextSegmentAddresses(
+    const ELFObjectFileBase *Obj) {
   if (const auto *ELFObj = dyn_cast<ELF32LEObjectFile>(Obj))
     setPreferredTextSegmentAddresses(ELFObj->getELFFile(), Obj->getFileName());
   else if (const auto *ELFObj = dyn_cast<ELF32BEObjectFile>(Obj))
@@ -324,9 +329,37 @@ void ProfiledBinary::setPreferredTextSegmentAddresses(const ELFObjectFileBase *O
     llvm_unreachable("invalid ELF object format");
 }
 
-void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+void ProfiledBinary::checkPseudoProbe(const ELFObjectFileBase *Obj) {
   if (UseDwarfCorrelation)
     return;
+
+  bool HasProbeDescSection = false;
+  bool HasPseudoProbeSection = false;
+
+  StringRef FileName = Obj->getFileName();
+  for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
+       SI != SE; ++SI) {
+    const SectionRef &Section = *SI;
+    StringRef SectionName = unwrapOrError(Section.getName(), FileName);
+    if (SectionName == ".pseudo_probe_desc") {
+      HasProbeDescSection = true;
+    } else if (SectionName == ".pseudo_probe") {
+      HasPseudoProbeSection = true;
+    }
+  }
+
+  // set UsePseudoProbes flag, used for PerfReader
+  UsePseudoProbes = HasProbeDescSection && HasPseudoProbeSection;
+}
+
+void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
+  if (!UsePseudoProbes)
+    return;
+
+  std::unordered_set<uint64_t> ProfiledGuids;
+  if (!ShowDisassemblyOnly)
+    for (auto *F : ProfiledFunctions)
+      ProfiledGuids.insert(Function::getGUID(F->FuncName));
 
   StringRef FileName = Obj->getFileName();
   for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
@@ -339,21 +372,20 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       if (!ProbeDecoder.buildGUID2FuncDescMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
               Contents.size()))
-        exitWithError("Pseudo Probe decoder fail in .pseudo_probe_desc section");
+        exitWithError(
+            "Pseudo Probe decoder fail in .pseudo_probe_desc section");
     } else if (SectionName == ".pseudo_probe") {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
       if (!ProbeDecoder.buildAddress2ProbeMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
-              Contents.size()))
+              Contents.size(), ProfiledGuids))
         exitWithError("Pseudo Probe decoder fail in .pseudo_probe section");
-      // set UsePseudoProbes flag, used for PerfReader
-      UsePseudoProbes = true;
     }
   }
 
   // Build TopLevelProbeFrameMap to track size for optimized inlinees when probe
   // is available
-  if (UsePseudoProbes && TrackFuncContextSize) {
+  if (TrackFuncContextSize) {
     for (const auto &Child : ProbeDecoder.getDummyInlineRoot().getChildren()) {
       auto *Frame = Child.second.get();
       StringRef FuncName =
@@ -364,6 +396,13 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
 
   if (ShowPseudoProbe)
     ProbeDecoder.printGUID2FuncDescMap(outs());
+}
+
+void ProfiledBinary::decodePseudoProbe() {
+  OwningBinary<Binary> OBinary = unwrapOrError(createBinary(Path), Path);
+  Binary &ExeBinary = *OBinary.getBinary();
+  auto *Obj = dyn_cast<ELFObjectFileBase>(&ExeBinary);
+  decodePseudoProbe(Obj);
 }
 
 void ProfiledBinary::setIsFuncEntry(uint64_t Offset, StringRef RangeSymName) {

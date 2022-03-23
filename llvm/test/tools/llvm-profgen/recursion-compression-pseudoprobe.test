@@ -123,7 +123,7 @@
 ; CHECK:  6: 1 fa:1
 ; CHECK:  !CFGChecksum: 563022570642068
 
-; CHECK-UNWINDER:      [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5]
+; CHECK-UNWINDER:      [0x842 @ 0x7d4 @ 0x7e0 @ 0x7ab]
 ; CHECK-UNWINDER-NEXT:   3
 ; CHECK-UNWINDER-NEXT:   7a0-7a7:1
 ; CHECK-UNWINDER-NEXT:   7a0-7ab:3
@@ -132,33 +132,33 @@
 ; CHECK-UNWINDER-NEXT:   7a7->7b2:1
 ; CHECK-UNWINDER-NEXT:   7ab->7a0:4
 ; CHECK-UNWINDER-NEXT:   7b5->7c0:1
-; CHECK-UNWINDER-NEXT: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6]
+; CHECK-UNWINDER-NEXT: [0x842 @ 0x7d4 @ 0x7e0 @ 0x7ab @ 0x7b5]
 ; CHECK-UNWINDER-NEXT:   1
 ; CHECK-UNWINDER-NEXT:   7c0-7d4:1
 ; CHECK-UNWINDER-NEXT:   1
 ; CHECK-UNWINDER-NEXT:   7d4->7c0:1
-; CHECK-UNWINDER-NEXT: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8]
+; CHECK-UNWINDER-NEXT: [0x842 @ 0x7d4 @ 0x7e0 @ 0x7ab @ 0x7b5 @ 0x7d4]
 ; CHECK-UNWINDER-NEXT:   2
 ; CHECK-UNWINDER-NEXT:   7c0-7cd:1
 ; CHECK-UNWINDER-NEXT:   7db-7e0:1
 ; CHECK-UNWINDER-NEXT:   2
 ; CHECK-UNWINDER-NEXT:   7cd->7db:1
 ; CHECK-UNWINDER-NEXT:   7e0->7a0:1
-; CHECK-UNWINDER-NEXT: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7]
+; CHECK-UNWINDER-NEXT: [0x842 @ 0x7d4 @ 0x7e0 @ 0x7ab @ 0x7b5 @ 0x7d4 @ 0x7e0]
 ; CHECK-UNWINDER-NEXT:   2
 ; CHECK-UNWINDER-NEXT:   7a0-7a7:1
 ; CHECK-UNWINDER-NEXT:   7b2-7b5:1
 ; CHECK-UNWINDER-NEXT:   2
 ; CHECK-UNWINDER-NEXT:   7a7->7b2:1
 ; CHECK-UNWINDER-NEXT:   7b5->7c0:1
-; CHECK-UNWINDER-NEXT: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6]
+; CHECK-UNWINDER-NEXT: [0x842 @ 0x7d4 @ 0x7e0 @ 0x7ab @ 0x7b5 @ 0x7d4 @ 0x7e0 @ 0x7b5]
 ; CHECK-UNWINDER-NEXT:   2
 ; CHECK-UNWINDER-NEXT:   7c0-7cd:2
 ; CHECK-UNWINDER-NEXT:   7db-7e0:1
 ; CHECK-UNWINDER-NEXT:   2
 ; CHECK-UNWINDER-NEXT:   7cd->7db:2
 ; CHECK-UNWINDER-NEXT:   7e0->7a0:1
-; CHECK-UNWINDER-NEXT: [main:2 @ foo:5 @ fa:8 @ fa:7 @ fb:5 @ fb:6 @ fa:8 @ fa:7 @ fb:6 @ fa:7]
+; CHECK-UNWINDER-NEXT: [0x842 @ 0x7d4 @ 0x7e0 @ 0x7ab @ 0x7b5 @ 0x7d4 @ 0x7e0 @ 0x7b5 @ 0x7e0]
 ; CHECK-UNWINDER-NEXT:   2
 ; CHECK-UNWINDER-NEXT:   7a0-7a7:1
 ; CHECK-UNWINDER-NEXT:   7b2-7b5:1

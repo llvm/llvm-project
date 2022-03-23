@@ -55,6 +55,7 @@
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -352,6 +353,15 @@ public:
 
   // Decode pseudo_probe section to build address to probes map.
   bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size);
+
+  // Decode pseudo_probe section to build address to probes map for specifed
+  // functions only.
+  bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size,
+                             std::unordered_set<uint64_t> &GuildFilter);
+
+  bool buildAddress2ProbeMap(MCDecodedPseudoProbeInlineTree *Cur,
+                             uint64_t &LastAddr,
+                             std::unordered_set<uint64_t> &GuildFilter);
 
   // Print pseudo_probe_desc section info
   void printGUID2FuncDescMap(raw_ostream &OS);

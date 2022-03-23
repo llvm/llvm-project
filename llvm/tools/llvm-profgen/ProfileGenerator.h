@@ -106,6 +106,8 @@ protected:
 
   void showDensitySuggestion(double Density);
 
+  void collectProfiledFunctions();
+
   // Thresholds from profile summary to answer isHotCount/isColdCount queries.
   uint64_t HotCountThreshold;
 
