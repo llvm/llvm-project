@@ -72,6 +72,8 @@ public:
 
   ArchSpec GetSystemArchitecture() override;
 
+  llvm::Optional<uint32_t> GetAddressingBits() override;
+
   // Check if a given Process
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;

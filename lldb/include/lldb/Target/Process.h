@@ -699,6 +699,9 @@ public:
   /// Get the system architecture for this process.
   virtual ArchSpec GetSystemArchitecture() { return {}; }
 
+  /// Return the number of bits in a vmaddr that are used by valid addresses.
+  virtual llvm::Optional<uint32_t> GetAddressingBits() { return {}; }
+
   /// Get the system runtime plug-in for this process.
   ///
   /// \return
