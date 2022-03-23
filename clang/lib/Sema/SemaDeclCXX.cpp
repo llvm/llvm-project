@@ -11060,6 +11060,11 @@ static void DiagnoseNamespaceInlineMismatch(Sema &S, SourceLocation KeywordLoc,
                                             NamespaceDecl *PrevNS) {
   assert(*IsInline != PrevNS->isInline());
 
+  // 'inline' must appear on the original definition, but not necessarily
+  // on all extension definitions, so the note should point to the first
+  // definition to avoid confusion.
+  PrevNS = PrevNS->getFirstDecl();
+
   if (PrevNS->isInline())
     // The user probably just forgot the 'inline', so suggest that it
     // be added back.
