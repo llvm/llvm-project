@@ -522,10 +522,13 @@ LogicalResult hoistBufferAllocations(Operation *op,
 
 /// Create alloc/dealloc ops as specified in the bufferization options. If
 /// `onlyLeakingAlloc`, only those buffer allocations are processed for which no
-/// buffer deallocation can be created.
+/// buffer deallocation can be created. `changed` is set to `true` if the IR was
+/// modified.
 LogicalResult createAllocDeallocOps(Operation *op,
                                     const BufferizationOptions &options,
-                                    bool onlyLeakingAllocs = false);
+                                    bool onlyLeakingAllocs = false,
+                                    bool *changed = nullptr);
+
 } // namespace bufferization
 } // namespace mlir
 
