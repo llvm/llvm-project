@@ -54,7 +54,7 @@ static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
 
 static ParseResult
 parseOperandList(OpAsmParser &parser, StringRef keyword,
-                 SmallVectorImpl<OpAsmParser::OperandType> &args,
+                 SmallVectorImpl<OpAsmParser::UnresolvedOperand> &args,
                  SmallVectorImpl<Type> &argTypes, OperationState &result) {
   if (failed(parser.parseOptionalKeyword(keyword)))
     return success();
@@ -67,7 +67,7 @@ parseOperandList(OpAsmParser &parser, StringRef keyword,
     return success();
 
   do {
-    OpAsmParser::OperandType arg;
+    OpAsmParser::UnresolvedOperand arg;
     Type type;
 
     if (parser.parseRegionArgument(arg) || parser.parseColonType(type))
@@ -97,7 +97,7 @@ static void printOperandList(Operation::operand_range operands,
 }
 
 static ParseResult parseOptionalOperand(OpAsmParser &parser, StringRef keyword,
-                                        OpAsmParser::OperandType &operand,
+                                        OpAsmParser::UnresolvedOperand &operand,
                                         Type type, bool &hasOptional,
                                         OperationState &result) {
   hasOptional = false;
@@ -113,7 +113,7 @@ static ParseResult parseOptionalOperand(OpAsmParser &parser, StringRef keyword,
 
 static ParseResult parseOperandAndType(OpAsmParser &parser,
                                        OperationState &result) {
-  OpAsmParser::OperandType operand;
+  OpAsmParser::UnresolvedOperand operand;
   Type type;
   if (parser.parseOperand(operand) || parser.parseColonType(type) ||
       parser.resolveOperand(operand, type, result.operands))
@@ -128,7 +128,7 @@ static ParseResult parseOperandAndType(OpAsmParser &parser,
 static OptionalParseResult parseOptionalOperandAndType(OpAsmParser &parser,
                                                        StringRef keyword,
                                                        OperationState &result) {
-  OpAsmParser::OperandType operand;
+  OpAsmParser::UnresolvedOperand operand;
   if (succeeded(parser.parseOptionalKeyword(keyword))) {
     return failure(parser.parseLParen() ||
                    parseOperandAndType(parser, result) || parser.parseRParen());
@@ -220,7 +220,7 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
 ///                             region attr-dict?
 ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   Builder &builder = parser.getBuilder();
-  SmallVector<OpAsmParser::OperandType, 8> privateOperands,
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> privateOperands,
       firstprivateOperands, copyOperands, copyinOperands,
       copyinReadonlyOperands, copyoutOperands, copyoutZeroOperands,
       createOperands, createZeroOperands, noCreateOperands, presentOperands,
@@ -233,7 +233,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
       firstprivateOperandTypes;
 
   SmallVector<Type, 8> operandTypes;
-  OpAsmParser::OperandType ifCond, selfCond;
+  OpAsmParser::UnresolvedOperand ifCond, selfCond;
   bool hasIfCond = false, hasSelfCond = false;
   OptionalParseResult async, numGangs, numWorkers, vectorLength;
   Type i1Type = builder.getI1Type();
@@ -516,8 +516,9 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
   Builder &builder = parser.getBuilder();
   unsigned executionMapping = OpenACCExecMapping::NONE;
   SmallVector<Type, 8> operandTypes;
-  SmallVector<OpAsmParser::OperandType, 8> privateOperands, reductionOperands;
-  SmallVector<OpAsmParser::OperandType, 8> tileOperands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> privateOperands,
+      reductionOperands;
+  SmallVector<OpAsmParser::UnresolvedOperand, 8> tileOperands;
   OptionalParseResult gangNum, gangStatic, worker, vector;
 
   // gang?
