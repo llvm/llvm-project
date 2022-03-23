@@ -1242,7 +1242,7 @@ LogicalResult mlir::replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
   }
 
   // Create the new operation.
-  auto *repOp = builder.createOperation(state);
+  auto *repOp = builder.create(state);
   op->replaceAllUsesWith(repOp);
   op->erase();
 

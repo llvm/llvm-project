@@ -405,7 +405,13 @@ public:
   Operation *insert(Operation *op);
 
   /// Creates an operation given the fields represented as an OperationState.
-  Operation *createOperation(const OperationState &state);
+  Operation *create(const OperationState &state);
+
+  /// Creates an operation with the given fields.
+  Operation *create(Location loc, StringAttr opName, ValueRange operands,
+                    TypeRange types, ArrayRef<NamedAttribute> attributes = {},
+                    BlockRange successors = {},
+                    MutableArrayRef<std::unique_ptr<Region>> regions = {});
 
 private:
   /// Helper for sanity checking preconditions for create* methods below.
@@ -431,7 +437,7 @@ public:
     OperationState state(location,
                          getCheckRegisteredInfo<OpTy>(location.getContext()));
     OpTy::build(*this, state, std::forward<Args>(args)...);
-    auto *op = createOperation(state);
+    auto *op = create(state);
     auto result = dyn_cast<OpTy>(op);
     assert(result && "builder didn't return the right type");
     return result;
@@ -443,7 +449,7 @@ public:
   template <typename OpTy, typename... Args>
   void createOrFold(SmallVectorImpl<Value> &results, Location location,
                     Args &&...args) {
-    // Create the operation without using 'createOperation' as we don't want to
+    // Create the operation without using 'create' as we don't want to
     // insert it yet.
     OperationState state(location,
                          getCheckRegisteredInfo<OpTy>(location.getContext()));

@@ -38,9 +38,10 @@ customMultiEntityVariadicConstraint(ArrayRef<PDLValue> values,
 // Custom creator invoked from PDL.
 static void customCreate(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
                          PDLResultList &results) {
-  results.push_back(rewriter.createOperation(
+  results.push_back(rewriter.create(
       OperationState(args[0].cast<Operation *>()->getLoc(), "test.success")));
 }
+
 static void customVariadicResultCreate(ArrayRef<PDLValue> args,
                                        PatternRewriter &rewriter,
                                        PDLResultList &results) {
@@ -59,7 +60,7 @@ static void customRewriter(ArrayRef<PDLValue> args, PatternRewriter &rewriter,
   Operation *root = args[0].cast<Operation *>();
   OperationState successOpState(root->getLoc(), "test.success");
   successOpState.addOperands(args[1].cast<Value>());
-  rewriter.createOperation(successOpState);
+  rewriter.create(successOpState);
   rewriter.eraseOp(root);
 }
 

@@ -789,7 +789,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
   if (failed(parseOpNameInfo))
     return failure();
 
-  StringRef innerOpName = parseOpNameInfo->getStringRef();
+  StringAttr innerOpName = parseOpNameInfo->getIdentifier();
 
   FunctionType opFntype;
   Optional<Location> explicitLoc;
@@ -823,12 +823,8 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
   OpBuilder builder(parser.getBuilder().getContext());
   builder.setInsertionPointToStart(&block);
 
-  OperationState innerOpState(opLoc, innerOpName);
-  innerOpState.operands.push_back(lhs);
-  innerOpState.operands.push_back(rhs);
-  innerOpState.addTypes(innerOpType);
-
-  Operation *innerOp = builder.createOperation(innerOpState);
+  Operation *innerOp =
+      builder.create(opLoc, innerOpName, /*operands=*/{lhs, rhs}, innerOpType);
 
   // Insert a return statement in the block returning the inner-op's result.
   builder.create<TestReturnOp>(innerOp->getLoc(), innerOp->getResults());

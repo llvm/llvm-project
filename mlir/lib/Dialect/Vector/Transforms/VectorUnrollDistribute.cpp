@@ -70,8 +70,8 @@ static Operation *cloneOpWithOperandsAndTypes(OpBuilder &builder, Location loc,
                                               Operation *op,
                                               ArrayRef<Value> operands,
                                               ArrayRef<Type> resultTypes) {
-  OperationState res(loc, op->getName(), operands, resultTypes, op->getAttrs());
-  return builder.createOperation(res);
+  return builder.create(loc, op->getName().getIdentifier(), operands,
+                        resultTypes, op->getAttrs());
 }
 
 /// Return the target shape for unrolling for the given `op`. Return llvm::None

@@ -1151,7 +1151,7 @@ Operation *OperationParser::parseGenericOperation() {
     return nullptr;
 
   // Create the operation and try to parse a location for it.
-  Operation *op = opBuilder.createOperation(result);
+  Operation *op = opBuilder.create(result);
   if (parseTrailingLocationSpecifier(op))
     return nullptr;
   return op;
@@ -1756,7 +1756,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     return nullptr;
 
   // Otherwise, create the operation and try to parse a location for it.
-  Operation *op = opBuilder.createOperation(opState);
+  Operation *op = opBuilder.create(opState);
   if (parseTrailingLocationSpecifier(op))
     return nullptr;
   return op;
