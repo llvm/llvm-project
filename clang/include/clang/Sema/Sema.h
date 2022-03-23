@@ -10175,7 +10175,7 @@ public:
   void ActOnPragmaVisibility(const IdentifierInfo* VisType,
                              SourceLocation PragmaLoc);
 
-  NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
+  NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
                                  SourceLocation Loc);
   void DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, WeakInfo &W);
 

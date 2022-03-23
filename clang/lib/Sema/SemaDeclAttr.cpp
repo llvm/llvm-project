@@ -9016,8 +9016,8 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 
 /// DeclClonePragmaWeak - clone existing decl (maybe definition),
 /// \#pragma weak needs a non-definition decl and source may not have one.
-NamedDecl * Sema::DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
-                                      SourceLocation Loc) {
+NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
+                                     SourceLocation Loc) {
   assert(isa<FunctionDecl>(ND) || isa<VarDecl>(ND));
   NamedDecl *NewD = nullptr;
   if (auto *FD = dyn_cast<FunctionDecl>(ND)) {
