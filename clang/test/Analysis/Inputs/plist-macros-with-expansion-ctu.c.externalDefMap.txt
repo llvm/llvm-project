@@ -1,4 +1,4 @@
-c:@F@F1 plist-macros-ctu.c.ast
-c:@F@F2 plist-macros-ctu.c.ast
-c:@F@F3 plist-macros-ctu.c.ast
-c:@F@F_H plist-macros-ctu.c.ast
+7:c:@F@F1 plist-macros-ctu.c.ast
+7:c:@F@F2 plist-macros-ctu.c.ast
+7:c:@F@F3 plist-macros-ctu.c.ast
+8:c:@F@F_H plist-macros-ctu.c.ast
