@@ -501,8 +501,17 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
     VPFunc = Intrinsic::getDeclaration(M, VPID, OverloadTy);
     break;
   }
+  case Intrinsic::vp_trunc:
+  case Intrinsic::vp_sext:
+  case Intrinsic::vp_zext:
+  case Intrinsic::vp_fptoui:
   case Intrinsic::vp_fptosi:
+  case Intrinsic::vp_uitofp:
   case Intrinsic::vp_sitofp:
+  case Intrinsic::vp_fptrunc:
+  case Intrinsic::vp_fpext:
+  case Intrinsic::vp_ptrtoint:
+  case Intrinsic::vp_inttoptr:
     VPFunc =
         Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[0]->getType()});
     break;
