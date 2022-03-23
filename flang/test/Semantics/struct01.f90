@@ -6,7 +6,7 @@ program main
   structure /s/
     !ERROR: /s/ is not a known STRUCTURE
     record /s/ attemptToRecurse
-    !ERROR: UNION is not yet supported
+    !ERROR: not yet implemented: support for UNION
     union
       map
         integer j
