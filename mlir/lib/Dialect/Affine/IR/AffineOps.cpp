@@ -2410,17 +2410,22 @@ OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
       SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.nameAttr()));
   if (!global)
     return {};
-  if (auto cstAttr =
-          global.getConstantInitValue().dyn_cast_or_null<DenseElementsAttr>()) {
-    // We can fold only if we know the indices.
-    if (!getAffineMap().isConstant())
-      return {};
-    auto indices = llvm::to_vector<4>(
-        llvm::map_range(getAffineMap().getConstantResults(),
-                        [](int64_t v) -> uint64_t { return v; }));
-    return cstAttr.getValues<Attribute>()[indices];
-  }
-  return {};
+
+  // Check if the global memref is a constant.
+  auto cstAttr =
+      global.getConstantInitValue().dyn_cast_or_null<DenseElementsAttr>();
+  if (!cstAttr)
+    return {};
+  // If it's a splat constant, we can fold irrespective of indices.
+  if (auto splatAttr = cstAttr.dyn_cast<SplatElementsAttr>())
+    return splatAttr.getSplatValue<Attribute>();
+  // Otherwise, we can fold only if we know the indices.
+  if (!getAffineMap().isConstant())
+    return {};
+  auto indices = llvm::to_vector<4>(
+      llvm::map_range(getAffineMap().getConstantResults(),
+                      [](int64_t v) -> uint64_t { return v; }));
+  return cstAttr.getValues<Attribute>()[indices];
 }
 
 //===----------------------------------------------------------------------===//
