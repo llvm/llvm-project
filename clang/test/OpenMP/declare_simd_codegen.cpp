@@ -153,6 +153,23 @@ double constlinear(const int i) { return 0.0; }
 // CHECK-DAG: "_ZGVdN4v__Z5add_1Pf"
 // CHECK-DAG: "_ZGVeN8v__Z5add_1Pf"
 
+// CHECK-NOT: _ZGVbN2vv__Z5add_1Pf
+// CHECK-NOT: _ZGVcN4vv__Z5add_1Pf
+// CHECK-NOT: _ZGVdN4vv__Z5add_1Pf
+// CHECK-NOT: _ZGVeN8vv__Z5add_1Pf
+// CHECK-NOT: _ZGVbM32vv__Z5add_1Pf
+// CHECK-NOT: _ZGVcM32vv__Z5add_1Pf
+// CHECK-NOT: _ZGVdM32vv__Z5add_1Pf
+// CHECK-NOT: _ZGVeM32vv__Z5add_1Pf
+// CHECK-NOT: _ZGVbN4l32v__Z5add_1Pf
+// CHECK-NOT: _ZGVcN8l32v__Z5add_1Pf
+// CHECK-NOT: _ZGVdN8l32v__Z5add_1Pf
+// CHECK-NOT: _ZGVeN16l32v__Z5add_1Pf
+// CHECK-NOT: _ZGVbM4l32v__Z5add_1Pf
+// CHECK-NOT: _ZGVcM8l32v__Z5add_1Pf
+// CHECK-NOT: _ZGVdM8l32v__Z5add_1Pf
+// CHECK-NOT: _ZGVeM16l32v__Z5add_1Pf
+
 // CHECK-DAG: "_ZGVbM2va16va16vv__Z1hIiEvPT_S1_S1_S1_"
 // CHECK-DAG: "_ZGVbN2va16va16vv__Z1hIiEvPT_S1_S1_S1_"
 // CHECK-DAG: "_ZGVcM4va16va16vv__Z1hIiEvPT_S1_S1_S1_"
