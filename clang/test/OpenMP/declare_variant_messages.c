@@ -162,9 +162,8 @@ __attribute__((target("sse"))) void incompat_attr_target(void); // expected-erro
 #pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
 __attribute__((target("default"))) void incompat_attr_target_default(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
 
-// FIXME: No diagnostics are produced for use of the 'target_clones' attribute in an OMP variant declaration.
 #pragma omp declare variant(incompat_attr_variant) match(implementation={vendor(llvm)})
-__attribute__((target_clones("sse,default"))) void incompat_attr_target_clones(void);
+__attribute__((target_clones("sse,default"))) void incompat_attr_target_clones(void); // expected-error {{'#pragma omp declare variant' is not compatible with any target-specific attributes}}
 
 void marked(void);
 void not_marked(void);
