@@ -403,25 +403,29 @@ static bool genericValueTraversal(
 
     if (auto *LI = dyn_cast<LoadInst>(V)) {
       bool UsedAssumedInformation = false;
-      SmallSetVector<Value *, 4> PotentialCopies;
-      if (AA::getPotentiallyLoadedValues(A, *LI, PotentialCopies, QueryingAA,
-                                         UsedAssumedInformation,
-                                         /* OnlyExact */ true)) {
-        // Values have to be dynamically unique or we loose the fact that a
-        // single llvm::Value might represent two runtime values (e.g., stack
-        // locations in different recursive calls).
-        bool DynamicallyUnique =
-            llvm::all_of(PotentialCopies, [&A, &QueryingAA](Value *PC) {
-              return AA::isDynamicallyUnique(A, QueryingAA, *PC);
-            });
-        if (DynamicallyUnique &&
-            (!Intraprocedural || !CtxI ||
-             llvm::all_of(PotentialCopies, [CtxI](Value *PC) {
-               return AA::isValidInScope(*PC, CtxI->getFunction());
-             }))) {
-          for (auto *PotentialCopy : PotentialCopies)
-            Worklist.push_back({PotentialCopy, CtxI});
-          continue;
+      // If we ask for the potentially loaded values from the initial pointer we
+      // will simply end up here again. The load is as far as we can make it.
+      if (LI->getPointerOperand() != InitialV) {
+        SmallSetVector<Value *, 4> PotentialCopies;
+        if (AA::getPotentiallyLoadedValues(A, *LI, PotentialCopies, QueryingAA,
+                                           UsedAssumedInformation,
+                                           /* OnlyExact */ true)) {
+          // Values have to be dynamically unique or we loose the fact that a
+          // single llvm::Value might represent two runtime values (e.g., stack
+          // locations in different recursive calls).
+          bool DynamicallyUnique =
+              llvm::all_of(PotentialCopies, [&A, &QueryingAA](Value *PC) {
+                return AA::isDynamicallyUnique(A, QueryingAA, *PC);
+              });
+          if (DynamicallyUnique &&
+              (!Intraprocedural || !CtxI ||
+               llvm::all_of(PotentialCopies, [CtxI](Value *PC) {
+                 return AA::isValidInScope(*PC, CtxI->getFunction());
+               }))) {
+            for (auto *PotentialCopy : PotentialCopies)
+              Worklist.push_back({PotentialCopy, CtxI});
+            continue;
+          }
         }
       }
     }
