@@ -2147,20 +2147,17 @@ cc_binary(
 cc_library(
     name = "extract_api",
     srcs = glob([
-        "lib/ExtractAPI/*.cpp",
-        "lib/ExtractAPI/*.h",
         "lib/ExtractAPI/**/*.cpp",
         "lib/ExtractAPI/**/*.h",
     ]),
     hdrs = glob(["include/clang/ExtractAPI/**/*.h"]),
     includes = ["include"],
-    visibility = ["//third_party/llvm/google3_users:clang_api_users"],
     deps = [
         ":ast",
-        ":index",
         ":basic",
         ":frontend",
-        "//third_party/llvm/llvm-project/llvm:Option",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        ":index",
+        "//llvm:Option",
+        "//llvm:Support",
     ],
 )
