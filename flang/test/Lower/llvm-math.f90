@@ -89,3 +89,23 @@
 ! CHECK-NEXT:   %0 = fir.call @llvm.log10.f32(%arg0) : (f32) -> f32
 ! CHECK-NEXT:   return %0 : f32
 ! CHECK-NEXT: }
+
+      SUBROUTINE SQRT_WRAPPER(IN, OUT)
+      REAL :: IN, OUT
+      OUT = SQRT(IN)
+      END SUBROUTINE
+
+! CHECK-LABEL: func private @fir.sqrt.f32.f32(%arg0: f32)
+! CHECK-NEXT:  %0 = fir.call @llvm.sqrt.f32(%arg0) : (f32) -> f32
+! CHECK-NEXT:   return %0 : f32
+! CHECK-NEXT: }
+
+      SUBROUTINE SQRTD_WRAPPER(IN, OUT)
+      REAL(KIND=8) :: IN, OUT
+      OUT = SQRT(IN)
+      END SUBROUTINE
+
+! CHECK-LABEL: func private @fir.sqrt.f64.f64(%arg0: f64)
+! CHECK-NEXT:  %0 = fir.call @llvm.sqrt.f64(%arg0) : (f64) -> f64
+! CHECK-NEXT:   return %0 : f64
+! CHECK-NEXT: }
