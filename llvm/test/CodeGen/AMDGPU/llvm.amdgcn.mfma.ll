@@ -390,6 +390,7 @@ bb:
 ; GFX908_A:      v_mfma_f32_4x4x1f32 [[MAI1:a\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, v{{[0-9]+}}, a[{{[0-9]+:[0-9]+}}]
 ; GFX908_A-NEXT: v_mfma_f32_4x4x1f32 a[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, v{{[0-9]+}}, [[MAI1]]
 ; GFX940:        v_mfma_f32_4x4x1_16b_f32 [[MAI1:a\[[0-9]+:[0-9]+\]]], v{{[0-9]+}}, v{{[0-9]+}}, a[{{[0-9]+:[0-9]+}}]
+; GFX940-NEXT:   s_nop 1
 ; GFX940-NEXT:   v_mfma_f32_4x4x1_16b_f32 a[{{[0-9]+:[0-9]+}}], v{{[0-9]+}}, v{{[0-9]+}}, [[MAI1]]
 define amdgpu_kernel void @test_mfma_f32_4x4x1f32_forward_acc(<4 x float> addrspace(1)* %arg) #0 {
 bb:
