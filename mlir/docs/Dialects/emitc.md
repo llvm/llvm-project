@@ -29,6 +29,7 @@ translating the following operations:
 *   'func' Dialect
     *   `func.call`
     *   `func.constant`
+    *   `func.func`
     *   `func.return`
 *   'scf' Dialect
     *   `scf.for`
