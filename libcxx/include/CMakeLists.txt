@@ -267,7 +267,6 @@ set(files
   __iterator/sortable.h
   __iterator/unreachable_sentinel.h
   __iterator/wrap_iter.h
-  __libcpp_version
   __locale
   __mbstate_t.h
   __memory/addressof.h
