@@ -2214,6 +2214,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
   llvm::MachO::linkedit_data_command exports_trie_load_command = {0, 0, 0, 0};
   llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  llvm::MachO::dysymtab_command dysymtab = m_dysymtab;
   // The data element of type bool indicates that this entry is thumb
   // code.
   typedef AddressDataArray<lldb::addr_t, bool, 100> FunctionStarts;
@@ -2394,12 +2395,12 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               ReadMemory(process_sp, symoff_addr, nlist_data_byte_size));
           if (nlist_data_sp)
             nlist_data.SetData(nlist_data_sp, 0, nlist_data_sp->GetByteSize());
-          if (m_dysymtab.nindirectsyms != 0) {
+          if (dysymtab.nindirectsyms != 0) {
             const addr_t indirect_syms_addr = linkedit_load_addr +
-                                              m_dysymtab.indirectsymoff -
+                                              dysymtab.indirectsymoff -
                                               linkedit_file_offset;
             DataBufferSP indirect_syms_data_sp(ReadMemory(
-                process_sp, indirect_syms_addr, m_dysymtab.nindirectsyms * 4));
+                process_sp, indirect_syms_addr, dysymtab.nindirectsyms * 4));
             if (indirect_syms_data_sp)
               indirect_symbol_index_data.SetData(
                   indirect_syms_data_sp, 0,
@@ -2452,7 +2453,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       symtab_load_command.symoff += linkedit_slide;
       symtab_load_command.stroff += linkedit_slide;
       dyld_info.export_off += linkedit_slide;
-      m_dysymtab.indirectsymoff += linkedit_slide;
+      dysymtab.indirectsymoff += linkedit_slide;
       function_starts_load_command.dataoff += linkedit_slide;
       exports_trie_load_command.dataoff += linkedit_slide;
     }
@@ -2474,9 +2475,9 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                              exports_trie_load_command.datasize);
     }
 
-    if (m_dysymtab.nindirectsyms != 0) {
-      indirect_symbol_index_data.SetData(m_data, m_dysymtab.indirectsymoff,
-                                         m_dysymtab.nindirectsyms * 4);
+    if (dysymtab.nindirectsyms != 0) {
+      indirect_symbol_index_data.SetData(m_data, dysymtab.indirectsymoff,
+                                         dysymtab.nindirectsyms * 4);
     }
     if (function_starts_load_command.cmd) {
       function_starts_data.SetData(m_data, function_starts_load_command.dataoff,
