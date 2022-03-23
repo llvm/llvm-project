@@ -1015,8 +1015,7 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
                                            ArrayRef<int> Mask, int Index,
-                                           Type *SubTp,
-                                           ArrayRef<Value *> Args) {
+                                           Type *SubTp) {
 
   InstructionCost CostFactor =
       vectorCostAdjustmentFactor(Instruction::ShuffleVector, Tp, nullptr);

@@ -125,8 +125,7 @@ public:
                                         Align Alignment, unsigned AddressSpace,
                                         TTI::TargetCostKind CostKind);
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, Type *Tp,
-                                 ArrayRef<int> Mask, int Index, Type *SubTp,
-                                 ArrayRef<Value *> Args = None);
+                                 ArrayRef<int> Mask, int Index, Type *SubTp);
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,

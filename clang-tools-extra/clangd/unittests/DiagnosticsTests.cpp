@@ -1110,6 +1110,9 @@ ID(ns::X a6);
       {SymbolWithHeader{"X", "unittest:///x.h", "\"x.h\""},
        SymbolWithHeader{"ns::X", "unittest:///ns.h", "\"x.h\""}});
   TU.ExternalIndex = Index.get();
+  // FIXME: -fms-compatibility (which is default on windows) breaks the
+  // ns::X cases when the namespace is undeclared. Find out why!
+  TU.ExtraArgs = {"-fno-ms-compatibility"};
   EXPECT_THAT(*TU.build().getDiagnostics(), Each(withFix(_)));
 }
 
