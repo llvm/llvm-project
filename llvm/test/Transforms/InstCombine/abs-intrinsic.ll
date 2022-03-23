@@ -433,10 +433,9 @@ define i32 @sub_abs_gt(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP0]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -456,14 +455,13 @@ cond.end:
 define i32 @sub_abs_lt(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_abs_lt(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 true)
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i32 [[Y]], [[X]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP0]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
@@ -483,14 +481,13 @@ cond.end:
 define i32 @sub_abs_lt_min_not_poison(i32 %x, i32 %y) {
 ; CHECK-LABEL: @sub_abs_lt_min_not_poison(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    [[SUB_NEG:%.*]] = sub i32 [[Y]], [[X]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[TMP0]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[R:%.*]] = phi i32 [ [[SUB_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
