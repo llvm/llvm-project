@@ -2749,6 +2749,13 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
       return nullptr;
     actual_class_descriptor_sp =
         m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
+    if (!actual_class_descriptor_sp) {
+      if (ABISP abi_sp = process->GetABI()) {
+        ObjCISA fixed_isa = abi_sp->FixCodeAddress((ObjCISA)slot_data);
+        actual_class_descriptor_sp =
+            m_runtime.GetClassDescriptorFromISA(fixed_isa);
+      }
+    }
     if (!actual_class_descriptor_sp)
       return ObjCLanguageRuntime::ClassDescriptorSP();
     m_cache[slot] = actual_class_descriptor_sp;
