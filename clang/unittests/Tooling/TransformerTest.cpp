@@ -31,11 +31,9 @@ using ::clang::transformer::makeRule;
 using ::clang::transformer::member;
 using ::clang::transformer::name;
 using ::clang::transformer::node;
-using ::clang::transformer::noEdits;
 using ::clang::transformer::remove;
 using ::clang::transformer::rewriteDescendants;
 using ::clang::transformer::RewriteRule;
-using ::clang::transformer::RewriteRuleWith;
 using ::clang::transformer::statement;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
@@ -131,7 +129,7 @@ protected:
         Changes.insert(Changes.end(), std::make_move_iterator(C->begin()),
                        std::make_move_iterator(C->end()));
       } else {
-        // FIXME: stash this error rather than printing.
+        // FIXME: stash this error rather then printing.
         llvm::errs() << "Error generating changes: "
                      << llvm::toString(C.takeError()) << "\n";
         ++ErrorCount;
@@ -139,47 +137,17 @@ protected:
     };
   }
 
-  auto consumerWithStringMetadata() {
-    return [this](Expected<Transformer::Result<std::string>> C) {
-      if (C) {
-        Changes.insert(Changes.end(),
-                       std::make_move_iterator(C->Changes.begin()),
-                       std::make_move_iterator(C->Changes.end()));
-        StringMetadata.push_back(std::move(C->Metadata));
-      } else {
-        // FIXME: stash this error rather than printing.
-        llvm::errs() << "Error generating changes: "
-                     << llvm::toString(C.takeError()) << "\n";
-        ++ErrorCount;
-      }
-    };
-  }
-
-  void testRule(RewriteRule Rule, StringRef Input, StringRef Expected) {
+  template <typename R>
+  void testRule(R Rule, StringRef Input, StringRef Expected) {
     Transformers.push_back(
         std::make_unique<Transformer>(std::move(Rule), consumer()));
     Transformers.back()->registerMatchers(&MatchFinder);
     compareSnippets(Expected, rewrite(Input));
   }
 
-  void testRule(RewriteRuleWith<std::string> Rule, StringRef Input,
-                StringRef Expected) {
-    Transformers.push_back(std::make_unique<Transformer>(
-        std::move(Rule), consumerWithStringMetadata()));
-    Transformers.back()->registerMatchers(&MatchFinder);
-    compareSnippets(Expected, rewrite(Input));
-  }
-
-  void testRuleFailure(RewriteRule Rule, StringRef Input) {
+  template <typename R> void testRuleFailure(R Rule, StringRef Input) {
     Transformers.push_back(
         std::make_unique<Transformer>(std::move(Rule), consumer()));
-    Transformers.back()->registerMatchers(&MatchFinder);
-    ASSERT_FALSE(rewrite(Input)) << "Expected failure to rewrite code";
-  }
-
-  void testRuleFailure(RewriteRuleWith<std::string> Rule, StringRef Input) {
-    Transformers.push_back(std::make_unique<Transformer>(
-        std::move(Rule), consumerWithStringMetadata()));
     Transformers.back()->registerMatchers(&MatchFinder);
     ASSERT_FALSE(rewrite(Input)) << "Expected failure to rewrite code";
   }
@@ -190,7 +158,6 @@ protected:
   // Records whether any errors occurred in individual changes.
   int ErrorCount = 0;
   AtomicChanges Changes;
-  std::vector<std::string> StringMetadata;
 
 private:
   FileContentMappings FileContents = {{"header.h", ""}};
@@ -202,7 +169,7 @@ protected:
 };
 
 // Given string s, change strlen($s.c_str()) to REPLACED.
-static RewriteRuleWith<std::string> ruleStrlenSize() {
+static RewriteRule ruleStrlenSize() {
   StringRef StringExpr = "strexpr";
   auto StringType = namedDecl(hasAnyName("::basic_string", "::string"));
   auto R = makeRule(
@@ -919,12 +886,12 @@ TEST_F(TransformerTest, FlattenWithMixedArgs) {
 
 TEST_F(TransformerTest, OrderedRuleUnrelated) {
   StringRef Flag = "flag";
-  RewriteRuleWith<std::string> FlagRule = makeRule(
+  RewriteRule FlagRule = makeRule(
       cxxMemberCallExpr(on(expr(hasType(cxxRecordDecl(
                                     hasName("proto::ProtoCommandLineFlag"))))
                                .bind(Flag)),
                         unless(callee(cxxMethodDecl(hasName("GetProto"))))),
-      changeTo(node(std::string(Flag)), cat("PROTO")), cat(""));
+      changeTo(node(std::string(Flag)), cat("PROTO")));
 
   std::string Input = R"cc(
     proto::ProtoCommandLineFlag flag;
@@ -1690,8 +1657,8 @@ TEST_F(TransformerTest, MultiFileEdit) {
       makeRule(callExpr(callee(functionDecl(hasName("Func"))),
                         forEachArgumentWithParam(expr().bind("arg"),
                                                  parmVarDecl().bind("param"))),
-               {changeTo(node("arg"), cat("ARG")),
-                changeTo(node("param"), cat("PARAM"))}),
+               editList({changeTo(node("arg"), cat("ARG")),
+                         changeTo(node("param"), cat("PARAM"))})),
       [&](Expected<MutableArrayRef<AtomicChange>> Changes) {
         if (Changes)
           ChangeSets.push_back(AtomicChanges(Changes->begin(), Changes->end()));
@@ -1713,41 +1680,6 @@ TEST_F(TransformerTest, MultiFileEdit) {
                    "input.cc"),
           ResultOf([](const AtomicChange &C) { return C.getFilePath(); },
                    "./input.h"))));
-}
-
-TEST_F(TransformerTest, GeneratesMetadata) {
-  std::string Input = R"cc(int target = 0;)cc";
-  std::string Expected = R"cc(REPLACE)cc";
-  RewriteRuleWith<std::string> Rule = makeRule(
-      varDecl(hasName("target")), changeTo(cat("REPLACE")), cat("METADATA"));
-  testRule(std::move(Rule), Input, Expected);
-  EXPECT_EQ(ErrorCount, 0);
-  EXPECT_THAT(StringMetadata, UnorderedElementsAre("METADATA"));
-}
-
-TEST_F(TransformerTest, GeneratesMetadataWithNoEdits) {
-  std::string Input = R"cc(int target = 0;)cc";
-  RewriteRuleWith<std::string> Rule = makeRule(
-      varDecl(hasName("target")).bind("var"), noEdits(), cat("METADATA"));
-  testRule(std::move(Rule), Input, Input);
-  EXPECT_EQ(ErrorCount, 0);
-  EXPECT_THAT(StringMetadata, UnorderedElementsAre("METADATA"));
-}
-
-TEST_F(TransformerTest, PropagateMetadataErrors) {
-  class AlwaysFail : public transformer::MatchComputation<std::string> {
-    llvm::Error eval(const ast_matchers::MatchFinder::MatchResult &,
-                     std::string *) const override {
-      return llvm::createStringError(llvm::errc::invalid_argument, "ERROR");
-    }
-    std::string toString() const override { return "AlwaysFail"; }
-  };
-  std::string Input = R"cc(int target = 0;)cc";
-  RewriteRuleWith<std::string> Rule = makeRule<std::string>(
-      varDecl(hasName("target")).bind("var"), changeTo(cat("REPLACE")),
-      std::make_shared<AlwaysFail>());
-  testRuleFailure(std::move(Rule), Input);
-  EXPECT_EQ(ErrorCount, 1);
 }
 
 } // namespace
