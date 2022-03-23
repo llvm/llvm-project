@@ -199,8 +199,8 @@ static Constant *getConstantStackValue(CallInst *Call, Value *Val,
 //       ret void
 //     }
 //
-static void constantArgPropagation(FuncList &WorkList,
-                                   Module &M, SCCPSolver &Solver) {
+static void constantArgPropagation(FuncList &WorkList, Module &M,
+                                   SCCPSolver &Solver) {
   // Iterate over the argument tracked functions see if there
   // are any new constant values for the call instruction via
   // stack variables.
@@ -300,7 +300,7 @@ public:
       auto Cost = getSpecializationCost(F);
       if (!Cost.isValid()) {
         LLVM_DEBUG(
-            dbgs() << "FnSpecialization: Invalid specialisation cost.\n");
+            dbgs() << "FnSpecialization: Invalid specialization cost.\n");
         continue;
       }
 
@@ -327,8 +327,8 @@ public:
 
   void removeDeadInstructions() {
     for (auto *I : ReplacedWithConstant) {
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Removing dead instruction "
-                        << *I << "\n");
+      LLVM_DEBUG(dbgs() << "FnSpecialization: Removing dead instruction " << *I
+                        << "\n");
       I->eraseFromParent();
     }
     ReplacedWithConstant.clear();
@@ -446,7 +446,8 @@ private:
 
       LLVM_DEBUG(dbgs() << "FnSpecialization: Specializations for function "
                         << F->getName() << "\n";
-                 for (SpecializationInfo &S : WorkList) {
+                 for (SpecializationInfo &S
+                      : WorkList) {
                    dbgs() << "FnSpecialization:   FormalArg = "
                           << S.Arg.Formal->getNameOrAsOperand()
                           << ", ActualArg = "
@@ -749,13 +750,12 @@ private:
     }
 
     LLVM_DEBUG(dbgs() << "FnSpecialization: Replacing call sites of "
-                      << F->getName() << " with "
-                      << Clone->getName() << "\n");
+                      << F->getName() << " with " << Clone->getName() << "\n");
 
     for (auto *CS : CallSitesToRewrite) {
       LLVM_DEBUG(dbgs() << "FnSpecialization:   "
-                        << CS->getFunction()->getName() << " ->"
-                        << *CS << "\n");
+                        << CS->getFunction()->getName() << " ->" << *CS
+                        << "\n");
       if (/* recursive call */
           (CS->getFunction() == Clone &&
            CS->getArgOperand(ArgNo) == Mappings[Arg.Formal]) ||
@@ -908,7 +908,7 @@ bool llvm::runFunctionSpecialization(
   }
 
   LLVM_DEBUG(dbgs() << "FnSpecialization: Number of specializations = "
-                    << NumFuncSpecialized <<"\n");
+                    << NumFuncSpecialized << "\n");
 
   // Remove any ssa_copy intrinsics that may have been introduced.
   removeSSACopy(M);
