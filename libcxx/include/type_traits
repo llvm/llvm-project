@@ -450,9 +450,6 @@ _LIBCPP_CONSTEXPR const _Tp integral_constant<_Tp, __v>::value;
 #if _LIBCPP_STD_VER > 14
 template <bool __b>
 using bool_constant = integral_constant<bool, __b>;
-#define _LIBCPP_BOOL_CONSTANT(__b) bool_constant<(__b)>
-#else
-#define _LIBCPP_BOOL_CONSTANT(__b) integral_constant<bool,(__b)>
 #endif
 
 template <bool, class _Tp = void> struct _LIBCPP_TEMPLATE_VIS enable_if {};
@@ -464,8 +461,8 @@ template <bool _Bp, class _Tp = void> using __enable_if_t _LIBCPP_NODEBUG = type
 template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 #endif
 
-typedef _LIBCPP_BOOL_CONSTANT(true)  true_type;
-typedef _LIBCPP_BOOL_CONSTANT(false) false_type;
+typedef integral_constant<bool, true>  true_type;
+typedef integral_constant<bool, false> false_type;
 
 template <bool _Val>
 using _BoolConstant _LIBCPP_NODEBUG = integral_constant<bool, _Val>;
@@ -1354,7 +1351,7 @@ inline constexpr bool is_signed_v = __is_signed(_Tp);
 #else // __has_keyword(__is_signed)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
-struct __libcpp_is_signed_impl : public _LIBCPP_BOOL_CONSTANT(_Tp(-1) < _Tp(0)) {};
+struct __libcpp_is_signed_impl : public _BoolConstant<(_Tp(-1) < _Tp(0))> {};
 
 template <class _Tp>
 struct __libcpp_is_signed_impl<_Tp, false> : public true_type {};  // floating point
@@ -1392,7 +1389,7 @@ inline constexpr bool is_unsigned_v = __is_unsigned(_Tp);
 #else // __has_keyword(__is_unsigned)
 
 template <class _Tp, bool = is_integral<_Tp>::value>
-struct __libcpp_is_unsigned_impl : public _LIBCPP_BOOL_CONSTANT(_Tp(0) < _Tp(-1)) {};
+struct __libcpp_is_unsigned_impl : public _BoolConstant<(_Tp(0) < _Tp(-1))> {};
 
 template <class _Tp>
 struct __libcpp_is_unsigned_impl<_Tp, false> : public false_type {};  // floating point

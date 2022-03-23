@@ -300,10 +300,10 @@ throw_with_nested(_Tp&& __t)
 }
 
 template <class _From, class _To>
-struct __can_dynamic_cast : public _LIBCPP_BOOL_CONSTANT(
+struct __can_dynamic_cast : _BoolConstant<
               is_polymorphic<_From>::value &&
                  (!is_base_of<_To, _From>::value ||
-                   is_convertible<const _From*, const _To*>::value)) {};
+                   is_convertible<const _From*, const _To*>::value)> {};
 
 template <class _Ep>
 inline _LIBCPP_INLINE_VISIBILITY
