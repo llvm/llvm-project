@@ -41,8 +41,7 @@ namespace presburger {
 /// each id, and an extra column at the end for the constant term.
 ///
 /// Checking equality of two such functions is supported, as well as finding the
-/// value of the function at a specified point. Note that local ids in the
-/// domain are not yet supported for finding the value at a point.
+/// value of the function at a specified point.
 class MultiAffineFunction : protected IntegerPolyhedron {
 public:
   /// We use protected inheritance to avoid inheriting the whole public
@@ -114,8 +113,6 @@ public:
 
   /// Get the value of the function at the specified point. If the point lies
   /// outside the domain, an empty optional is returned.
-  ///
-  /// Note: domains with local ids are not yet supported, and will assert-fail.
   Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
 
   void print(raw_ostream &os) const;
@@ -145,8 +142,7 @@ private:
 /// symbolic ids.
 ///
 /// Support is provided to compare equality of two such functions as well as
-/// finding the value of the function at a point. Note that local ids in the
-/// piece are not supported for the latter.
+/// finding the value of the function at a point.
 class PWMAFunction : public PresburgerSpace {
 public:
   PWMAFunction(unsigned numDims, unsigned numSymbols, unsigned numOutputs)
@@ -170,8 +166,6 @@ public:
 
   /// Return the value at the specified point and an empty optional if the
   /// point does not lie in the domain.
-  ///
-  /// Note: domains with local ids are not yet supported, and will assert-fail.
   Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
 
   /// Return whether `this` and `other` are equal as PWMAFunctions, i.e. whether

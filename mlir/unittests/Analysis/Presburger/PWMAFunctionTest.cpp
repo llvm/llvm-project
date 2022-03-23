@@ -129,16 +129,31 @@ TEST(PWAFunctionTest, isEqual) {
 }
 
 TEST(PWMAFunction, valueAt) {
-  PWMAFunction nonNegPWAF = parsePWMAF(
+  PWMAFunction nonNegPWMAF = parsePWMAF(
       /*numInputs=*/2, /*numOutputs=*/2,
       {
           {"(x, y) : (x >= 0)", {{1, 2, 3}, {3, 4, 5}}}, // (x, y).
           {"(x, y) : (y >= 0, -x - 1 >= 0)", {{-1, 2, 3}, {-3, 4, 5}}} // (x, y)
       });
-  EXPECT_THAT(*nonNegPWAF.valueAt({2, 3}), ElementsAre(11, 23));
-  EXPECT_THAT(*nonNegPWAF.valueAt({-2, 3}), ElementsAre(11, 23));
-  EXPECT_THAT(*nonNegPWAF.valueAt({2, -3}), ElementsAre(-1, -1));
-  EXPECT_FALSE(nonNegPWAF.valueAt({-2, -3}).hasValue());
+  EXPECT_THAT(*nonNegPWMAF.valueAt({2, 3}), ElementsAre(11, 23));
+  EXPECT_THAT(*nonNegPWMAF.valueAt({-2, 3}), ElementsAre(11, 23));
+  EXPECT_THAT(*nonNegPWMAF.valueAt({2, -3}), ElementsAre(-1, -1));
+  EXPECT_FALSE(nonNegPWMAF.valueAt({-2, -3}).hasValue());
+
+  PWMAFunction divPWMAF = parsePWMAF(
+      /*numInputs=*/2, /*numOutputs=*/2,
+      {
+          {"(x, y) : (x >= 0, x - 2*(x floordiv 2) == 0)",
+           {{0, 2, 1, 3}, {0, 4, 3, 5}}}, // (x, y).
+          {"(x, y) : (y >= 0, -x - 1 >= 0)", {{-1, 2, 3}, {-3, 4, 5}}} // (x, y)
+      });
+  EXPECT_THAT(*divPWMAF.valueAt({4, 3}), ElementsAre(11, 23));
+  EXPECT_THAT(*divPWMAF.valueAt({4, -3}), ElementsAre(-1, -1));
+  EXPECT_FALSE(divPWMAF.valueAt({3, 3}).hasValue());
+  EXPECT_FALSE(divPWMAF.valueAt({3, -3}).hasValue());
+
+  EXPECT_THAT(*divPWMAF.valueAt({-2, 3}), ElementsAre(11, 23));
+  EXPECT_FALSE(divPWMAF.valueAt({-2, -3}).hasValue());
 }
 
 TEST(PWMAFunction, removeIdRangeRegressionTest) {
