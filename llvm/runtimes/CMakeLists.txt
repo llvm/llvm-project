@@ -340,17 +340,6 @@ function(runtime_register_target name target)
     endforeach()
   endif()
 
-  # If we're passed any option like <project>_FOO, pass it through to the sub-builds.
-  foreach(runtime ${LLVM_ENABLE_RUNTIMES})
-    string(TOUPPER "${runtime}" runtime_upper)
-    foreach(variableName ${variableNames})
-      if (variableName MATCHES "^${runtime_upper}_.+")
-        string(REPLACE ";" "|" escaped_value "${${variableName}}")
-        list(APPEND ${name}_extra_args "-D${variableName}=${escaped_value}")
-      endif()
-    endforeach()
-  endforeach()
-
   if(NOT RUNTIMES_${name}_LLVM_ENABLE_RUNTIMES AND NOT RUNTIMES_${target}_LLVM_ENABLE_RUNTIMES)
     string(REPLACE ";" "|" LLVM_ENABLE_RUNTIMES_PASSTHROUGH "${LLVM_ENABLE_RUNTIMES}")
     list(APPEND ${name}_extra_args -DLLVM_ENABLE_RUNTIMES=${LLVM_ENABLE_RUNTIMES_PASSTHROUGH})
