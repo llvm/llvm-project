@@ -3595,7 +3595,8 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
 void ArgumentAnalyzer::AddAssignmentConversion(
     const DynamicType &lhsType, const DynamicType &rhsType) {
   if (lhsType.category() == rhsType.category() &&
-      lhsType.kind() == rhsType.kind()) {
+      (lhsType.category() == TypeCategory::Derived ||
+          lhsType.kind() == rhsType.kind())) {
     // no conversion necessary
   } else if (auto rhsExpr{evaluate::ConvertToType(lhsType, MoveExpr(1))}) {
     std::optional<parser::CharBlock> source;
@@ -3684,7 +3685,10 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   if (i >= actuals_.size() || !actuals_[i]) {
     return "missing argument";
   } else if (std::optional<DynamicType> type{GetType(i)}) {
-    return type->category() == TypeCategory::Derived
+    return type->IsAssumedType()         ? "TYPE(*)"s
+        : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
+        : type->IsPolymorphic()          ? "CLASS("s + type->AsFortran() + ')'
+        : type->category() == TypeCategory::Derived
         ? "TYPE("s + type->AsFortran() + ')'
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
