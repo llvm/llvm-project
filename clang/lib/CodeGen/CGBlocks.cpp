@@ -216,8 +216,9 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
     llvm::Constant *disposeHelper = buildDisposeHelper(CGM, blockInfo);
     elements.add(disposeHelper);
 
-    if (cast<llvm::Function>(copyHelper->getOperand(0))->hasInternalLinkage() ||
-        cast<llvm::Function>(disposeHelper->getOperand(0))
+    if (cast<llvm::Function>(copyHelper->stripPointerCasts())
+            ->hasInternalLinkage() ||
+        cast<llvm::Function>(disposeHelper->stripPointerCasts())
             ->hasInternalLinkage())
       hasInternalHelper = true;
   }
