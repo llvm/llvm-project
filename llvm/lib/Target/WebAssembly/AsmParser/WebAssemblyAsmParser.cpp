@@ -671,11 +671,12 @@ public:
         } else {
           // Assume this identifier is a label.
           const MCExpr *Val;
+          SMLoc Start = Id.getLoc();
           SMLoc End;
           if (Parser.parseExpression(Val, End))
             return error("Cannot parse symbol: ", Lexer.getTok());
           Operands.push_back(std::make_unique<WebAssemblyOperand>(
-              WebAssemblyOperand::Symbol, Id.getLoc(), Id.getEndLoc(),
+              WebAssemblyOperand::Symbol, Start, End,
               WebAssemblyOperand::SymOp{Val}));
           if (checkForP2AlignIfLoadStore(Operands, Name))
             return true;
