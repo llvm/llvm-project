@@ -91,6 +91,12 @@ void PresburgerSpace::removeIdRange(IdKind kind, unsigned idStart,
     llvm_unreachable("PresburgerSpace does not support local identifiers!");
 }
 
+void PresburgerSpace::truncateIdKind(IdKind kind, unsigned num) {
+  unsigned curNum = getNumIdKind(kind);
+  assert(num <= curNum && "Can't truncate to more ids!");
+  removeIdRange(kind, num, curNum);
+}
+
 unsigned PresburgerLocalSpace::insertId(IdKind kind, unsigned pos,
                                         unsigned num) {
   if (kind == IdKind::Local) {

@@ -109,6 +109,10 @@ public:
   /// idLimit). The range is relative to the kind of identifier.
   virtual void removeIdRange(IdKind kind, unsigned idStart, unsigned idLimit);
 
+  /// Truncate the ids of the specified kind to the specified number by dropping
+  /// some ids at the end. `num` must be less than the current number.
+  void truncateIdKind(IdKind kind, unsigned num);
+
   /// Returns true if both the spaces are equal i.e. if both spaces have the
   /// same number of identifiers of each kind (excluding Local Identifiers).
   bool isEqual(const PresburgerSpace &other) const;

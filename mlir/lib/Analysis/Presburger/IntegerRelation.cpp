@@ -126,6 +126,26 @@ void removeConstraintsInvolvingIdRange(IntegerRelation &poly, unsigned begin,
     if (!rangeIsZero(poly.getInequality(i - 1).slice(begin, count)))
       poly.removeInequality(i - 1);
 }
+
+IntegerRelation::CountsSnapshot IntegerRelation::getCounts() const {
+  return {PresburgerLocalSpace(*this), getNumInequalities(),
+          getNumEqualities()};
+}
+
+void IntegerRelation::truncateIdKind(IdKind kind,
+                                     const CountsSnapshot &counts) {
+  truncateIdKind(kind, counts.getSpace().getNumIdKind(kind));
+}
+
+void IntegerRelation::truncate(const CountsSnapshot &counts) {
+  truncateIdKind(IdKind::Domain, counts);
+  truncateIdKind(IdKind::Range, counts);
+  truncateIdKind(IdKind::Symbol, counts);
+  truncateIdKind(IdKind::Local, counts);
+  removeInequalityRange(counts.getNumIneqs(), getNumInequalities());
+  removeInequalityRange(counts.getNumEqs(), getNumEqualities());
+}
+
 unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
