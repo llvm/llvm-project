@@ -685,6 +685,7 @@ class VPseudoUSLoadMask<VReg RetClass, int EEW, bit isFF> :
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -733,6 +734,7 @@ class VPseudoSLoadMask<VReg RetClass, int EEW>:
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -787,6 +789,7 @@ class VPseudoILoadMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -912,6 +915,7 @@ class VPseudoNullaryMask<VReg RegClass>:
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -973,6 +977,7 @@ class VPseudoUnaryMask<VReg RetClass, VReg OpClass, string Constraint = ""> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -989,6 +994,7 @@ class VPseudoUnaryMaskTA<VReg RetClass, VReg OpClass, string Constraint = ""> :
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1164,6 +1170,7 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1184,6 +1191,9 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
+  // FIXME: In current design, we would not change the mask policy, so
+  // UsesMaskPolicy is false. We could fix after add the policy operand.
+  let UsesMaskPolicy = 0;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1206,6 +1216,7 @@ class VPseudoTiedBinaryMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasMergeOp = 0; // Merge is also rs2.
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1325,6 +1336,7 @@ class VPseudoUSSegLoadMask<VReg RetClass, int EEW, bits<4> NF, bit isFF>:
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1358,6 +1370,7 @@ class VPseudoSSegLoadMask<VReg RetClass, int EEW, bits<4> NF>:
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
@@ -1397,6 +1410,7 @@ class VPseudoISegLoadMask<VReg RetClass, VReg IdxClass, int EEW, bits<3> LMUL,
   let HasSEWOp = 1;
   let HasMergeOp = 1;
   let HasVecPolicyOp = 1;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 

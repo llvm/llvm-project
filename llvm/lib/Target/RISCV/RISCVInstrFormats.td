@@ -196,7 +196,10 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{16} = HasVecPolicyOp;
 
   bit IsRVVWideningReduction = 0;
-  let TSFlags{17} =  IsRVVWideningReduction;
+  let TSFlags{17} = IsRVVWideningReduction;
+
+  bit UsesMaskPolicy = 0;
+  let TSFlags{18} = UsesMaskPolicy;
 }
 
 // Pseudo instructions
