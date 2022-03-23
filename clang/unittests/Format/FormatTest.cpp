@@ -21934,6 +21934,30 @@ TEST_F(FormatTest, LambdaWithLineComments) {
       "auto k = []() // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n"
       "{ return; }",
       LLVMWithBeforeLambdaBody);
+
+  LLVMWithBeforeLambdaBody.ColumnLimit = 0;
+
+  verifyFormat("foo([]()\n"
+               "    {\n"
+               "      bar();    //\n"
+               "      return 1; // comment\n"
+               "    }());",
+               "foo([]() {\n"
+               "  bar(); //\n"
+               "  return 1; // comment\n"
+               "}());",
+               LLVMWithBeforeLambdaBody);
+  verifyFormat("foo(\n"
+               "    1, MACRO {\n"
+               "      baz();\n"
+               "      bar(); // comment\n"
+               "    },\n"
+               "    []() {});",
+               "foo(\n"
+               "  1, MACRO { baz(); bar(); // comment\n"
+               "  }, []() {}\n"
+               ");",
+               LLVMWithBeforeLambdaBody);
 }
 
 TEST_F(FormatTest, EmptyLinesInLambdas) {
