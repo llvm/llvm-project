@@ -56,7 +56,9 @@ public:
 
 /// A storage location which is subdivided into smaller storage locations that
 /// can be traced independently by abstract interpretation. For example: a
-/// struct with public members.
+/// struct with public members. The child map is flat, so when used for a struct
+/// or class type, all accessible members of base struct and class types are
+/// directly accesible as children of this location.
 class AggregateStorageLocation final : public StorageLocation {
 public:
   explicit AggregateStorageLocation(QualType Type)

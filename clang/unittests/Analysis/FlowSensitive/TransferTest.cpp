@@ -1009,6 +1009,174 @@ TEST_F(TransferTest, StructMember) {
       });
 }
 
+TEST_F(TransferTest, DerivedBaseMemberClass) {
+  std::string Code = R"(
+    class A {
+      int ADefault;
+    protected:
+      int AProtected;
+    private:
+      int APrivate;
+    public:
+      int APublic;
+    };
+
+    class B : public A {
+      int BDefault;
+    protected:
+      int BProtected;
+    private:
+      int BPrivate;
+    };
+
+    void target() {
+      B Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+        ASSERT_TRUE(FooDecl->getType()->isRecordType());
+
+        // Derived-class fields.
+        const FieldDecl *BDefaultDecl = nullptr;
+        const FieldDecl *BProtectedDecl = nullptr;
+        const FieldDecl *BPrivateDecl = nullptr;
+        for (const FieldDecl *Field :
+             FooDecl->getType()->getAsRecordDecl()->fields()) {
+          if (Field->getNameAsString() == "BDefault") {
+            BDefaultDecl = Field;
+          } else if (Field->getNameAsString() == "BProtected") {
+            BProtectedDecl = Field;
+          } else if (Field->getNameAsString() == "BPrivate") {
+            BPrivateDecl = Field;
+          } else {
+            FAIL() << "Unexpected field: " << Field->getNameAsString();
+          }
+        }
+        ASSERT_THAT(BDefaultDecl, NotNull());
+        ASSERT_THAT(BProtectedDecl, NotNull());
+        ASSERT_THAT(BPrivateDecl, NotNull());
+
+        // Base-class fields.
+        const FieldDecl *ADefaultDecl = nullptr;
+        const FieldDecl *APrivateDecl = nullptr;
+        const FieldDecl *AProtectedDecl = nullptr;
+        const FieldDecl *APublicDecl = nullptr;
+        for (const clang::CXXBaseSpecifier &Base :
+             FooDecl->getType()->getAsCXXRecordDecl()->bases()) {
+          QualType BaseType = Base.getType();
+          ASSERT_TRUE(BaseType->isRecordType());
+          for (const FieldDecl *Field : BaseType->getAsRecordDecl()->fields()) {
+            if (Field->getNameAsString() == "ADefault") {
+              ADefaultDecl = Field;
+            } else if (Field->getNameAsString() == "AProtected") {
+              AProtectedDecl = Field;
+            } else if (Field->getNameAsString() == "APrivate") {
+              APrivateDecl = Field;
+            } else if (Field->getNameAsString() == "APublic") {
+              APublicDecl = Field;
+            } else {
+              FAIL() << "Unexpected field: " << Field->getNameAsString();
+            }
+          }
+        }
+        ASSERT_THAT(ADefaultDecl, NotNull());
+        ASSERT_THAT(AProtectedDecl, NotNull());
+        ASSERT_THAT(APrivateDecl, NotNull());
+        ASSERT_THAT(APublicDecl, NotNull());
+
+        const auto &FooLoc = *cast<AggregateStorageLocation>(
+            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
+
+        // Note: we can't test presence of children in `FooLoc`, because
+        // `getChild` requires its argument be present (or fails an assert). So,
+        // we limit to testing presence in `FooVal` and coherence between the
+        // two.
+
+        // Base-class fields.
+        EXPECT_THAT(FooVal.getChild(*ADefaultDecl), IsNull());
+        EXPECT_THAT(FooVal.getChild(*APrivateDecl), IsNull());
+
+        EXPECT_THAT(FooVal.getChild(*AProtectedDecl), NotNull());
+        EXPECT_EQ(Env.getValue(FooLoc.getChild(*APublicDecl)),
+                  FooVal.getChild(*APublicDecl));
+        EXPECT_THAT(FooVal.getChild(*APublicDecl), NotNull());
+        EXPECT_EQ(Env.getValue(FooLoc.getChild(*AProtectedDecl)),
+                  FooVal.getChild(*AProtectedDecl));
+
+        // Derived-class fields.
+        EXPECT_THAT(FooVal.getChild(*BDefaultDecl), NotNull());
+        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BDefaultDecl)),
+                  FooVal.getChild(*BDefaultDecl));
+        EXPECT_THAT(FooVal.getChild(*BProtectedDecl), NotNull());
+        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BProtectedDecl)),
+                  FooVal.getChild(*BProtectedDecl));
+        EXPECT_THAT(FooVal.getChild(*BPrivateDecl), NotNull());
+        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BPrivateDecl)),
+                  FooVal.getChild(*BPrivateDecl));
+      });
+}
+
+TEST_F(TransferTest, DerivedBaseMemberStructDefault) {
+  std::string Code = R"(
+    struct A {
+      int Bar;
+    };
+    struct B : public A {
+    };
+
+    void target() {
+      B Foo;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code, [](llvm::ArrayRef<
+                   std::pair<std::string, DataflowAnalysisState<NoopLattice>>>
+                   Results,
+               ASTContext &ASTCtx) {
+        ASSERT_THAT(Results, ElementsAre(Pair("p", _)));
+        const Environment &Env = Results[0].second.Env;
+
+        const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        ASSERT_TRUE(FooDecl->getType()->isRecordType());
+        const FieldDecl *BarDecl = nullptr;
+        for (const clang::CXXBaseSpecifier &Base :
+             FooDecl->getType()->getAsCXXRecordDecl()->bases()) {
+          QualType BaseType = Base.getType();
+          ASSERT_TRUE(BaseType->isStructureType());
+
+          for (const FieldDecl *Field : BaseType->getAsRecordDecl()->fields()) {
+            if (Field->getNameAsString() == "Bar") {
+              BarDecl = Field;
+            } else {
+              FAIL() << "Unexpected field: " << Field->getNameAsString();
+            }
+          }
+        }
+        ASSERT_THAT(BarDecl, NotNull());
+
+        const auto &FooLoc = *cast<AggregateStorageLocation>(
+            Env.getStorageLocation(*FooDecl, SkipPast::None));
+        const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
+        EXPECT_THAT(FooVal.getChild(*BarDecl), NotNull());
+        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BarDecl)),
+                  FooVal.getChild(*BarDecl));
+      });
+}
+
 TEST_F(TransferTest, ClassMember) {
   std::string Code = R"(
     class A {
