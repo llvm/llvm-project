@@ -512,8 +512,10 @@ LogicalResult bufferization::createMemCpy(OpBuilder &b, Location loc,
 LogicalResult
 bufferization::createAllocDeallocOps(Operation *op,
                                      const BufferizationOptions &options,
-                                     bool onlyLeakingAllocs) {
+                                     bool onlyLeakingAllocs, bool *changed) {
   IRRewriter rewriter(op->getContext());
+  if (changed)
+    *changed = false;
 
   // Bufferization creates memref.alloca ops. After bufferization, these must be
   // rewritten to alloc/dealloc ops as specified in the bufferization options.
@@ -536,6 +538,8 @@ bufferization::createAllocDeallocOps(Operation *op,
     if (failed(alloc))
       return WalkResult::interrupt();
     rewriter.replaceOp(allocaOp, *alloc);
+    if (changed)
+      *changed = true;
 
     // Stop here if the buffer should not be deallocated.
     if (skipDealloc)
