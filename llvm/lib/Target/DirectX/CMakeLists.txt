@@ -9,6 +9,7 @@ add_public_tablegen_target(DirectXCommonTableGen)
 add_llvm_target(DirectXCodeGen
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
+  DXILPrepare.cpp
 
   LINK_COMPONENTS
   Bitwriter
