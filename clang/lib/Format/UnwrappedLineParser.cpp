@@ -480,10 +480,6 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
   unsigned StatementCount = 0;
   bool SwitchLabelEncountered = false;
   do {
-    if (FormatTok->getType() == TT_AttributeMacro) {
-      nextToken();
-      continue;
-    }
     tok::TokenKind kind = FormatTok->Tok.getKind();
     if (FormatTok->getType() == TT_MacroBlockBegin)
       kind = tok::l_brace;
@@ -573,8 +569,6 @@ bool UnwrappedLineParser::parseLevel(bool HasOpeningBrace,
         parseCSharpAttribute();
         break;
       }
-      if (handleCppAttributes())
-        break;
       LLVM_FALLTHROUGH;
     default:
       ParseDefault();
@@ -1403,11 +1397,9 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
     // e.g. "default void f() {}" in a Java interface.
     break;
   case tok::kw_case:
-    if (Style.isJavaScript() && Line->MustBeDeclaration) {
+    if (Style.isJavaScript() && Line->MustBeDeclaration)
       // 'case: string' field declaration.
-      nextToken();
       break;
-    }
     parseCaseLabel();
     return;
   case tok::kw_try:
@@ -1827,12 +1819,6 @@ void UnwrappedLineParser::parseStructuralElement(IfStmtKind *IfKind,
       break;
     case tok::kw_new:
       parseNew();
-      break;
-    case tok::kw_case:
-      if (Style.isJavaScript() && Line->MustBeDeclaration)
-        // 'case: string' field declaration.
-        break;
-      parseCaseLabel();
       break;
     default:
       nextToken();
@@ -2402,24 +2388,17 @@ static void markOptionalBraces(FormatToken *LeftBrace) {
   RightBrace->Optional = true;
 }
 
-void UnwrappedLineParser::handleAttributes() {
-  // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
-  if (FormatTok->is(TT_AttributeMacro))
-    nextToken();
-  handleCppAttributes();
-}
-
-bool UnwrappedLineParser::handleCppAttributes() {
-  // Handle [[likely]] / [[unlikely]] attributes.
-  if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute()) {
-    parseSquare();
-    return true;
-  }
-  return false;
-}
-
 FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
                                                   bool KeepBraces) {
+  auto HandleAttributes = [this]() {
+    // Handle AttributeMacro, e.g. `if (x) UNLIKELY`.
+    if (FormatTok->is(TT_AttributeMacro))
+      nextToken();
+    // Handle [[likely]] / [[unlikely]] attributes.
+    if (FormatTok->is(tok::l_square) && tryToParseSimpleAttribute())
+      parseSquare();
+  };
+
   assert(FormatTok->is(tok::kw_if) && "'if' expected");
   nextToken();
   if (FormatTok->is(tok::exclaim))
@@ -2432,7 +2411,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     if (FormatTok->is(tok::l_paren))
       parseParens();
   }
-  handleAttributes();
+  HandleAttributes();
 
   bool NeedsUnwrappedLine = false;
   keepAncestorBraces();
@@ -2469,7 +2448,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       Kind = IfStmtKind::IfElse;
     }
     nextToken();
-    handleAttributes();
+    HandleAttributes();
     if (FormatTok->is(tok::l_brace)) {
       ElseLeftBrace = FormatTok;
       CompoundStatementIndenter Indenter(this, Style, Line->Level);
