@@ -126,6 +126,8 @@ int omp_get_default_device(void);
 
 int omp_get_num_devices(void);
 
+int omp_get_device_num(void);
+
 int omp_get_num_teams(void);
 
 int omp_get_team_num();
@@ -350,5 +352,15 @@ int32_t __kmpc_shuffle_int32(int32_t val, int16_t delta, int16_t size);
 int64_t __kmpc_shuffle_int64(int64_t val, int16_t delta, int16_t size);
 ///}
 }
+
+/// Extra API exposed by ROCm
+extern "C" {
+int omp_ext_get_warp_id(void);
+int omp_ext_get_lane_id(void);
+int omp_ext_get_master_thread_id(void);
+int omp_ext_get_smid(void);
+int omp_ext_is_spmd_mode(void);
+unsigned long long omp_ext_get_active_threads_mask(void);
+} // extern "C"
 
 #endif

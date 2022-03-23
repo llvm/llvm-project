@@ -125,6 +125,7 @@ set(src_files
   ${source_directory}/Tasking.cpp
   ${source_directory}/Utils.cpp
   ${source_directory}/Workshare.cpp
+  ${source_directory}/ExtraMapping.cpp
 )
 
 set(clang_opt_flags -O1 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
