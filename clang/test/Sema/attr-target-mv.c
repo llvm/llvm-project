@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -Wno-strict-prototypes -fsyntax-only -verify %s
+// XFAIL: asserts
 
 void __attribute__((target("sse4.2"))) no_default(void);
 void __attribute__((target("arch=sandybridge")))  no_default(void);
@@ -108,3 +109,60 @@ void __attribute__((target("arch=sandybridge"))) addtl_attrs5(int*);
 void __attribute__((target("sse4.2"))) addtl_attrs6(int*);
 void __attribute__((target("arch=sandybridge"), nothrow, used, nonnull)) addtl_attrs6(int*);
 
+// FIXME: Declaration of a non-overloadable function when more than one
+// FIXME: multiversion function declarations are present results in an
+// FIXME: assertion failure.
+int __attribute__((target("sse4.2"))) bad_overload1(void);
+int __attribute__((target("arch=sandybridge"))) bad_overload1(void);
+// expected-error@+2 {{at most one overload for a given name may lack the 'overloadable' attribute}}
+// expected-note@-2 {{previous unmarked overload of function is here}}
+int bad_overload1(int);
+
+int bad_overload2(int);
+// expected-error@+2 {{conflicting types for 'bad_overload2'}}
+// expected-note@-2 {{previous declaration is here}}
+int __attribute__((target("sse4.2"))) bad_overload2(void);
+// expected-error@+2 {{conflicting types for 'bad_overload2'}}
+// expected-note@-5 {{previous declaration is here}}
+int __attribute__((target("arch=sandybridge"))) bad_overload2(void);
+
+// expected-error@+2 {{attribute 'target' multiversioning cannot be combined with attribute 'overloadable'}}
+// expected-note@+2 {{function multiversioning caused by this declaration}}
+int __attribute__((__overloadable__)) __attribute__((target("sse4.2"))) bad_overload3(void);
+int __attribute__((target("arch=sandybridge"))) bad_overload3(void);
+
+int __attribute__((target("sse4.2"))) bad_overload4(void);
+// expected-error@+1 {{attribute 'target' multiversioning cannot be combined with attribute 'overloadable'}}
+int __attribute__((__overloadable__)) __attribute__((target("arch=sandybridge"))) bad_overload4(void);
+
+int __attribute__((target("sse4.2"))) bad_overload5(void);
+int __attribute__((target("arch=sandybridge"))) bad_overload5(int);
+
+int __attribute__((target("sse4.2"))) good_overload1(void);
+int __attribute__((target("arch=sandybridge"))) good_overload1(void);
+int __attribute__((__overloadable__)) good_overload1(int);
+
+int __attribute__((__overloadable__)) good_overload2(int);
+int __attribute__((target("sse4.2"))) good_overload2(void);
+int __attribute__((target("arch=sandybridge"))) good_overload2(void);
+
+// expected-error@+2 {{attribute 'target' multiversioning cannot be combined with attribute 'overloadable'}}
+// expected-note@+2 {{function multiversioning caused by this declaration}}
+int __attribute__((__overloadable__)) __attribute__((target("sse4.2"))) good_overload3(void);
+int __attribute__((__overloadable__)) __attribute__((target("arch=sandybridge"))) good_overload3(void);
+int good_overload3(int);
+
+int good_overload4(int);
+// expected-error@+2 {{attribute 'target' multiversioning cannot be combined with attribute 'overloadable'}}
+// expected-note@+2 {{function multiversioning caused by this declaration}}
+int __attribute__((__overloadable__)) __attribute__((target("sse4.2"))) good_overload4(void);
+int __attribute__((__overloadable__)) __attribute__((target("arch=sandybridge"))) good_overload4(void);
+
+int __attribute__((__overloadable__)) __attribute__((target("sse4.2"))) good_overload5(void);
+int __attribute__((__overloadable__)) __attribute__((target("arch=sandybridge"))) good_overload5(int);
+
+int __attribute__((target("sse4.2"))) good_overload6(void);
+int __attribute__((__overloadable__)) __attribute__((target("arch=sandybridge"))) good_overload6(int);
+
+int __attribute__((__overloadable__)) __attribute__((target("sse4.2"))) good_overload7(void);
+int __attribute__((target("arch=sandybridge"))) good_overload7(int);
