@@ -151,8 +151,6 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
-  if (Split.first == "native")
-    ArchKind = llvm::AArch64::getCPUArchKind(llvm::sys::getHostCPUName().str());
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
       !llvm::AArch64::getArchFeatures(ArchKind, Features))
     return false;
