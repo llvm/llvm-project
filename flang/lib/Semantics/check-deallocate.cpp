@@ -17,7 +17,7 @@ namespace Fortran::semantics {
 void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
   for (const parser::AllocateObject &allocateObject :
       std::get<std::list<parser::AllocateObject>>(deallocateStmt.t)) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Name &name) {
               auto const *symbol{name.symbol};
@@ -50,7 +50,7 @@ void DeallocateChecker::Leave(const parser::DeallocateStmt &deallocateStmt) {
   bool gotStat{false}, gotMsg{false};
   for (const parser::StatOrErrmsg &deallocOpt :
       std::get<std::list<parser::StatOrErrmsg>>(deallocateStmt.t)) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::StatVariable &) {
               if (gotStat) {
