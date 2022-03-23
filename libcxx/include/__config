@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CONFIG
-#define _LIBCPP_CONFIG
+#ifndef _LIBCPP___CONFIG
+#define _LIBCPP___CONFIG
 
 #include <__config_site>
 
@@ -1363,4 +1363,4 @@ extern "C" _LIBCPP_FUNC_VIS void __sanitizer_annotate_contiguous_container(
 
 #endif // __cplusplus
 
-#endif // _LIBCPP_CONFIG
+#endif // _LIBCPP___CONFIG

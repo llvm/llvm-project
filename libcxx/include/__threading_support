@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_THREADING_SUPPORT
-#define _LIBCPP_THREADING_SUPPORT
+#ifndef _LIBCPP___THREADING_SUPPORT
+#define _LIBCPP___THREADING_SUPPORT
 
 #include <__availability>
 #include <__chrono/convert_to_timespec.h>
@@ -674,4 +674,4 @@ get_id() _NOEXCEPT
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_THREADING_SUPPORT
+#endif // _LIBCPP___THREADING_SUPPORT
