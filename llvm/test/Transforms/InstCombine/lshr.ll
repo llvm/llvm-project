@@ -3,6 +3,9 @@
 
 target datalayout = "e-m:e-i64:64-n8:16:32:64"
 
+declare i32 @llvm.bswap.i32(i32)
+declare i128 @llvm.bswap.i128(i128)
+declare <2 x i64> @llvm.bswap.v2i64(<2 x i64>)
 declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
@@ -824,4 +827,95 @@ define i1 @icmp_sge(i32 %x, i32 %y) {
   %x.shifted = lshr i32 %x, %y
   %cmp = icmp sge i32 %x.shifted, %x
   ret i1 %cmp
+}
+
+define i32 @narrow_bswap(i16 %x) {
+; CHECK-LABEL: @narrow_bswap(
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.bswap.i32(i32 [[Z]])
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i32 [[B]], 16
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %z = zext i16 %x to i32
+  %b = call i32 @llvm.bswap.i32(i32 %z)
+  %s = lshr i32 %b, 16
+  ret i32 %s
+}
+
+define i128 @narrow_bswap_extra_wide(i16 %x) {
+; CHECK-LABEL: @narrow_bswap_extra_wide(
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i128
+; CHECK-NEXT:    [[B:%.*]] = call i128 @llvm.bswap.i128(i128 [[Z]])
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i128 [[B]], 112
+; CHECK-NEXT:    ret i128 [[S]]
+;
+  %z = zext i16 %x to i128
+  %b = call i128 @llvm.bswap.i128(i128 %z)
+  %s = lshr i128 %b, 112
+  ret i128 %s
+}
+
+define i32 @narrow_bswap_undershift(i16 %x) {
+; CHECK-LABEL: @narrow_bswap_undershift(
+; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.bswap.i32(i32 [[Z]])
+; CHECK-NEXT:    [[S:%.*]] = lshr exact i32 [[B]], 8
+; CHECK-NEXT:    ret i32 [[S]]
+;
+  %z = zext i16 %x to i32
+  %b = call i32 @llvm.bswap.i32(i32 %z)
+  %s = lshr i32 %b, 8
+  ret i32 %s
+}
+
+define <2 x i64> @narrow_bswap_splat(<2 x i16> %x) {
+; CHECK-LABEL: @narrow_bswap_splat(
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[Z]])
+; CHECK-NEXT:    [[S:%.*]] = lshr exact <2 x i64> [[B]], <i64 48, i64 48>
+; CHECK-NEXT:    ret <2 x i64> [[S]]
+;
+  %z = zext <2 x i16> %x to <2 x i64>
+  %b = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %z)
+  %s = lshr <2 x i64> %b, <i64 48, i64 48>
+  ret <2 x i64> %s
+}
+
+define <2 x i64> @narrow_bswap_splat_poison_elt(<2 x i16> %x) {
+; CHECK-LABEL: @narrow_bswap_splat_poison_elt(
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[Z]])
+; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[B]], <i64 48, i64 poison>
+; CHECK-NEXT:    ret <2 x i64> [[S]]
+;
+  %z = zext <2 x i16> %x to <2 x i64>
+  %b = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %z)
+  %s = lshr <2 x i64> %b, <i64 48, i64 poison>
+  ret <2 x i64> %s
+}
+
+define <2 x i64> @narrow_bswap_overshift(<2 x i32> %x) {
+; CHECK-LABEL: @narrow_bswap_overshift(
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[Z]])
+; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[B]], <i64 48, i64 48>
+; CHECK-NEXT:    ret <2 x i64> [[S]]
+;
+  %z = zext <2 x i32> %x to <2 x i64>
+  %b = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> %z)
+  %s = lshr <2 x i64> %b, <i64 48, i64 48>
+  ret <2 x i64> %s
+}
+
+define i128 @narrow_bswap_overshift2(i96 %x) {
+; CHECK-LABEL: @narrow_bswap_overshift2(
+; CHECK-NEXT:    [[Z:%.*]] = zext i96 [[X:%.*]] to i128
+; CHECK-NEXT:    [[B:%.*]] = call i128 @llvm.bswap.i128(i128 [[Z]])
+; CHECK-NEXT:    [[S:%.*]] = lshr i128 [[B]], 61
+; CHECK-NEXT:    ret i128 [[S]]
+;
+  %z = zext i96 %x to i128
+  %b = call i128 @llvm.bswap.i128(i128 %z)
+  %s = lshr i128 %b, 61
+  ret i128 %s
 }
