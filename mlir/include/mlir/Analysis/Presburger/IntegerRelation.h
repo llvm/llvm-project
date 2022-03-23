@@ -390,9 +390,14 @@ public:
   /// O(VC) time.
   void removeRedundantConstraints();
 
-  /// Converts identifiers in the column range [idStart, idLimit) to local
-  /// variables.
-  void convertDimToLocal(unsigned dimStart, unsigned dimLimit);
+  /// Converts identifiers of kind srcKind in the range [idStart, idLimit) to
+  /// variables of kind dstKind and placed after all the other variables of kind
+  /// dstKind. The internal ordering among the moved variables is preserved.
+  void convertIdKind(IdKind srcKind, unsigned idStart, unsigned idLimit,
+                     IdKind dstKind);
+  void convertToLocal(IdKind kind, unsigned idStart, unsigned idLimit) {
+    convertIdKind(kind, idStart, idLimit, IdKind::Local);
+  }
 
   /// Adds additional local ids to the sets such that they both have the union
   /// of the local ids in each set, without changing the set of points that

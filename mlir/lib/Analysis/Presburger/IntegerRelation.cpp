@@ -1117,23 +1117,31 @@ void IntegerRelation::removeRedundantLocalVars() {
   }
 }
 
-void IntegerRelation::convertDimToLocal(unsigned dimStart, unsigned dimLimit) {
-  assert(dimLimit <= getNumDimIds() && "Invalid dim pos range");
+void IntegerRelation::convertIdKind(IdKind srcKind, unsigned idStart,
+                                    unsigned idLimit, IdKind dstKind) {
+  assert(idLimit <= getNumIdKind(srcKind) && "Invalid id range");
 
-  if (dimStart >= dimLimit)
+  if (idStart >= idLimit)
     return;
 
   // Append new local variables corresponding to the dimensions to be converted.
-  unsigned convertCount = dimLimit - dimStart;
-  unsigned newLocalIdStart = getNumIds();
-  appendId(IdKind::Local, convertCount);
+  unsigned newIdsBegin = getIdKindEnd(dstKind);
+  unsigned convertCount = idLimit - idStart;
+  appendId(dstKind, convertCount);
 
   // Swap the new local variables with dimensions.
+  //
+  // Essentially, this moves the information corresponding to the specified ids
+  // of kind `srcKind` to the `convertCount` newly created ids of kind
+  // `dstKind`. In particular, this moves the columns in the constraint
+  // matrices, and zeros out the initially occupied columns (because the newly
+  // created ids we're swapping with were zero-initialized).
+  unsigned offset = getIdKindOffset(srcKind);
   for (unsigned i = 0; i < convertCount; ++i)
-    swapId(i + dimStart, i + newLocalIdStart);
+    swapId(offset + idStart + i, newIdsBegin + i);
 
-  // Remove dimensions converted to local variables.
-  removeIdRange(IdKind::SetDim, dimStart, dimLimit);
+  // Complete the move by deleting the initially occupied columns.
+  removeIdRange(srcKind, idStart, idLimit);
 }
 
 void IntegerRelation::addBound(BoundType type, unsigned pos, int64_t value) {
