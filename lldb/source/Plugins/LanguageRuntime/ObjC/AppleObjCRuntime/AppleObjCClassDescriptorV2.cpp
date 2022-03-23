@@ -78,6 +78,7 @@ bool ClassDescriptorV2::objc_class_t::Read(Process *process,
   if (ABISP abi_sp = process->GetABI()) {
     m_isa = abi_sp->FixCodeAddress(m_isa);
     m_superclass = abi_sp->FixCodeAddress(m_superclass);
+    m_data_ptr = abi_sp->FixCodeAddress(m_data_ptr);
   }
   return true;
 }
