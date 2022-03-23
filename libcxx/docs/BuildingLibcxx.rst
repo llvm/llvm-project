@@ -159,7 +159,6 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
           -DLLVM_ENABLE_RUNTIMES=libcxx                                               \
-          -DLIBCXX_HAS_WIN32_THREAD_API=ON                                            \
           -DLIBCXX_CXX_ABI=libstdc++                                                  \
           -DLIBCXX_TARGET_INFO="libcxx.test.target_info.MingwLocalTI"
   > ninja -C build cxx
