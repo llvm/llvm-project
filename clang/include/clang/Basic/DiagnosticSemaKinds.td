@@ -8783,6 +8783,8 @@ let CategoryName = "Inline Assembly Issue" in {
     " in asm %select{input|output}1 with a memory constraint '%2'">;
   def err_asm_input_duplicate_match : Error<
     "more than one input constraint matches the same output '%0'">;
+  def err_store_value_to_reg : Error<
+    "impossible constraint in asm: can't store value into a register">;
 
   def warn_asm_label_on_auto_decl : Warning<
     "ignored asm label '%0' on automatic variable">;
