@@ -831,9 +831,8 @@ define i1 @icmp_sge(i32 %x, i32 %y) {
 
 define i32 @narrow_bswap(i16 %x) {
 ; CHECK-LABEL: @narrow_bswap(
-; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.bswap.i32(i32 [[Z]])
-; CHECK-NEXT:    [[S:%.*]] = lshr exact i32 [[B]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = zext i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
   %z = zext i16 %x to i32
@@ -844,9 +843,8 @@ define i32 @narrow_bswap(i16 %x) {
 
 define i128 @narrow_bswap_extra_wide(i16 %x) {
 ; CHECK-LABEL: @narrow_bswap_extra_wide(
-; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i128
-; CHECK-NEXT:    [[B:%.*]] = call i128 @llvm.bswap.i128(i128 [[Z]])
-; CHECK-NEXT:    [[S:%.*]] = lshr exact i128 [[B]], 112
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = zext i16 [[TMP1]] to i128
 ; CHECK-NEXT:    ret i128 [[S]]
 ;
   %z = zext i16 %x to i128
@@ -854,6 +852,8 @@ define i128 @narrow_bswap_extra_wide(i16 %x) {
   %s = lshr i128 %b, 112
   ret i128 %s
 }
+
+; TODO: The bswap can be narrowed followed by shl.
 
 define i32 @narrow_bswap_undershift(i16 %x) {
 ; CHECK-LABEL: @narrow_bswap_undershift(
@@ -870,9 +870,8 @@ define i32 @narrow_bswap_undershift(i16 %x) {
 
 define <2 x i64> @narrow_bswap_splat(<2 x i16> %x) {
 ; CHECK-LABEL: @narrow_bswap_splat(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i16> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[Z]])
-; CHECK-NEXT:    [[S:%.*]] = lshr exact <2 x i64> [[B]], <i64 48, i64 48>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i16> @llvm.bswap.v2i16(<2 x i16> [[X:%.*]])
+; CHECK-NEXT:    [[S:%.*]] = zext <2 x i16> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[S]]
 ;
   %z = zext <2 x i16> %x to <2 x i64>
@@ -880,6 +879,8 @@ define <2 x i64> @narrow_bswap_splat(<2 x i16> %x) {
   %s = lshr <2 x i64> %b, <i64 48, i64 48>
   ret <2 x i64> %s
 }
+
+; TODO: poison/undef in the shift amount is ok to propagate.
 
 define <2 x i64> @narrow_bswap_splat_poison_elt(<2 x i16> %x) {
 ; CHECK-LABEL: @narrow_bswap_splat_poison_elt(
@@ -896,9 +897,9 @@ define <2 x i64> @narrow_bswap_splat_poison_elt(<2 x i16> %x) {
 
 define <2 x i64> @narrow_bswap_overshift(<2 x i32> %x) {
 ; CHECK-LABEL: @narrow_bswap_overshift(
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[B:%.*]] = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> [[Z]])
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i64> [[B]], <i64 48, i64 48>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i32> [[TMP1]], <i32 16, i32 16>
+; CHECK-NEXT:    [[S:%.*]] = zext <2 x i32> [[TMP2]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[S]]
 ;
   %z = zext <2 x i32> %x to <2 x i64>
@@ -909,9 +910,9 @@ define <2 x i64> @narrow_bswap_overshift(<2 x i32> %x) {
 
 define i128 @narrow_bswap_overshift2(i96 %x) {
 ; CHECK-LABEL: @narrow_bswap_overshift2(
-; CHECK-NEXT:    [[Z:%.*]] = zext i96 [[X:%.*]] to i128
-; CHECK-NEXT:    [[B:%.*]] = call i128 @llvm.bswap.i128(i128 [[Z]])
-; CHECK-NEXT:    [[S:%.*]] = lshr i128 [[B]], 61
+; CHECK-NEXT:    [[TMP1:%.*]] = call i96 @llvm.bswap.i96(i96 [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i96 [[TMP1]], 29
+; CHECK-NEXT:    [[S:%.*]] = zext i96 [[TMP2]] to i128
 ; CHECK-NEXT:    ret i128 [[S]]
 ;
   %z = zext i96 %x to i128
@@ -919,6 +920,8 @@ define i128 @narrow_bswap_overshift2(i96 %x) {
   %s = lshr i128 %b, 61
   ret i128 %s
 }
+
+; negative test - can't make a bswap with an odd number of bytes
 
 define i32 @not_narrow_bswap(i24 %x) {
 ; CHECK-LABEL: @not_narrow_bswap(

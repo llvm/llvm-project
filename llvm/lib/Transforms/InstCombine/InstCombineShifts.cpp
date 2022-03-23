@@ -1173,6 +1173,22 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
         MulC->logBase2() == ShAmtC)
       return BinaryOperator::CreateAnd(X, ConstantInt::get(Ty, *MulC - 2));
 
+    // Try to narrow a bswap:
+    // (bswap (zext X)) >> C --> zext (bswap X >> C')
+    // In the case where the shift amount equals the bitwidth difference, the
+    // shift is eliminated.
+    if (match(Op0, m_OneUse(m_Intrinsic<Intrinsic::bswap>(
+                       m_OneUse(m_ZExt(m_Value(X))))))) {
+      // TODO: If the shift amount is less than the zext, we could shift left.
+      unsigned SrcWidth = X->getType()->getScalarSizeInBits();
+      unsigned WidthDiff = BitWidth - SrcWidth;
+      if (SrcWidth % 16 == 0 && ShAmtC >= WidthDiff) {
+        Value *NarrowSwap = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, X);
+        Value *NewShift = Builder.CreateLShr(NarrowSwap, ShAmtC - WidthDiff);
+        return new ZExtInst(NewShift, Ty);
+      }
+    }
+
     // If the shifted-out value is known-zero, then this is an exact shift.
     if (!I.isExact() &&
         MaskedValueIsZero(Op0, APInt::getLowBitsSet(BitWidth, ShAmtC), 0, &I)) {
