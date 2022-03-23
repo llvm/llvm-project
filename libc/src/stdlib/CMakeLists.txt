@@ -235,6 +235,11 @@ if(LLVM_LIBC_INCLUDE_SCUDO)
       ${SCUDO_DEPS}
   )
   add_entrypoint_external(
+    aligned_alloc
+    DEPENDS
+      ${SCUDO_DEPS}
+  )
+  add_entrypoint_external(
     free
     DEPENDS
       ${SCUDO_DEPS}
@@ -248,6 +253,9 @@ else()
   )
   add_entrypoint_external(
     realloc
+  )
+  add_entrypoint_external(
+    aligned_alloc
   )
   add_entrypoint_external(
     free

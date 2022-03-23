@@ -86,6 +86,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.malloc
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
     libc.src.stdlib.free
 
     # sys/mman.h entrypoints
