@@ -1880,6 +1880,14 @@ static std::string getPrintableNameForEntity(DeclarationName Entity) {
   return "type name";
 }
 
+static bool isDependentOrGNUAutoType(QualType T) {
+  if (T->isDependentType())
+    return true;
+
+  const auto *AT = dyn_cast<AutoType>(T);
+  return AT && AT->isGNUAutoType();
+}
+
 QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
                                   Qualifiers Qs, const DeclSpec *DS) {
   if (T.isNull())
@@ -1913,7 +1921,10 @@ QualType Sema::BuildQualifiedType(QualType T, SourceLocation Loc,
         DiagID = diag::err_typecheck_invalid_restrict_invalid_pointee;
         ProblemTy = EltTy;
       }
-    } else if (!T->isDependentType()) {
+    } else if (!isDependentOrGNUAutoType(T)) {
+      // For an __auto_type variable, we may not have seen the initializer yet
+      // and so have no idea whether the underlying type is a pointer type or
+      // not.
       DiagID = diag::err_typecheck_invalid_restrict_not_pointer;
       ProblemTy = T;
     }
@@ -9101,7 +9112,7 @@ QualType Sema::BuildUnaryTransformType(QualType BaseType,
 }
 
 QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
-  if (!T->isDependentType()) {
+  if (!isDependentOrGNUAutoType(T)) {
     // FIXME: It isn't entirely clear whether incomplete atomic types
     // are allowed or not; for simplicity, ban them for the moment.
     if (RequireCompleteType(Loc, T, diag::err_atomic_specifier_bad_type, 0))

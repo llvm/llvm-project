@@ -10285,7 +10285,16 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS,
       if (RHS->isObjCIdType() && LHS->isBlockPointerType())
         return RHS;
     }
-
+    // Allow __auto_type to match anything; it merges to the type with more
+    // information.
+    if (const auto *AT = LHS->getAs<AutoType>()) {
+      if (AT->isGNUAutoType())
+        return RHS;
+    }
+    if (const auto *AT = RHS->getAs<AutoType>()) {
+      if (AT->isGNUAutoType())
+        return LHS;
+    }
     return {};
   }
 

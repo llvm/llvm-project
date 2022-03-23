@@ -9399,6 +9399,15 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
     return Compatible;
   }
 
+  // If the LHS has an __auto_type, there are no additional type constraints
+  // to be worried about.
+  if (const auto *AT = dyn_cast<AutoType>(LHSType)) {
+    if (AT->isGNUAutoType()) {
+      Kind = CK_NoOp;
+      return Compatible;
+    }
+  }
+
   // If we have an atomic type, try a non-atomic assignment, then just add an
   // atomic qualification step.
   if (const AtomicType *AtomicTy = dyn_cast<AtomicType>(LHSType)) {

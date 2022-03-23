@@ -73,6 +73,11 @@ Bug Fixes
   Now fixed by setting identifiers for them.
   This fixes `Issue 28475 (PR28101) <https://github.com/llvm/llvm-project/issues/28475>`_.
 
+- Now allow the `restrict` and `_Atomic` qualifiers to be used in conjunction
+  with `__auto_type` to match the behavior in GCC. This fixes
+  `Issue 53652 <https://github.com/llvm/llvm-project/issues/53652>`_.
+
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - ``-Wliteral-range`` will warn on floating-point equality comparisons with
