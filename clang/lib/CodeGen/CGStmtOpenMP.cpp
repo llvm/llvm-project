@@ -6949,16 +6949,13 @@ void CodeGenFunction::EmitOMPUseDeviceAddrClause(
     // For declrefs and variable length array need to load the pointer for
     // correct mapping, since the pointer to the data was passed to the runtime.
     if (isa<DeclRefExpr>(Ref->IgnoreParenImpCasts()) ||
-        MatchingVD->getType()->isArrayType())
-      PrivAddr =
-          EmitLoadOfPointer(PrivAddr, getContext()
-                                          .getPointerType(OrigVD->getType())
-                                          ->castAs<PointerType>());
-    llvm::Type *RealElTy =
-        ConvertTypeForMem(OrigVD->getType().getNonReferenceType());
-    llvm::Type *RealTy = RealElTy->getPointerTo();
-    PrivAddr =
-        Builder.CreatePointerBitCastOrAddrSpaceCast(PrivAddr, RealTy, RealElTy);
+        MatchingVD->getType()->isArrayType()) {
+      QualType PtrTy = getContext().getPointerType(
+          OrigVD->getType().getNonReferenceType());
+      PrivAddr = EmitLoadOfPointer(
+          Builder.CreateElementBitCast(PrivAddr, ConvertTypeForMem(PtrTy)),
+          PtrTy->castAs<PointerType>());
+    }
 
     (void)PrivateScope.addPrivate(OrigVD, PrivAddr);
   }
