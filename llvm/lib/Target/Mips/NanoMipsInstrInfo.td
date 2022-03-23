@@ -599,6 +599,10 @@ def : NMPat<(MipsTailCall (i32 tglobaladdr:$dst)),
 def : NMPat<(MipsTailCall (i32 texternalsym:$dst)),
             (TAILCALL_NM texternalsym:$dst)>;
 
+// '>-1' can be represented as '>=0'.
+def : NMPat<(brcond (i32 (setgt GPR32NM:$lhs, -1)), bb:$dst),
+            (BGEC_NM GPR32NM:$lhs, ZERO_NM, bb:$dst)>;
+
 // Reversed branch conditions:
 def : NMPat<(brcond (i32 (setugt GPR32NM:$lhs, GPR32NM:$rhs)), bb:$dst),
             (BLTUC_NM GPR32NM:$rhs, GPR32NM:$lhs, bb:$dst)>;

@@ -1992,6 +1992,17 @@ void Clang::AddMIPSTargetArgs(const ArgList &Args,
   if (Triple.isNanoMips()) {
     CmdArgs.push_back("-mllvm");
     CmdArgs.push_back("-enable-ipra");
+
+    // Change inlining thresholds.
+    if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
+      if (A->getOption().matches(options::OPT_O)) {
+        char C = A->getValue()[0];
+        if (C == 's' || C == 'z') {
+          CmdArgs.push_back("-mllvm");
+          CmdArgs.push_back("-inline-threshold=0");
+        }
+      }
+    }
   }
 }
 

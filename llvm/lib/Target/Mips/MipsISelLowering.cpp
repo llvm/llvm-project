@@ -542,7 +542,8 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(
       ABI.IsN64() ? Mips::SP_64 : ABI.IsP32() ? Mips::SP_NM : Mips::SP);
 
-  MaxStoresPerMemcpy = 16;
+  if (!Subtarget.hasNanoMips())
+    MaxStoresPerMemcpy = 16;
 
   isMicroMips = Subtarget.inMicroMipsMode();
 }
@@ -4809,6 +4810,9 @@ MipsTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
 
 EVT MipsTargetLowering::getOptimalMemOpType(
     const MemOp &Op, const AttributeList &FuncAttributes) const {
+  if (Subtarget.hasNanoMips())
+    // Use target-independent logic to determine the type.
+    return MVT::Other;
   if (Subtarget.hasMips64())
     return MVT::i64;
 
