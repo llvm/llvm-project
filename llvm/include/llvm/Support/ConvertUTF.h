@@ -126,6 +126,9 @@ typedef unsigned char   Boolean; /* 0 or 1 */
 #define UNI_UTF16_BYTE_ORDER_MARK_NATIVE  0xFEFF
 #define UNI_UTF16_BYTE_ORDER_MARK_SWAPPED 0xFFFE
 
+#define UNI_UTF32_BYTE_ORDER_MARK_NATIVE 0x0000FEFF
+#define UNI_UTF32_BYTE_ORDER_MARK_SWAPPED 0xFFFE0000
+
 typedef enum {
   conversionOK,           /* conversion successful */
   sourceExhausted,        /* partial character in source, but hit end */
@@ -280,6 +283,24 @@ bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
 * \returns true on success
 */
 bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out);
+
+/**
+ * Converts a stream of raw bytes assumed to be UTF32 into a UTF8 std::string.
+ *
+ * \param [in] SrcBytes A buffer of what is assumed to be UTF-32 encoded text.
+ * \param [out] Out Converted UTF-8 is stored here on success.
+ * \returns true on success
+ */
+bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out);
+
+/**
+ * Converts a UTF32 string into a UTF8 std::string.
+ *
+ * \param [in] Src A buffer of UTF-32 encoded text.
+ * \param [out] Out Converted UTF-8 is stored here on success.
+ * \returns true on success
+ */
+bool convertUTF32ToUTF8String(ArrayRef<UTF32> Src, std::string &Out);
 
 /**
  * Converts a UTF-8 string into a UTF-16 string with native endianness.
