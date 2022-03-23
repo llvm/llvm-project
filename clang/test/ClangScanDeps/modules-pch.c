@@ -107,14 +107,10 @@
 
 // Explicitly build the PCH:
 //
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --module-name=ModCommon1 > %t/mod_common_1.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --module-name=ModCommon2 > %t/mod_common_2.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --module-name=ModPCH > %t/mod_pch.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --tu-index=0 > %t/pch.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=ModCommon1 > %t/mod_common_1.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=ModCommon2 > %t/mod_common_2.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=ModPCH > %t/mod_pch.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --tu-index=0 > %t/pch.rsp
 //
 // RUN: %clang @%t/mod_common_1.cc1.rsp
 // RUN: %clang @%t/mod_common_2.cc1.rsp
@@ -173,10 +169,8 @@
 
 // Explicitly build the TU:
 //
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu.json \
-// RUN:   --module-name=ModTU > %t/mod_tu.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu.json \
-// RUN:   --tu-index=0 > %t/tu.rsp
+// RUN: %deps-to-rsp %t/result_tu.json --module-name=ModTU > %t/mod_tu.cc1.rsp
+// RUN: %deps-to-rsp %t/result_tu.json --tu-index=0 > %t/tu.rsp
 //
 // RUN: %clang @%t/mod_tu.cc1.rsp
 // RUN: %clang @%t/tu.rsp
@@ -235,10 +229,8 @@
 
 // Explicitly build the TU that has common modules with the PCH:
 //
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_with_common.json \
-// RUN:   --module-name=ModTUWithCommon > %t/mod_tu_with_common.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu_with_common.json \
-// RUN:   --tu-index=0 > %t/tu_with_common.rsp
+// RUN: %deps-to-rsp %t/result_tu_with_common.json --module-name=ModTUWithCommon > %t/mod_tu_with_common.cc1.rsp
+// RUN: %deps-to-rsp %t/result_tu_with_common.json --tu-index=0 > %t/tu_with_common.rsp
 //
 // RUN: %clang @%t/mod_tu_with_common.cc1.rsp
 // RUN: %clang @%t/tu_with_common.rsp

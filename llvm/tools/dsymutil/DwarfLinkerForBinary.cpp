@@ -494,7 +494,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
 
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
     const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
-    const std::vector<uint64_t> &SectionToOffsetInDwarf,
+    std::vector<uint64_t> &SectionToOffsetInDwarf,
     std::vector<MachOUtils::DwarfRelocationApplicationInfo>
         &RelocationsToApply) {
   using binaryformat::Swift5ReflectionSectionKind;
@@ -539,6 +539,10 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
       collectRelocationsToApplyToSwiftReflectionSections(
           Section, *SectionContents, MO, SectionToOffsetInDwarf, Obj,
           RelocationsToApply);
+      // Update the section start with the current section's contribution, so
+      // the next section we copy from a different .o file points to the correct
+      // place.
+      SectionToOffsetInDwarf[SectionKind] += Section.getSize();
       Streamer->emitSwiftReflectionSection(SectionKind, *SectionContents,
                                            Section.getAlignment(),
                                            Section.getSize());

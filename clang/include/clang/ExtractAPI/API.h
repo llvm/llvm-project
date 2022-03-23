@@ -30,6 +30,25 @@
 #include "llvm/Support/Casting.h"
 #include <memory>
 
+namespace {
+
+/// \brief A custom deleter used for ``std::unique_ptr`` to APIRecords stored
+/// in the BumpPtrAllocator.
+///
+/// \tparam T the exact type of the APIRecord subclass.
+template <typename T> struct UniquePtrBumpPtrAllocatorDeleter {
+  void operator()(T *Instance) { Instance->~T(); }
+};
+
+/// A unique pointer to an APIRecord stored in the BumpPtrAllocator.
+///
+/// \tparam T the exact type of the APIRecord subclass.
+template <typename T>
+using APIRecordUniquePtr =
+    std::unique_ptr<T, UniquePtrBumpPtrAllocatorDeleter<T>>;
+
+} // anonymous namespace
+
 namespace clang {
 namespace extractapi {
 
@@ -73,6 +92,10 @@ struct APIRecord {
   /// Discriminator for LLVM-style RTTI (dyn_cast<> et al.)
   enum RecordKind {
     RK_Global,
+    RK_EnumConstant,
+    RK_Enum,
+    RK_StructField,
+    RK_Struct,
   };
 
 private:
@@ -125,6 +148,66 @@ private:
   virtual void anchor();
 };
 
+/// This holds information associated with enum constants.
+struct EnumConstantRecord : APIRecord {
+  EnumConstantRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                     const AvailabilityInfo &Availability,
+                     const DocComment &Comment,
+                     DeclarationFragments Declaration,
+                     DeclarationFragments SubHeading)
+      : APIRecord(RK_EnumConstant, Name, USR, Loc, Availability,
+                  LinkageInfo::none(), Comment, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_EnumConstant;
+  }
+};
+
+/// This holds information associated with enums.
+struct EnumRecord : APIRecord {
+  SmallVector<APIRecordUniquePtr<EnumConstantRecord>> Constants;
+
+  EnumRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+             const AvailabilityInfo &Availability, const DocComment &Comment,
+             DeclarationFragments Declaration, DeclarationFragments SubHeading)
+      : APIRecord(RK_Enum, Name, USR, Loc, Availability, LinkageInfo::none(),
+                  Comment, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_Enum;
+  }
+};
+
+/// This holds information associated with struct fields.
+struct StructFieldRecord : APIRecord {
+  StructFieldRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                    const AvailabilityInfo &Availability,
+                    const DocComment &Comment, DeclarationFragments Declaration,
+                    DeclarationFragments SubHeading)
+      : APIRecord(RK_StructField, Name, USR, Loc, Availability,
+                  LinkageInfo::none(), Comment, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_StructField;
+  }
+};
+
+/// This holds information associated with structs.
+struct StructRecord : APIRecord {
+  SmallVector<APIRecordUniquePtr<StructFieldRecord>> Fields;
+
+  StructRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+               const AvailabilityInfo &Availability, const DocComment &Comment,
+               DeclarationFragments Declaration,
+               DeclarationFragments SubHeading)
+      : APIRecord(RK_Struct, Name, USR, Loc, Availability, LinkageInfo::none(),
+                  Comment, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_Struct;
+  }
+};
+
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
 public:
@@ -166,27 +249,70 @@ public:
                             DeclarationFragments SubHeading,
                             FunctionSignature Signature);
 
-private:
-  /// \brief A custom deleter used for ``std::unique_ptr`` to APIRecords stored
-  /// in the BumpPtrAllocator.
+  /// Create and add an enum constant record into the API set.
   ///
-  /// \tparam T the exact type of the APIRecord subclass.
-  template <typename T> struct UniquePtrBumpPtrAllocatorDeleter {
-    void operator()(T *Instance) { Instance->~T(); }
-  };
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  EnumConstantRecord *addEnumConstant(EnumRecord *Enum, StringRef Name,
+                                      StringRef USR, PresumedLoc Loc,
+                                      const AvailabilityInfo &Availability,
+                                      const DocComment &Comment,
+                                      DeclarationFragments Declaration,
+                                      DeclarationFragments SubHeading);
 
-public:
-  /// A unique pointer to an APIRecord stored in the BumpPtrAllocator.
+  /// Create and add an enum record into the API set.
   ///
-  /// \tparam T the exact type of the APIRecord subclass.
-  template <typename T>
-  using APIRecordUniquePtr =
-      std::unique_ptr<T, UniquePtrBumpPtrAllocatorDeleter<T>>;
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  EnumRecord *addEnum(StringRef Name, StringRef USR, PresumedLoc Loc,
+                      const AvailabilityInfo &Availability,
+                      const DocComment &Comment,
+                      DeclarationFragments Declaration,
+                      DeclarationFragments SubHeading);
+
+  /// Create and add a struct field record into the API set.
+  ///
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  StructFieldRecord *addStructField(StructRecord *Struct, StringRef Name,
+                                    StringRef USR, PresumedLoc Loc,
+                                    const AvailabilityInfo &Availability,
+                                    const DocComment &Comment,
+                                    DeclarationFragments Declaration,
+                                    DeclarationFragments SubHeading);
+
+  /// Create and add a struct record into the API set.
+  ///
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  StructRecord *addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
+                          const AvailabilityInfo &Availability,
+                          const DocComment &Comment,
+                          DeclarationFragments Declaration,
+                          DeclarationFragments SubHeading);
 
   /// A map to store the set of GlobalRecord%s with the declaration name as the
   /// key.
   using GlobalRecordMap =
       llvm::MapVector<StringRef, APIRecordUniquePtr<GlobalRecord>>;
+
+  /// A map to store the set of EnumRecord%s with the declaration name as the
+  /// key.
+  using EnumRecordMap =
+      llvm::MapVector<StringRef, APIRecordUniquePtr<EnumRecord>>;
+
+  /// A map to store the set of StructRecord%s with the declaration name as the
+  /// key.
+  using StructRecordMap =
+      llvm::MapVector<StringRef, APIRecordUniquePtr<StructRecord>>;
 
   /// Get the target triple for the ExtractAPI invocation.
   const llvm::Triple &getTarget() const { return Target; }
@@ -195,6 +321,8 @@ public:
   const LangOptions &getLangOpts() const { return LangOpts; }
 
   const GlobalRecordMap &getGlobals() const { return Globals; }
+  const EnumRecordMap &getEnums() const { return Enums; }
+  const StructRecordMap &getStructs() const { return Structs; }
 
   /// Generate and store the USR of declaration \p D.
   ///
@@ -219,6 +347,8 @@ private:
   const LangOptions LangOpts;
 
   GlobalRecordMap Globals;
+  EnumRecordMap Enums;
+  StructRecordMap Structs;
 };
 
 } // namespace extractapi

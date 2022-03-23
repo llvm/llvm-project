@@ -332,9 +332,8 @@ public:
     return nonloc::ConcreteInt(BasicVals.getIntValue(integer, isUnsigned));
   }
 
-  NonLoc makeIntValWithPtrWidth(uint64_t integer, bool isUnsigned) {
-    return nonloc::ConcreteInt(
-        BasicVals.getIntWithPtrWidth(integer, isUnsigned));
+  NonLoc makeIntValWithWidth(QualType ptrType, uint64_t integer) {
+    return nonloc::ConcreteInt(BasicVals.getValue(integer, ptrType));
   }
 
   NonLoc makeLocAsInteger(Loc loc, unsigned bits) {

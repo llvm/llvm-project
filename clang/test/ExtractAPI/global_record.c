@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
 // RUN: %t/reference.output.json
-// RUN: %clang -extract-api -target arm64-apple-macosx \
+// RUN: %clang -extract-api --product-name=GlobalRecord -target arm64-apple-macosx \
 // RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
 
 // Generator version is not consistent across test runs, normalize it.
@@ -37,7 +37,7 @@ char unavailable __attribute__((unavailable));
     "generator": "?"
   },
   "module": {
-    "name": "",
+    "name": "GlobalRecord",
     "platform": {
       "architecture": "arm64",
       "operatingSystem": {

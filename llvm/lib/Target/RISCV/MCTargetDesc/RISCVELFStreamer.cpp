@@ -23,7 +23,6 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributes.h"
 
@@ -32,38 +31,12 @@ using namespace llvm;
 // This part is for ELF object output.
 RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
-    : RISCVTargetStreamer(S), CurrentVendor("riscv") {
+    : RISCVTargetStreamer(S), CurrentVendor("riscv"), STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
   const FeatureBitset &Features = STI.getFeatureBits();
   auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
-  RISCVABI::ABI ABI = MAB.getTargetABI();
-  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialised target ABI");
-
-  unsigned EFlags = MCA.getELFHeaderEFlags();
-
-  if (Features[RISCV::FeatureStdExtC])
-    EFlags |= ELF::EF_RISCV_RVC;
-
-  switch (ABI) {
-  case RISCVABI::ABI_ILP32:
-  case RISCVABI::ABI_LP64:
-    break;
-  case RISCVABI::ABI_ILP32F:
-  case RISCVABI::ABI_LP64F:
-    EFlags |= ELF::EF_RISCV_FLOAT_ABI_SINGLE;
-    break;
-  case RISCVABI::ABI_ILP32D:
-  case RISCVABI::ABI_LP64D:
-    EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
-    break;
-  case RISCVABI::ABI_ILP32E:
-    EFlags |= ELF::EF_RISCV_RVE;
-    break;
-  case RISCVABI::ABI_Unknown:
-    llvm_unreachable("Improperly initialised target ABI");
-  }
-
-  MCA.setELFHeaderEFlags(EFlags);
+  setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
+                                          MAB.getTargetOptions().getABIName()));
 }
 
 MCELFStreamer &RISCVTargetELFStreamer::getStreamer() {
@@ -172,6 +145,39 @@ size_t RISCVTargetELFStreamer::calculateContentSize() const {
     }
   }
   return Result;
+}
+
+void RISCVTargetELFStreamer::finish() {
+  RISCVTargetStreamer::finish();
+  MCAssembler &MCA = getStreamer().getAssembler();
+  const FeatureBitset &Features = STI.getFeatureBits();
+  RISCVABI::ABI ABI = getTargetABI();
+
+  unsigned EFlags = MCA.getELFHeaderEFlags();
+
+  if (Features[RISCV::FeatureStdExtC])
+    EFlags |= ELF::EF_RISCV_RVC;
+
+  switch (ABI) {
+  case RISCVABI::ABI_ILP32:
+  case RISCVABI::ABI_LP64:
+    break;
+  case RISCVABI::ABI_ILP32F:
+  case RISCVABI::ABI_LP64F:
+    EFlags |= ELF::EF_RISCV_FLOAT_ABI_SINGLE;
+    break;
+  case RISCVABI::ABI_ILP32D:
+  case RISCVABI::ABI_LP64D:
+    EFlags |= ELF::EF_RISCV_FLOAT_ABI_DOUBLE;
+    break;
+  case RISCVABI::ABI_ILP32E:
+    EFlags |= ELF::EF_RISCV_RVE;
+    break;
+  case RISCVABI::ABI_Unknown:
+    llvm_unreachable("Improperly initialised target ABI");
+  }
+
+  MCA.setELFHeaderEFlags(EFlags);
 }
 
 namespace {

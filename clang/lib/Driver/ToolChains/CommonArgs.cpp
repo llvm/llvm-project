@@ -574,6 +574,13 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back("-plugin-opt=-data-sections");
   }
 
+  // Pass an option to enable split machine functions.
+  if (auto *A = Args.getLastArg(options::OPT_fsplit_machine_functions,
+                                options::OPT_fno_split_machine_functions)) {
+    if (A->getOption().matches(options::OPT_fsplit_machine_functions))
+      CmdArgs.push_back("-plugin-opt=-split-machine-functions");
+  }
+
   if (Arg *A = getLastProfileSampleUseArg(Args)) {
     StringRef FName = A->getValue();
     if (!llvm::sys::fs::exists(FName))
