@@ -92,25 +92,25 @@ module mod    { header "mod.h"    }
 
 // Explicitly build the PCH:
 //
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_00 > %t/mod_00.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_01 > %t/mod_01.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_02 > %t/mod_02.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_03 > %t/mod_03.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_04 > %t/mod_04.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_05 > %t/mod_05.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_06 > %t/mod_06.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_07 > %t/mod_07.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_08 > %t/mod_08.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_09 > %t/mod_09.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_10 > %t/mod_10.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_11 > %t/mod_11.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_12 > %t/mod_12.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_13 > %t/mod_13.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_14 > %t/mod_14.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_15 > %t/mod_15.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod_16 > %t/mod_16.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --module-name=mod    > %t/mod.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json --tu-index=0 > %t/pch.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_00 > %t/mod_00.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_01 > %t/mod_01.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_02 > %t/mod_02.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_03 > %t/mod_03.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_04 > %t/mod_04.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_05 > %t/mod_05.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_06 > %t/mod_06.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_07 > %t/mod_07.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_08 > %t/mod_08.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_09 > %t/mod_09.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_10 > %t/mod_10.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_11 > %t/mod_11.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_12 > %t/mod_12.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_13 > %t/mod_13.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_14 > %t/mod_14.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_15 > %t/mod_15.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod_16 > %t/mod_16.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod    > %t/mod.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --tu-index=0 > %t/pch.rsp
 //
 // RUN: %clang @%t/mod_00.cc1.rsp
 // RUN: %clang @%t/mod_01.cc1.rsp

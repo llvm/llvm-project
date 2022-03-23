@@ -115,6 +115,11 @@ config.substitutions.append(
     ('%hmaptool', "'%s' %s" % (config.python_executable,
                              os.path.join(config.clang_tools_dir, 'hmaptool'))))
 
+config.substitutions.append(
+    ('%deps-to-rsp',
+     '"%s" %s' % (config.python_executable, os.path.join(config.clang_src_dir, 'utils',
+                                                         'module-deps-to-rsp.py'))))
+
 config.substitutions.append(('%host_cc', config.host_cc))
 config.substitutions.append(('%host_cxx', config.host_cxx))
 

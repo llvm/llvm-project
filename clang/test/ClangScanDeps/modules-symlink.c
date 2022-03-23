@@ -43,10 +43,8 @@ static int foo = MACRO; // Macro usage that will trigger
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -format experimental-full \
 // RUN:   -generate-modules-path-args -module-files-dir %t/build > %t/result_pch.json
 //
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --module-name=mod > %t/mod.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --tu-index=0 > %t/pch.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=mod > %t/mod.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --tu-index=0 > %t/pch.rsp
 //
 // RUN: %clang @%t/mod.cc1.rsp
 // RUN: %clang @%t/pch.rsp
