@@ -120,7 +120,7 @@ define <2 x i8> @vxor_vi_v2i8_unmasked_1(<2 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> poison, i8 -1, i32 0
   %vb = shufflevector <2 x i8> %elt.head, <2 x i8> poison, <2 x i32> zeroinitializer
@@ -222,7 +222,7 @@ define <4 x i8> @vxor_vi_v4i8_unmasked_1(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> poison, i8 -1, i32 0
   %vb = shufflevector <4 x i8> %elt.head, <4 x i8> poison, <4 x i32> zeroinitializer
@@ -324,7 +324,7 @@ define <8 x i8> @vxor_vi_v8i8_unmasked_1(<8 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> poison, i8 -1, i32 0
   %vb = shufflevector <8 x i8> %elt.head, <8 x i8> poison, <8 x i32> zeroinitializer
@@ -426,7 +426,7 @@ define <9 x i8> @vxor_vi_v9i8_unmasked_1(<9 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v9i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <9 x i8> poison, i8 -1, i32 0
   %vb = shufflevector <9 x i8> %elt.head, <9 x i8> poison, <9 x i32> zeroinitializer
@@ -528,7 +528,7 @@ define <16 x i8> @vxor_vi_v16i8_unmasked_1(<16 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v16i8_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i8> poison, i8 -1, i32 0
   %vb = shufflevector <16 x i8> %elt.head, <16 x i8> poison, <16 x i32> zeroinitializer
@@ -630,7 +630,7 @@ define <2 x i16> @vxor_vi_v2i16_unmasked_1(<2 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i16_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> poison, i16 -1, i32 0
   %vb = shufflevector <2 x i16> %elt.head, <2 x i16> poison, <2 x i32> zeroinitializer
@@ -732,7 +732,7 @@ define <4 x i16> @vxor_vi_v4i16_unmasked_1(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i16_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> poison, i16 -1, i32 0
   %vb = shufflevector <4 x i16> %elt.head, <4 x i16> poison, <4 x i32> zeroinitializer
@@ -834,7 +834,7 @@ define <8 x i16> @vxor_vi_v8i16_unmasked_1(<8 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i16_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i16> poison, i16 -1, i32 0
   %vb = shufflevector <8 x i16> %elt.head, <8 x i16> poison, <8 x i32> zeroinitializer
@@ -936,7 +936,7 @@ define <16 x i16> @vxor_vi_v16i16_unmasked_1(<16 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v16i16_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i16> poison, i16 -1, i32 0
   %vb = shufflevector <16 x i16> %elt.head, <16 x i16> poison, <16 x i32> zeroinitializer
@@ -1038,7 +1038,7 @@ define <2 x i32> @vxor_vi_v2i32_unmasked_1(<2 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i32_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> poison, i32 -1, i32 0
   %vb = shufflevector <2 x i32> %elt.head, <2 x i32> poison, <2 x i32> zeroinitializer
@@ -1140,7 +1140,7 @@ define <4 x i32> @vxor_vi_v4i32_unmasked_1(<4 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i32_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i32> poison, i32 -1, i32 0
   %vb = shufflevector <4 x i32> %elt.head, <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1242,7 +1242,7 @@ define <8 x i32> @vxor_vi_v8i32_unmasked_1(<8 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i32_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i32> poison, i32 -1, i32 0
   %vb = shufflevector <8 x i32> %elt.head, <8 x i32> poison, <8 x i32> zeroinitializer
@@ -1344,7 +1344,7 @@ define <16 x i32> @vxor_vi_v16i32_unmasked_1(<16 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v16i32_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i32> poison, i32 -1, i32 0
   %vb = shufflevector <16 x i32> %elt.head, <16 x i32> poison, <16 x i32> zeroinitializer
@@ -1474,7 +1474,7 @@ define <2 x i64> @vxor_vi_v2i64_unmasked_1(<2 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v2i64_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i64> poison, i64 -1, i32 0
   %vb = shufflevector <2 x i64> %elt.head, <2 x i64> poison, <2 x i32> zeroinitializer
@@ -1604,7 +1604,7 @@ define <4 x i64> @vxor_vi_v4i64_unmasked_1(<4 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v4i64_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i64> poison, i64 -1, i32 0
   %vb = shufflevector <4 x i64> %elt.head, <4 x i64> poison, <4 x i32> zeroinitializer
@@ -1734,7 +1734,7 @@ define <8 x i64> @vxor_vi_v8i64_unmasked_1(<8 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v8i64_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i64> poison, i64 -1, i32 0
   %vb = shufflevector <8 x i64> %elt.head, <8 x i64> poison, <8 x i32> zeroinitializer
@@ -1864,7 +1864,7 @@ define <16 x i64> @vxor_vi_v16i64_unmasked_1(<16 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vxor_vi_v16i64_unmasked_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
-; CHECK-NEXT:    vxor.vi v8, v8, -1
+; CHECK-NEXT:    vnot.v v8, v8
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i64> poison, i64 -1, i32 0
   %vb = shufflevector <16 x i64> %elt.head, <16 x i64> poison, <16 x i32> zeroinitializer

@@ -21,6 +21,32 @@ using namespace mlir::math;
 #include "mlir/Dialect/Math/IR/MathOps.cpp.inc"
 
 //===----------------------------------------------------------------------===//
+// AbsOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::AbsOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand)
+    return {};
+
+  auto attr = constOperand.dyn_cast<FloatAttr>();
+  if (!attr)
+    return {};
+
+  auto ft = getType().cast<FloatType>();
+
+  APFloat apf = attr.getValue();
+
+  if (ft.getWidth() == 64)
+    return FloatAttr::get(getType(), fabs(apf.convertToDouble()));
+
+  if (ft.getWidth() == 32)
+    return FloatAttr::get(getType(), fabsf(apf.convertToFloat()));
+
+  return {};
+}
+
+//===----------------------------------------------------------------------===//
 // CeilOp folder
 //===----------------------------------------------------------------------===//
 
@@ -37,6 +63,81 @@ OpFoldResult math::CeilOp::fold(ArrayRef<Attribute> operands) {
   sourceVal.roundToIntegral(llvm::RoundingMode::TowardPositive);
 
   return FloatAttr::get(getType(), sourceVal);
+}
+
+//===----------------------------------------------------------------------===//
+// CopySignOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CopySignOp::fold(ArrayRef<Attribute> operands) {
+  auto ft = getType().dyn_cast<FloatType>();
+  if (!ft)
+    return {};
+
+  APFloat vals[2]{APFloat(ft.getFloatSemantics()),
+                  APFloat(ft.getFloatSemantics())};
+  for (int i = 0; i < 2; ++i) {
+    if (!operands[i])
+      return {};
+
+    auto attr = operands[i].dyn_cast<FloatAttr>();
+    if (!attr)
+      return {};
+
+    vals[i] = attr.getValue();
+  }
+
+  vals[0].copySign(vals[1]);
+
+  return FloatAttr::get(getType(), vals[0]);
+}
+
+//===----------------------------------------------------------------------===//
+// CountLeadingZerosOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CountLeadingZerosOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand)
+    return {};
+
+  auto attr = constOperand.dyn_cast<IntegerAttr>();
+  if (!attr)
+    return {};
+
+  return IntegerAttr::get(getType(), attr.getValue().countLeadingZeros());
+}
+
+//===----------------------------------------------------------------------===//
+// CountTrailingZerosOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CountTrailingZerosOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand)
+    return {};
+
+  auto attr = constOperand.dyn_cast<IntegerAttr>();
+  if (!attr)
+    return {};
+
+  return IntegerAttr::get(getType(), attr.getValue().countTrailingZeros());
+}
+
+//===----------------------------------------------------------------------===//
+// CtPopOp folder
+//===----------------------------------------------------------------------===//
+
+OpFoldResult math::CtPopOp::fold(ArrayRef<Attribute> operands) {
+  auto constOperand = operands.front();
+  if (!constOperand)
+    return {};
+
+  auto attr = constOperand.dyn_cast<IntegerAttr>();
+  if (!attr)
+    return {};
+
+  return IntegerAttr::get(getType(), attr.getValue().countPopulation());
 }
 
 //===----------------------------------------------------------------------===//

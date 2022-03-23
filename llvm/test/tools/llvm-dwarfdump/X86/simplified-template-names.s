@@ -10,10 +10,10 @@
 # CHECK: No errors.
 	.text
 	.file	"simplified_template_names.cpp"
-	.file	0 "/usr/local/google/home/blaikie/dev/llvm/src" "cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp" md5 0xeb7736932083f3bb70e031e86d00362e
+	.file	0 "/usr/local/google/home/blaikie/dev/llvm/src" "cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp" md5 0x32ddf5ad86a2fc516a43ad9a2b034228
 	.file	1 "/usr" "include/x86_64-linux-gnu/bits/types.h" md5 0x58b79843d97f4309eefa4aa722dac91e
 	.file	2 "/usr" "include/x86_64-linux-gnu/bits/stdint-intn.h" md5 0xb26974ec56196748bbc399ee826d2a0e
-	.file	3 "/usr/local/google/home/blaikie" "install/bin/../lib/gcc/x86_64-pc-linux-gnu/10.0.0/../../../../include/c++/10.0.0/cstdint"
+	.file	3 "/usr" "lib/gcc/x86_64-linux-gnu/11/../../../../include/c++/11/cstdint"
 	.file	4 "/usr" "include/stdint.h" md5 0x8e56ab3ccd56760d8ae9848ebf326071
 	.file	5 "/usr" "include/x86_64-linux-gnu/bits/stdint-uintn.h" md5 0x3d2fbc5d847dd222c2fbd70457568436
 	.globl	_Zli5_suffy                     # -- Begin function _Zli5_suffy
@@ -23,7 +23,7 @@ _Zli5_suffy:                            # @_Zli5_suffy
 .Lfunc_begin0:
 	.loc	0 142 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:142:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -47,7 +47,7 @@ main:                                   # @main
 .Lfunc_begin1:
 	.loc	0 182 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:182:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -56,7 +56,7 @@ main:                                   # @main
 	subq	$64, %rsp
 .Ltmp2:
 	.loc	0 184 8 prologue_end            # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:8
-	movb	.L__const.main.L, %al
+	movb	.L__const.main.L(%rip), %al
 	movb	%al, -16(%rbp)
 	.loc	0 185 3                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:185:3
 	callq	_Z2f1IJiEEvv
@@ -373,7 +373,9 @@ main:                                   # @main
 	callq	_Z2f1IJFv2t1IJEES1_EEEvv
 	.loc	0 325 3                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:325:3
 	callq	_Z2f1IJM2t1IJEEiEEvv
-	.loc	0 326 1                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:326:1
+	.loc	0 327 3                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:327:3
+	callq	_Z2f1IJU9swiftcallFvvEEEvv
+	.loc	0 328 1                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:328:1
 	xorl	%eax, %eax
 	addq	$64, %rsp
 	popq	%rbp
@@ -392,7 +394,7 @@ _Z2f1IJiEEvv:                           # @_Z2f1IJiEEvv
 .Lfunc_begin2:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -416,7 +418,7 @@ _Z2f1IJfEEvv:                           # @_Z2f1IJfEEvv
 .Lfunc_begin3:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -440,7 +442,7 @@ _Z2f1IJbEEvv:                           # @_Z2f1IJbEEvv
 .Lfunc_begin4:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -464,7 +466,7 @@ _Z2f1IJdEEvv:                           # @_Z2f1IJdEEvv
 .Lfunc_begin5:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -488,7 +490,7 @@ _Z2f1IJlEEvv:                           # @_Z2f1IJlEEvv
 .Lfunc_begin6:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -512,7 +514,7 @@ _Z2f1IJsEEvv:                           # @_Z2f1IJsEEvv
 .Lfunc_begin7:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -536,7 +538,7 @@ _Z2f1IJjEEvv:                           # @_Z2f1IJjEEvv
 .Lfunc_begin8:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -560,7 +562,7 @@ _Z2f1IJyEEvv:                           # @_Z2f1IJyEEvv
 .Lfunc_begin9:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -584,7 +586,7 @@ _Z2f1IJxEEvv:                           # @_Z2f1IJxEEvv
 .Lfunc_begin10:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -608,7 +610,7 @@ _Z2f1IJ3udtEEvv:                        # @_Z2f1IJ3udtEEvv
 .Lfunc_begin11:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -632,7 +634,7 @@ _Z2f1IJN2ns3udtEEEvv:                   # @_Z2f1IJN2ns3udtEEEvv
 .Lfunc_begin12:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -656,7 +658,7 @@ _Z2f1IJPN2ns3udtEEEvv:                  # @_Z2f1IJPN2ns3udtEEEvv
 .Lfunc_begin13:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -680,7 +682,7 @@ _Z2f1IJN2ns5inner3udtEEEvv:             # @_Z2f1IJN2ns5inner3udtEEEvv
 .Lfunc_begin14:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -704,7 +706,7 @@ _Z2f1IJ2t1IJiEEEEvv:                    # @_Z2f1IJ2t1IJiEEEEvv
 .Lfunc_begin15:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -728,7 +730,7 @@ _Z2f1IJifEEvv:                          # @_Z2f1IJifEEvv
 .Lfunc_begin16:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -752,7 +754,7 @@ _Z2f1IJPiEEvv:                          # @_Z2f1IJPiEEvv
 .Lfunc_begin17:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -776,7 +778,7 @@ _Z2f1IJRiEEvv:                          # @_Z2f1IJRiEEvv
 .Lfunc_begin18:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -800,7 +802,7 @@ _Z2f1IJOiEEvv:                          # @_Z2f1IJOiEEvv
 .Lfunc_begin19:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -824,7 +826,7 @@ _Z2f1IJKiEEvv:                          # @_Z2f1IJKiEEvv
 .Lfunc_begin20:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -848,7 +850,7 @@ _Z2f1IJA3_iEEvv:                        # @_Z2f1IJA3_iEEvv
 .Lfunc_begin21:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -872,7 +874,7 @@ _Z2f1IJvEEvv:                           # @_Z2f1IJvEEvv
 .Lfunc_begin22:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -896,7 +898,7 @@ _Z2f1IJN11outer_class11inner_classEEEvv: # @_Z2f1IJN11outer_class11inner_classEE
 .Lfunc_begin23:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -920,7 +922,7 @@ _Z2f1IJmEEvv:                           # @_Z2f1IJmEEvv
 .Lfunc_begin24:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -944,7 +946,7 @@ _Z2f2ILb1ELi3EEvv:                      # @_Z2f2ILb1ELi3EEvv
 .Lfunc_begin25:
 	.loc	0 38 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:38:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -968,7 +970,7 @@ _Z2f3IN2ns11EnumerationEJLS1_1ELS1_2EEEvv: # @_Z2f3IN2ns11EnumerationEJLS1_1ELS1
 .Lfunc_begin26:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -992,7 +994,7 @@ _Z2f3IN2ns16EnumerationClassEJLS1_1ELS1_2EEEvv: # @_Z2f3IN2ns16EnumerationClassE
 .Lfunc_begin27:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1016,7 +1018,7 @@ _Z2f3IN2ns16EnumerationSmallEJLS1_255EEEvv: # @_Z2f3IN2ns16EnumerationSmallEJLS1
 .Lfunc_begin28:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1039,7 +1041,7 @@ _Z2f3IN2ns3$_0EJLS1_1ELS1_2EEEvv:       # @"_Z2f3IN2ns3$_0EJLS1_1ELS1_2EEEvv"
 .Lfunc_begin29:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1061,7 +1063,7 @@ _Z2f3IN12_GLOBAL__N_19LocalEnumEJLS1_0EEEvv: # @_Z2f3IN12_GLOBAL__N_19LocalEnumE
 .Lfunc_begin30:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1085,7 +1087,7 @@ _Z2f3IPiJXadL_Z1iEEEEvv:                # @_Z2f3IPiJXadL_Z1iEEEEvv
 .Lfunc_begin31:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1109,7 +1111,7 @@ _Z2f3IPiJLS0_0EEEvv:                    # @_Z2f3IPiJLS0_0EEEvv
 .Lfunc_begin32:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1133,7 +1135,7 @@ _Z2f3ImJLm1EEEvv:                       # @_Z2f3ImJLm1EEEvv
 .Lfunc_begin33:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1157,7 +1159,7 @@ _Z2f3IyJLy1EEEvv:                       # @_Z2f3IyJLy1EEEvv
 .Lfunc_begin34:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1181,7 +1183,7 @@ _Z2f3IlJLl1EEEvv:                       # @_Z2f3IlJLl1EEEvv
 .Lfunc_begin35:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1205,7 +1207,7 @@ _Z2f3IjJLj1EEEvv:                       # @_Z2f3IjJLj1EEEvv
 .Lfunc_begin36:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1229,7 +1231,7 @@ _Z2f3IsJLs1EEEvv:                       # @_Z2f3IsJLs1EEEvv
 .Lfunc_begin37:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1253,7 +1255,7 @@ _Z2f3IhJLh0EEEvv:                       # @_Z2f3IhJLh0EEEvv
 .Lfunc_begin38:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1277,7 +1279,7 @@ _Z2f3IaJLa0EEEvv:                       # @_Z2f3IaJLa0EEEvv
 .Lfunc_begin39:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1301,7 +1303,7 @@ _Z2f3ItJLt1ELt2EEEvv:                   # @_Z2f3ItJLt1ELt2EEEvv
 .Lfunc_begin40:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1325,7 +1327,7 @@ _Z2f3IcJLc0ELc1ELc6ELc7ELc13ELc14ELc31ELc32ELc33ELc127ELcn128EEEvv: # @_Z2f3IcJL
 .Lfunc_begin41:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1349,7 +1351,7 @@ _Z2f3InJLn18446744073709551614EEEvv:    # @_Z2f3InJLn18446744073709551614EEEvv
 .Lfunc_begin42:
 	.loc	0 41 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:41:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1373,7 +1375,7 @@ _Z2f4IjLj3EEvv:                         # @_Z2f4IjLj3EEvv
 .Lfunc_begin43:
 	.loc	0 44 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:44:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1397,7 +1399,7 @@ _Z2f1IJ2t3IiLb0EEEEvv:                  # @_Z2f1IJ2t3IiLb0EEEEvv
 .Lfunc_begin44:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1421,7 +1423,7 @@ _Z2f1IJ2t3IS0_IiLb0EELb0EEEEvv:         # @_Z2f1IJ2t3IS0_IiLb0EELb0EEEEvv
 .Lfunc_begin45:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1444,7 +1446,7 @@ _Z2f1IJZ4mainE3$_1EEvv:                 # @"_Z2f1IJZ4mainE3$_1EEvv"
 .Lfunc_begin46:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1466,7 +1468,7 @@ _Z2f1IJ2t3IS0_IZ4mainE3$_1Lb0EELb0EEEEvv: # @"_Z2f1IJ2t3IS0_IZ4mainE3$_1Lb0EELb0
 .Lfunc_begin47:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1490,7 +1492,7 @@ _Z2f1IJFifEEEvv:                        # @_Z2f1IJFifEEEvv
 .Lfunc_begin48:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1514,7 +1516,7 @@ _Z2f1IJFvzEEEvv:                        # @_Z2f1IJFvzEEEvv
 .Lfunc_begin49:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1538,7 +1540,7 @@ _Z2f1IJFvizEEEvv:                       # @_Z2f1IJFvizEEEvv
 .Lfunc_begin50:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1562,7 +1564,7 @@ _Z2f1IJRKiEEvv:                         # @_Z2f1IJRKiEEvv
 .Lfunc_begin51:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1586,7 +1588,7 @@ _Z2f1IJRPKiEEvv:                        # @_Z2f1IJRPKiEEvv
 .Lfunc_begin52:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1609,7 +1611,7 @@ _Z2f1IJN12_GLOBAL__N_12t5EEEvv:         # @_Z2f1IJN12_GLOBAL__N_12t5EEEvv
 .Lfunc_begin53:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1633,7 +1635,7 @@ _Z2f1IJDnEEvv:                          # @_Z2f1IJDnEEvv
 .Lfunc_begin54:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1657,7 +1659,7 @@ _Z2f1IJPlS0_EEvv:                       # @_Z2f1IJPlS0_EEvv
 .Lfunc_begin55:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1681,7 +1683,7 @@ _Z2f1IJPlP3udtEEvv:                     # @_Z2f1IJPlP3udtEEvv
 .Lfunc_begin56:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1705,7 +1707,7 @@ _Z2f1IJKPvEEvv:                         # @_Z2f1IJKPvEEvv
 .Lfunc_begin57:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1729,7 +1731,7 @@ _Z2f1IJPKPKvEEvv:                       # @_Z2f1IJPKPKvEEvv
 .Lfunc_begin58:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1753,7 +1755,7 @@ _Z2f1IJFvvEEEvv:                        # @_Z2f1IJFvvEEEvv
 .Lfunc_begin59:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1777,7 +1779,7 @@ _Z2f1IJPFvvEEEvv:                       # @_Z2f1IJPFvvEEEvv
 .Lfunc_begin60:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1800,7 +1802,7 @@ _Z2f1IJPZ4mainE3$_1EEvv:                # @"_Z2f1IJPZ4mainE3$_1EEvv"
 .Lfunc_begin61:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1822,7 +1824,7 @@ _Z2f1IJZ4mainE3$_2EEvv:                 # @"_Z2f1IJZ4mainE3$_2EEvv"
 .Lfunc_begin62:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1844,7 +1846,7 @@ _Z2f1IJPZ4mainE3$_2EEvv:                # @"_Z2f1IJPZ4mainE3$_2EEvv"
 .Lfunc_begin63:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1868,7 +1870,7 @@ _Z2f5IJ2t1IJiEEEiEvv:                   # @_Z2f5IJ2t1IJiEEEiEvv
 .Lfunc_begin64:
 	.loc	0 62 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:62:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1892,7 +1894,7 @@ _Z2f5IJEiEvv:                           # @_Z2f5IJEiEvv
 .Lfunc_begin65:
 	.loc	0 62 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:62:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1916,7 +1918,7 @@ _Z2f6I2t1IJiEEJEEvv:                    # @_Z2f6I2t1IJiEEJEEvv
 .Lfunc_begin66:
 	.loc	0 64 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:64:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1940,7 +1942,7 @@ _Z2f1IJEEvv:                            # @_Z2f1IJEEvv
 .Lfunc_begin67:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1964,7 +1966,7 @@ _Z2f1IJPKvS1_EEvv:                      # @_Z2f1IJPKvS1_EEvv
 .Lfunc_begin68:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -1988,7 +1990,7 @@ _Z2f1IJP2t1IJPiEEEEvv:                  # @_Z2f1IJP2t1IJPiEEEEvv
 .Lfunc_begin69:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2012,7 +2014,7 @@ _Z2f1IJA_PiEEvv:                        # @_Z2f1IJA_PiEEvv
 .Lfunc_begin70:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2036,7 +2038,7 @@ _ZN2t6lsIiEEvi:                         # @_ZN2t6lsIiEEvi
 .Lfunc_begin71:
 	.loc	0 67 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:67:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2062,7 +2064,7 @@ _ZN2t6ltIiEEvi:                         # @_ZN2t6ltIiEEvi
 .Lfunc_begin72:
 	.loc	0 70 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:70:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2088,7 +2090,7 @@ _ZN2t6leIiEEvi:                         # @_ZN2t6leIiEEvi
 .Lfunc_begin73:
 	.loc	0 73 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:73:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2114,7 +2116,7 @@ _ZN2t6cvP2t1IJfEEIiEEv:                 # @_ZN2t6cvP2t1IJfEEIiEEv
 .Lfunc_begin74:
 	.loc	0 76 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:76:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2141,7 +2143,7 @@ _ZN2t6miIiEEvi:                         # @_ZN2t6miIiEEvi
 .Lfunc_begin75:
 	.loc	0 80 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:80:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2167,7 +2169,7 @@ _ZN2t6mlIiEEvi:                         # @_ZN2t6mlIiEEvi
 .Lfunc_begin76:
 	.loc	0 83 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:83:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2193,7 +2195,7 @@ _ZN2t6dvIiEEvi:                         # @_ZN2t6dvIiEEvi
 .Lfunc_begin77:
 	.loc	0 86 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:86:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2219,7 +2221,7 @@ _ZN2t6rmIiEEvi:                         # @_ZN2t6rmIiEEvi
 .Lfunc_begin78:
 	.loc	0 89 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:89:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2245,7 +2247,7 @@ _ZN2t6eoIiEEvi:                         # @_ZN2t6eoIiEEvi
 .Lfunc_begin79:
 	.loc	0 92 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:92:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2271,7 +2273,7 @@ _ZN2t6anIiEEvi:                         # @_ZN2t6anIiEEvi
 .Lfunc_begin80:
 	.loc	0 95 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:95:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2297,7 +2299,7 @@ _ZN2t6orIiEEvi:                         # @_ZN2t6orIiEEvi
 .Lfunc_begin81:
 	.loc	0 98 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:98:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2323,7 +2325,7 @@ _ZN2t6coIiEEvv:                         # @_ZN2t6coIiEEvv
 .Lfunc_begin82:
 	.loc	0 101 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:101:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2348,7 +2350,7 @@ _ZN2t6ntIiEEvv:                         # @_ZN2t6ntIiEEvv
 .Lfunc_begin83:
 	.loc	0 104 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:104:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2373,7 +2375,7 @@ _ZN2t6aSIiEEvi:                         # @_ZN2t6aSIiEEvi
 .Lfunc_begin84:
 	.loc	0 107 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:107:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2399,7 +2401,7 @@ _ZN2t6gtIiEEvi:                         # @_ZN2t6gtIiEEvi
 .Lfunc_begin85:
 	.loc	0 110 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:110:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2425,7 +2427,7 @@ _ZN2t6cmIiEEvi:                         # @_ZN2t6cmIiEEvi
 .Lfunc_begin86:
 	.loc	0 113 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:113:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2451,7 +2453,7 @@ _ZN2t6clIiEEvv:                         # @_ZN2t6clIiEEvv
 .Lfunc_begin87:
 	.loc	0 116 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:116:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2476,7 +2478,7 @@ _ZN2t6ixIiEEvi:                         # @_ZN2t6ixIiEEvi
 .Lfunc_begin88:
 	.loc	0 119 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:119:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2502,7 +2504,7 @@ _ZN2t6ssIiEEvi:                         # @_ZN2t6ssIiEEvi
 .Lfunc_begin89:
 	.loc	0 122 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:122:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2527,7 +2529,7 @@ _ZN2t6ssIiEEvi:                         # @_ZN2t6ssIiEEvi
 _ZN2t6nwIiEEPvmT_:                      # @_ZN2t6nwIiEEPvmT_
 .Lfunc_begin90:
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2538,7 +2540,7 @@ _ZN2t6nwIiEEPvmT_:                      # @_ZN2t6nwIiEEPvmT_
 .Lfunc_end90:
 	.size	_ZN2t6nwIiEEPvmT_, .Lfunc_end90-_ZN2t6nwIiEEPvmT_
 	.cfi_endproc
-	.file	6 "/usr/local/google/home/blaikie" "install/bin/../lib/gcc/x86_64-pc-linux-gnu/10.0.0/../../../../include/c++/10.0.0/x86_64-pc-linux-gnu/bits/c++config.h" md5 0x13aeea7494b5171d821b8ca5f04a3bc5
+	.file	6 "/usr" "lib/gcc/x86_64-linux-gnu/11/../../../../include/x86_64-linux-gnu/c++/11/bits/c++config.h" md5 0x6ae0e1f800c3d941fd89365f1601d843
                                         # -- End function
 	.section	.text._ZN2t6naIiEEPvmT_,"axG",@progbits,_ZN2t6naIiEEPvmT_,comdat
 	.weak	_ZN2t6naIiEEPvmT_               # -- Begin function _ZN2t6naIiEEPvmT_
@@ -2547,7 +2549,7 @@ _ZN2t6nwIiEEPvmT_:                      # @_ZN2t6nwIiEEPvmT_
 _ZN2t6naIiEEPvmT_:                      # @_ZN2t6naIiEEPvmT_
 .Lfunc_begin91:
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2567,7 +2569,7 @@ _ZN2t6dlIiEEvPvT_:                      # @_ZN2t6dlIiEEvPvT_
 .Lfunc_begin92:
 	.loc	0 129 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:129:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2593,7 +2595,7 @@ _ZN2t6daIiEEvPvT_:                      # @_ZN2t6daIiEEvPvT_
 .Lfunc_begin93:
 	.loc	0 136 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:136:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2618,7 +2620,7 @@ _ZN2t6daIiEEvPvT_:                      # @_ZN2t6daIiEEvPvT_
 _ZN2t6awIiEEiv:                         # @_ZN2t6awIiEEiv
 .Lfunc_begin94:
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2636,7 +2638,7 @@ _Z2f1IJZ4mainE2t7EEvv:                  # @_Z2f1IJZ4mainE2t7EEvv
 .Lfunc_begin95:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2660,7 +2662,7 @@ _Z2f1IJRA3_iEEvv:                       # @_Z2f1IJRA3_iEEvv
 .Lfunc_begin96:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2684,7 +2686,7 @@ _Z2f1IJPA3_iEEvv:                       # @_Z2f1IJPA3_iEEvv
 .Lfunc_begin97:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2708,7 +2710,7 @@ _Z2f7I2t1Evv:                           # @_Z2f7I2t1Evv
 .Lfunc_begin98:
 	.loc	0 143 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:143:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2732,7 +2734,7 @@ _Z2f8I2t1iEvv:                          # @_Z2f8I2t1iEvv
 .Lfunc_begin99:
 	.loc	0 144 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:144:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2756,7 +2758,7 @@ _ZN2ns8ttp_userINS_5inner3ttpEEEvv:     # @_ZN2ns8ttp_userINS_5inner3ttpEEEvv
 .Lfunc_begin100:
 	.loc	0 26 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:26:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2780,7 +2782,7 @@ _Z2f1IJPiPDnEEvv:                       # @_Z2f1IJPiPDnEEvv
 .Lfunc_begin101:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2804,7 +2806,7 @@ _Z2f1IJ2t7IiEEEvv:                      # @_Z2f1IJ2t7IiEEEvv
 .Lfunc_begin102:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2828,7 +2830,7 @@ _Z2f7IN2ns3inl2t9EEvv:                  # @_Z2f7IN2ns3inl2t9EEvv
 .Lfunc_begin103:
 	.loc	0 143 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:143:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2852,7 +2854,7 @@ _Z2f1IJU7_AtomiciEEvv:                  # @_Z2f1IJU7_AtomiciEEvv
 .Lfunc_begin104:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2876,7 +2878,7 @@ _Z2f1IJilVcEEvv:                        # @_Z2f1IJilVcEEvv
 .Lfunc_begin105:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2900,7 +2902,7 @@ _Z2f1IJDv2_iEEvv:                       # @_Z2f1IJDv2_iEEvv
 .Lfunc_begin106:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2924,7 +2926,7 @@ _Z2f1IJVKPiEEvv:                        # @_Z2f1IJVKPiEEvv
 .Lfunc_begin107:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2948,7 +2950,7 @@ _Z2f1IJVKvEEvv:                         # @_Z2f1IJVKvEEvv
 .Lfunc_begin108:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2971,7 +2973,7 @@ _Z2f1IJ2t1IJZ4mainE3$_1EEEEvv:          # @"_Z2f1IJ2t1IJZ4mainE3$_1EEEEvv"
 .Lfunc_begin109:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -2995,7 +2997,7 @@ _ZN3t10C2IvEEv:                         # @_ZN3t10C2IvEEv
 .Lfunc_begin110:
 	.loc	0 167 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:167:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3020,7 +3022,7 @@ _Z2f1IJM3udtKFvvEEEvv:                  # @_Z2f1IJM3udtKFvvEEEvv
 .Lfunc_begin111:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3044,7 +3046,7 @@ _Z2f1IJM3udtVFvvREEEvv:                 # @_Z2f1IJM3udtVFvvREEEvv
 .Lfunc_begin112:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3068,7 +3070,7 @@ _Z2f1IJM3udtVKFvvOEEEvv:                # @_Z2f1IJM3udtVKFvvOEEEvv
 .Lfunc_begin113:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3092,7 +3094,7 @@ _Z2f9IiEPFvvEv:                         # @_Z2f9IiEPFvvEv
 .Lfunc_begin114:
 	.loc	0 162 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:162:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3118,7 +3120,7 @@ _Z2f1IJKPFvvEEEvv:                      # @_Z2f1IJKPFvvEEEvv
 .Lfunc_begin115:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3142,7 +3144,7 @@ _Z2f1IJRA1_KcEEvv:                      # @_Z2f1IJRA1_KcEEvv
 .Lfunc_begin116:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3166,7 +3168,7 @@ _Z2f1IJKFvvREEEvv:                      # @_Z2f1IJKFvvREEEvv
 .Lfunc_begin117:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3190,7 +3192,7 @@ _Z2f1IJVFvvOEEEvv:                      # @_Z2f1IJVFvvOEEEvv
 .Lfunc_begin118:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3214,7 +3216,7 @@ _Z2f1IJVKFvvEEEvv:                      # @_Z2f1IJVKFvvEEEvv
 .Lfunc_begin119:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3238,7 +3240,7 @@ _Z2f1IJA1_KPiEEvv:                      # @_Z2f1IJA1_KPiEEvv
 .Lfunc_begin120:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3262,7 +3264,7 @@ _Z2f1IJRA1_KPiEEvv:                     # @_Z2f1IJRA1_KPiEEvv
 .Lfunc_begin121:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3286,7 +3288,7 @@ _Z2f1IJRKM3udtFvvEEEvv:                 # @_Z2f1IJRKM3udtFvvEEEvv
 .Lfunc_begin122:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3310,7 +3312,7 @@ _Z2f1IJFPFvfEiEEEvv:                    # @_Z2f1IJFPFvfEiEEEvv
 .Lfunc_begin123:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3334,7 +3336,7 @@ _Z2f1IJA1_2t1IJiEEEEvv:                 # @_Z2f1IJA1_2t1IJiEEEEvv
 .Lfunc_begin124:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3358,7 +3360,7 @@ _Z2f1IJPDoFvvEEEvv:                     # @_Z2f1IJPDoFvvEEEvv
 .Lfunc_begin125:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3381,7 +3383,7 @@ _Z2f1IJFvZ4mainE3$_2EEEvv:              # @"_Z2f1IJFvZ4mainE3$_2EEEvv"
 .Lfunc_begin126:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3403,7 +3405,7 @@ _Z2f1IJFvZ4mainE2t8Z4mainE3$_2EEEvv:    # @"_Z2f1IJFvZ4mainE2t8Z4mainE3$_2EEEvv"
 .Lfunc_begin127:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3425,7 +3427,7 @@ _Z2f1IJFvZ4mainE2t8EEEvv:               # @_Z2f1IJFvZ4mainE2t8EEEvv
 .Lfunc_begin128:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3449,7 +3451,7 @@ _Z19operator_not_reallyIiEvv:           # @_Z19operator_not_reallyIiEvv
 .Lfunc_begin129:
 	.loc	0 171 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:171:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3473,7 +3475,7 @@ _Z2f1IJDB3_EEvv:                        # @_Z2f1IJDB3_EEvv
 .Lfunc_begin130:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3497,7 +3499,7 @@ _Z2f1IJKDU5_EEvv:                       # @_Z2f1IJKDU5_EEvv
 .Lfunc_begin131:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3521,7 +3523,7 @@ _Z2f1IJFv2t1IJEES1_EEEvv:               # @_Z2f1IJFv2t1IJEES1_EEEvv
 .Lfunc_begin132:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3545,7 +3547,7 @@ _Z2f1IJM2t1IJEEiEEvv:                   # @_Z2f1IJM2t1IJEEiEEvv
 .Lfunc_begin133:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3561,15 +3563,39 @@ _Z2f1IJM2t1IJEEiEEvv:                   # @_Z2f1IJM2t1IJEEiEEvv
 	.size	_Z2f1IJM2t1IJEEiEEvv, .Lfunc_end133-_Z2f1IJM2t1IJEEiEEvv
 	.cfi_endproc
                                         # -- End function
+	.section	.text._Z2f1IJU9swiftcallFvvEEEvv,"axG",@progbits,_Z2f1IJU9swiftcallFvvEEEvv,comdat
+	.weak	_Z2f1IJU9swiftcallFvvEEEvv      # -- Begin function _Z2f1IJU9swiftcallFvvEEEvv
+	.p2align	4, 0x90
+	.type	_Z2f1IJU9swiftcallFvvEEEvv,@function
+_Z2f1IJU9swiftcallFvvEEEvv:             # @_Z2f1IJU9swiftcallFvvEEEvv
+.Lfunc_begin134:
+	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+.Ltmp262:
+	.loc	0 36 1 prologue_end             # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:36:1
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Ltmp263:
+.Lfunc_end134:
+	.size	_Z2f1IJU9swiftcallFvvEEEvv, .Lfunc_end134-_Z2f1IJU9swiftcallFvvEEEvv
+	.cfi_endproc
+                                        # -- End function
 	.text
 	.globl	_ZN2t83memEv                    # -- Begin function _ZN2t83memEv
 	.p2align	4, 0x90
 	.type	_ZN2t83memEv,@function
 _ZN2t83memEv:                           # @_ZN2t83memEv
-.Lfunc_begin134:
-	.loc	0 327 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:327:0
+.Lfunc_begin135:
+	.loc	0 329 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:329:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3577,52 +3603,28 @@ _ZN2t83memEv:                           # @_ZN2t83memEv
 	.cfi_def_cfa_register %rbp
 	subq	$16, %rsp
 	movq	%rdi, -8(%rbp)
-.Ltmp262:
-	.loc	0 329 3 prologue_end            # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:329:3
-	callq	_Z2f1IJZN2t83memEvE2t7EEvv
-	.loc	0 330 3                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:330:3
-	callq	_Z2f1IJM2t8FvvEEEvv
-	.loc	0 331 1                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:331:1
-	addq	$16, %rsp
-	popq	%rbp
-	.cfi_def_cfa %rsp, 8
-	retq
-.Ltmp263:
-.Lfunc_end134:
-	.size	_ZN2t83memEv, .Lfunc_end134-_ZN2t83memEv
-	.cfi_endproc
-                                        # -- End function
-	.p2align	4, 0x90                         # -- Begin function _Z2f1IJZN2t83memEvE2t7EEvv
-	.type	_Z2f1IJZN2t83memEvE2t7EEvv,@function
-_Z2f1IJZN2t83memEvE2t7EEvv:             # @_Z2f1IJZN2t83memEvE2t7EEvv
-.Lfunc_begin135:
-	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
-	.cfi_startproc
-# %bb.0:                                # %entry
-	pushq	%rbp
-	.cfi_def_cfa_offset 16
-	.cfi_offset %rbp, -16
-	movq	%rsp, %rbp
-	.cfi_def_cfa_register %rbp
 .Ltmp264:
-	.loc	0 36 1 prologue_end             # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:36:1
+	.loc	0 331 3 prologue_end            # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:331:3
+	callq	_Z2f1IJZN2t83memEvE2t7EEvv
+	.loc	0 332 3                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:332:3
+	callq	_Z2f1IJM2t8FvvEEEvv
+	.loc	0 333 1                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:333:1
+	addq	$16, %rsp
 	popq	%rbp
 	.cfi_def_cfa %rsp, 8
 	retq
 .Ltmp265:
 .Lfunc_end135:
-	.size	_Z2f1IJZN2t83memEvE2t7EEvv, .Lfunc_end135-_Z2f1IJZN2t83memEvE2t7EEvv
+	.size	_ZN2t83memEv, .Lfunc_end135-_ZN2t83memEv
 	.cfi_endproc
                                         # -- End function
-	.section	.text._Z2f1IJM2t8FvvEEEvv,"axG",@progbits,_Z2f1IJM2t8FvvEEEvv,comdat
-	.weak	_Z2f1IJM2t8FvvEEEvv             # -- Begin function _Z2f1IJM2t8FvvEEEvv
-	.p2align	4, 0x90
-	.type	_Z2f1IJM2t8FvvEEEvv,@function
-_Z2f1IJM2t8FvvEEEvv:                    # @_Z2f1IJM2t8FvvEEEvv
+	.p2align	4, 0x90                         # -- Begin function _Z2f1IJZN2t83memEvE2t7EEvv
+	.type	_Z2f1IJZN2t83memEvE2t7EEvv,@function
+_Z2f1IJZN2t83memEvE2t7EEvv:             # @_Z2f1IJZN2t83memEvE2t7EEvv
 .Lfunc_begin136:
 	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
 	.cfi_startproc
-# %bb.0:                                # %entry
+# %bb.0:
 	pushq	%rbp
 	.cfi_def_cfa_offset 16
 	.cfi_offset %rbp, -16
@@ -3635,7 +3637,31 @@ _Z2f1IJM2t8FvvEEEvv:                    # @_Z2f1IJM2t8FvvEEEvv
 	retq
 .Ltmp267:
 .Lfunc_end136:
-	.size	_Z2f1IJM2t8FvvEEEvv, .Lfunc_end136-_Z2f1IJM2t8FvvEEEvv
+	.size	_Z2f1IJZN2t83memEvE2t7EEvv, .Lfunc_end136-_Z2f1IJZN2t83memEvE2t7EEvv
+	.cfi_endproc
+                                        # -- End function
+	.section	.text._Z2f1IJM2t8FvvEEEvv,"axG",@progbits,_Z2f1IJM2t8FvvEEEvv,comdat
+	.weak	_Z2f1IJM2t8FvvEEEvv             # -- Begin function _Z2f1IJM2t8FvvEEEvv
+	.p2align	4, 0x90
+	.type	_Z2f1IJM2t8FvvEEEvv,@function
+_Z2f1IJM2t8FvvEEEvv:                    # @_Z2f1IJM2t8FvvEEEvv
+.Lfunc_begin137:
+	.loc	0 33 0                          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:33:0
+	.cfi_startproc
+# %bb.0:
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset %rbp, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register %rbp
+.Ltmp268:
+	.loc	0 36 1 prologue_end             # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:36:1
+	popq	%rbp
+	.cfi_def_cfa %rsp, 8
+	retq
+.Ltmp269:
+.Lfunc_end137:
+	.size	_Z2f1IJM2t8FvvEEEvv, .Lfunc_end137-_Z2f1IJM2t8FvvEEEvv
 	.cfi_endproc
                                         # -- End function
 	.type	i,@object                       # @i
@@ -4614,6 +4640,13 @@ i:
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
 	.byte	88                              # Abbreviation Code
+	.byte	21                              # DW_TAG_subroutine_type
+	.byte	0                               # DW_CHILDREN_no
+	.byte	54                              # DW_AT_calling_convention
+	.byte	11                              # DW_FORM_data1
+	.byte	0                               # EOM(1)
+	.byte	0                               # EOM(2)
+	.byte	89                              # Abbreviation Code
 	.byte	48                              # DW_TAG_template_value_parameter
 	.byte	0                               # DW_CHILDREN_no
 	.byte	73                              # DW_AT_type
@@ -4624,7 +4657,7 @@ i:
 	.byte	15                              # DW_FORM_udata
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
-	.byte	89                              # Abbreviation Code
+	.byte	90                              # Abbreviation Code
 	.byte	22                              # DW_TAG_typedef
 	.byte	0                               # DW_CHILDREN_no
 	.byte	73                              # DW_AT_type
@@ -4637,7 +4670,7 @@ i:
 	.byte	11                              # DW_FORM_data1
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
-	.byte	90                              # Abbreviation Code
+	.byte	91                              # Abbreviation Code
 	.byte	13                              # DW_TAG_member
 	.byte	0                               # DW_CHILDREN_no
 	.byte	3                               # DW_AT_name
@@ -4652,7 +4685,7 @@ i:
 	.byte	11                              # DW_FORM_data1
 	.byte	0                               # EOM(1)
 	.byte	0                               # EOM(2)
-	.byte	91                              # Abbreviation Code
+	.byte	92                              # Abbreviation Code
 	.byte	19                              # DW_TAG_structure_type
 	.byte	1                               # DW_CHILDREN_yes
 	.byte	3                               # DW_AT_name
@@ -4670,7 +4703,7 @@ i:
 	.byte	1                               # DWARF Unit Type
 	.byte	8                               # Address Size (in bytes)
 	.long	.debug_abbrev                   # Offset Into Abbrev. Section
-	.byte	1                               # Abbrev [1] 0xc:0x290a DW_TAG_compile_unit
+	.byte	1                               # Abbrev [1] 0xc:0x295d DW_TAG_compile_unit
 	.byte	0                               # DW_AT_producer
 	.short	33                              # DW_AT_language
 	.byte	1                               # DW_AT_name
@@ -4958,7 +4991,7 @@ i:
 	.long	697                             # DW_AT_type
 	.byte	121                             # DW_AT_name
 	.byte	6                               # DW_AT_decl_file
-	.short	260                             # DW_AT_decl_line
+	.short	280                             # DW_AT_decl_line
 	.byte	0                               # End Of Children Mark
 	.byte	22                              # Abbrev [22] 0x1b1:0x8 DW_TAG_typedef
 	.long	441                             # DW_AT_type
@@ -5226,7 +5259,7 @@ i:
 	.byte	120
 	.byte	0                               # DW_AT_decl_file
 	.byte	142                             # DW_AT_decl_line
-	.long	7147                            # DW_AT_type
+	.long	7195                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	25                              # Abbrev [25] 0x34c:0x8a DW_TAG_subprogram
 	.byte	2                               # DW_AT_low_pc
@@ -5250,7 +5283,7 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	384                             # DW_AT_name
+	.short	386                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	184                             # DW_AT_decl_line
 	.long	966                             # DW_AT_type
@@ -5258,23 +5291,23 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	104
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	216                             # DW_AT_decl_line
-	.long	7787                            # DW_AT_type
+	.long	7837                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x37e:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	96
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	231                             # DW_AT_decl_line
-	.long	7262                            # DW_AT_type
+	.long	7310                            # DW_AT_type
 	.byte	28                              # Abbrev [28] 0x38a:0xd DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	88
-	.short	389                             # DW_AT_name
+	.short	391                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.short	256                             # DW_AT_decl_line
 	.long	3851                            # DW_AT_type
@@ -5282,15 +5315,15 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	80
-	.short	390                             # DW_AT_name
+	.short	392                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.short	291                             # DW_AT_decl_line
-	.long	7803                            # DW_AT_type
+	.long	7853                            # DW_AT_type
 	.byte	28                              # Abbrev [28] 0x3a4:0xd DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	72
-	.short	392                             # DW_AT_name
+	.short	394                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.short	300                             # DW_AT_decl_line
 	.long	206                             # DW_AT_type
@@ -5298,10 +5331,10 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	64
-	.short	393                             # DW_AT_name
+	.short	395                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.short	321                             # DW_AT_decl_line
-	.long	7812                            # DW_AT_type
+	.long	7862                            # DW_AT_type
 	.byte	29                              # Abbrev [29] 0x3be:0x8 DW_TAG_imported_module
 	.byte	0                               # DW_AT_decl_file
 	.short	288                             # DW_AT_decl_line
@@ -5337,18 +5370,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7162                            # DW_AT_type
+	.long	7210                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x3ee:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	7853                            # DW_AT_type
+	.long	7903                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x3fa:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x3fc:0x5 DW_TAG_template_type_parameter
@@ -5369,7 +5402,7 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
 	.long	4516                            # DW_AT_type
@@ -5377,10 +5410,10 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	7870                            # DW_AT_type
+	.long	7920                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x427:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x429:0x5 DW_TAG_template_type_parameter
@@ -5401,18 +5434,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7887                            # DW_AT_type
+	.long	7937                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x448:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	7903                            # DW_AT_type
+	.long	7953                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x454:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x456:0x5 DW_TAG_template_type_parameter
@@ -5433,22 +5466,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7920                            # DW_AT_type
+	.long	7970                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x475:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	7936                            # DW_AT_type
+	.long	7986                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x481:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x483:0x5 DW_TAG_template_type_parameter
-	.long	7143                            # DW_AT_type
+	.long	7191                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x48a:0x2d DW_TAG_subprogram
@@ -5465,18 +5498,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7953                            # DW_AT_type
+	.long	8003                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x4a2:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	7969                            # DW_AT_type
+	.long	8019                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x4ae:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x4b0:0x5 DW_TAG_template_type_parameter
@@ -5497,18 +5530,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7986                            # DW_AT_type
+	.long	8036                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x4cf:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8002                            # DW_AT_type
+	.long	8052                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x4db:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x4dd:0x5 DW_TAG_template_type_parameter
@@ -5529,18 +5562,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8019                            # DW_AT_type
+	.long	8069                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x4fc:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8035                            # DW_AT_type
+	.long	8085                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x508:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x50a:0x5 DW_TAG_template_type_parameter
@@ -5561,22 +5594,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8052                            # DW_AT_type
+	.long	8102                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x529:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8068                            # DW_AT_type
+	.long	8118                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x535:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x537:0x5 DW_TAG_template_type_parameter
-	.long	7147                            # DW_AT_type
+	.long	7195                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x53e:0x2d DW_TAG_subprogram
@@ -5593,22 +5626,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8085                            # DW_AT_type
+	.long	8135                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x556:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8101                            # DW_AT_type
+	.long	8151                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x562:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x564:0x5 DW_TAG_template_type_parameter
-	.long	7151                            # DW_AT_type
+	.long	7199                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x56b:0x2d DW_TAG_subprogram
@@ -5625,22 +5658,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8118                            # DW_AT_type
+	.long	8168                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x583:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8134                            # DW_AT_type
+	.long	8184                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x58f:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x591:0x5 DW_TAG_template_type_parameter
-	.long	7155                            # DW_AT_type
+	.long	7203                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x598:0x2d DW_TAG_subprogram
@@ -5657,18 +5690,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8151                            # DW_AT_type
+	.long	8201                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x5b0:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8167                            # DW_AT_type
+	.long	8217                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x5bc:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x5be:0x5 DW_TAG_template_type_parameter
@@ -5689,22 +5722,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8184                            # DW_AT_type
+	.long	8234                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x5dd:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8200                            # DW_AT_type
+	.long	8250                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x5e9:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x5eb:0x5 DW_TAG_template_type_parameter
-	.long	7157                            # DW_AT_type
+	.long	7205                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x5f2:0x2d DW_TAG_subprogram
@@ -5721,18 +5754,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8217                            # DW_AT_type
+	.long	8267                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x60a:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8233                            # DW_AT_type
+	.long	8283                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x616:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x618:0x5 DW_TAG_template_type_parameter
@@ -5753,22 +5786,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8250                            # DW_AT_type
+	.long	8300                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x637:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8266                            # DW_AT_type
+	.long	8316                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x643:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x645:0x5 DW_TAG_template_type_parameter
-	.long	7162                            # DW_AT_type
+	.long	7210                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x64c:0x32 DW_TAG_subprogram
@@ -5785,18 +5818,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8283                            # DW_AT_type
+	.long	8333                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x664:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8304                            # DW_AT_type
+	.long	8354                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x670:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x672:0x5 DW_TAG_template_type_parameter
@@ -5819,22 +5852,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7374                            # DW_AT_type
+	.long	7422                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x696:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8326                            # DW_AT_type
+	.long	8376                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x6a2:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x6a4:0x5 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
+	.long	7225                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x6ab:0x2d DW_TAG_subprogram
@@ -5851,22 +5884,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8343                            # DW_AT_type
+	.long	8393                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x6c3:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8359                            # DW_AT_type
+	.long	8409                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x6cf:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x6d1:0x5 DW_TAG_template_type_parameter
-	.long	7182                            # DW_AT_type
+	.long	7230                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x6d8:0x2d DW_TAG_subprogram
@@ -5883,22 +5916,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8376                            # DW_AT_type
+	.long	8426                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x6f0:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8392                            # DW_AT_type
+	.long	8442                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x6fc:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x6fe:0x5 DW_TAG_template_type_parameter
-	.long	7187                            # DW_AT_type
+	.long	7235                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x705:0x2d DW_TAG_subprogram
@@ -5915,22 +5948,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8409                            # DW_AT_type
+	.long	8459                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x71d:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8425                            # DW_AT_type
+	.long	8475                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x729:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x72b:0x5 DW_TAG_template_type_parameter
-	.long	7192                            # DW_AT_type
+	.long	7240                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x732:0x2d DW_TAG_subprogram
@@ -5947,22 +5980,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8442                            # DW_AT_type
+	.long	8492                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x74a:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8458                            # DW_AT_type
+	.long	8508                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x756:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x758:0x5 DW_TAG_template_type_parameter
-	.long	7197                            # DW_AT_type
+	.long	7245                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x75f:0x29 DW_TAG_subprogram
@@ -5979,18 +6012,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8475                            # DW_AT_type
+	.long	8525                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x777:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8487                            # DW_AT_type
+	.long	8537                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x783:0x4 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	35                              # Abbrev [35] 0x785:0x1 DW_TAG_template_type_parameter
@@ -6010,22 +6043,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8500                            # DW_AT_type
+	.long	8550                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x7a0:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8516                            # DW_AT_type
+	.long	8566                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x7ac:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x7ae:0x5 DW_TAG_template_type_parameter
-	.long	7219                            # DW_AT_type
+	.long	7267                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0x7b5:0x2d DW_TAG_subprogram
@@ -6042,18 +6075,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8533                            # DW_AT_type
+	.long	8583                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x7cd:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8549                            # DW_AT_type
+	.long	8599                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x7d9:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x7db:0x5 DW_TAG_template_type_parameter
@@ -6197,12 +6230,12 @@ i:
 	.byte	41                              # DW_AT_decl_line
                                         # DW_AT_external
 	.byte	15                              # Abbrev [15] 0x8a8:0x6 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
+	.long	7225                            # DW_AT_type
 	.byte	20                              # DW_AT_name
 	.byte	33                              # Abbrev [33] 0x8ae:0xc DW_TAG_GNU_template_parameter_pack
 	.byte	194                             # DW_AT_name
 	.byte	41                              # Abbrev [41] 0x8b0:0x9 DW_TAG_template_value_parameter
-	.long	7177                            # DW_AT_type
+	.long	7225                            # DW_AT_type
 	.byte	3                               # DW_AT_location
 	.byte	161
 	.byte	0
@@ -6220,12 +6253,12 @@ i:
 	.byte	41                              # DW_AT_decl_line
                                         # DW_AT_external
 	.byte	15                              # Abbrev [15] 0x8c7:0x6 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
+	.long	7225                            # DW_AT_type
 	.byte	20                              # DW_AT_name
 	.byte	33                              # Abbrev [33] 0x8cd:0x9 DW_TAG_GNU_template_parameter_pack
 	.byte	194                             # DW_AT_name
 	.byte	38                              # Abbrev [38] 0x8cf:0x6 DW_TAG_template_value_parameter
-	.long	7177                            # DW_AT_type
+	.long	7225                            # DW_AT_type
 	.byte	0                               # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
@@ -6260,12 +6293,12 @@ i:
 	.byte	41                              # DW_AT_decl_line
                                         # DW_AT_external
 	.byte	15                              # Abbrev [15] 0x8ff:0x6 DW_TAG_template_type_parameter
-	.long	7147                            # DW_AT_type
+	.long	7195                            # DW_AT_type
 	.byte	20                              # DW_AT_name
 	.byte	33                              # Abbrev [33] 0x905:0x9 DW_TAG_GNU_template_parameter_pack
 	.byte	194                             # DW_AT_name
 	.byte	38                              # Abbrev [38] 0x907:0x6 DW_TAG_template_value_parameter
-	.long	7147                            # DW_AT_type
+	.long	7195                            # DW_AT_type
 	.byte	1                               # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
@@ -6403,42 +6436,42 @@ i:
 	.byte	41                              # DW_AT_decl_line
                                         # DW_AT_external
 	.byte	15                              # Abbrev [15] 0x9c9:0x6 DW_TAG_template_type_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	20                              # DW_AT_name
 	.byte	33                              # Abbrev [33] 0x9cf:0x47 DW_TAG_GNU_template_parameter_pack
 	.byte	194                             # DW_AT_name
 	.byte	39                              # Abbrev [39] 0x9d1:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	0                               # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0x9d7:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	1                               # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0x9dd:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	6                               # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0x9e3:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	7                               # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0x9e9:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	13                              # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0x9ef:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	14                              # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0x9f5:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	31                              # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0x9fb:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	32                              # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0xa01:0x6 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.byte	33                              # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0xa07:0x7 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.asciz	"\377"                          # DW_AT_const_value
 	.byte	39                              # Abbrev [39] 0xa0e:0x7 DW_TAG_template_value_parameter
-	.long	7222                            # DW_AT_type
+	.long	7270                            # DW_AT_type
 	.ascii	"\200\177"                      # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
@@ -6453,12 +6486,12 @@ i:
 	.byte	41                              # DW_AT_decl_line
                                         # DW_AT_external
 	.byte	15                              # Abbrev [15] 0xa23:0x6 DW_TAG_template_type_parameter
-	.long	7226                            # DW_AT_type
+	.long	7274                            # DW_AT_type
 	.byte	20                              # DW_AT_name
 	.byte	33                              # Abbrev [33] 0xa29:0x19 DW_TAG_GNU_template_parameter_pack
 	.byte	194                             # DW_AT_name
 	.byte	42                              # Abbrev [42] 0xa2b:0x16 DW_TAG_template_value_parameter
-	.long	7226                            # DW_AT_type
+	.long	7274                            # DW_AT_type
 	.byte	16                              # DW_AT_const_value
 	.byte	254
 	.byte	255
@@ -6510,18 +6543,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8566                            # DW_AT_type
+	.long	8616                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xa74:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8582                            # DW_AT_type
+	.long	8632                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xa80:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xa82:0x5 DW_TAG_template_type_parameter
@@ -6542,22 +6575,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8599                            # DW_AT_type
+	.long	8649                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xaa1:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8615                            # DW_AT_type
+	.long	8665                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xaad:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xaaf:0x5 DW_TAG_template_type_parameter
-	.long	7230                            # DW_AT_type
+	.long	7278                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	40                              # Abbrev [40] 0xab6:0x2d DW_TAG_subprogram
@@ -6573,18 +6606,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7468                            # DW_AT_type
+	.long	7516                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xace:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8632                            # DW_AT_type
+	.long	8682                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xada:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xadc:0x5 DW_TAG_template_type_parameter
@@ -6604,22 +6637,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8649                            # DW_AT_type
+	.long	8699                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xafb:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8665                            # DW_AT_type
+	.long	8715                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xb07:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xb09:0x5 DW_TAG_template_type_parameter
-	.long	7246                            # DW_AT_type
+	.long	7294                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0xb10:0x2d DW_TAG_subprogram
@@ -6636,22 +6669,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8682                            # DW_AT_type
+	.long	8732                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xb28:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8698                            # DW_AT_type
+	.long	8748                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xb34:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xb36:0x5 DW_TAG_template_type_parameter
-	.long	7282                            # DW_AT_type
+	.long	7330                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0xb3d:0x2d DW_TAG_subprogram
@@ -6668,22 +6701,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8715                            # DW_AT_type
+	.long	8765                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xb55:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8731                            # DW_AT_type
+	.long	8781                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xb61:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xb63:0x5 DW_TAG_template_type_parameter
-	.long	7293                            # DW_AT_type
+	.long	7341                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0xb6a:0x2d DW_TAG_subprogram
@@ -6700,22 +6733,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8748                            # DW_AT_type
+	.long	8798                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xb82:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8764                            # DW_AT_type
+	.long	8814                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xb8e:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xb90:0x5 DW_TAG_template_type_parameter
-	.long	7296                            # DW_AT_type
+	.long	7344                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0xb97:0x2d DW_TAG_subprogram
@@ -6732,22 +6765,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8781                            # DW_AT_type
+	.long	8831                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xbaf:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8797                            # DW_AT_type
+	.long	8847                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xbbb:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xbbd:0x5 DW_TAG_template_type_parameter
-	.long	7304                            # DW_AT_type
+	.long	7352                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	23                              # Abbrev [23] 0xbc4:0x2d DW_TAG_subprogram
@@ -6764,22 +6797,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8814                            # DW_AT_type
+	.long	8864                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xbdc:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8830                            # DW_AT_type
+	.long	8880                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xbe8:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xbea:0x5 DW_TAG_template_type_parameter
-	.long	7309                            # DW_AT_type
+	.long	7357                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	44                              # Abbrev [44] 0xbf1:0x2e DW_TAG_subprogram
@@ -6795,18 +6828,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8847                            # DW_AT_type
+	.long	8897                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xc0a:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8863                            # DW_AT_type
+	.long	8913                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xc16:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xc18:0x5 DW_TAG_template_type_parameter
@@ -6827,22 +6860,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8880                            # DW_AT_type
+	.long	8930                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xc39:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8896                            # DW_AT_type
+	.long	8946                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xc45:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xc47:0x5 DW_TAG_template_type_parameter
-	.long	7319                            # DW_AT_type
+	.long	7367                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xc4e:0x34 DW_TAG_subprogram
@@ -6859,24 +6892,24 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8913                            # DW_AT_type
+	.long	8963                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xc68:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8934                            # DW_AT_type
+	.long	8984                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xc74:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xc76:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
+	.long	7370                            # DW_AT_type
 	.byte	34                              # Abbrev [34] 0xc7b:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
+	.long	7370                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xc82:0x34 DW_TAG_subprogram
@@ -6893,24 +6926,24 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8956                            # DW_AT_type
+	.long	9006                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xc9c:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	8977                            # DW_AT_type
+	.long	9027                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xca8:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xcaa:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
+	.long	7370                            # DW_AT_type
 	.byte	34                              # Abbrev [34] 0xcaf:0x5 DW_TAG_template_type_parameter
-	.long	7327                            # DW_AT_type
+	.long	7375                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xcb6:0x2f DW_TAG_subprogram
@@ -6927,22 +6960,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	8999                            # DW_AT_type
+	.long	9049                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xcd0:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9015                            # DW_AT_type
+	.long	9065                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xcdc:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xcde:0x5 DW_TAG_template_type_parameter
-	.long	7332                            # DW_AT_type
+	.long	7380                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xce5:0x2f DW_TAG_subprogram
@@ -6959,22 +6992,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9032                            # DW_AT_type
+	.long	9082                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xcff:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9048                            # DW_AT_type
+	.long	9098                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xd0b:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xd0d:0x5 DW_TAG_template_type_parameter
-	.long	7337                            # DW_AT_type
+	.long	7385                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xd14:0x2f DW_TAG_subprogram
@@ -6991,22 +7024,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9065                            # DW_AT_type
+	.long	9115                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xd2e:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9081                            # DW_AT_type
+	.long	9131                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xd3a:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xd3c:0x5 DW_TAG_template_type_parameter
-	.long	7353                            # DW_AT_type
+	.long	7401                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xd43:0x2f DW_TAG_subprogram
@@ -7023,22 +7056,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9098                            # DW_AT_type
+	.long	9148                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xd5d:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9114                            # DW_AT_type
+	.long	9164                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xd69:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xd6b:0x5 DW_TAG_template_type_parameter
-	.long	7354                            # DW_AT_type
+	.long	7402                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	45                              # Abbrev [45] 0xd72:0x2f DW_TAG_subprogram
@@ -7054,22 +7087,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9131                            # DW_AT_type
+	.long	9181                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xd8c:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9147                            # DW_AT_type
+	.long	9197                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xd98:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xd9a:0x5 DW_TAG_template_type_parameter
-	.long	7359                            # DW_AT_type
+	.long	7407                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	45                              # Abbrev [45] 0xda1:0x2f DW_TAG_subprogram
@@ -7085,18 +7118,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9164                            # DW_AT_type
+	.long	9214                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xdbb:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9180                            # DW_AT_type
+	.long	9230                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xdc7:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xdc9:0x5 DW_TAG_template_type_parameter
@@ -7116,22 +7149,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9197                            # DW_AT_type
+	.long	9247                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xdea:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9213                            # DW_AT_type
+	.long	9263                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xdf6:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xdf8:0x5 DW_TAG_template_type_parameter
-	.long	7364                            # DW_AT_type
+	.long	7412                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xdff:0x1f DW_TAG_subprogram
@@ -7147,7 +7180,7 @@ i:
 	.byte	46                              # Abbrev [46] 0xe0d:0x9 DW_TAG_GNU_template_parameter_pack
 	.short	278                             # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xe10:0x5 DW_TAG_template_type_parameter
-	.long	7162                            # DW_AT_type
+	.long	7210                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	47                              # Abbrev [47] 0xe16:0x7 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
@@ -7182,7 +7215,7 @@ i:
 	.byte	64                              # DW_AT_decl_line
                                         # DW_AT_external
 	.byte	49                              # Abbrev [49] 0xe45:0x7 DW_TAG_template_type_parameter
-	.long	7162                            # DW_AT_type
+	.long	7210                            # DW_AT_type
 	.short	278                             # DW_AT_name
 	.byte	48                              # Abbrev [48] 0xe4c:0x3 DW_TAG_GNU_template_parameter_pack
 	.short	279                             # DW_AT_name
@@ -7201,18 +7234,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	7752                            # DW_AT_type
+	.long	7800                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xe6a:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9230                            # DW_AT_type
+	.long	9280                            # DW_AT_type
 	.byte	50                              # Abbrev [50] 0xe76:0x2 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	0                               # End Of Children Mark
@@ -7230,24 +7263,24 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9241                            # DW_AT_type
+	.long	9291                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xe93:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9262                            # DW_AT_type
+	.long	9312                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xe9f:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xea1:0x5 DW_TAG_template_type_parameter
-	.long	7347                            # DW_AT_type
+	.long	7395                            # DW_AT_type
 	.byte	34                              # Abbrev [34] 0xea6:0x5 DW_TAG_template_type_parameter
-	.long	7347                            # DW_AT_type
+	.long	7395                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xead:0x2f DW_TAG_subprogram
@@ -7264,22 +7297,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9284                            # DW_AT_type
+	.long	9334                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xec7:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9300                            # DW_AT_type
+	.long	9350                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xed3:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xed5:0x5 DW_TAG_template_type_parameter
-	.long	7369                            # DW_AT_type
+	.long	7417                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0xedc:0x2f DW_TAG_subprogram
@@ -7296,22 +7329,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9317                            # DW_AT_type
+	.long	9367                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0xef6:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9333                            # DW_AT_type
+	.long	9383                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0xf02:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0xf04:0x5 DW_TAG_template_type_parameter
-	.long	7390                            # DW_AT_type
+	.long	7438                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	14                              # Abbrev [14] 0xf0b:0x20e DW_TAG_structure_type
@@ -7709,8 +7742,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x1138:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7734,8 +7767,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x1163:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7759,8 +7792,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x118e:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7802,8 +7835,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	54                              # Abbrev [54] 0x11d1:0x6 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
@@ -7821,8 +7854,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x11f2:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7846,8 +7879,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x121d:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7871,8 +7904,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x1248:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7896,8 +7929,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x1273:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7921,8 +7954,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x129e:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7946,8 +7979,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x12c9:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7971,8 +8004,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x12f4:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -7996,8 +8029,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	15                              # Abbrev [15] 0x131f:0x6 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
@@ -8014,8 +8047,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	15                              # Abbrev [15] 0x1340:0x6 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
@@ -8032,8 +8065,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x1361:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -8057,8 +8090,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x138c:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -8082,8 +8115,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x13b7:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -8107,8 +8140,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	15                              # Abbrev [15] 0x13e2:0x6 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
@@ -8125,8 +8158,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x1403:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -8150,8 +8183,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9350                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9400                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	24                              # Abbrev [24] 0x142e:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
@@ -8256,18 +8289,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9355                            # DW_AT_type
+	.long	9405                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x14e1:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9371                            # DW_AT_type
+	.long	9421                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x14ed:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x14ef:0x5 DW_TAG_template_type_parameter
@@ -8288,22 +8321,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9388                            # DW_AT_type
+	.long	9438                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1510:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9404                            # DW_AT_type
+	.long	9454                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x151c:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x151e:0x5 DW_TAG_template_type_parameter
-	.long	7401                            # DW_AT_type
+	.long	7449                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1525:0x2f DW_TAG_subprogram
@@ -8320,22 +8353,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9421                            # DW_AT_type
+	.long	9471                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x153f:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9437                            # DW_AT_type
+	.long	9487                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x154b:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x154d:0x5 DW_TAG_template_type_parameter
-	.long	7406                            # DW_AT_type
+	.long	7454                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1554:0x13 DW_TAG_subprogram
@@ -8383,24 +8416,24 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9454                            # DW_AT_type
+	.long	9504                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x159b:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9475                            # DW_AT_type
+	.long	9525                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x15a7:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x15a9:0x5 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
+	.long	7225                            # DW_AT_type
 	.byte	34                              # Abbrev [34] 0x15ae:0x5 DW_TAG_template_type_parameter
-	.long	7411                            # DW_AT_type
+	.long	7459                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x15b5:0x2f DW_TAG_subprogram
@@ -8417,22 +8450,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9497                            # DW_AT_type
+	.long	9547                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x15cf:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9513                            # DW_AT_type
+	.long	9563                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x15db:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x15dd:0x5 DW_TAG_template_type_parameter
-	.long	7416                            # DW_AT_type
+	.long	7464                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x15e4:0x13 DW_TAG_subprogram
@@ -8463,22 +8496,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9530                            # DW_AT_type
+	.long	9580                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1611:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9546                            # DW_AT_type
+	.long	9596                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x161d:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x161f:0x5 DW_TAG_template_type_parameter
-	.long	7430                            # DW_AT_type
+	.long	7478                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1626:0x39 DW_TAG_subprogram
@@ -8495,18 +8528,18 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9563                            # DW_AT_type
+	.long	9613                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1640:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9589                            # DW_AT_type
+	.long	9639                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x164c:0x12 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x164e:0x5 DW_TAG_template_type_parameter
@@ -8514,7 +8547,7 @@ i:
 	.byte	34                              # Abbrev [34] 0x1653:0x5 DW_TAG_template_type_parameter
 	.long	505                             # DW_AT_type
 	.byte	34                              # Abbrev [34] 0x1658:0x5 DW_TAG_template_type_parameter
-	.long	7435                            # DW_AT_type
+	.long	7483                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x165f:0x2f DW_TAG_subprogram
@@ -8531,22 +8564,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9616                            # DW_AT_type
+	.long	9666                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1679:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9632                            # DW_AT_type
+	.long	9682                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1685:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1687:0x5 DW_TAG_template_type_parameter
-	.long	7440                            # DW_AT_type
+	.long	7488                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x168e:0x2f DW_TAG_subprogram
@@ -8563,22 +8596,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9649                            # DW_AT_type
+	.long	9699                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x16a8:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9665                            # DW_AT_type
+	.long	9715                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x16b4:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x16b6:0x5 DW_TAG_template_type_parameter
-	.long	7452                            # DW_AT_type
+	.long	7500                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x16bd:0x2f DW_TAG_subprogram
@@ -8595,22 +8628,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9682                            # DW_AT_type
+	.long	9732                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x16d7:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9698                            # DW_AT_type
+	.long	9748                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x16e3:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x16e5:0x5 DW_TAG_template_type_parameter
-	.long	7462                            # DW_AT_type
+	.long	7510                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	45                              # Abbrev [45] 0x16ec:0x2f DW_TAG_subprogram
@@ -8626,22 +8659,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9715                            # DW_AT_type
+	.long	9765                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1706:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9731                            # DW_AT_type
+	.long	9781                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1712:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1714:0x5 DW_TAG_template_type_parameter
-	.long	7468                            # DW_AT_type
+	.long	7516                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x171b:0x5 DW_TAG_pointer_type
@@ -8658,8 +8691,8 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	485                             # DW_AT_name
-	.long	9748                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	9798                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	18                              # Abbrev [18] 0x173c:0x2 DW_TAG_template_type_parameter
 	.byte	20                              # DW_AT_name
@@ -8679,22 +8712,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9753                            # DW_AT_type
+	.long	9803                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1759:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9769                            # DW_AT_type
+	.long	9819                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1765:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1767:0x5 DW_TAG_template_type_parameter
-	.long	7484                            # DW_AT_type
+	.long	7532                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x176e:0x2f DW_TAG_subprogram
@@ -8711,22 +8744,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9786                            # DW_AT_type
+	.long	9836                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1788:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9802                            # DW_AT_type
+	.long	9852                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1794:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1796:0x5 DW_TAG_template_type_parameter
-	.long	7510                            # DW_AT_type
+	.long	7558                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x179d:0x2f DW_TAG_subprogram
@@ -8743,22 +8776,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9819                            # DW_AT_type
+	.long	9869                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x17b7:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9835                            # DW_AT_type
+	.long	9885                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x17c3:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x17c5:0x5 DW_TAG_template_type_parameter
-	.long	7536                            # DW_AT_type
+	.long	7584                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	61                              # Abbrev [61] 0x17cc:0x19 DW_TAG_subprogram
@@ -8770,7 +8803,7 @@ i:
 	.short	339                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	162                             # DW_AT_decl_line
-	.long	7354                            # DW_AT_type
+	.long	7402                            # DW_AT_type
                                         # DW_AT_external
 	.byte	15                              # Abbrev [15] 0x17de:0x6 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
@@ -8790,22 +8823,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9852                            # DW_AT_type
+	.long	9902                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x17ff:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9868                            # DW_AT_type
+	.long	9918                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x180b:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x180d:0x5 DW_TAG_template_type_parameter
-	.long	7562                            # DW_AT_type
+	.long	7610                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1814:0x2f DW_TAG_subprogram
@@ -8822,22 +8855,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9885                            # DW_AT_type
+	.long	9935                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x182e:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9901                            # DW_AT_type
+	.long	9951                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x183a:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x183c:0x5 DW_TAG_template_type_parameter
-	.long	7567                            # DW_AT_type
+	.long	7615                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1843:0x2f DW_TAG_subprogram
@@ -8854,22 +8887,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9918                            # DW_AT_type
+	.long	9968                            # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x185d:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9934                            # DW_AT_type
+	.long	9984                            # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1869:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x186b:0x5 DW_TAG_template_type_parameter
-	.long	7589                            # DW_AT_type
+	.long	7637                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1872:0x2f DW_TAG_subprogram
@@ -8886,22 +8919,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9951                            # DW_AT_type
+	.long	10001                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x188c:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	9967                            # DW_AT_type
+	.long	10017                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1898:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x189a:0x5 DW_TAG_template_type_parameter
-	.long	7595                            # DW_AT_type
+	.long	7643                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x18a1:0x2f DW_TAG_subprogram
@@ -8918,22 +8951,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	9984                            # DW_AT_type
+	.long	10034                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x18bb:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10000                           # DW_AT_type
+	.long	10050                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x18c7:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x18c9:0x5 DW_TAG_template_type_parameter
-	.long	7601                            # DW_AT_type
+	.long	7649                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x18d0:0x2f DW_TAG_subprogram
@@ -8950,22 +8983,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10017                           # DW_AT_type
+	.long	10067                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x18ea:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10033                           # DW_AT_type
+	.long	10083                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x18f6:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x18f8:0x5 DW_TAG_template_type_parameter
-	.long	7611                            # DW_AT_type
+	.long	7659                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x18ff:0x2f DW_TAG_subprogram
@@ -8982,22 +9015,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10050                           # DW_AT_type
+	.long	10100                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1919:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10066                           # DW_AT_type
+	.long	10116                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1925:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1927:0x5 DW_TAG_template_type_parameter
-	.long	7628                            # DW_AT_type
+	.long	7676                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x192e:0x2f DW_TAG_subprogram
@@ -9014,22 +9047,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10083                           # DW_AT_type
+	.long	10133                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1948:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10099                           # DW_AT_type
+	.long	10149                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1954:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1956:0x5 DW_TAG_template_type_parameter
-	.long	7633                            # DW_AT_type
+	.long	7681                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x195d:0x2f DW_TAG_subprogram
@@ -9046,22 +9079,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10116                           # DW_AT_type
+	.long	10166                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1977:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10132                           # DW_AT_type
+	.long	10182                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1983:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1985:0x5 DW_TAG_template_type_parameter
-	.long	7664                            # DW_AT_type
+	.long	7712                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x198c:0x2f DW_TAG_subprogram
@@ -9078,22 +9111,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10149                           # DW_AT_type
+	.long	10199                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x19a6:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10165                           # DW_AT_type
+	.long	10215                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x19b2:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x19b4:0x5 DW_TAG_template_type_parameter
-	.long	7687                            # DW_AT_type
+	.long	7735                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x19bb:0x2f DW_TAG_subprogram
@@ -9110,22 +9143,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10182                           # DW_AT_type
+	.long	10232                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x19d5:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10198                           # DW_AT_type
+	.long	10248                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x19e1:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x19e3:0x5 DW_TAG_template_type_parameter
-	.long	7354                            # DW_AT_type
+	.long	7402                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	45                              # Abbrev [45] 0x19ea:0x2f DW_TAG_subprogram
@@ -9141,22 +9174,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10215                           # DW_AT_type
+	.long	10265                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1a04:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10231                           # DW_AT_type
+	.long	10281                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1a10:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1a12:0x5 DW_TAG_template_type_parameter
-	.long	7699                            # DW_AT_type
+	.long	7747                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	45                              # Abbrev [45] 0x1a19:0x30 DW_TAG_subprogram
@@ -9172,22 +9205,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10248                           # DW_AT_type
+	.long	10298                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1a34:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10264                           # DW_AT_type
+	.long	10314                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1a40:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1a42:0x5 DW_TAG_template_type_parameter
-	.long	7706                            # DW_AT_type
+	.long	7754                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	45                              # Abbrev [45] 0x1a49:0x30 DW_TAG_subprogram
@@ -9203,22 +9236,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10281                           # DW_AT_type
+	.long	10331                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1a64:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10297                           # DW_AT_type
+	.long	10347                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1a70:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1a72:0x5 DW_TAG_template_type_parameter
-	.long	7718                            # DW_AT_type
+	.long	7766                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1a79:0x16 DW_TAG_subprogram
@@ -9249,22 +9282,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10314                           # DW_AT_type
+	.long	10364                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1aaa:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10330                           # DW_AT_type
+	.long	10380                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1ab6:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1ab8:0x5 DW_TAG_template_type_parameter
-	.long	7725                            # DW_AT_type
+	.long	7773                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1abf:0x30 DW_TAG_subprogram
@@ -9281,22 +9314,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10347                           # DW_AT_type
+	.long	10397                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1ada:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10363                           # DW_AT_type
+	.long	10413                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1ae6:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1ae8:0x5 DW_TAG_template_type_parameter
-	.long	7730                            # DW_AT_type
+	.long	7778                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1aef:0x30 DW_TAG_subprogram
@@ -9313,22 +9346,22 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10380                           # DW_AT_type
+	.long	10430                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1b0a:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10396                           # DW_AT_type
+	.long	10446                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1b16:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1b18:0x5 DW_TAG_template_type_parameter
-	.long	7740                            # DW_AT_type
+	.long	7788                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	12                              # Abbrev [12] 0x1b1f:0x30 DW_TAG_subprogram
@@ -9345,2364 +9378,2421 @@ i:
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10413                           # DW_AT_type
+	.long	10463                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1b3a:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10429                           # DW_AT_type
+	.long	10479                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1b46:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1b48:0x5 DW_TAG_template_type_parameter
-	.long	7762                            # DW_AT_type
+	.long	7810                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	14                              # Abbrev [14] 0x1b4f:0x12 DW_TAG_structure_type
+	.byte	12                              # Abbrev [12] 0x1b4f:0x30 DW_TAG_subprogram
+	.ascii	"\207\001"                      # DW_AT_low_pc
+	.long	.Lfunc_end134-.Lfunc_begin134   # DW_AT_high_pc
+	.byte	1                               # DW_AT_frame_base
+	.byte	86
+	.short	381                             # DW_AT_linkage_name
+	.short	382                             # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	33                              # DW_AT_decl_line
+                                        # DW_AT_external
+	.byte	27                              # Abbrev [27] 0x1b5e:0xc DW_TAG_variable
+	.byte	2                               # DW_AT_location
+	.byte	145
+	.byte	120
+	.short	390                             # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	34                              # DW_AT_decl_line
+	.long	10496                           # DW_AT_type
+	.byte	27                              # Abbrev [27] 0x1b6a:0xc DW_TAG_variable
+	.byte	2                               # DW_AT_location
+	.byte	145
+	.byte	112
+	.short	387                             # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	35                              # DW_AT_decl_line
+	.long	10512                           # DW_AT_type
+	.byte	33                              # Abbrev [33] 0x1b76:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1b78:0x5 DW_TAG_template_type_parameter
+	.long	7819                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	14                              # Abbrev [14] 0x1b7f:0x12 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.byte	133                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	153                             # DW_AT_decl_line
-	.byte	51                              # Abbrev [51] 0x1b55:0xb DW_TAG_subprogram
+	.byte	51                              # Abbrev [51] 0x1b85:0xb DW_TAG_subprogram
 	.byte	131                             # DW_AT_linkage_name
 	.byte	132                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	154                             # DW_AT_decl_line
                                         # DW_AT_declaration
                                         # DW_AT_external
-	.byte	19                              # Abbrev [19] 0x1b5a:0x5 DW_TAG_formal_parameter
-	.long	7009                            # DW_AT_type
+	.byte	19                              # Abbrev [19] 0x1b8a:0x5 DW_TAG_formal_parameter
+	.long	7057                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1b61:0x5 DW_TAG_pointer_type
-	.long	6991                            # DW_AT_type
-	.byte	62                              # Abbrev [62] 0x1b66:0x21 DW_TAG_subprogram
-	.ascii	"\207\001"                      # DW_AT_low_pc
-	.long	.Lfunc_end134-.Lfunc_begin134   # DW_AT_high_pc
-	.byte	1                               # DW_AT_frame_base
-	.byte	86
-	.long	7033                            # DW_AT_object_pointer
-	.short	327                             # DW_AT_decl_line
-	.long	6997                            # DW_AT_specification
-	.byte	57                              # Abbrev [57] 0x1b79:0xa DW_TAG_formal_parameter
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	120
-	.short	485                             # DW_AT_name
-	.long	10446                           # DW_AT_type
-                                        # DW_AT_artificial
-	.byte	32                              # Abbrev [32] 0x1b83:0x3 DW_TAG_structure_type
-	.short	295                             # DW_AT_name
-                                        # DW_AT_declaration
-	.byte	0                               # End Of Children Mark
-	.byte	45                              # Abbrev [45] 0x1b87:0x30 DW_TAG_subprogram
+	.byte	55                              # Abbrev [55] 0x1b91:0x5 DW_TAG_pointer_type
+	.long	7039                            # DW_AT_type
+	.byte	62                              # Abbrev [62] 0x1b96:0x21 DW_TAG_subprogram
 	.ascii	"\210\001"                      # DW_AT_low_pc
 	.long	.Lfunc_end135-.Lfunc_begin135   # DW_AT_high_pc
 	.byte	1                               # DW_AT_frame_base
 	.byte	86
-	.short	381                             # DW_AT_linkage_name
-	.short	297                             # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	33                              # DW_AT_decl_line
-	.byte	27                              # Abbrev [27] 0x1b96:0xc DW_TAG_variable
+	.long	7081                            # DW_AT_object_pointer
+	.short	329                             # DW_AT_decl_line
+	.long	7045                            # DW_AT_specification
+	.byte	57                              # Abbrev [57] 0x1ba9:0xa DW_TAG_formal_parameter
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	34                              # DW_AT_decl_line
-	.long	10451                           # DW_AT_type
-	.byte	27                              # Abbrev [27] 0x1ba2:0xc DW_TAG_variable
-	.byte	2                               # DW_AT_location
-	.byte	145
-	.byte	112
-	.short	385                             # DW_AT_name
-	.byte	0                               # DW_AT_decl_file
-	.byte	35                              # DW_AT_decl_line
-	.long	10467                           # DW_AT_type
-	.byte	33                              # Abbrev [33] 0x1bae:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1bb0:0x5 DW_TAG_template_type_parameter
-	.long	7043                            # DW_AT_type
+	.short	487                             # DW_AT_name
+	.long	10529                           # DW_AT_type
+                                        # DW_AT_artificial
+	.byte	32                              # Abbrev [32] 0x1bb3:0x3 DW_TAG_structure_type
+	.short	295                             # DW_AT_name
+                                        # DW_AT_declaration
 	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	12                              # Abbrev [12] 0x1bb7:0x30 DW_TAG_subprogram
+	.byte	45                              # Abbrev [45] 0x1bb7:0x30 DW_TAG_subprogram
 	.ascii	"\211\001"                      # DW_AT_low_pc
 	.long	.Lfunc_end136-.Lfunc_begin136   # DW_AT_high_pc
 	.byte	1                               # DW_AT_frame_base
 	.byte	86
-	.short	382                             # DW_AT_linkage_name
-	.short	383                             # DW_AT_name
+	.short	383                             # DW_AT_linkage_name
+	.short	297                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	33                              # DW_AT_decl_line
-                                        # DW_AT_external
 	.byte	27                              # Abbrev [27] 0x1bc6:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	120
-	.short	388                             # DW_AT_name
+	.short	390                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	34                              # DW_AT_decl_line
-	.long	10484                           # DW_AT_type
+	.long	10534                           # DW_AT_type
 	.byte	27                              # Abbrev [27] 0x1bd2:0xc DW_TAG_variable
 	.byte	2                               # DW_AT_location
 	.byte	145
 	.byte	112
-	.short	385                             # DW_AT_name
+	.short	387                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	35                              # DW_AT_decl_line
-	.long	10500                           # DW_AT_type
+	.long	10550                           # DW_AT_type
 	.byte	33                              # Abbrev [33] 0x1bde:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1be0:0x5 DW_TAG_template_type_parameter
-	.long	7771                            # DW_AT_type
+	.long	7091                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	3                               # Abbrev [3] 0x1be7:0x4 DW_TAG_base_type
+	.byte	12                              # Abbrev [12] 0x1be7:0x30 DW_TAG_subprogram
+	.ascii	"\212\001"                      # DW_AT_low_pc
+	.long	.Lfunc_end137-.Lfunc_begin137   # DW_AT_high_pc
+	.byte	1                               # DW_AT_frame_base
+	.byte	86
+	.short	384                             # DW_AT_linkage_name
+	.short	385                             # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	33                              # DW_AT_decl_line
+                                        # DW_AT_external
+	.byte	27                              # Abbrev [27] 0x1bf6:0xc DW_TAG_variable
+	.byte	2                               # DW_AT_location
+	.byte	145
+	.byte	120
+	.short	390                             # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	34                              # DW_AT_decl_line
+	.long	10567                           # DW_AT_type
+	.byte	27                              # Abbrev [27] 0x1c02:0xc DW_TAG_variable
+	.byte	2                               # DW_AT_location
+	.byte	145
+	.byte	112
+	.short	387                             # DW_AT_name
+	.byte	0                               # DW_AT_decl_file
+	.byte	35                              # DW_AT_decl_line
+	.long	10583                           # DW_AT_type
+	.byte	33                              # Abbrev [33] 0x1c0e:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1c10:0x5 DW_TAG_template_type_parameter
+	.long	7821                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	3                               # Abbrev [3] 0x1c17:0x4 DW_TAG_base_type
 	.byte	143                             # DW_AT_name
 	.byte	4                               # DW_AT_encoding
 	.byte	8                               # DW_AT_byte_size
-	.byte	3                               # Abbrev [3] 0x1beb:0x4 DW_TAG_base_type
+	.byte	3                               # Abbrev [3] 0x1c1b:0x4 DW_TAG_base_type
 	.byte	152                             # DW_AT_name
 	.byte	7                               # DW_AT_encoding
 	.byte	8                               # DW_AT_byte_size
-	.byte	3                               # Abbrev [3] 0x1bef:0x4 DW_TAG_base_type
+	.byte	3                               # Abbrev [3] 0x1c1f:0x4 DW_TAG_base_type
 	.byte	155                             # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	8                               # DW_AT_byte_size
-	.byte	7                               # Abbrev [7] 0x1bf3:0x2 DW_TAG_structure_type
+	.byte	7                               # Abbrev [7] 0x1c23:0x2 DW_TAG_structure_type
 	.byte	158                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	55                              # Abbrev [55] 0x1bf5:0x5 DW_TAG_pointer_type
+	.byte	55                              # Abbrev [55] 0x1c25:0x5 DW_TAG_pointer_type
 	.long	170                             # DW_AT_type
-	.byte	14                              # Abbrev [14] 0x1bfa:0xf DW_TAG_structure_type
+	.byte	14                              # Abbrev [14] 0x1c2a:0xf DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.byte	168                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1c00:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x1c30:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1c02:0x5 DW_TAG_template_type_parameter
+	.byte	34                              # Abbrev [34] 0x1c32:0x5 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1c09:0x5 DW_TAG_pointer_type
+	.byte	55                              # Abbrev [55] 0x1c39:0x5 DW_TAG_pointer_type
 	.long	54                              # DW_AT_type
-	.byte	63                              # Abbrev [63] 0x1c0e:0x5 DW_TAG_reference_type
+	.byte	63                              # Abbrev [63] 0x1c3e:0x5 DW_TAG_reference_type
 	.long	54                              # DW_AT_type
-	.byte	64                              # Abbrev [64] 0x1c13:0x5 DW_TAG_rvalue_reference_type
+	.byte	64                              # Abbrev [64] 0x1c43:0x5 DW_TAG_rvalue_reference_type
 	.long	54                              # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1c18:0x5 DW_TAG_const_type
+	.byte	65                              # Abbrev [65] 0x1c48:0x5 DW_TAG_const_type
 	.long	54                              # DW_AT_type
-	.byte	66                              # Abbrev [66] 0x1c1d:0xc DW_TAG_array_type
+	.byte	66                              # Abbrev [66] 0x1c4d:0xc DW_TAG_array_type
 	.long	54                              # DW_AT_type
-	.byte	67                              # Abbrev [67] 0x1c22:0x6 DW_TAG_subrange_type
-	.long	7209                            # DW_AT_type
+	.byte	67                              # Abbrev [67] 0x1c52:0x6 DW_TAG_subrange_type
+	.long	7257                            # DW_AT_type
 	.byte	3                               # DW_AT_count
 	.byte	0                               # End Of Children Mark
-	.byte	68                              # Abbrev [68] 0x1c29:0x4 DW_TAG_base_type
+	.byte	68                              # Abbrev [68] 0x1c59:0x4 DW_TAG_base_type
 	.byte	181                             # DW_AT_name
 	.byte	8                               # DW_AT_byte_size
 	.byte	7                               # DW_AT_encoding
-	.byte	14                              # Abbrev [14] 0x1c2d:0x9 DW_TAG_structure_type
+	.byte	14                              # Abbrev [14] 0x1c5d:0x9 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.byte	186                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	50                              # DW_AT_decl_line
-	.byte	7                               # Abbrev [7] 0x1c33:0x2 DW_TAG_structure_type
+	.byte	7                               # Abbrev [7] 0x1c63:0x2 DW_TAG_structure_type
 	.byte	187                             # DW_AT_name
                                         # DW_AT_declaration
 	.byte	0                               # End Of Children Mark
-	.byte	3                               # Abbrev [3] 0x1c36:0x4 DW_TAG_base_type
+	.byte	3                               # Abbrev [3] 0x1c66:0x4 DW_TAG_base_type
 	.byte	225                             # DW_AT_name
 	.byte	6                               # DW_AT_encoding
 	.byte	1                               # DW_AT_byte_size
-	.byte	3                               # Abbrev [3] 0x1c3a:0x4 DW_TAG_base_type
+	.byte	3                               # Abbrev [3] 0x1c6a:0x4 DW_TAG_base_type
 	.byte	228                             # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	16                              # DW_AT_byte_size
-	.byte	69                              # Abbrev [69] 0x1c3e:0x10 DW_TAG_structure_type
+	.byte	69                              # Abbrev [69] 0x1c6e:0x10 DW_TAG_structure_type
 	.byte	235                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	15                              # Abbrev [15] 0x1c40:0x6 DW_TAG_template_type_parameter
+	.byte	15                              # Abbrev [15] 0x1c70:0x6 DW_TAG_template_type_parameter
 	.long	182                             # DW_AT_type
 	.byte	20                              # DW_AT_name
-	.byte	16                              # Abbrev [16] 0x1c46:0x7 DW_TAG_template_value_parameter
+	.byte	16                              # Abbrev [16] 0x1c76:0x7 DW_TAG_template_value_parameter
 	.long	202                             # DW_AT_type
 	.byte	22                              # DW_AT_name
                                         # DW_AT_default_value
 	.byte	0                               # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
-	.byte	69                              # Abbrev [69] 0x1c4e:0x10 DW_TAG_structure_type
+	.byte	69                              # Abbrev [69] 0x1c7e:0x10 DW_TAG_structure_type
 	.byte	241                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	15                              # Abbrev [15] 0x1c50:0x6 DW_TAG_template_type_parameter
-	.long	7262                            # DW_AT_type
+	.byte	15                              # Abbrev [15] 0x1c80:0x6 DW_TAG_template_type_parameter
+	.long	7310                            # DW_AT_type
 	.byte	20                              # DW_AT_name
-	.byte	16                              # Abbrev [16] 0x1c56:0x7 DW_TAG_template_value_parameter
+	.byte	16                              # Abbrev [16] 0x1c86:0x7 DW_TAG_template_value_parameter
 	.long	202                             # DW_AT_type
 	.byte	22                              # DW_AT_name
                                         # DW_AT_default_value
 	.byte	0                               # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
-	.byte	14                              # Abbrev [14] 0x1c5e:0x14 DW_TAG_structure_type
+	.byte	14                              # Abbrev [14] 0x1c8e:0x14 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.byte	240                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	47                              # DW_AT_decl_line
-	.byte	15                              # Abbrev [15] 0x1c64:0x6 DW_TAG_template_type_parameter
+	.byte	15                              # Abbrev [15] 0x1c94:0x6 DW_TAG_template_type_parameter
 	.long	966                             # DW_AT_type
 	.byte	20                              # DW_AT_name
-	.byte	16                              # Abbrev [16] 0x1c6a:0x7 DW_TAG_template_value_parameter
+	.byte	16                              # Abbrev [16] 0x1c9a:0x7 DW_TAG_template_value_parameter
 	.long	202                             # DW_AT_type
 	.byte	22                              # DW_AT_name
                                         # DW_AT_default_value
 	.byte	0                               # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
-	.byte	70                              # Abbrev [70] 0x1c72:0xb DW_TAG_subroutine_type
+	.byte	70                              # Abbrev [70] 0x1ca2:0xb DW_TAG_subroutine_type
 	.long	54                              # DW_AT_type
-	.byte	52                              # Abbrev [52] 0x1c77:0x5 DW_TAG_formal_parameter
+	.byte	52                              # Abbrev [52] 0x1ca7:0x5 DW_TAG_formal_parameter
 	.long	4531                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	71                              # Abbrev [71] 0x1c7d:0x3 DW_TAG_subroutine_type
-	.byte	72                              # Abbrev [72] 0x1c7e:0x1 DW_TAG_unspecified_parameters
+	.byte	71                              # Abbrev [71] 0x1cad:0x3 DW_TAG_subroutine_type
+	.byte	72                              # Abbrev [72] 0x1cae:0x1 DW_TAG_unspecified_parameters
 	.byte	0                               # End Of Children Mark
-	.byte	71                              # Abbrev [71] 0x1c80:0x8 DW_TAG_subroutine_type
-	.byte	52                              # Abbrev [52] 0x1c81:0x5 DW_TAG_formal_parameter
+	.byte	71                              # Abbrev [71] 0x1cb0:0x8 DW_TAG_subroutine_type
+	.byte	52                              # Abbrev [52] 0x1cb1:0x5 DW_TAG_formal_parameter
 	.long	54                              # DW_AT_type
-	.byte	72                              # Abbrev [72] 0x1c86:0x1 DW_TAG_unspecified_parameters
+	.byte	72                              # Abbrev [72] 0x1cb6:0x1 DW_TAG_unspecified_parameters
 	.byte	0                               # End Of Children Mark
-	.byte	63                              # Abbrev [63] 0x1c88:0x5 DW_TAG_reference_type
-	.long	7192                            # DW_AT_type
-	.byte	63                              # Abbrev [63] 0x1c8d:0x5 DW_TAG_reference_type
-	.long	7314                            # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1c92:0x5 DW_TAG_pointer_type
-	.long	7192                            # DW_AT_type
-	.byte	73                              # Abbrev [73] 0x1c97:0x3 DW_TAG_unspecified_type
+	.byte	63                              # Abbrev [63] 0x1cb8:0x5 DW_TAG_reference_type
+	.long	7240                            # DW_AT_type
+	.byte	63                              # Abbrev [63] 0x1cbd:0x5 DW_TAG_reference_type
+	.long	7362                            # DW_AT_type
+	.byte	55                              # Abbrev [55] 0x1cc2:0x5 DW_TAG_pointer_type
+	.long	7240                            # DW_AT_type
+	.byte	73                              # Abbrev [73] 0x1cc7:0x3 DW_TAG_unspecified_type
 	.short	257                             # DW_AT_name
-	.byte	55                              # Abbrev [55] 0x1c9a:0x5 DW_TAG_pointer_type
+	.byte	55                              # Abbrev [55] 0x1cca:0x5 DW_TAG_pointer_type
 	.long	505                             # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1c9f:0x5 DW_TAG_pointer_type
-	.long	7155                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1ca4:0x5 DW_TAG_const_type
+	.byte	55                              # Abbrev [55] 0x1ccf:0x5 DW_TAG_pointer_type
+	.long	7203                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1cd4:0x5 DW_TAG_const_type
 	.long	5183                            # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1ca9:0x5 DW_TAG_pointer_type
-	.long	7342                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1cae:0x5 DW_TAG_const_type
-	.long	7347                            # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1cb3:0x5 DW_TAG_pointer_type
-	.long	7352                            # DW_AT_type
-	.byte	74                              # Abbrev [74] 0x1cb8:0x1 DW_TAG_const_type
-	.byte	75                              # Abbrev [75] 0x1cb9:0x1 DW_TAG_subroutine_type
-	.byte	55                              # Abbrev [55] 0x1cba:0x5 DW_TAG_pointer_type
-	.long	7353                            # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1cbf:0x5 DW_TAG_pointer_type
+	.byte	55                              # Abbrev [55] 0x1cd9:0x5 DW_TAG_pointer_type
+	.long	7390                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1cde:0x5 DW_TAG_const_type
+	.long	7395                            # DW_AT_type
+	.byte	55                              # Abbrev [55] 0x1ce3:0x5 DW_TAG_pointer_type
+	.long	7400                            # DW_AT_type
+	.byte	74                              # Abbrev [74] 0x1ce8:0x1 DW_TAG_const_type
+	.byte	75                              # Abbrev [75] 0x1ce9:0x1 DW_TAG_subroutine_type
+	.byte	55                              # Abbrev [55] 0x1cea:0x5 DW_TAG_pointer_type
+	.long	7401                            # DW_AT_type
+	.byte	55                              # Abbrev [55] 0x1cef:0x5 DW_TAG_pointer_type
 	.long	966                             # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1cc4:0x5 DW_TAG_pointer_type
+	.byte	55                              # Abbrev [55] 0x1cf4:0x5 DW_TAG_pointer_type
 	.long	971                             # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1cc9:0x5 DW_TAG_pointer_type
-	.long	7374                            # DW_AT_type
-	.byte	76                              # Abbrev [76] 0x1cce:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1cf9:0x5 DW_TAG_pointer_type
+	.long	7422                            # DW_AT_type
+	.byte	76                              # Abbrev [76] 0x1cfe:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	290                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1cd5:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x1d05:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1cd7:0x5 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x1d07:0x5 DW_TAG_template_type_parameter
+	.long	7225                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	66                              # Abbrev [66] 0x1cde:0xb DW_TAG_array_type
-	.long	7177                            # DW_AT_type
-	.byte	77                              # Abbrev [77] 0x1ce3:0x5 DW_TAG_subrange_type
-	.long	7209                            # DW_AT_type
+	.byte	66                              # Abbrev [66] 0x1d0e:0xb DW_TAG_array_type
+	.long	7225                            # DW_AT_type
+	.byte	77                              # Abbrev [77] 0x1d13:0x5 DW_TAG_subrange_type
+	.long	7257                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	63                              # Abbrev [63] 0x1ce9:0x5 DW_TAG_reference_type
-	.long	7197                            # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1cee:0x5 DW_TAG_pointer_type
-	.long	7197                            # DW_AT_type
-	.byte	55                              # Abbrev [55] 0x1cf3:0x5 DW_TAG_pointer_type
-	.long	7319                            # DW_AT_type
-	.byte	76                              # Abbrev [76] 0x1cf8:0xe DW_TAG_structure_type
+	.byte	63                              # Abbrev [63] 0x1d19:0x5 DW_TAG_reference_type
+	.long	7245                            # DW_AT_type
+	.byte	55                              # Abbrev [55] 0x1d1e:0x5 DW_TAG_pointer_type
+	.long	7245                            # DW_AT_type
+	.byte	55                              # Abbrev [55] 0x1d23:0x5 DW_TAG_pointer_type
+	.long	7367                            # DW_AT_type
+	.byte	76                              # Abbrev [76] 0x1d28:0xe DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	312                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	151                             # DW_AT_decl_line
-	.byte	15                              # Abbrev [15] 0x1cff:0x6 DW_TAG_template_type_parameter
+	.byte	15                              # Abbrev [15] 0x1d2f:0x6 DW_TAG_template_type_parameter
 	.long	54                              # DW_AT_type
 	.byte	20                              # DW_AT_name
 	.byte	0                               # End Of Children Mark
-	.byte	78                              # Abbrev [78] 0x1d06:0x5 DW_TAG_atomic_type
+	.byte	78                              # Abbrev [78] 0x1d36:0x5 DW_TAG_atomic_type
 	.long	54                              # DW_AT_type
-	.byte	79                              # Abbrev [79] 0x1d0b:0x5 DW_TAG_volatile_type
-	.long	7222                            # DW_AT_type
-	.byte	80                              # Abbrev [80] 0x1d10:0xc DW_TAG_array_type
+	.byte	79                              # Abbrev [79] 0x1d3b:0x5 DW_TAG_volatile_type
+	.long	7270                            # DW_AT_type
+	.byte	80                              # Abbrev [80] 0x1d40:0xc DW_TAG_array_type
                                         # DW_AT_GNU_vector
 	.long	54                              # DW_AT_type
-	.byte	67                              # Abbrev [67] 0x1d15:0x6 DW_TAG_subrange_type
-	.long	7209                            # DW_AT_type
+	.byte	67                              # Abbrev [67] 0x1d45:0x6 DW_TAG_subrange_type
+	.long	7257                            # DW_AT_type
 	.byte	2                               # DW_AT_count
 	.byte	0                               # End Of Children Mark
-	.byte	65                              # Abbrev [65] 0x1d1c:0x5 DW_TAG_const_type
-	.long	7457                            # DW_AT_type
-	.byte	79                              # Abbrev [79] 0x1d21:0x5 DW_TAG_volatile_type
-	.long	7177                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1d26:0x5 DW_TAG_const_type
-	.long	7467                            # DW_AT_type
-	.byte	81                              # Abbrev [81] 0x1d2b:0x1 DW_TAG_volatile_type
-	.byte	76                              # Abbrev [76] 0x1d2c:0x10 DW_TAG_structure_type
+	.byte	65                              # Abbrev [65] 0x1d4c:0x5 DW_TAG_const_type
+	.long	7505                            # DW_AT_type
+	.byte	79                              # Abbrev [79] 0x1d51:0x5 DW_TAG_volatile_type
+	.long	7225                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1d56:0x5 DW_TAG_const_type
+	.long	7515                            # DW_AT_type
+	.byte	81                              # Abbrev [81] 0x1d5b:0x1 DW_TAG_volatile_type
+	.byte	76                              # Abbrev [76] 0x1d5c:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	328                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1d33:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x1d63:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1d35:0x5 DW_TAG_template_type_parameter
+	.byte	34                              # Abbrev [34] 0x1d65:0x5 DW_TAG_template_type_parameter
 	.long	966                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	82                              # Abbrev [82] 0x1d3c:0x9 DW_TAG_ptr_to_member_type
-	.long	7493                            # DW_AT_type
-	.long	7155                            # DW_AT_containing_type
-	.byte	71                              # Abbrev [71] 0x1d45:0x7 DW_TAG_subroutine_type
-	.byte	19                              # Abbrev [19] 0x1d46:0x5 DW_TAG_formal_parameter
-	.long	7500                            # DW_AT_type
+	.byte	82                              # Abbrev [82] 0x1d6c:0x9 DW_TAG_ptr_to_member_type
+	.long	7541                            # DW_AT_type
+	.long	7203                            # DW_AT_containing_type
+	.byte	71                              # Abbrev [71] 0x1d75:0x7 DW_TAG_subroutine_type
+	.byte	19                              # Abbrev [19] 0x1d76:0x5 DW_TAG_formal_parameter
+	.long	7548                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1d4c:0x5 DW_TAG_pointer_type
-	.long	7505                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1d51:0x5 DW_TAG_const_type
-	.long	7155                            # DW_AT_type
-	.byte	82                              # Abbrev [82] 0x1d56:0x9 DW_TAG_ptr_to_member_type
-	.long	7519                            # DW_AT_type
-	.long	7155                            # DW_AT_containing_type
-	.byte	83                              # Abbrev [83] 0x1d5f:0x7 DW_TAG_subroutine_type
+	.byte	55                              # Abbrev [55] 0x1d7c:0x5 DW_TAG_pointer_type
+	.long	7553                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1d81:0x5 DW_TAG_const_type
+	.long	7203                            # DW_AT_type
+	.byte	82                              # Abbrev [82] 0x1d86:0x9 DW_TAG_ptr_to_member_type
+	.long	7567                            # DW_AT_type
+	.long	7203                            # DW_AT_containing_type
+	.byte	83                              # Abbrev [83] 0x1d8f:0x7 DW_TAG_subroutine_type
                                         # DW_AT_reference
-	.byte	19                              # Abbrev [19] 0x1d60:0x5 DW_TAG_formal_parameter
-	.long	7526                            # DW_AT_type
+	.byte	19                              # Abbrev [19] 0x1d90:0x5 DW_TAG_formal_parameter
+	.long	7574                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1d66:0x5 DW_TAG_pointer_type
-	.long	7531                            # DW_AT_type
-	.byte	79                              # Abbrev [79] 0x1d6b:0x5 DW_TAG_volatile_type
-	.long	7155                            # DW_AT_type
-	.byte	82                              # Abbrev [82] 0x1d70:0x9 DW_TAG_ptr_to_member_type
-	.long	7545                            # DW_AT_type
-	.long	7155                            # DW_AT_containing_type
-	.byte	84                              # Abbrev [84] 0x1d79:0x7 DW_TAG_subroutine_type
+	.byte	55                              # Abbrev [55] 0x1d96:0x5 DW_TAG_pointer_type
+	.long	7579                            # DW_AT_type
+	.byte	79                              # Abbrev [79] 0x1d9b:0x5 DW_TAG_volatile_type
+	.long	7203                            # DW_AT_type
+	.byte	82                              # Abbrev [82] 0x1da0:0x9 DW_TAG_ptr_to_member_type
+	.long	7593                            # DW_AT_type
+	.long	7203                            # DW_AT_containing_type
+	.byte	84                              # Abbrev [84] 0x1da9:0x7 DW_TAG_subroutine_type
                                         # DW_AT_rvalue_reference
-	.byte	19                              # Abbrev [19] 0x1d7a:0x5 DW_TAG_formal_parameter
-	.long	7552                            # DW_AT_type
-                                        # DW_AT_artificial
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1d80:0x5 DW_TAG_pointer_type
-	.long	7557                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1d85:0x5 DW_TAG_const_type
-	.long	7531                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1d8a:0x5 DW_TAG_const_type
-	.long	7354                            # DW_AT_type
-	.byte	63                              # Abbrev [63] 0x1d8f:0x5 DW_TAG_reference_type
-	.long	7572                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1d94:0x5 DW_TAG_const_type
-	.long	7577                            # DW_AT_type
-	.byte	66                              # Abbrev [66] 0x1d99:0xc DW_TAG_array_type
-	.long	7222                            # DW_AT_type
-	.byte	67                              # Abbrev [67] 0x1d9e:0x6 DW_TAG_subrange_type
-	.long	7209                            # DW_AT_type
-	.byte	1                               # DW_AT_count
-	.byte	0                               # End Of Children Mark
-	.byte	65                              # Abbrev [65] 0x1da5:0x5 DW_TAG_const_type
-	.long	7594                            # DW_AT_type
-	.byte	85                              # Abbrev [85] 0x1daa:0x1 DW_TAG_subroutine_type
-                                        # DW_AT_reference
-	.byte	79                              # Abbrev [79] 0x1dab:0x5 DW_TAG_volatile_type
+	.byte	19                              # Abbrev [19] 0x1daa:0x5 DW_TAG_formal_parameter
 	.long	7600                            # DW_AT_type
-	.byte	86                              # Abbrev [86] 0x1db0:0x1 DW_TAG_subroutine_type
-                                        # DW_AT_rvalue_reference
-	.byte	65                              # Abbrev [65] 0x1db1:0x5 DW_TAG_const_type
-	.long	7606                            # DW_AT_type
-	.byte	79                              # Abbrev [79] 0x1db6:0x5 DW_TAG_volatile_type
-	.long	7353                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1dbb:0x5 DW_TAG_const_type
-	.long	7616                            # DW_AT_type
-	.byte	66                              # Abbrev [66] 0x1dc0:0xc DW_TAG_array_type
-	.long	7177                            # DW_AT_type
-	.byte	67                              # Abbrev [67] 0x1dc5:0x6 DW_TAG_subrange_type
-	.long	7209                            # DW_AT_type
-	.byte	1                               # DW_AT_count
-	.byte	0                               # End Of Children Mark
-	.byte	63                              # Abbrev [63] 0x1dcc:0x5 DW_TAG_reference_type
-	.long	7611                            # DW_AT_type
-	.byte	63                              # Abbrev [63] 0x1dd1:0x5 DW_TAG_reference_type
-	.long	7638                            # DW_AT_type
-	.byte	65                              # Abbrev [65] 0x1dd6:0x5 DW_TAG_const_type
-	.long	7643                            # DW_AT_type
-	.byte	82                              # Abbrev [82] 0x1ddb:0x9 DW_TAG_ptr_to_member_type
-	.long	7652                            # DW_AT_type
-	.long	7155                            # DW_AT_containing_type
-	.byte	71                              # Abbrev [71] 0x1de4:0x7 DW_TAG_subroutine_type
-	.byte	19                              # Abbrev [19] 0x1de5:0x5 DW_TAG_formal_parameter
-	.long	7659                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1deb:0x5 DW_TAG_pointer_type
-	.long	7155                            # DW_AT_type
-	.byte	70                              # Abbrev [70] 0x1df0:0xb DW_TAG_subroutine_type
-	.long	7675                            # DW_AT_type
-	.byte	52                              # Abbrev [52] 0x1df5:0x5 DW_TAG_formal_parameter
+	.byte	55                              # Abbrev [55] 0x1db0:0x5 DW_TAG_pointer_type
+	.long	7605                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1db5:0x5 DW_TAG_const_type
+	.long	7579                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1dba:0x5 DW_TAG_const_type
+	.long	7402                            # DW_AT_type
+	.byte	63                              # Abbrev [63] 0x1dbf:0x5 DW_TAG_reference_type
+	.long	7620                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1dc4:0x5 DW_TAG_const_type
+	.long	7625                            # DW_AT_type
+	.byte	66                              # Abbrev [66] 0x1dc9:0xc DW_TAG_array_type
+	.long	7270                            # DW_AT_type
+	.byte	67                              # Abbrev [67] 0x1dce:0x6 DW_TAG_subrange_type
+	.long	7257                            # DW_AT_type
+	.byte	1                               # DW_AT_count
+	.byte	0                               # End Of Children Mark
+	.byte	65                              # Abbrev [65] 0x1dd5:0x5 DW_TAG_const_type
+	.long	7642                            # DW_AT_type
+	.byte	85                              # Abbrev [85] 0x1dda:0x1 DW_TAG_subroutine_type
+                                        # DW_AT_reference
+	.byte	79                              # Abbrev [79] 0x1ddb:0x5 DW_TAG_volatile_type
+	.long	7648                            # DW_AT_type
+	.byte	86                              # Abbrev [86] 0x1de0:0x1 DW_TAG_subroutine_type
+                                        # DW_AT_rvalue_reference
+	.byte	65                              # Abbrev [65] 0x1de1:0x5 DW_TAG_const_type
+	.long	7654                            # DW_AT_type
+	.byte	79                              # Abbrev [79] 0x1de6:0x5 DW_TAG_volatile_type
+	.long	7401                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1deb:0x5 DW_TAG_const_type
+	.long	7664                            # DW_AT_type
+	.byte	66                              # Abbrev [66] 0x1df0:0xc DW_TAG_array_type
+	.long	7225                            # DW_AT_type
+	.byte	67                              # Abbrev [67] 0x1df5:0x6 DW_TAG_subrange_type
+	.long	7257                            # DW_AT_type
+	.byte	1                               # DW_AT_count
+	.byte	0                               # End Of Children Mark
+	.byte	63                              # Abbrev [63] 0x1dfc:0x5 DW_TAG_reference_type
+	.long	7659                            # DW_AT_type
+	.byte	63                              # Abbrev [63] 0x1e01:0x5 DW_TAG_reference_type
+	.long	7686                            # DW_AT_type
+	.byte	65                              # Abbrev [65] 0x1e06:0x5 DW_TAG_const_type
+	.long	7691                            # DW_AT_type
+	.byte	82                              # Abbrev [82] 0x1e0b:0x9 DW_TAG_ptr_to_member_type
+	.long	7700                            # DW_AT_type
+	.long	7203                            # DW_AT_containing_type
+	.byte	71                              # Abbrev [71] 0x1e14:0x7 DW_TAG_subroutine_type
+	.byte	19                              # Abbrev [19] 0x1e15:0x5 DW_TAG_formal_parameter
+	.long	7707                            # DW_AT_type
+                                        # DW_AT_artificial
+	.byte	0                               # End Of Children Mark
+	.byte	55                              # Abbrev [55] 0x1e1b:0x5 DW_TAG_pointer_type
+	.long	7203                            # DW_AT_type
+	.byte	70                              # Abbrev [70] 0x1e20:0xb DW_TAG_subroutine_type
+	.long	7723                            # DW_AT_type
+	.byte	52                              # Abbrev [52] 0x1e25:0x5 DW_TAG_formal_parameter
 	.long	54                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1dfb:0x5 DW_TAG_pointer_type
-	.long	7680                            # DW_AT_type
-	.byte	71                              # Abbrev [71] 0x1e00:0x7 DW_TAG_subroutine_type
-	.byte	52                              # Abbrev [52] 0x1e01:0x5 DW_TAG_formal_parameter
+	.byte	55                              # Abbrev [55] 0x1e2b:0x5 DW_TAG_pointer_type
+	.long	7728                            # DW_AT_type
+	.byte	71                              # Abbrev [71] 0x1e30:0x7 DW_TAG_subroutine_type
+	.byte	52                              # Abbrev [52] 0x1e31:0x5 DW_TAG_formal_parameter
 	.long	4531                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	66                              # Abbrev [66] 0x1e07:0xc DW_TAG_array_type
-	.long	7162                            # DW_AT_type
-	.byte	67                              # Abbrev [67] 0x1e0c:0x6 DW_TAG_subrange_type
-	.long	7209                            # DW_AT_type
+	.byte	66                              # Abbrev [66] 0x1e37:0xc DW_TAG_array_type
+	.long	7210                            # DW_AT_type
+	.byte	67                              # Abbrev [67] 0x1e3c:0x6 DW_TAG_subrange_type
+	.long	7257                            # DW_AT_type
 	.byte	1                               # DW_AT_count
 	.byte	0                               # End Of Children Mark
-	.byte	71                              # Abbrev [71] 0x1e13:0x7 DW_TAG_subroutine_type
-	.byte	52                              # Abbrev [52] 0x1e14:0x5 DW_TAG_formal_parameter
+	.byte	71                              # Abbrev [71] 0x1e43:0x7 DW_TAG_subroutine_type
+	.byte	52                              # Abbrev [52] 0x1e44:0x5 DW_TAG_formal_parameter
 	.long	971                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	71                              # Abbrev [71] 0x1e1a:0xc DW_TAG_subroutine_type
-	.byte	52                              # Abbrev [52] 0x1e1b:0x5 DW_TAG_formal_parameter
+	.byte	71                              # Abbrev [71] 0x1e4a:0xc DW_TAG_subroutine_type
+	.byte	52                              # Abbrev [52] 0x1e4b:0x5 DW_TAG_formal_parameter
 	.long	979                             # DW_AT_type
-	.byte	52                              # Abbrev [52] 0x1e20:0x5 DW_TAG_formal_parameter
+	.byte	52                              # Abbrev [52] 0x1e50:0x5 DW_TAG_formal_parameter
 	.long	971                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	71                              # Abbrev [71] 0x1e26:0x7 DW_TAG_subroutine_type
-	.byte	52                              # Abbrev [52] 0x1e27:0x5 DW_TAG_formal_parameter
+	.byte	71                              # Abbrev [71] 0x1e56:0x7 DW_TAG_subroutine_type
+	.byte	52                              # Abbrev [52] 0x1e57:0x5 DW_TAG_formal_parameter
 	.long	979                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	87                              # Abbrev [87] 0x1e2d:0x5 DW_TAG_base_type
+	.byte	87                              # Abbrev [87] 0x1e5d:0x5 DW_TAG_base_type
 	.short	370                             # DW_AT_name
 	.byte	5                               # DW_AT_encoding
 	.byte	1                               # DW_AT_byte_size
-	.byte	65                              # Abbrev [65] 0x1e32:0x5 DW_TAG_const_type
-	.long	7735                            # DW_AT_type
-	.byte	87                              # Abbrev [87] 0x1e37:0x5 DW_TAG_base_type
+	.byte	65                              # Abbrev [65] 0x1e62:0x5 DW_TAG_const_type
+	.long	7783                            # DW_AT_type
+	.byte	87                              # Abbrev [87] 0x1e67:0x5 DW_TAG_base_type
 	.short	373                             # DW_AT_name
 	.byte	7                               # DW_AT_encoding
 	.byte	1                               # DW_AT_byte_size
-	.byte	71                              # Abbrev [71] 0x1e3c:0xc DW_TAG_subroutine_type
-	.byte	52                              # Abbrev [52] 0x1e3d:0x5 DW_TAG_formal_parameter
-	.long	7752                            # DW_AT_type
-	.byte	52                              # Abbrev [52] 0x1e42:0x5 DW_TAG_formal_parameter
-	.long	7752                            # DW_AT_type
+	.byte	71                              # Abbrev [71] 0x1e6c:0xc DW_TAG_subroutine_type
+	.byte	52                              # Abbrev [52] 0x1e6d:0x5 DW_TAG_formal_parameter
+	.long	7800                            # DW_AT_type
+	.byte	52                              # Abbrev [52] 0x1e72:0x5 DW_TAG_formal_parameter
+	.long	7800                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1e48:0xa DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x1e78:0xa DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	376                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	50                              # Abbrev [50] 0x1e4f:0x2 DW_TAG_GNU_template_parameter_pack
+	.byte	50                              # Abbrev [50] 0x1e7f:0x2 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	0                               # End Of Children Mark
-	.byte	82                              # Abbrev [82] 0x1e52:0x9 DW_TAG_ptr_to_member_type
+	.byte	82                              # Abbrev [82] 0x1e82:0x9 DW_TAG_ptr_to_member_type
 	.long	54                              # DW_AT_type
-	.long	7752                            # DW_AT_containing_type
-	.byte	82                              # Abbrev [82] 0x1e5b:0x9 DW_TAG_ptr_to_member_type
-	.long	7780                            # DW_AT_type
-	.long	6991                            # DW_AT_containing_type
-	.byte	71                              # Abbrev [71] 0x1e64:0x7 DW_TAG_subroutine_type
-	.byte	19                              # Abbrev [19] 0x1e65:0x5 DW_TAG_formal_parameter
-	.long	7009                            # DW_AT_type
+	.long	7800                            # DW_AT_containing_type
+	.byte	88                              # Abbrev [88] 0x1e8b:0x2 DW_TAG_subroutine_type
+	.byte	200                             # DW_AT_calling_convention
+	.byte	82                              # Abbrev [82] 0x1e8d:0x9 DW_TAG_ptr_to_member_type
+	.long	7830                            # DW_AT_type
+	.long	7039                            # DW_AT_containing_type
+	.byte	71                              # Abbrev [71] 0x1e96:0x7 DW_TAG_subroutine_type
+	.byte	19                              # Abbrev [19] 0x1e97:0x5 DW_TAG_formal_parameter
+	.long	7057                            # DW_AT_type
                                         # DW_AT_artificial
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1e6b:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x1e9d:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
-	.short	387                             # DW_AT_name
+	.short	389                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	56                              # DW_AT_decl_line
-	.byte	88                              # Abbrev [88] 0x1e72:0x8 DW_TAG_template_value_parameter
+	.byte	89                              # Abbrev [89] 0x1ea4:0x8 DW_TAG_template_value_parameter
 	.long	75                              # DW_AT_type
-	.short	386                             # DW_AT_name
+	.short	388                             # DW_AT_name
 	.byte	3                               # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
-	.byte	89                              # Abbrev [89] 0x1e7b:0x9 DW_TAG_typedef
-	.long	7416                            # DW_AT_type
-	.short	391                             # DW_AT_name
+	.byte	90                              # Abbrev [90] 0x1ead:0x9 DW_TAG_typedef
+	.long	7464                            # DW_AT_type
+	.short	393                             # DW_AT_name
 	.byte	0                               # DW_AT_decl_file
 	.byte	147                             # DW_AT_decl_line
-	.byte	76                              # Abbrev [76] 0x1e84:0x12 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x1eb6:0x12 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
-	.short	395                             # DW_AT_name
+	.short	397                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	178                             # DW_AT_decl_line
-	.byte	90                              # Abbrev [90] 0x1e8b:0xa DW_TAG_member
-	.short	388                             # DW_AT_name
-	.long	7830                            # DW_AT_type
+	.byte	91                              # Abbrev [91] 0x1ebd:0xa DW_TAG_member
+	.short	390                             # DW_AT_name
+	.long	7880                            # DW_AT_type
 	.byte	0                               # DW_AT_decl_file
 	.byte	179                             # DW_AT_decl_line
 	.byte	0                               # DW_AT_data_member_location
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1e96:0x17 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x1ec8:0x17 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
-	.short	394                             # DW_AT_name
+	.short	396                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	175                             # DW_AT_decl_line
-	.byte	15                              # Abbrev [15] 0x1e9d:0x6 DW_TAG_template_type_parameter
+	.byte	15                              # Abbrev [15] 0x1ecf:0x6 DW_TAG_template_type_parameter
 	.long	59                              # DW_AT_type
 	.byte	20                              # DW_AT_name
-	.byte	33                              # Abbrev [33] 0x1ea3:0x9 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x1ed5:0x9 DW_TAG_GNU_template_parameter_pack
 	.byte	194                             # DW_AT_name
-	.byte	38                              # Abbrev [38] 0x1ea5:0x6 DW_TAG_template_value_parameter
+	.byte	38                              # Abbrev [38] 0x1ed7:0x6 DW_TAG_template_value_parameter
 	.long	59                              # DW_AT_type
 	.byte	0                               # DW_AT_const_value
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1ead:0x5 DW_TAG_pointer_type
-	.long	7858                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1eb2:0xc DW_TAG_structure_type
-	.short	396                             # DW_AT_name
-                                        # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x1eb5:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1eb7:0x5 DW_TAG_template_type_parameter
-	.long	54                              # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1ebe:0x5 DW_TAG_pointer_type
-	.long	7875                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1ec3:0xc DW_TAG_structure_type
-	.short	397                             # DW_AT_name
-                                        # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x1ec6:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1ec8:0x5 DW_TAG_template_type_parameter
-	.long	4531                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1ecf:0x10 DW_TAG_structure_type
-	.byte	5                               # DW_AT_calling_convention
-	.short	398                             # DW_AT_name
-	.byte	1                               # DW_AT_byte_size
-	.byte	0                               # DW_AT_decl_file
-	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1ed6:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1ed8:0x5 DW_TAG_template_type_parameter
-	.long	202                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x1edf:0x5 DW_TAG_pointer_type
 	.long	7908                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1ee4:0xc DW_TAG_structure_type
-	.short	399                             # DW_AT_name
+	.byte	92                              # Abbrev [92] 0x1ee4:0xc DW_TAG_structure_type
+	.short	398                             # DW_AT_name
                                         # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1ee7:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1ee9:0x5 DW_TAG_template_type_parameter
-	.long	202                             # DW_AT_type
+	.long	54                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1ef0:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1ef0:0x5 DW_TAG_pointer_type
+	.long	7925                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1ef5:0xc DW_TAG_structure_type
+	.short	399                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1ef8:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1efa:0x5 DW_TAG_template_type_parameter
+	.long	4531                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1f01:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	400                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1ef7:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1ef9:0x5 DW_TAG_template_type_parameter
-	.long	7143                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1f00:0x5 DW_TAG_pointer_type
-	.long	7941                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1f05:0xc DW_TAG_structure_type
-	.short	401                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1f08:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1f0a:0x5 DW_TAG_template_type_parameter
-	.long	7143                            # DW_AT_type
+	.long	202                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1f11:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1f11:0x5 DW_TAG_pointer_type
+	.long	7958                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1f16:0xc DW_TAG_structure_type
+	.short	401                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1f19:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1f1b:0x5 DW_TAG_template_type_parameter
+	.long	202                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1f22:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	402                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1f18:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1f1a:0x5 DW_TAG_template_type_parameter
-	.long	505                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1f21:0x5 DW_TAG_pointer_type
-	.long	7974                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1f26:0xc DW_TAG_structure_type
-	.short	403                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1f29:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1f2b:0x5 DW_TAG_template_type_parameter
-	.long	505                             # DW_AT_type
+	.long	7191                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1f32:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1f32:0x5 DW_TAG_pointer_type
+	.long	7991                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1f37:0xc DW_TAG_structure_type
+	.short	403                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1f3a:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1f3c:0x5 DW_TAG_template_type_parameter
+	.long	7191                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1f43:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	404                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1f39:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1f3b:0x5 DW_TAG_template_type_parameter
-	.long	469                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1f42:0x5 DW_TAG_pointer_type
-	.long	8007                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1f47:0xc DW_TAG_structure_type
-	.short	405                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1f4a:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1f4c:0x5 DW_TAG_template_type_parameter
-	.long	469                             # DW_AT_type
+	.long	505                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1f53:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1f53:0x5 DW_TAG_pointer_type
+	.long	8024                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1f58:0xc DW_TAG_structure_type
+	.short	405                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1f5b:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1f5d:0x5 DW_TAG_template_type_parameter
+	.long	505                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1f64:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	406                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1f5a:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1f5c:0x5 DW_TAG_template_type_parameter
-	.long	75                              # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1f63:0x5 DW_TAG_pointer_type
-	.long	8040                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1f68:0xc DW_TAG_structure_type
-	.short	407                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1f6b:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1f6d:0x5 DW_TAG_template_type_parameter
-	.long	75                              # DW_AT_type
+	.long	469                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1f74:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1f74:0x5 DW_TAG_pointer_type
+	.long	8057                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1f79:0xc DW_TAG_structure_type
+	.short	407                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1f7c:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1f7e:0x5 DW_TAG_template_type_parameter
+	.long	469                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1f85:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	408                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1f7b:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1f7d:0x5 DW_TAG_template_type_parameter
-	.long	7147                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1f84:0x5 DW_TAG_pointer_type
-	.long	8073                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1f89:0xc DW_TAG_structure_type
-	.short	409                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1f8c:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1f8e:0x5 DW_TAG_template_type_parameter
-	.long	7147                            # DW_AT_type
+	.long	75                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1f95:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1f95:0x5 DW_TAG_pointer_type
+	.long	8090                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1f9a:0xc DW_TAG_structure_type
+	.short	409                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1f9d:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1f9f:0x5 DW_TAG_template_type_parameter
+	.long	75                              # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1fa6:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	410                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1f9c:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1f9e:0x5 DW_TAG_template_type_parameter
-	.long	7151                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1fa5:0x5 DW_TAG_pointer_type
-	.long	8106                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1faa:0xc DW_TAG_structure_type
-	.short	411                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1fad:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1faf:0x5 DW_TAG_template_type_parameter
-	.long	7151                            # DW_AT_type
+	.long	7195                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1fb6:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1fb6:0x5 DW_TAG_pointer_type
+	.long	8123                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1fbb:0xc DW_TAG_structure_type
+	.short	411                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1fbe:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1fc0:0x5 DW_TAG_template_type_parameter
+	.long	7195                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1fc7:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	412                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1fbd:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1fbf:0x5 DW_TAG_template_type_parameter
-	.long	7155                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1fc6:0x5 DW_TAG_pointer_type
-	.long	8139                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1fcb:0xc DW_TAG_structure_type
-	.short	413                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1fce:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1fd0:0x5 DW_TAG_template_type_parameter
-	.long	7155                            # DW_AT_type
+	.long	7199                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1fd7:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1fd7:0x5 DW_TAG_pointer_type
+	.long	8156                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1fdc:0xc DW_TAG_structure_type
+	.short	413                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x1fdf:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x1fe1:0x5 DW_TAG_template_type_parameter
+	.long	7199                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x1fe8:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	414                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1fde:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x1fe0:0x5 DW_TAG_template_type_parameter
-	.long	170                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x1fe7:0x5 DW_TAG_pointer_type
-	.long	8172                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x1fec:0xc DW_TAG_structure_type
-	.short	415                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x1fef:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x1ff1:0x5 DW_TAG_template_type_parameter
-	.long	170                             # DW_AT_type
+	.long	7203                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x1ff8:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x1ff8:0x5 DW_TAG_pointer_type
+	.long	8189                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x1ffd:0xc DW_TAG_structure_type
+	.short	415                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2000:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2002:0x5 DW_TAG_template_type_parameter
+	.long	7203                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2009:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	416                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x1fff:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2001:0x5 DW_TAG_template_type_parameter
-	.long	7157                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2008:0x5 DW_TAG_pointer_type
-	.long	8205                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x200d:0xc DW_TAG_structure_type
-	.short	417                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2010:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2012:0x5 DW_TAG_template_type_parameter
-	.long	7157                            # DW_AT_type
+	.long	170                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2019:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2019:0x5 DW_TAG_pointer_type
+	.long	8222                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x201e:0xc DW_TAG_structure_type
+	.short	417                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2021:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2023:0x5 DW_TAG_template_type_parameter
+	.long	170                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x202a:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	418                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2020:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2022:0x5 DW_TAG_template_type_parameter
-	.long	174                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2029:0x5 DW_TAG_pointer_type
-	.long	8238                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x202e:0xc DW_TAG_structure_type
-	.short	419                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2031:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2033:0x5 DW_TAG_template_type_parameter
-	.long	174                             # DW_AT_type
+	.long	7205                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x203a:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x203a:0x5 DW_TAG_pointer_type
+	.long	8255                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x203f:0xc DW_TAG_structure_type
+	.short	419                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2042:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2044:0x5 DW_TAG_template_type_parameter
+	.long	7205                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x204b:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	420                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2041:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2043:0x5 DW_TAG_template_type_parameter
-	.long	7162                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x204a:0x5 DW_TAG_pointer_type
-	.long	8271                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x204f:0xc DW_TAG_structure_type
-	.short	421                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2052:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2054:0x5 DW_TAG_template_type_parameter
-	.long	7162                            # DW_AT_type
+	.long	174                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x205b:0x15 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x205b:0x5 DW_TAG_pointer_type
+	.long	8288                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2060:0xc DW_TAG_structure_type
+	.short	421                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2063:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2065:0x5 DW_TAG_template_type_parameter
+	.long	174                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x206c:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	422                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2062:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2073:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2064:0x5 DW_TAG_template_type_parameter
-	.long	54                              # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x2069:0x5 DW_TAG_template_type_parameter
-	.long	4531                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2075:0x5 DW_TAG_template_type_parameter
+	.long	7210                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2070:0x5 DW_TAG_pointer_type
-	.long	8309                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2075:0x11 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x207c:0x5 DW_TAG_pointer_type
+	.long	8321                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2081:0xc DW_TAG_structure_type
 	.short	423                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x2078:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2084:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x207a:0x5 DW_TAG_template_type_parameter
-	.long	54                              # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x207f:0x5 DW_TAG_template_type_parameter
-	.long	4531                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2086:0x5 DW_TAG_template_type_parameter
+	.long	7210                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2086:0x5 DW_TAG_pointer_type
-	.long	8331                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x208b:0xc DW_TAG_structure_type
-	.short	424                             # DW_AT_name
-                                        # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x208e:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2090:0x5 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2097:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x208d:0x15 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
-	.short	425                             # DW_AT_name
+	.short	424                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x209e:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2094:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x20a0:0x5 DW_TAG_template_type_parameter
-	.long	7182                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2096:0x5 DW_TAG_template_type_parameter
+	.long	54                              # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x209b:0x5 DW_TAG_template_type_parameter
+	.long	4531                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x20a7:0x5 DW_TAG_pointer_type
-	.long	8364                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x20ac:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x20a2:0x5 DW_TAG_pointer_type
+	.long	8359                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x20a7:0x11 DW_TAG_structure_type
+	.short	425                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x20aa:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x20ac:0x5 DW_TAG_template_type_parameter
+	.long	54                              # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x20b1:0x5 DW_TAG_template_type_parameter
+	.long	4531                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	55                              # Abbrev [55] 0x20b8:0x5 DW_TAG_pointer_type
+	.long	8381                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x20bd:0xc DW_TAG_structure_type
 	.short	426                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x20af:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x20c0:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x20b1:0x5 DW_TAG_template_type_parameter
-	.long	7182                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x20c2:0x5 DW_TAG_template_type_parameter
+	.long	7225                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x20b8:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x20c9:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	427                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x20bf:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x20c1:0x5 DW_TAG_template_type_parameter
-	.long	7187                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x20c8:0x5 DW_TAG_pointer_type
-	.long	8397                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x20cd:0xc DW_TAG_structure_type
-	.short	428                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x20d0:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x20d2:0x5 DW_TAG_template_type_parameter
-	.long	7187                            # DW_AT_type
+	.long	7230                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x20d9:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x20d9:0x5 DW_TAG_pointer_type
+	.long	8414                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x20de:0xc DW_TAG_structure_type
+	.short	428                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x20e1:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x20e3:0x5 DW_TAG_template_type_parameter
+	.long	7230                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x20ea:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	429                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x20e0:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x20e2:0x5 DW_TAG_template_type_parameter
-	.long	7192                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x20e9:0x5 DW_TAG_pointer_type
-	.long	8430                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x20ee:0xc DW_TAG_structure_type
-	.short	430                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x20f1:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x20f3:0x5 DW_TAG_template_type_parameter
-	.long	7192                            # DW_AT_type
+	.long	7235                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x20fa:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x20fa:0x5 DW_TAG_pointer_type
+	.long	8447                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x20ff:0xc DW_TAG_structure_type
+	.short	430                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2102:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2104:0x5 DW_TAG_template_type_parameter
+	.long	7235                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x210b:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	431                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2101:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2103:0x5 DW_TAG_template_type_parameter
-	.long	7197                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x210a:0x5 DW_TAG_pointer_type
-	.long	8463                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x210f:0xc DW_TAG_structure_type
-	.short	432                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2112:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2114:0x5 DW_TAG_template_type_parameter
-	.long	7197                            # DW_AT_type
+	.long	7240                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x211b:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x211b:0x5 DW_TAG_pointer_type
+	.long	8480                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2120:0xc DW_TAG_structure_type
+	.short	432                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2123:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2125:0x5 DW_TAG_template_type_parameter
+	.long	7240                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x212c:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	433                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2122:0x4 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2133:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	35                              # Abbrev [35] 0x2124:0x1 DW_TAG_template_type_parameter
+	.byte	34                              # Abbrev [34] 0x2135:0x5 DW_TAG_template_type_parameter
+	.long	7245                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2127:0x5 DW_TAG_pointer_type
-	.long	8492                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x212c:0x8 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x213c:0x5 DW_TAG_pointer_type
+	.long	8513                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2141:0xc DW_TAG_structure_type
 	.short	434                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x212f:0x4 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2144:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	35                              # Abbrev [35] 0x2131:0x1 DW_TAG_template_type_parameter
+	.byte	34                              # Abbrev [34] 0x2146:0x5 DW_TAG_template_type_parameter
+	.long	7245                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2134:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x214d:0xc DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	435                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x213b:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2154:0x4 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x213d:0x5 DW_TAG_template_type_parameter
-	.long	7219                            # DW_AT_type
+	.byte	35                              # Abbrev [35] 0x2156:0x1 DW_TAG_template_type_parameter
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2144:0x5 DW_TAG_pointer_type
-	.long	8521                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2149:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2159:0x5 DW_TAG_pointer_type
+	.long	8542                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x215e:0x8 DW_TAG_structure_type
 	.short	436                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x214c:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2161:0x4 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x214e:0x5 DW_TAG_template_type_parameter
-	.long	7219                            # DW_AT_type
+	.byte	35                              # Abbrev [35] 0x2163:0x1 DW_TAG_template_type_parameter
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2155:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x2166:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	437                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x215c:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x215e:0x5 DW_TAG_template_type_parameter
-	.long	697                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2165:0x5 DW_TAG_pointer_type
-	.long	8554                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x216a:0xc DW_TAG_structure_type
-	.short	438                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x216d:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x216f:0x5 DW_TAG_template_type_parameter
-	.long	697                             # DW_AT_type
+	.long	7267                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2176:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2176:0x5 DW_TAG_pointer_type
+	.long	8571                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x217b:0xc DW_TAG_structure_type
+	.short	438                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x217e:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2180:0x5 DW_TAG_template_type_parameter
+	.long	7267                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2187:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	439                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x217d:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x217f:0x5 DW_TAG_template_type_parameter
-	.long	182                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2186:0x5 DW_TAG_pointer_type
-	.long	8587                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x218b:0xc DW_TAG_structure_type
-	.short	440                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x218e:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2190:0x5 DW_TAG_template_type_parameter
-	.long	182                             # DW_AT_type
+	.long	697                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2197:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2197:0x5 DW_TAG_pointer_type
+	.long	8604                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x219c:0xc DW_TAG_structure_type
+	.short	440                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x219f:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x21a1:0x5 DW_TAG_template_type_parameter
+	.long	697                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x21a8:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	441                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x219e:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x21a0:0x5 DW_TAG_template_type_parameter
-	.long	7230                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x21a7:0x5 DW_TAG_pointer_type
-	.long	8620                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x21ac:0xc DW_TAG_structure_type
-	.short	442                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x21af:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x21b1:0x5 DW_TAG_template_type_parameter
-	.long	7230                            # DW_AT_type
+	.long	182                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x21b8:0x5 DW_TAG_pointer_type
 	.long	8637                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x21bd:0xc DW_TAG_structure_type
-	.short	443                             # DW_AT_name
+	.byte	92                              # Abbrev [92] 0x21bd:0xc DW_TAG_structure_type
+	.short	442                             # DW_AT_name
                                         # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x21c0:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x21c2:0x5 DW_TAG_template_type_parameter
-	.long	966                             # DW_AT_type
+	.long	182                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	76                              # Abbrev [76] 0x21c9:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
-	.short	444                             # DW_AT_name
+	.short	443                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
 	.byte	33                              # Abbrev [33] 0x21d0:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x21d2:0x5 DW_TAG_template_type_parameter
-	.long	7246                            # DW_AT_type
+	.long	7278                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x21d9:0x5 DW_TAG_pointer_type
 	.long	8670                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x21de:0xc DW_TAG_structure_type
-	.short	445                             # DW_AT_name
+	.byte	92                              # Abbrev [92] 0x21de:0xc DW_TAG_structure_type
+	.short	444                             # DW_AT_name
                                         # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x21e1:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x21e3:0x5 DW_TAG_template_type_parameter
-	.long	7246                            # DW_AT_type
+	.long	7278                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x21ea:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x21ea:0x5 DW_TAG_pointer_type
+	.long	8687                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x21ef:0xc DW_TAG_structure_type
+	.short	445                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x21f2:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x21f4:0x5 DW_TAG_template_type_parameter
+	.long	966                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x21fb:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	446                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x21f1:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x21f3:0x5 DW_TAG_template_type_parameter
-	.long	7282                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x21fa:0x5 DW_TAG_pointer_type
-	.long	8703                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x21ff:0xc DW_TAG_structure_type
-	.short	447                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2202:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2204:0x5 DW_TAG_template_type_parameter
-	.long	7282                            # DW_AT_type
+	.long	7294                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x220b:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x220b:0x5 DW_TAG_pointer_type
+	.long	8720                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2210:0xc DW_TAG_structure_type
+	.short	447                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2213:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2215:0x5 DW_TAG_template_type_parameter
+	.long	7294                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x221c:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	448                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2212:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2214:0x5 DW_TAG_template_type_parameter
-	.long	7293                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x221b:0x5 DW_TAG_pointer_type
-	.long	8736                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2220:0xc DW_TAG_structure_type
-	.short	449                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2223:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2225:0x5 DW_TAG_template_type_parameter
-	.long	7293                            # DW_AT_type
+	.long	7330                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x222c:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x222c:0x5 DW_TAG_pointer_type
+	.long	8753                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2231:0xc DW_TAG_structure_type
+	.short	449                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2234:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2236:0x5 DW_TAG_template_type_parameter
+	.long	7330                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x223d:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	450                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2233:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2235:0x5 DW_TAG_template_type_parameter
-	.long	7296                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x223c:0x5 DW_TAG_pointer_type
-	.long	8769                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2241:0xc DW_TAG_structure_type
-	.short	451                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2244:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2246:0x5 DW_TAG_template_type_parameter
-	.long	7296                            # DW_AT_type
+	.long	7341                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x224d:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x224d:0x5 DW_TAG_pointer_type
+	.long	8786                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2252:0xc DW_TAG_structure_type
+	.short	451                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2255:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2257:0x5 DW_TAG_template_type_parameter
+	.long	7341                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x225e:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	452                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2254:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2256:0x5 DW_TAG_template_type_parameter
-	.long	7304                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x225d:0x5 DW_TAG_pointer_type
-	.long	8802                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2262:0xc DW_TAG_structure_type
-	.short	453                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2265:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2267:0x5 DW_TAG_template_type_parameter
-	.long	7304                            # DW_AT_type
+	.long	7344                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x226e:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x226e:0x5 DW_TAG_pointer_type
+	.long	8819                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2273:0xc DW_TAG_structure_type
+	.short	453                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2276:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2278:0x5 DW_TAG_template_type_parameter
+	.long	7344                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x227f:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	454                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2275:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2277:0x5 DW_TAG_template_type_parameter
-	.long	7309                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x227e:0x5 DW_TAG_pointer_type
-	.long	8835                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2283:0xc DW_TAG_structure_type
-	.short	455                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2286:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2288:0x5 DW_TAG_template_type_parameter
-	.long	7309                            # DW_AT_type
+	.long	7352                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x228f:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x228f:0x5 DW_TAG_pointer_type
+	.long	8852                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2294:0xc DW_TAG_structure_type
+	.short	455                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2297:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2299:0x5 DW_TAG_template_type_parameter
+	.long	7352                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x22a0:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	456                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2296:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2298:0x5 DW_TAG_template_type_parameter
-	.long	72                              # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x229f:0x5 DW_TAG_pointer_type
-	.long	8868                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x22a4:0xc DW_TAG_structure_type
-	.short	457                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x22a7:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x22a9:0x5 DW_TAG_template_type_parameter
-	.long	72                              # DW_AT_type
+	.long	7357                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x22b0:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x22b0:0x5 DW_TAG_pointer_type
+	.long	8885                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x22b5:0xc DW_TAG_structure_type
+	.short	457                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x22b8:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x22ba:0x5 DW_TAG_template_type_parameter
+	.long	7357                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x22c1:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	458                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x22b7:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x22b9:0x5 DW_TAG_template_type_parameter
-	.long	7319                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x22c0:0x5 DW_TAG_pointer_type
-	.long	8901                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x22c5:0xc DW_TAG_structure_type
-	.short	459                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x22c8:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x22ca:0x5 DW_TAG_template_type_parameter
-	.long	7319                            # DW_AT_type
+	.long	72                              # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x22d1:0x15 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x22d1:0x5 DW_TAG_pointer_type
+	.long	8918                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x22d6:0xc DW_TAG_structure_type
+	.short	459                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x22d9:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x22db:0x5 DW_TAG_template_type_parameter
+	.long	72                              # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x22e2:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	460                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x22d8:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x22e9:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x22da:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x22df:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x22eb:0x5 DW_TAG_template_type_parameter
+	.long	7367                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x22e6:0x5 DW_TAG_pointer_type
-	.long	8939                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x22eb:0x11 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x22f2:0x5 DW_TAG_pointer_type
+	.long	8951                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x22f7:0xc DW_TAG_structure_type
 	.short	461                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x22ee:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x22fa:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x22f0:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x22f5:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x22fc:0x5 DW_TAG_template_type_parameter
+	.long	7367                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x22fc:0x15 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x2303:0x15 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	462                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2303:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x230a:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2305:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x230a:0x5 DW_TAG_template_type_parameter
-	.long	7327                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x230c:0x5 DW_TAG_template_type_parameter
+	.long	7370                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2311:0x5 DW_TAG_template_type_parameter
+	.long	7370                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2311:0x5 DW_TAG_pointer_type
-	.long	8982                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2316:0x11 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2318:0x5 DW_TAG_pointer_type
+	.long	8989                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x231d:0x11 DW_TAG_structure_type
 	.short	463                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x2319:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2320:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x231b:0x5 DW_TAG_template_type_parameter
-	.long	7322                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x2320:0x5 DW_TAG_template_type_parameter
-	.long	7327                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2322:0x5 DW_TAG_template_type_parameter
+	.long	7370                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2327:0x5 DW_TAG_template_type_parameter
+	.long	7370                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2327:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x232e:0x15 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	464                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x232e:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2335:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2330:0x5 DW_TAG_template_type_parameter
-	.long	7332                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2337:0x5 DW_TAG_template_type_parameter
+	.long	7370                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x233c:0x5 DW_TAG_template_type_parameter
+	.long	7375                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2337:0x5 DW_TAG_pointer_type
-	.long	9020                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x233c:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2343:0x5 DW_TAG_pointer_type
+	.long	9032                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2348:0x11 DW_TAG_structure_type
 	.short	465                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x233f:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x234b:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2341:0x5 DW_TAG_template_type_parameter
-	.long	7332                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x234d:0x5 DW_TAG_template_type_parameter
+	.long	7370                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2352:0x5 DW_TAG_template_type_parameter
+	.long	7375                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2348:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x2359:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	466                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x234f:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2351:0x5 DW_TAG_template_type_parameter
-	.long	7337                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2358:0x5 DW_TAG_pointer_type
-	.long	9053                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x235d:0xc DW_TAG_structure_type
-	.short	467                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2360:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2362:0x5 DW_TAG_template_type_parameter
-	.long	7337                            # DW_AT_type
+	.long	7380                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2369:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2369:0x5 DW_TAG_pointer_type
+	.long	9070                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x236e:0xc DW_TAG_structure_type
+	.short	467                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2371:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2373:0x5 DW_TAG_template_type_parameter
+	.long	7380                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x237a:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	468                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2370:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2372:0x5 DW_TAG_template_type_parameter
-	.long	7353                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2379:0x5 DW_TAG_pointer_type
-	.long	9086                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x237e:0xc DW_TAG_structure_type
-	.short	469                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2381:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2383:0x5 DW_TAG_template_type_parameter
-	.long	7353                            # DW_AT_type
+	.long	7385                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x238a:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x238a:0x5 DW_TAG_pointer_type
+	.long	9103                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x238f:0xc DW_TAG_structure_type
+	.short	469                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2392:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2394:0x5 DW_TAG_template_type_parameter
+	.long	7385                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x239b:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	470                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2391:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2393:0x5 DW_TAG_template_type_parameter
-	.long	7354                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x239a:0x5 DW_TAG_pointer_type
-	.long	9119                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x239f:0xc DW_TAG_structure_type
-	.short	471                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x23a2:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x23a4:0x5 DW_TAG_template_type_parameter
-	.long	7354                            # DW_AT_type
+	.long	7401                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x23ab:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x23ab:0x5 DW_TAG_pointer_type
+	.long	9136                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x23b0:0xc DW_TAG_structure_type
+	.short	471                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x23b3:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x23b5:0x5 DW_TAG_template_type_parameter
+	.long	7401                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x23bc:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	472                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x23b2:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x23b4:0x5 DW_TAG_template_type_parameter
-	.long	7359                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x23bb:0x5 DW_TAG_pointer_type
-	.long	9152                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x23c0:0xc DW_TAG_structure_type
-	.short	473                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x23c3:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x23c5:0x5 DW_TAG_template_type_parameter
-	.long	7359                            # DW_AT_type
+	.long	7402                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x23cc:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x23cc:0x5 DW_TAG_pointer_type
+	.long	9169                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x23d1:0xc DW_TAG_structure_type
+	.short	473                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x23d4:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x23d6:0x5 DW_TAG_template_type_parameter
+	.long	7402                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x23dd:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	474                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x23d3:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x23d5:0x5 DW_TAG_template_type_parameter
-	.long	971                             # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x23dc:0x5 DW_TAG_pointer_type
-	.long	9185                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x23e1:0xc DW_TAG_structure_type
-	.short	475                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x23e4:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x23e6:0x5 DW_TAG_template_type_parameter
-	.long	971                             # DW_AT_type
+	.long	7407                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x23ed:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x23ed:0x5 DW_TAG_pointer_type
+	.long	9202                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x23f2:0xc DW_TAG_structure_type
+	.short	475                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x23f5:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x23f7:0x5 DW_TAG_template_type_parameter
+	.long	7407                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x23fe:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	476                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x23f4:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x23f6:0x5 DW_TAG_template_type_parameter
-	.long	7364                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x23fd:0x5 DW_TAG_pointer_type
-	.long	9218                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2402:0xc DW_TAG_structure_type
-	.short	477                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2405:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2407:0x5 DW_TAG_template_type_parameter
-	.long	7364                            # DW_AT_type
+	.long	971                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x240e:0x5 DW_TAG_pointer_type
 	.long	9235                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2413:0x6 DW_TAG_structure_type
-	.short	478                             # DW_AT_name
+	.byte	92                              # Abbrev [92] 0x2413:0xc DW_TAG_structure_type
+	.short	477                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	50                              # Abbrev [50] 0x2416:0x2 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2416:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2418:0x5 DW_TAG_template_type_parameter
+	.long	971                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2419:0x15 DW_TAG_structure_type
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x241f:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
-	.short	479                             # DW_AT_name
+	.short	478                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2420:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2426:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2422:0x5 DW_TAG_template_type_parameter
-	.long	7347                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x2427:0x5 DW_TAG_template_type_parameter
-	.long	7347                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2428:0x5 DW_TAG_template_type_parameter
+	.long	7412                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x242e:0x5 DW_TAG_pointer_type
-	.long	9267                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2433:0x11 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x242f:0x5 DW_TAG_pointer_type
+	.long	9268                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2434:0xc DW_TAG_structure_type
+	.short	479                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2437:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2439:0x5 DW_TAG_template_type_parameter
+	.long	7412                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	55                              # Abbrev [55] 0x2440:0x5 DW_TAG_pointer_type
+	.long	9285                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2445:0x6 DW_TAG_structure_type
 	.short	480                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x2436:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	50                              # Abbrev [50] 0x2448:0x2 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2438:0x5 DW_TAG_template_type_parameter
-	.long	7347                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x243d:0x5 DW_TAG_template_type_parameter
-	.long	7347                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2444:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x244b:0x15 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	481                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x244b:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2452:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x244d:0x5 DW_TAG_template_type_parameter
-	.long	7369                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2454:0x5 DW_TAG_template_type_parameter
+	.long	7395                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2459:0x5 DW_TAG_template_type_parameter
+	.long	7395                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2454:0x5 DW_TAG_pointer_type
-	.long	9305                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2459:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2460:0x5 DW_TAG_pointer_type
+	.long	9317                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2465:0x11 DW_TAG_structure_type
 	.short	482                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x245c:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2468:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x245e:0x5 DW_TAG_template_type_parameter
-	.long	7369                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x246a:0x5 DW_TAG_template_type_parameter
+	.long	7395                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x246f:0x5 DW_TAG_template_type_parameter
+	.long	7395                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2465:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x2476:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	483                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x246c:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x246e:0x5 DW_TAG_template_type_parameter
-	.long	7390                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2475:0x5 DW_TAG_pointer_type
-	.long	9338                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x247a:0xc DW_TAG_structure_type
-	.short	484                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x247d:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x247f:0x5 DW_TAG_template_type_parameter
-	.long	7390                            # DW_AT_type
+	.long	7417                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x2486:0x5 DW_TAG_pointer_type
-	.long	3851                            # DW_AT_type
-	.byte	76                              # Abbrev [76] 0x248b:0x10 DW_TAG_structure_type
+	.long	9355                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x248b:0xc DW_TAG_structure_type
+	.short	484                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x248e:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2490:0x5 DW_TAG_template_type_parameter
+	.long	7417                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2497:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
-	.short	486                             # DW_AT_name
+	.short	485                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2492:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x249e:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2494:0x5 DW_TAG_template_type_parameter
-	.long	976                             # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x24a0:0x5 DW_TAG_template_type_parameter
+	.long	7438                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x249b:0x5 DW_TAG_pointer_type
-	.long	9376                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x24a0:0xc DW_TAG_structure_type
-	.short	487                             # DW_AT_name
+	.byte	55                              # Abbrev [55] 0x24a7:0x5 DW_TAG_pointer_type
+	.long	9388                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x24ac:0xc DW_TAG_structure_type
+	.short	486                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x24a3:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x24af:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x24a5:0x5 DW_TAG_template_type_parameter
-	.long	976                             # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x24b1:0x5 DW_TAG_template_type_parameter
+	.long	7438                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x24ac:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x24b8:0x5 DW_TAG_pointer_type
+	.long	3851                            # DW_AT_type
+	.byte	76                              # Abbrev [76] 0x24bd:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	488                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x24b3:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x24b5:0x5 DW_TAG_template_type_parameter
-	.long	7401                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x24bc:0x5 DW_TAG_pointer_type
-	.long	9409                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x24c1:0xc DW_TAG_structure_type
-	.short	489                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x24c4:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x24c6:0x5 DW_TAG_template_type_parameter
-	.long	7401                            # DW_AT_type
+	.long	976                             # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x24cd:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x24cd:0x5 DW_TAG_pointer_type
+	.long	9426                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x24d2:0xc DW_TAG_structure_type
+	.short	489                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x24d5:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x24d7:0x5 DW_TAG_template_type_parameter
+	.long	976                             # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x24de:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	490                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x24d4:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x24d6:0x5 DW_TAG_template_type_parameter
-	.long	7406                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x24dd:0x5 DW_TAG_pointer_type
-	.long	9442                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x24e2:0xc DW_TAG_structure_type
-	.short	491                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x24e5:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x24e7:0x5 DW_TAG_template_type_parameter
-	.long	7406                            # DW_AT_type
+	.long	7449                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x24ee:0x15 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x24ee:0x5 DW_TAG_pointer_type
+	.long	9459                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x24f3:0xc DW_TAG_structure_type
+	.short	491                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x24f6:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x24f8:0x5 DW_TAG_template_type_parameter
+	.long	7449                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x24ff:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	492                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x24f5:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2506:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x24f7:0x5 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x24fc:0x5 DW_TAG_template_type_parameter
-	.long	7411                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2508:0x5 DW_TAG_template_type_parameter
+	.long	7454                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2503:0x5 DW_TAG_pointer_type
-	.long	9480                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2508:0x11 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x250f:0x5 DW_TAG_pointer_type
+	.long	9492                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2514:0xc DW_TAG_structure_type
 	.short	493                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x250b:0xd DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2517:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x250d:0x5 DW_TAG_template_type_parameter
-	.long	7177                            # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x2512:0x5 DW_TAG_template_type_parameter
-	.long	7411                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2519:0x5 DW_TAG_template_type_parameter
+	.long	7454                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2519:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x2520:0x15 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	494                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2520:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2527:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2522:0x5 DW_TAG_template_type_parameter
-	.long	7416                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2529:0x5 DW_TAG_template_type_parameter
+	.long	7225                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x252e:0x5 DW_TAG_template_type_parameter
+	.long	7459                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2529:0x5 DW_TAG_pointer_type
-	.long	9518                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x252e:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2535:0x5 DW_TAG_pointer_type
+	.long	9530                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x253a:0x11 DW_TAG_structure_type
 	.short	495                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x2531:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x253d:0xd DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2533:0x5 DW_TAG_template_type_parameter
-	.long	7416                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x253f:0x5 DW_TAG_template_type_parameter
+	.long	7225                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2544:0x5 DW_TAG_template_type_parameter
+	.long	7459                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x253a:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x254b:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	496                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2541:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2543:0x5 DW_TAG_template_type_parameter
-	.long	7430                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x254a:0x5 DW_TAG_pointer_type
-	.long	9551                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x254f:0xc DW_TAG_structure_type
-	.short	497                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2552:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2554:0x5 DW_TAG_template_type_parameter
-	.long	7430                            # DW_AT_type
+	.long	7464                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x255b:0x1a DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x255b:0x5 DW_TAG_pointer_type
+	.long	9568                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2560:0xc DW_TAG_structure_type
+	.short	497                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2563:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2565:0x5 DW_TAG_template_type_parameter
+	.long	7464                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x256c:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	498                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2562:0x12 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2573:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2564:0x5 DW_TAG_template_type_parameter
-	.long	54                              # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x2569:0x5 DW_TAG_template_type_parameter
-	.long	505                             # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x256e:0x5 DW_TAG_template_type_parameter
-	.long	7435                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2575:0x5 DW_TAG_template_type_parameter
+	.long	7478                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2575:0x5 DW_TAG_pointer_type
-	.long	9594                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x257a:0x16 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x257c:0x5 DW_TAG_pointer_type
+	.long	9601                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2581:0xc DW_TAG_structure_type
 	.short	499                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x257d:0x12 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2584:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x257f:0x5 DW_TAG_template_type_parameter
-	.long	54                              # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x2584:0x5 DW_TAG_template_type_parameter
-	.long	505                             # DW_AT_type
-	.byte	34                              # Abbrev [34] 0x2589:0x5 DW_TAG_template_type_parameter
-	.long	7435                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2586:0x5 DW_TAG_template_type_parameter
+	.long	7478                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2590:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x258d:0x1a DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	500                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2597:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x2594:0x12 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2599:0x5 DW_TAG_template_type_parameter
-	.long	7440                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x2596:0x5 DW_TAG_template_type_parameter
+	.long	54                              # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x259b:0x5 DW_TAG_template_type_parameter
+	.long	505                             # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x25a0:0x5 DW_TAG_template_type_parameter
+	.long	7483                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x25a0:0x5 DW_TAG_pointer_type
-	.long	9637                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x25a5:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x25a7:0x5 DW_TAG_pointer_type
+	.long	9644                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x25ac:0x16 DW_TAG_structure_type
 	.short	501                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x25a8:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x25af:0x12 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x25aa:0x5 DW_TAG_template_type_parameter
-	.long	7440                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x25b1:0x5 DW_TAG_template_type_parameter
+	.long	54                              # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x25b6:0x5 DW_TAG_template_type_parameter
+	.long	505                             # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x25bb:0x5 DW_TAG_template_type_parameter
+	.long	7483                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x25b1:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x25c2:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	502                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x25b8:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x25ba:0x5 DW_TAG_template_type_parameter
-	.long	7452                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x25c1:0x5 DW_TAG_pointer_type
-	.long	9670                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x25c6:0xc DW_TAG_structure_type
-	.short	503                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x25c9:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x25cb:0x5 DW_TAG_template_type_parameter
-	.long	7452                            # DW_AT_type
+	.long	7488                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x25d2:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x25d2:0x5 DW_TAG_pointer_type
+	.long	9687                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x25d7:0xc DW_TAG_structure_type
+	.short	503                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x25da:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x25dc:0x5 DW_TAG_template_type_parameter
+	.long	7488                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x25e3:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	504                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x25d9:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x25db:0x5 DW_TAG_template_type_parameter
-	.long	7462                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x25e2:0x5 DW_TAG_pointer_type
-	.long	9703                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x25e7:0xc DW_TAG_structure_type
-	.short	505                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x25ea:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x25ec:0x5 DW_TAG_template_type_parameter
-	.long	7462                            # DW_AT_type
+	.long	7500                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x25f3:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x25f3:0x5 DW_TAG_pointer_type
+	.long	9720                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x25f8:0xc DW_TAG_structure_type
+	.short	505                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x25fb:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x25fd:0x5 DW_TAG_template_type_parameter
+	.long	7500                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2604:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	506                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x25fa:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x25fc:0x5 DW_TAG_template_type_parameter
-	.long	7468                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2603:0x5 DW_TAG_pointer_type
-	.long	9736                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2608:0xc DW_TAG_structure_type
-	.short	507                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x260b:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x260d:0x5 DW_TAG_template_type_parameter
-	.long	7468                            # DW_AT_type
+	.long	7510                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x2614:0x5 DW_TAG_pointer_type
-	.long	206                             # DW_AT_type
-	.byte	76                              # Abbrev [76] 0x2619:0x10 DW_TAG_structure_type
+	.long	9753                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2619:0xc DW_TAG_structure_type
+	.short	507                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x261c:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x261e:0x5 DW_TAG_template_type_parameter
+	.long	7510                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2625:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	508                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2620:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x262c:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2622:0x5 DW_TAG_template_type_parameter
-	.long	7484                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x262e:0x5 DW_TAG_template_type_parameter
+	.long	7516                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2629:0x5 DW_TAG_pointer_type
-	.long	9774                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x262e:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2635:0x5 DW_TAG_pointer_type
+	.long	9786                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x263a:0xc DW_TAG_structure_type
 	.short	509                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x2631:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x263d:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2633:0x5 DW_TAG_template_type_parameter
-	.long	7484                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x263f:0x5 DW_TAG_template_type_parameter
+	.long	7516                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x263a:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2646:0x5 DW_TAG_pointer_type
+	.long	206                             # DW_AT_type
+	.byte	76                              # Abbrev [76] 0x264b:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	510                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2641:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2643:0x5 DW_TAG_template_type_parameter
-	.long	7510                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x264a:0x5 DW_TAG_pointer_type
-	.long	9807                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x264f:0xc DW_TAG_structure_type
-	.short	511                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2652:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2654:0x5 DW_TAG_template_type_parameter
-	.long	7510                            # DW_AT_type
+	.long	7532                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x265b:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x265b:0x5 DW_TAG_pointer_type
+	.long	9824                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2660:0xc DW_TAG_structure_type
+	.short	511                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2663:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2665:0x5 DW_TAG_template_type_parameter
+	.long	7532                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x266c:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	512                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2662:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2664:0x5 DW_TAG_template_type_parameter
-	.long	7536                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x266b:0x5 DW_TAG_pointer_type
-	.long	9840                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2670:0xc DW_TAG_structure_type
-	.short	513                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2673:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2675:0x5 DW_TAG_template_type_parameter
-	.long	7536                            # DW_AT_type
+	.long	7558                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x267c:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x267c:0x5 DW_TAG_pointer_type
+	.long	9857                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2681:0xc DW_TAG_structure_type
+	.short	513                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2684:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2686:0x5 DW_TAG_template_type_parameter
+	.long	7558                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x268d:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	514                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2683:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2685:0x5 DW_TAG_template_type_parameter
-	.long	7562                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x268c:0x5 DW_TAG_pointer_type
-	.long	9873                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2691:0xc DW_TAG_structure_type
-	.short	515                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2694:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2696:0x5 DW_TAG_template_type_parameter
-	.long	7562                            # DW_AT_type
+	.long	7584                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x269d:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x269d:0x5 DW_TAG_pointer_type
+	.long	9890                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x26a2:0xc DW_TAG_structure_type
+	.short	515                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x26a5:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x26a7:0x5 DW_TAG_template_type_parameter
+	.long	7584                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x26ae:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	516                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x26a4:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x26a6:0x5 DW_TAG_template_type_parameter
-	.long	7567                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x26ad:0x5 DW_TAG_pointer_type
-	.long	9906                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x26b2:0xc DW_TAG_structure_type
-	.short	517                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x26b5:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x26b7:0x5 DW_TAG_template_type_parameter
-	.long	7567                            # DW_AT_type
+	.long	7610                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x26be:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x26be:0x5 DW_TAG_pointer_type
+	.long	9923                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x26c3:0xc DW_TAG_structure_type
+	.short	517                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x26c6:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x26c8:0x5 DW_TAG_template_type_parameter
+	.long	7610                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x26cf:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	518                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x26c5:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x26c7:0x5 DW_TAG_template_type_parameter
-	.long	7589                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x26ce:0x5 DW_TAG_pointer_type
-	.long	9939                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x26d3:0xc DW_TAG_structure_type
-	.short	519                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x26d6:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x26d8:0x5 DW_TAG_template_type_parameter
-	.long	7589                            # DW_AT_type
+	.long	7615                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x26df:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x26df:0x5 DW_TAG_pointer_type
+	.long	9956                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x26e4:0xc DW_TAG_structure_type
+	.short	519                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x26e7:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x26e9:0x5 DW_TAG_template_type_parameter
+	.long	7615                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x26f0:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	520                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x26e6:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x26e8:0x5 DW_TAG_template_type_parameter
-	.long	7595                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x26ef:0x5 DW_TAG_pointer_type
-	.long	9972                            # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x26f4:0xc DW_TAG_structure_type
-	.short	521                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x26f7:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x26f9:0x5 DW_TAG_template_type_parameter
-	.long	7595                            # DW_AT_type
+	.long	7637                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2700:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2700:0x5 DW_TAG_pointer_type
+	.long	9989                            # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2705:0xc DW_TAG_structure_type
+	.short	521                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2708:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x270a:0x5 DW_TAG_template_type_parameter
+	.long	7637                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2711:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	522                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2707:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2709:0x5 DW_TAG_template_type_parameter
-	.long	7601                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2710:0x5 DW_TAG_pointer_type
-	.long	10005                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2715:0xc DW_TAG_structure_type
-	.short	523                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2718:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x271a:0x5 DW_TAG_template_type_parameter
-	.long	7601                            # DW_AT_type
+	.long	7643                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2721:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2721:0x5 DW_TAG_pointer_type
+	.long	10022                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2726:0xc DW_TAG_structure_type
+	.short	523                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2729:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x272b:0x5 DW_TAG_template_type_parameter
+	.long	7643                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2732:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	524                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2728:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x272a:0x5 DW_TAG_template_type_parameter
-	.long	7611                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2731:0x5 DW_TAG_pointer_type
-	.long	10038                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2736:0xc DW_TAG_structure_type
-	.short	525                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2739:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x273b:0x5 DW_TAG_template_type_parameter
-	.long	7611                            # DW_AT_type
+	.long	7649                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2742:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2742:0x5 DW_TAG_pointer_type
+	.long	10055                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2747:0xc DW_TAG_structure_type
+	.short	525                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x274a:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x274c:0x5 DW_TAG_template_type_parameter
+	.long	7649                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2753:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	526                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2749:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x274b:0x5 DW_TAG_template_type_parameter
-	.long	7628                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2752:0x5 DW_TAG_pointer_type
-	.long	10071                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2757:0xc DW_TAG_structure_type
-	.short	527                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x275a:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x275c:0x5 DW_TAG_template_type_parameter
-	.long	7628                            # DW_AT_type
+	.long	7659                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2763:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2763:0x5 DW_TAG_pointer_type
+	.long	10088                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2768:0xc DW_TAG_structure_type
+	.short	527                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x276b:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x276d:0x5 DW_TAG_template_type_parameter
+	.long	7659                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2774:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	528                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x276a:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x276c:0x5 DW_TAG_template_type_parameter
-	.long	7633                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2773:0x5 DW_TAG_pointer_type
-	.long	10104                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2778:0xc DW_TAG_structure_type
-	.short	529                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x277b:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x277d:0x5 DW_TAG_template_type_parameter
-	.long	7633                            # DW_AT_type
+	.long	7676                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2784:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2784:0x5 DW_TAG_pointer_type
+	.long	10121                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2789:0xc DW_TAG_structure_type
+	.short	529                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x278c:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x278e:0x5 DW_TAG_template_type_parameter
+	.long	7676                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2795:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	530                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x278b:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x278d:0x5 DW_TAG_template_type_parameter
-	.long	7664                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2794:0x5 DW_TAG_pointer_type
-	.long	10137                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2799:0xc DW_TAG_structure_type
-	.short	531                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x279c:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x279e:0x5 DW_TAG_template_type_parameter
-	.long	7664                            # DW_AT_type
+	.long	7681                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x27a5:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x27a5:0x5 DW_TAG_pointer_type
+	.long	10154                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x27aa:0xc DW_TAG_structure_type
+	.short	531                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x27ad:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x27af:0x5 DW_TAG_template_type_parameter
+	.long	7681                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x27b6:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	532                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x27ac:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x27ae:0x5 DW_TAG_template_type_parameter
-	.long	7687                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x27b5:0x5 DW_TAG_pointer_type
-	.long	10170                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x27ba:0xc DW_TAG_structure_type
-	.short	533                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x27bd:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x27bf:0x5 DW_TAG_template_type_parameter
-	.long	7687                            # DW_AT_type
+	.long	7712                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x27c6:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x27c6:0x5 DW_TAG_pointer_type
+	.long	10187                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x27cb:0xc DW_TAG_structure_type
+	.short	533                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x27ce:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x27d0:0x5 DW_TAG_template_type_parameter
+	.long	7712                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x27d7:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	534                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x27cd:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x27cf:0x5 DW_TAG_template_type_parameter
-	.long	7354                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x27d6:0x5 DW_TAG_pointer_type
-	.long	10203                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x27db:0xc DW_TAG_structure_type
-	.short	535                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x27de:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x27e0:0x5 DW_TAG_template_type_parameter
-	.long	7354                            # DW_AT_type
+	.long	7735                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x27e7:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x27e7:0x5 DW_TAG_pointer_type
+	.long	10220                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x27ec:0xc DW_TAG_structure_type
+	.short	535                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x27ef:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x27f1:0x5 DW_TAG_template_type_parameter
+	.long	7735                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x27f8:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	536                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x27ee:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x27f0:0x5 DW_TAG_template_type_parameter
-	.long	7699                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x27f7:0x5 DW_TAG_pointer_type
-	.long	10236                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x27fc:0xc DW_TAG_structure_type
-	.short	537                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x27ff:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2801:0x5 DW_TAG_template_type_parameter
-	.long	7699                            # DW_AT_type
+	.long	7402                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2808:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2808:0x5 DW_TAG_pointer_type
+	.long	10253                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x280d:0xc DW_TAG_structure_type
+	.short	537                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2810:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2812:0x5 DW_TAG_template_type_parameter
+	.long	7402                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2819:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	538                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x280f:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2811:0x5 DW_TAG_template_type_parameter
-	.long	7706                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2818:0x5 DW_TAG_pointer_type
-	.long	10269                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x281d:0xc DW_TAG_structure_type
-	.short	539                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2820:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2822:0x5 DW_TAG_template_type_parameter
-	.long	7706                            # DW_AT_type
+	.long	7747                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x2829:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x2829:0x5 DW_TAG_pointer_type
+	.long	10286                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x282e:0xc DW_TAG_structure_type
+	.short	539                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2831:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2833:0x5 DW_TAG_template_type_parameter
+	.long	7747                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x283a:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	540                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2830:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2832:0x5 DW_TAG_template_type_parameter
-	.long	7718                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2839:0x5 DW_TAG_pointer_type
-	.long	10302                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x283e:0xc DW_TAG_structure_type
-	.short	541                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2841:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2843:0x5 DW_TAG_template_type_parameter
-	.long	7718                            # DW_AT_type
+	.long	7754                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x284a:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x284a:0x5 DW_TAG_pointer_type
+	.long	10319                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x284f:0xc DW_TAG_structure_type
+	.short	541                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2852:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2854:0x5 DW_TAG_template_type_parameter
+	.long	7754                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x285b:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	542                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2851:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2853:0x5 DW_TAG_template_type_parameter
-	.long	7725                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x285a:0x5 DW_TAG_pointer_type
-	.long	10335                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x285f:0xc DW_TAG_structure_type
-	.short	543                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2862:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2864:0x5 DW_TAG_template_type_parameter
-	.long	7725                            # DW_AT_type
+	.long	7766                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x286b:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x286b:0x5 DW_TAG_pointer_type
+	.long	10352                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2870:0xc DW_TAG_structure_type
+	.short	543                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2873:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2875:0x5 DW_TAG_template_type_parameter
+	.long	7766                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x287c:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	544                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2872:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2874:0x5 DW_TAG_template_type_parameter
-	.long	7730                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x287b:0x5 DW_TAG_pointer_type
-	.long	10368                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2880:0xc DW_TAG_structure_type
-	.short	545                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x2883:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x2885:0x5 DW_TAG_template_type_parameter
-	.long	7730                            # DW_AT_type
+	.long	7773                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x288c:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x288c:0x5 DW_TAG_pointer_type
+	.long	10385                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2891:0xc DW_TAG_structure_type
+	.short	545                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2894:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2896:0x5 DW_TAG_template_type_parameter
+	.long	7773                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x289d:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	546                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x2893:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x2895:0x5 DW_TAG_template_type_parameter
-	.long	7740                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x289c:0x5 DW_TAG_pointer_type
-	.long	10401                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x28a1:0xc DW_TAG_structure_type
-	.short	547                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x28a4:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x28a6:0x5 DW_TAG_template_type_parameter
-	.long	7740                            # DW_AT_type
+	.long	7778                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x28ad:0x10 DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x28ad:0x5 DW_TAG_pointer_type
+	.long	10418                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x28b2:0xc DW_TAG_structure_type
+	.short	547                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x28b5:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x28b7:0x5 DW_TAG_template_type_parameter
+	.long	7778                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x28be:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	548                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x28b4:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x28b6:0x5 DW_TAG_template_type_parameter
-	.long	7762                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x28bd:0x5 DW_TAG_pointer_type
-	.long	10434                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x28c2:0xc DW_TAG_structure_type
-	.short	549                             # DW_AT_name
-                                        # DW_AT_declaration
 	.byte	33                              # Abbrev [33] 0x28c5:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
 	.byte	34                              # Abbrev [34] 0x28c7:0x5 DW_TAG_template_type_parameter
-	.long	7762                            # DW_AT_type
+	.long	7788                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	55                              # Abbrev [55] 0x28ce:0x5 DW_TAG_pointer_type
-	.long	6991                            # DW_AT_type
-	.byte	76                              # Abbrev [76] 0x28d3:0x10 DW_TAG_structure_type
-	.byte	5                               # DW_AT_calling_convention
-	.short	486                             # DW_AT_name
-	.byte	1                               # DW_AT_byte_size
-	.byte	0                               # DW_AT_decl_file
-	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x28da:0x8 DW_TAG_GNU_template_parameter_pack
-	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x28dc:0x5 DW_TAG_template_type_parameter
-	.long	7043                            # DW_AT_type
-	.byte	0                               # End Of Children Mark
-	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x28e3:0x5 DW_TAG_pointer_type
-	.long	10472                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x28e8:0xc DW_TAG_structure_type
-	.short	487                             # DW_AT_name
+	.long	10451                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x28d3:0xc DW_TAG_structure_type
+	.short	549                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x28eb:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x28d6:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x28ed:0x5 DW_TAG_template_type_parameter
-	.long	7043                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x28d8:0x5 DW_TAG_template_type_parameter
+	.long	7788                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	76                              # Abbrev [76] 0x28f4:0x10 DW_TAG_structure_type
+	.byte	76                              # Abbrev [76] 0x28df:0x10 DW_TAG_structure_type
 	.byte	5                               # DW_AT_calling_convention
 	.short	550                             # DW_AT_name
 	.byte	1                               # DW_AT_byte_size
 	.byte	0                               # DW_AT_decl_file
 	.byte	12                              # DW_AT_decl_line
-	.byte	33                              # Abbrev [33] 0x28fb:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x28e6:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x28fd:0x5 DW_TAG_template_type_parameter
-	.long	7771                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x28e8:0x5 DW_TAG_template_type_parameter
+	.long	7810                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
-	.byte	55                              # Abbrev [55] 0x2904:0x5 DW_TAG_pointer_type
-	.long	10505                           # DW_AT_type
-	.byte	91                              # Abbrev [91] 0x2909:0xc DW_TAG_structure_type
+	.byte	55                              # Abbrev [55] 0x28ef:0x5 DW_TAG_pointer_type
+	.long	10484                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x28f4:0xc DW_TAG_structure_type
 	.short	551                             # DW_AT_name
                                         # DW_AT_declaration
-	.byte	33                              # Abbrev [33] 0x290c:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	33                              # Abbrev [33] 0x28f7:0x8 DW_TAG_GNU_template_parameter_pack
 	.byte	86                              # DW_AT_name
-	.byte	34                              # Abbrev [34] 0x290e:0x5 DW_TAG_template_type_parameter
-	.long	7771                            # DW_AT_type
+	.byte	34                              # Abbrev [34] 0x28f9:0x5 DW_TAG_template_type_parameter
+	.long	7810                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2900:0x10 DW_TAG_structure_type
+	.byte	5                               # DW_AT_calling_convention
+	.short	552                             # DW_AT_name
+	.byte	1                               # DW_AT_byte_size
+	.byte	0                               # DW_AT_decl_file
+	.byte	12                              # DW_AT_decl_line
+	.byte	33                              # Abbrev [33] 0x2907:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2909:0x5 DW_TAG_template_type_parameter
+	.long	7819                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	55                              # Abbrev [55] 0x2910:0x5 DW_TAG_pointer_type
+	.long	10517                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x2915:0xc DW_TAG_structure_type
+	.short	553                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x2918:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x291a:0x5 DW_TAG_template_type_parameter
+	.long	7819                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	55                              # Abbrev [55] 0x2921:0x5 DW_TAG_pointer_type
+	.long	7039                            # DW_AT_type
+	.byte	76                              # Abbrev [76] 0x2926:0x10 DW_TAG_structure_type
+	.byte	5                               # DW_AT_calling_convention
+	.short	488                             # DW_AT_name
+	.byte	1                               # DW_AT_byte_size
+	.byte	0                               # DW_AT_decl_file
+	.byte	12                              # DW_AT_decl_line
+	.byte	33                              # Abbrev [33] 0x292d:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x292f:0x5 DW_TAG_template_type_parameter
+	.long	7091                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	55                              # Abbrev [55] 0x2936:0x5 DW_TAG_pointer_type
+	.long	10555                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x293b:0xc DW_TAG_structure_type
+	.short	489                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x293e:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2940:0x5 DW_TAG_template_type_parameter
+	.long	7091                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	76                              # Abbrev [76] 0x2947:0x10 DW_TAG_structure_type
+	.byte	5                               # DW_AT_calling_convention
+	.short	554                             # DW_AT_name
+	.byte	1                               # DW_AT_byte_size
+	.byte	0                               # DW_AT_decl_file
+	.byte	12                              # DW_AT_decl_line
+	.byte	33                              # Abbrev [33] 0x294e:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2950:0x5 DW_TAG_template_type_parameter
+	.long	7821                            # DW_AT_type
+	.byte	0                               # End Of Children Mark
+	.byte	0                               # End Of Children Mark
+	.byte	55                              # Abbrev [55] 0x2957:0x5 DW_TAG_pointer_type
+	.long	10588                           # DW_AT_type
+	.byte	92                              # Abbrev [92] 0x295c:0xc DW_TAG_structure_type
+	.short	555                             # DW_AT_name
+                                        # DW_AT_declaration
+	.byte	33                              # Abbrev [33] 0x295f:0x8 DW_TAG_GNU_template_parameter_pack
+	.byte	86                              # DW_AT_name
+	.byte	34                              # Abbrev [34] 0x2961:0x5 DW_TAG_template_type_parameter
+	.long	7821                            # DW_AT_type
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
 	.byte	0                               # End Of Children Mark
@@ -11744,8 +11834,8 @@ i:
 	.uleb128 .Lfunc_begin126-.Lfunc_begin0  #   starting offset
 	.uleb128 .Lfunc_end128-.Lfunc_begin0    #   ending offset
 	.byte	4                               # DW_RLE_offset_pair
-	.uleb128 .Lfunc_begin134-.Lfunc_begin0  #   starting offset
-	.uleb128 .Lfunc_end135-.Lfunc_begin0    #   ending offset
+	.uleb128 .Lfunc_begin135-.Lfunc_begin0  #   starting offset
+	.uleb128 .Lfunc_end136-.Lfunc_begin0    #   ending offset
 	.byte	3                               # DW_RLE_startx_length
 	.byte	3                               #   start index
 	.uleb128 .Lfunc_end2-.Lfunc_begin2      #   length
@@ -12104,18 +12194,21 @@ i:
 	.ascii	"\206\001"                      #   start index
 	.uleb128 .Lfunc_end133-.Lfunc_begin133  #   length
 	.byte	3                               # DW_RLE_startx_length
-	.ascii	"\211\001"                      #   start index
-	.uleb128 .Lfunc_end136-.Lfunc_begin136  #   length
+	.ascii	"\207\001"                      #   start index
+	.uleb128 .Lfunc_end134-.Lfunc_begin134  #   length
+	.byte	3                               # DW_RLE_startx_length
+	.ascii	"\212\001"                      #   start index
+	.uleb128 .Lfunc_end137-.Lfunc_begin137  #   length
 	.byte	0                               # DW_RLE_end_of_list
 .Ldebug_list_header_end0:
 	.section	.debug_str_offsets,"",@progbits
-	.long	2212                            # Length of String Offsets Set
+	.long	2228                            # Length of String Offsets Set
 	.short	5
 	.short	0
 .Lstr_offsets_base0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 15.0.0 (git@github.com:llvm/llvm-project.git 9980a3f8318cbfe2305b4ffc58a7256da1a3891d)" # string offset=0
+	.asciz	"clang version 15.0.0 (git@github.com:llvm/llvm-project.git 4e115b7d881136947c083e12f62010bc6b1d3f00)" # string offset=0
 .Linfo_string1:
 	.asciz	"cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp" # string offset=101
 .Linfo_string2:
@@ -12877,347 +12970,355 @@ i:
 .Linfo_string380:
 	.asciz	"_STNf1|<int t1<>::*>"          # string offset=8582
 .Linfo_string381:
-	.asciz	"_Z2f1IJZN2t83memEvE2t7EEvv"    # string offset=8603
+	.asciz	"_Z2f1IJU9swiftcallFvvEEEvv"    # string offset=8603
 .Linfo_string382:
-	.asciz	"_Z2f1IJM2t8FvvEEEvv"           # string offset=8630
+	.asciz	"_STNf1|<void () __attribute__((swiftcall))>" # string offset=8630
 .Linfo_string383:
-	.asciz	"_STNf1|<void (t8::*)()>"       # string offset=8650
+	.asciz	"_Z2f1IJZN2t83memEvE2t7EEvv"    # string offset=8674
 .Linfo_string384:
-	.asciz	"L"                             # string offset=8674
+	.asciz	"_Z2f1IJM2t8FvvEEEvv"           # string offset=8701
 .Linfo_string385:
-	.asciz	"v2"                            # string offset=8676
+	.asciz	"_STNf1|<void (t8::*)()>"       # string offset=8721
 .Linfo_string386:
-	.asciz	"N"                             # string offset=8679
+	.asciz	"L"                             # string offset=8745
 .Linfo_string387:
-	.asciz	"_STNt4|<3U>"                   # string offset=8681
+	.asciz	"v2"                            # string offset=8747
 .Linfo_string388:
-	.asciz	"v1"                            # string offset=8693
+	.asciz	"N"                             # string offset=8750
 .Linfo_string389:
-	.asciz	"v6"                            # string offset=8696
+	.asciz	"_STNt4|<3U>"                   # string offset=8752
 .Linfo_string390:
-	.asciz	"x"                             # string offset=8699
+	.asciz	"v1"                            # string offset=8764
 .Linfo_string391:
-	.asciz	"t7i"                           # string offset=8701
+	.asciz	"v6"                            # string offset=8767
 .Linfo_string392:
-	.asciz	"v3"                            # string offset=8705
+	.asciz	"x"                             # string offset=8770
 .Linfo_string393:
-	.asciz	"v4"                            # string offset=8708
+	.asciz	"t7i"                           # string offset=8772
 .Linfo_string394:
-	.asciz	"t11<(anonymous namespace)::LocalEnum, (anonymous namespace)::LocalEnum1>" # string offset=8711
+	.asciz	"v3"                            # string offset=8776
 .Linfo_string395:
-	.asciz	"t12"                           # string offset=8784
+	.asciz	"v4"                            # string offset=8779
 .Linfo_string396:
-	.asciz	"_STNt2|<int>"                  # string offset=8788
+	.asciz	"t11<(anonymous namespace)::LocalEnum, (anonymous namespace)::LocalEnum1>" # string offset=8782
 .Linfo_string397:
-	.asciz	"_STNt2|<float>"                # string offset=8801
+	.asciz	"t12"                           # string offset=8855
 .Linfo_string398:
-	.asciz	"_STNt1|<bool>"                 # string offset=8816
+	.asciz	"_STNt2|<int>"                  # string offset=8859
 .Linfo_string399:
-	.asciz	"_STNt2|<bool>"                 # string offset=8830
+	.asciz	"_STNt2|<float>"                # string offset=8872
 .Linfo_string400:
-	.asciz	"_STNt1|<double>"               # string offset=8844
+	.asciz	"_STNt1|<bool>"                 # string offset=8887
 .Linfo_string401:
-	.asciz	"_STNt2|<double>"               # string offset=8860
+	.asciz	"_STNt2|<bool>"                 # string offset=8901
 .Linfo_string402:
-	.asciz	"_STNt1|<long>"                 # string offset=8876
+	.asciz	"_STNt1|<double>"               # string offset=8915
 .Linfo_string403:
-	.asciz	"_STNt2|<long>"                 # string offset=8890
+	.asciz	"_STNt2|<double>"               # string offset=8931
 .Linfo_string404:
-	.asciz	"_STNt1|<short>"                # string offset=8904
+	.asciz	"_STNt1|<long>"                 # string offset=8947
 .Linfo_string405:
-	.asciz	"_STNt2|<short>"                # string offset=8919
+	.asciz	"_STNt2|<long>"                 # string offset=8961
 .Linfo_string406:
-	.asciz	"_STNt1|<unsigned int>"         # string offset=8934
+	.asciz	"_STNt1|<short>"                # string offset=8975
 .Linfo_string407:
-	.asciz	"_STNt2|<unsigned int>"         # string offset=8956
+	.asciz	"_STNt2|<short>"                # string offset=8990
 .Linfo_string408:
-	.asciz	"_STNt1|<unsigned long long>"   # string offset=8978
+	.asciz	"_STNt1|<unsigned int>"         # string offset=9005
 .Linfo_string409:
-	.asciz	"_STNt2|<unsigned long long>"   # string offset=9006
+	.asciz	"_STNt2|<unsigned int>"         # string offset=9027
 .Linfo_string410:
-	.asciz	"_STNt1|<long long>"            # string offset=9034
+	.asciz	"_STNt1|<unsigned long long>"   # string offset=9049
 .Linfo_string411:
-	.asciz	"_STNt2|<long long>"            # string offset=9053
+	.asciz	"_STNt2|<unsigned long long>"   # string offset=9077
 .Linfo_string412:
-	.asciz	"_STNt1|<udt>"                  # string offset=9072
+	.asciz	"_STNt1|<long long>"            # string offset=9105
 .Linfo_string413:
-	.asciz	"_STNt2|<udt>"                  # string offset=9085
+	.asciz	"_STNt2|<long long>"            # string offset=9124
 .Linfo_string414:
-	.asciz	"_STNt1|<ns::udt>"              # string offset=9098
+	.asciz	"_STNt1|<udt>"                  # string offset=9143
 .Linfo_string415:
-	.asciz	"_STNt2|<ns::udt>"              # string offset=9115
+	.asciz	"_STNt2|<udt>"                  # string offset=9156
 .Linfo_string416:
-	.asciz	"_STNt1|<ns::udt *>"            # string offset=9132
+	.asciz	"_STNt1|<ns::udt>"              # string offset=9169
 .Linfo_string417:
-	.asciz	"_STNt2|<ns::udt *>"            # string offset=9151
+	.asciz	"_STNt2|<ns::udt>"              # string offset=9186
 .Linfo_string418:
-	.asciz	"_STNt1|<ns::inner::udt>"       # string offset=9170
+	.asciz	"_STNt1|<ns::udt *>"            # string offset=9203
 .Linfo_string419:
-	.asciz	"_STNt2|<ns::inner::udt>"       # string offset=9194
+	.asciz	"_STNt2|<ns::udt *>"            # string offset=9222
 .Linfo_string420:
-	.asciz	"_STNt1|<t1<int> >"             # string offset=9218
+	.asciz	"_STNt1|<ns::inner::udt>"       # string offset=9241
 .Linfo_string421:
-	.asciz	"_STNt2|<t1<int> >"             # string offset=9236
+	.asciz	"_STNt2|<ns::inner::udt>"       # string offset=9265
 .Linfo_string422:
-	.asciz	"_STNt1|<int, float>"           # string offset=9254
+	.asciz	"_STNt1|<t1<int> >"             # string offset=9289
 .Linfo_string423:
-	.asciz	"_STNt2|<int, float>"           # string offset=9274
+	.asciz	"_STNt2|<t1<int> >"             # string offset=9307
 .Linfo_string424:
-	.asciz	"_STNt2|<int *>"                # string offset=9294
+	.asciz	"_STNt1|<int, float>"           # string offset=9325
 .Linfo_string425:
-	.asciz	"_STNt1|<int &>"                # string offset=9309
+	.asciz	"_STNt2|<int, float>"           # string offset=9345
 .Linfo_string426:
-	.asciz	"_STNt2|<int &>"                # string offset=9324
+	.asciz	"_STNt2|<int *>"                # string offset=9365
 .Linfo_string427:
-	.asciz	"_STNt1|<int &&>"               # string offset=9339
+	.asciz	"_STNt1|<int &>"                # string offset=9380
 .Linfo_string428:
-	.asciz	"_STNt2|<int &&>"               # string offset=9355
+	.asciz	"_STNt2|<int &>"                # string offset=9395
 .Linfo_string429:
-	.asciz	"_STNt1|<const int>"            # string offset=9371
+	.asciz	"_STNt1|<int &&>"               # string offset=9410
 .Linfo_string430:
-	.asciz	"_STNt2|<const int>"            # string offset=9390
+	.asciz	"_STNt2|<int &&>"               # string offset=9426
 .Linfo_string431:
-	.asciz	"_STNt1|<int[3]>"               # string offset=9409
+	.asciz	"_STNt1|<const int>"            # string offset=9442
 .Linfo_string432:
-	.asciz	"_STNt2|<int[3]>"               # string offset=9425
+	.asciz	"_STNt2|<const int>"            # string offset=9461
 .Linfo_string433:
-	.asciz	"_STNt1|<void>"                 # string offset=9441
+	.asciz	"_STNt1|<int[3]>"               # string offset=9480
 .Linfo_string434:
-	.asciz	"_STNt2|<void>"                 # string offset=9455
+	.asciz	"_STNt2|<int[3]>"               # string offset=9496
 .Linfo_string435:
-	.asciz	"_STNt1|<outer_class::inner_class>" # string offset=9469
+	.asciz	"_STNt1|<void>"                 # string offset=9512
 .Linfo_string436:
-	.asciz	"_STNt2|<outer_class::inner_class>" # string offset=9503
+	.asciz	"_STNt2|<void>"                 # string offset=9526
 .Linfo_string437:
-	.asciz	"_STNt1|<unsigned long>"        # string offset=9537
+	.asciz	"_STNt1|<outer_class::inner_class>" # string offset=9540
 .Linfo_string438:
-	.asciz	"_STNt2|<unsigned long>"        # string offset=9560
+	.asciz	"_STNt2|<outer_class::inner_class>" # string offset=9574
 .Linfo_string439:
-	.asciz	"_STNt1|<t3<int, false> >"      # string offset=9583
+	.asciz	"_STNt1|<unsigned long>"        # string offset=9608
 .Linfo_string440:
-	.asciz	"_STNt2|<t3<int, false> >"      # string offset=9608
+	.asciz	"_STNt2|<unsigned long>"        # string offset=9631
 .Linfo_string441:
-	.asciz	"_STNt1|<t3<t3<int, false>, false> >" # string offset=9633
+	.asciz	"_STNt1|<t3<int, false> >"      # string offset=9654
 .Linfo_string442:
-	.asciz	"_STNt2|<t3<t3<int, false>, false> >" # string offset=9669
+	.asciz	"_STNt2|<t3<int, false> >"      # string offset=9679
 .Linfo_string443:
-	.asciz	"t2<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)>" # string offset=9705
+	.asciz	"_STNt1|<t3<t3<int, false>, false> >" # string offset=9704
 .Linfo_string444:
-	.asciz	"t1<t3<t3<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12), false>, false> >" # string offset=9815
+	.asciz	"_STNt2|<t3<t3<int, false>, false> >" # string offset=9740
 .Linfo_string445:
-	.asciz	"t2<t3<t3<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12), false>, false> >" # string offset=9948
+	.asciz	"t2<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)>" # string offset=9776
 .Linfo_string446:
-	.asciz	"_STNt1|<int (float)>"          # string offset=10081
+	.asciz	"t1<t3<t3<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12), false>, false> >" # string offset=9886
 .Linfo_string447:
-	.asciz	"_STNt2|<int (float)>"          # string offset=10102
+	.asciz	"t2<t3<t3<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12), false>, false> >" # string offset=10019
 .Linfo_string448:
-	.asciz	"_STNt1|<void (...)>"           # string offset=10123
+	.asciz	"_STNt1|<int (float)>"          # string offset=10152
 .Linfo_string449:
-	.asciz	"_STNt2|<void (...)>"           # string offset=10143
+	.asciz	"_STNt2|<int (float)>"          # string offset=10173
 .Linfo_string450:
-	.asciz	"_STNt1|<void (int, ...)>"      # string offset=10163
+	.asciz	"_STNt1|<void (...)>"           # string offset=10194
 .Linfo_string451:
-	.asciz	"_STNt2|<void (int, ...)>"      # string offset=10188
+	.asciz	"_STNt2|<void (...)>"           # string offset=10214
 .Linfo_string452:
-	.asciz	"_STNt1|<const int &>"          # string offset=10213
+	.asciz	"_STNt1|<void (int, ...)>"      # string offset=10234
 .Linfo_string453:
-	.asciz	"_STNt2|<const int &>"          # string offset=10234
+	.asciz	"_STNt2|<void (int, ...)>"      # string offset=10259
 .Linfo_string454:
-	.asciz	"_STNt1|<const int *&>"         # string offset=10255
+	.asciz	"_STNt1|<const int &>"          # string offset=10284
 .Linfo_string455:
-	.asciz	"_STNt2|<const int *&>"         # string offset=10277
+	.asciz	"_STNt2|<const int &>"          # string offset=10305
 .Linfo_string456:
-	.asciz	"_STNt1|<(anonymous namespace)::t5>" # string offset=10299
+	.asciz	"_STNt1|<const int *&>"         # string offset=10326
 .Linfo_string457:
-	.asciz	"_STNt2|<(anonymous namespace)::t5>" # string offset=10334
+	.asciz	"_STNt2|<const int *&>"         # string offset=10348
 .Linfo_string458:
-	.asciz	"_STNt1|<std::nullptr_t>"       # string offset=10369
+	.asciz	"_STNt1|<(anonymous namespace)::t5>" # string offset=10370
 .Linfo_string459:
-	.asciz	"_STNt2|<std::nullptr_t>"       # string offset=10393
+	.asciz	"_STNt2|<(anonymous namespace)::t5>" # string offset=10405
 .Linfo_string460:
-	.asciz	"_STNt1|<long *, long *>"       # string offset=10417
+	.asciz	"_STNt1|<std::nullptr_t>"       # string offset=10440
 .Linfo_string461:
-	.asciz	"_STNt2|<long *, long *>"       # string offset=10441
+	.asciz	"_STNt2|<std::nullptr_t>"       # string offset=10464
 .Linfo_string462:
-	.asciz	"_STNt1|<long *, udt *>"        # string offset=10465
+	.asciz	"_STNt1|<long *, long *>"       # string offset=10488
 .Linfo_string463:
-	.asciz	"_STNt2|<long *, udt *>"        # string offset=10488
+	.asciz	"_STNt2|<long *, long *>"       # string offset=10512
 .Linfo_string464:
-	.asciz	"_STNt1|<void *const>"          # string offset=10511
+	.asciz	"_STNt1|<long *, udt *>"        # string offset=10536
 .Linfo_string465:
-	.asciz	"_STNt2|<void *const>"          # string offset=10532
+	.asciz	"_STNt2|<long *, udt *>"        # string offset=10559
 .Linfo_string466:
-	.asciz	"_STNt1|<const void *const *>"  # string offset=10553
+	.asciz	"_STNt1|<void *const>"          # string offset=10582
 .Linfo_string467:
-	.asciz	"_STNt2|<const void *const *>"  # string offset=10582
+	.asciz	"_STNt2|<void *const>"          # string offset=10603
 .Linfo_string468:
-	.asciz	"_STNt1|<void ()>"              # string offset=10611
+	.asciz	"_STNt1|<const void *const *>"  # string offset=10624
 .Linfo_string469:
-	.asciz	"_STNt2|<void ()>"              # string offset=10628
+	.asciz	"_STNt2|<const void *const *>"  # string offset=10653
 .Linfo_string470:
-	.asciz	"_STNt1|<void (*)()>"           # string offset=10645
+	.asciz	"_STNt1|<void ()>"              # string offset=10682
 .Linfo_string471:
-	.asciz	"_STNt2|<void (*)()>"           # string offset=10665
+	.asciz	"_STNt2|<void ()>"              # string offset=10699
 .Linfo_string472:
-	.asciz	"t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12) *>" # string offset=10685
+	.asciz	"_STNt1|<void (*)()>"           # string offset=10716
 .Linfo_string473:
-	.asciz	"t2<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12) *>" # string offset=10797
+	.asciz	"_STNt2|<void (*)()>"           # string offset=10736
 .Linfo_string474:
-	.asciz	"t1<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3)>" # string offset=10909
+	.asciz	"t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12) *>" # string offset=10756
 .Linfo_string475:
-	.asciz	"t2<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3)>" # string offset=11026
+	.asciz	"t2<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12) *>" # string offset=10868
 .Linfo_string476:
-	.asciz	"t1<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3) *>" # string offset=11143
+	.asciz	"t1<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3)>" # string offset=10980
 .Linfo_string477:
-	.asciz	"t2<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3) *>" # string offset=11262
+	.asciz	"t2<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3)>" # string offset=11097
 .Linfo_string478:
-	.asciz	"_STNt2|<>"                     # string offset=11381
+	.asciz	"t1<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3) *>" # string offset=11214
 .Linfo_string479:
-	.asciz	"_STNt1|<const void *, const void *>" # string offset=11391
+	.asciz	"t2<(unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3) *>" # string offset=11333
 .Linfo_string480:
-	.asciz	"_STNt2|<const void *, const void *>" # string offset=11427
+	.asciz	"_STNt2|<>"                     # string offset=11452
 .Linfo_string481:
-	.asciz	"_STNt1|<t1<int *> *>"          # string offset=11463
+	.asciz	"_STNt1|<const void *, const void *>" # string offset=11462
 .Linfo_string482:
-	.asciz	"_STNt2|<t1<int *> *>"          # string offset=11484
+	.asciz	"_STNt2|<const void *, const void *>" # string offset=11498
 .Linfo_string483:
-	.asciz	"_STNt1|<int *[]>"              # string offset=11505
+	.asciz	"_STNt1|<t1<int *> *>"          # string offset=11534
 .Linfo_string484:
-	.asciz	"_STNt2|<int *[]>"              # string offset=11522
+	.asciz	"_STNt2|<t1<int *> *>"          # string offset=11555
 .Linfo_string485:
-	.asciz	"this"                          # string offset=11539
+	.asciz	"_STNt1|<int *[]>"              # string offset=11576
 .Linfo_string486:
-	.asciz	"_STNt1|<t7>"                   # string offset=11544
+	.asciz	"_STNt2|<int *[]>"              # string offset=11593
 .Linfo_string487:
-	.asciz	"_STNt2|<t7>"                   # string offset=11556
+	.asciz	"this"                          # string offset=11610
 .Linfo_string488:
-	.asciz	"_STNt1|<int (&)[3]>"           # string offset=11568
+	.asciz	"_STNt1|<t7>"                   # string offset=11615
 .Linfo_string489:
-	.asciz	"_STNt2|<int (&)[3]>"           # string offset=11588
+	.asciz	"_STNt2|<t7>"                   # string offset=11627
 .Linfo_string490:
-	.asciz	"_STNt1|<int (*)[3]>"           # string offset=11608
+	.asciz	"_STNt1|<int (&)[3]>"           # string offset=11639
 .Linfo_string491:
-	.asciz	"_STNt2|<int (*)[3]>"           # string offset=11628
+	.asciz	"_STNt2|<int (&)[3]>"           # string offset=11659
 .Linfo_string492:
-	.asciz	"_STNt1|<int *, std::nullptr_t *>" # string offset=11648
+	.asciz	"_STNt1|<int (*)[3]>"           # string offset=11679
 .Linfo_string493:
-	.asciz	"_STNt2|<int *, std::nullptr_t *>" # string offset=11681
+	.asciz	"_STNt2|<int (*)[3]>"           # string offset=11699
 .Linfo_string494:
-	.asciz	"_STNt1|<t7<int> >"             # string offset=11714
+	.asciz	"_STNt1|<int *, std::nullptr_t *>" # string offset=11719
 .Linfo_string495:
-	.asciz	"_STNt2|<t7<int> >"             # string offset=11732
+	.asciz	"_STNt2|<int *, std::nullptr_t *>" # string offset=11752
 .Linfo_string496:
-	.asciz	"t1<_Atomic(int)>"              # string offset=11750
+	.asciz	"_STNt1|<t7<int> >"             # string offset=11785
 .Linfo_string497:
-	.asciz	"t2<_Atomic(int)>"              # string offset=11767
+	.asciz	"_STNt2|<t7<int> >"             # string offset=11803
 .Linfo_string498:
-	.asciz	"_STNt1|<int, long, volatile char>" # string offset=11784
+	.asciz	"t1<_Atomic(int)>"              # string offset=11821
 .Linfo_string499:
-	.asciz	"_STNt2|<int, long, volatile char>" # string offset=11818
+	.asciz	"t2<_Atomic(int)>"              # string offset=11838
 .Linfo_string500:
-	.asciz	"t1<__attribute__((__vector_size__(2 * sizeof(int)))) int>" # string offset=11852
+	.asciz	"_STNt1|<int, long, volatile char>" # string offset=11855
 .Linfo_string501:
-	.asciz	"t2<__attribute__((__vector_size__(2 * sizeof(int)))) int>" # string offset=11910
+	.asciz	"_STNt2|<int, long, volatile char>" # string offset=11889
 .Linfo_string502:
-	.asciz	"_STNt1|<int *const volatile>"  # string offset=11968
+	.asciz	"t1<__attribute__((__vector_size__(2 * sizeof(int)))) int>" # string offset=11923
 .Linfo_string503:
-	.asciz	"_STNt2|<int *const volatile>"  # string offset=11997
+	.asciz	"t2<__attribute__((__vector_size__(2 * sizeof(int)))) int>" # string offset=11981
 .Linfo_string504:
-	.asciz	"_STNt1|<const volatile void>"  # string offset=12026
+	.asciz	"_STNt1|<int *const volatile>"  # string offset=12039
 .Linfo_string505:
-	.asciz	"_STNt2|<const volatile void>"  # string offset=12055
+	.asciz	"_STNt2|<int *const volatile>"  # string offset=12068
 .Linfo_string506:
-	.asciz	"t1<t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)> >" # string offset=12084
+	.asciz	"_STNt1|<const volatile void>"  # string offset=12097
 .Linfo_string507:
-	.asciz	"t2<t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)> >" # string offset=12199
+	.asciz	"_STNt2|<const volatile void>"  # string offset=12126
 .Linfo_string508:
-	.asciz	"_STNt1|<void (udt::*)() const>" # string offset=12314
+	.asciz	"t1<t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)> >" # string offset=12155
 .Linfo_string509:
-	.asciz	"_STNt2|<void (udt::*)() const>" # string offset=12345
+	.asciz	"t2<t1<(lambda at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:184:12)> >" # string offset=12270
 .Linfo_string510:
-	.asciz	"_STNt1|<void (udt::*)() volatile &>" # string offset=12376
+	.asciz	"_STNt1|<void (udt::*)() const>" # string offset=12385
 .Linfo_string511:
-	.asciz	"_STNt2|<void (udt::*)() volatile &>" # string offset=12412
+	.asciz	"_STNt2|<void (udt::*)() const>" # string offset=12416
 .Linfo_string512:
-	.asciz	"_STNt1|<void (udt::*)() const volatile &&>" # string offset=12448
+	.asciz	"_STNt1|<void (udt::*)() volatile &>" # string offset=12447
 .Linfo_string513:
-	.asciz	"_STNt2|<void (udt::*)() const volatile &&>" # string offset=12491
+	.asciz	"_STNt2|<void (udt::*)() volatile &>" # string offset=12483
 .Linfo_string514:
-	.asciz	"_STNt1|<void (*const)()>"      # string offset=12534
+	.asciz	"_STNt1|<void (udt::*)() const volatile &&>" # string offset=12519
 .Linfo_string515:
-	.asciz	"_STNt2|<void (*const)()>"      # string offset=12559
+	.asciz	"_STNt2|<void (udt::*)() const volatile &&>" # string offset=12562
 .Linfo_string516:
-	.asciz	"_STNt1|<const char (&)[1]>"    # string offset=12584
+	.asciz	"_STNt1|<void (*const)()>"      # string offset=12605
 .Linfo_string517:
-	.asciz	"_STNt2|<const char (&)[1]>"    # string offset=12611
+	.asciz	"_STNt2|<void (*const)()>"      # string offset=12630
 .Linfo_string518:
-	.asciz	"_STNt1|<void () const &>"      # string offset=12638
+	.asciz	"_STNt1|<const char (&)[1]>"    # string offset=12655
 .Linfo_string519:
-	.asciz	"_STNt2|<void () const &>"      # string offset=12663
+	.asciz	"_STNt2|<const char (&)[1]>"    # string offset=12682
 .Linfo_string520:
-	.asciz	"_STNt1|<void () volatile &&>"  # string offset=12688
+	.asciz	"_STNt1|<void () const &>"      # string offset=12709
 .Linfo_string521:
-	.asciz	"_STNt2|<void () volatile &&>"  # string offset=12717
+	.asciz	"_STNt2|<void () const &>"      # string offset=12734
 .Linfo_string522:
-	.asciz	"_STNt1|<void () const volatile>" # string offset=12746
+	.asciz	"_STNt1|<void () volatile &&>"  # string offset=12759
 .Linfo_string523:
-	.asciz	"_STNt2|<void () const volatile>" # string offset=12778
+	.asciz	"_STNt2|<void () volatile &&>"  # string offset=12788
 .Linfo_string524:
-	.asciz	"_STNt1|<int *const[1]>"        # string offset=12810
+	.asciz	"_STNt1|<void () const volatile>" # string offset=12817
 .Linfo_string525:
-	.asciz	"_STNt2|<int *const[1]>"        # string offset=12833
+	.asciz	"_STNt2|<void () const volatile>" # string offset=12849
 .Linfo_string526:
-	.asciz	"_STNt1|<int *const (&)[1]>"    # string offset=12856
+	.asciz	"_STNt1|<int *const[1]>"        # string offset=12881
 .Linfo_string527:
-	.asciz	"_STNt2|<int *const (&)[1]>"    # string offset=12883
+	.asciz	"_STNt2|<int *const[1]>"        # string offset=12904
 .Linfo_string528:
-	.asciz	"_STNt1|<void (udt::*const &)()>" # string offset=12910
+	.asciz	"_STNt1|<int *const (&)[1]>"    # string offset=12927
 .Linfo_string529:
-	.asciz	"_STNt2|<void (udt::*const &)()>" # string offset=12942
+	.asciz	"_STNt2|<int *const (&)[1]>"    # string offset=12954
 .Linfo_string530:
-	.asciz	"_STNt1|<void (*(int))(float)>" # string offset=12974
+	.asciz	"_STNt1|<void (udt::*const &)()>" # string offset=12981
 .Linfo_string531:
-	.asciz	"_STNt2|<void (*(int))(float)>" # string offset=13004
+	.asciz	"_STNt2|<void (udt::*const &)()>" # string offset=13013
 .Linfo_string532:
-	.asciz	"_STNt1|<t1<int>[1]>"           # string offset=13034
+	.asciz	"_STNt1|<void (*(int))(float)>" # string offset=13045
 .Linfo_string533:
-	.asciz	"_STNt2|<t1<int>[1]>"           # string offset=13054
+	.asciz	"_STNt2|<void (*(int))(float)>" # string offset=13075
 .Linfo_string534:
-	.asciz	"t1<void (*)() noexcept>"       # string offset=13074
+	.asciz	"_STNt1|<t1<int>[1]>"           # string offset=13105
 .Linfo_string535:
-	.asciz	"t2<void (*)() noexcept>"       # string offset=13098
+	.asciz	"_STNt2|<t1<int>[1]>"           # string offset=13125
 .Linfo_string536:
-	.asciz	"t1<void ((unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13122
+	.asciz	"t1<void (*)() noexcept>"       # string offset=13145
 .Linfo_string537:
-	.asciz	"t2<void ((unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13246
+	.asciz	"t2<void (*)() noexcept>"       # string offset=13169
 .Linfo_string538:
-	.asciz	"t1<void (t8, (unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13370
+	.asciz	"t1<void ((unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13193
 .Linfo_string539:
-	.asciz	"t2<void (t8, (unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13498
+	.asciz	"t2<void ((unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13317
 .Linfo_string540:
-	.asciz	"_STNt1|<void (t8)>"            # string offset=13626
+	.asciz	"t1<void (t8, (unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13441
 .Linfo_string541:
-	.asciz	"_STNt2|<void (t8)>"            # string offset=13645
+	.asciz	"t2<void (t8, (unnamed struct at cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/simplified_template_names.cpp:183:3))>" # string offset=13569
 .Linfo_string542:
-	.asciz	"t1<_BitInt(3)>"                # string offset=13664
+	.asciz	"_STNt1|<void (t8)>"            # string offset=13697
 .Linfo_string543:
-	.asciz	"t2<_BitInt(3)>"                # string offset=13679
+	.asciz	"_STNt2|<void (t8)>"            # string offset=13716
 .Linfo_string544:
-	.asciz	"t1<const unsigned _BitInt(5)>" # string offset=13694
+	.asciz	"t1<_BitInt(3)>"                # string offset=13735
 .Linfo_string545:
-	.asciz	"t2<const unsigned _BitInt(5)>" # string offset=13724
+	.asciz	"t2<_BitInt(3)>"                # string offset=13750
 .Linfo_string546:
-	.asciz	"_STNt1|<void (t1<>, t1<>)>"    # string offset=13754
+	.asciz	"t1<const unsigned _BitInt(5)>" # string offset=13765
 .Linfo_string547:
-	.asciz	"_STNt2|<void (t1<>, t1<>)>"    # string offset=13781
+	.asciz	"t2<const unsigned _BitInt(5)>" # string offset=13795
 .Linfo_string548:
-	.asciz	"_STNt1|<int t1<>::*>"          # string offset=13808
+	.asciz	"_STNt1|<void (t1<>, t1<>)>"    # string offset=13825
 .Linfo_string549:
-	.asciz	"_STNt2|<int t1<>::*>"          # string offset=13829
+	.asciz	"_STNt2|<void (t1<>, t1<>)>"    # string offset=13852
 .Linfo_string550:
-	.asciz	"_STNt1|<void (t8::*)()>"       # string offset=13850
+	.asciz	"_STNt1|<int t1<>::*>"          # string offset=13879
 .Linfo_string551:
-	.asciz	"_STNt2|<void (t8::*)()>"       # string offset=13874
+	.asciz	"_STNt2|<int t1<>::*>"          # string offset=13900
+.Linfo_string552:
+	.asciz	"_STNt1|<void () __attribute__((swiftcall))>" # string offset=13921
+.Linfo_string553:
+	.asciz	"_STNt2|<void () __attribute__((swiftcall))>" # string offset=13965
+.Linfo_string554:
+	.asciz	"_STNt1|<void (t8::*)()>"       # string offset=14009
+.Linfo_string555:
+	.asciz	"_STNt2|<void (t8::*)()>"       # string offset=14033
 	.section	.debug_str_offsets,"",@progbits
 	.long	.Linfo_string0
 	.long	.Linfo_string1
@@ -13771,6 +13872,10 @@ i:
 	.long	.Linfo_string549
 	.long	.Linfo_string550
 	.long	.Linfo_string551
+	.long	.Linfo_string552
+	.long	.Linfo_string553
+	.long	.Linfo_string554
+	.long	.Linfo_string555
 	.section	.debug_addr,"",@progbits
 	.long	.Ldebug_addr_end0-.Ldebug_addr_start0 # Length of contribution
 .Ldebug_addr_start0:
@@ -13916,8 +14021,9 @@ i:
 	.quad	.Lfunc_begin134
 	.quad	.Lfunc_begin135
 	.quad	.Lfunc_begin136
+	.quad	.Lfunc_begin137
 .Ldebug_addr_end0:
-	.ident	"clang version 15.0.0 (git@github.com:llvm/llvm-project.git 9980a3f8318cbfe2305b4ffc58a7256da1a3891d)"
+	.ident	"clang version 15.0.0 (git@github.com:llvm/llvm-project.git 4e115b7d881136947c083e12f62010bc6b1d3f00)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.addrsig_sym _Zli5_suffy
@@ -14052,6 +14158,7 @@ i:
 	.addrsig_sym _Z2f1IJKDU5_EEvv
 	.addrsig_sym _Z2f1IJFv2t1IJEES1_EEEvv
 	.addrsig_sym _Z2f1IJM2t1IJEEiEEvv
+	.addrsig_sym _Z2f1IJU9swiftcallFvvEEEvv
 	.addrsig_sym _Z2f1IJZN2t83memEvE2t7EEvv
 	.addrsig_sym _Z2f1IJM2t8FvvEEEvv
 	.section	.debug_line,"",@progbits

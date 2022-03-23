@@ -114,16 +114,21 @@ class X86FoldTablesEmitter {
       OS  << "X86::" << MemInst->TheDef->getName() << ",";
       OS.PadToColumn(75);
 
+      std::string Attrs;
       if (IsLoad)
-        OS << "TB_FOLDED_LOAD | ";
+        Attrs += "TB_FOLDED_LOAD | ";
       if (IsStore)
-        OS << "TB_FOLDED_STORE | ";
+        Attrs += "TB_FOLDED_STORE | ";
       if (CannotUnfold)
-        OS << "TB_NO_REVERSE | ";
+        Attrs += "TB_NO_REVERSE | ";
       if (IsAligned)
-        OS << "TB_ALIGN_" << Alignment << " | ";
+        Attrs += "TB_ALIGN_" + std::to_string(Alignment) + " | ";
 
-      OS << "0 },\n";
+      StringRef SimplifiedAttrs = StringRef(Attrs).rtrim("| ");
+      if (SimplifiedAttrs.empty())
+        SimplifiedAttrs = "0";
+
+      OS << SimplifiedAttrs << " },\n";
     }
 
     bool operator<(const X86FoldTableEntry &RHS) const {

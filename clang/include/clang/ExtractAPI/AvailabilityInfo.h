@@ -1,4 +1,4 @@
-//===- SymbolGraph/AvailabilityInfo.h - Availability Info -------*- C++ -*-===//
+//===- ExtractAPI/AvailabilityInfo.h - Availability Info --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the Availability Info for a declaration.
+/// This file defines the AvailabilityInfo struct that collects availability
+/// attributes of a symbol.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SYMBOLGRAPH_AVAILABILITY_INFO_H
-#define LLVM_CLANG_SYMBOLGRAPH_AVAILABILITY_INFO_H
+#ifndef LLVM_CLANG_EXTRACTAPI_AVAILABILITY_INFO_H
+#define LLVM_CLANG_EXTRACTAPI_AVAILABILITY_INFO_H
 
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -21,8 +22,9 @@
 using llvm::VersionTuple;
 
 namespace clang {
-namespace symbolgraph {
+namespace extractapi {
 
+/// Stores availability attributes of a symbol.
 struct AvailabilityInfo {
   VersionTuple Introduced;
   VersionTuple Deprecated;
@@ -31,20 +33,30 @@ struct AvailabilityInfo {
   bool UnconditionallyDeprecated{false};
   bool UnconditionallyUnavailable{false};
 
-  explicit AvailabilityInfo(bool Unavailable = false)
-      : Unavailable(Unavailable) {}
+  /// Determine if this AvailabilityInfo represents the default availability.
+  bool isDefault() const { return *this == AvailabilityInfo(); }
+
+  /// Check if the symbol is unavailable.
+  bool isUnavailable() const { return Unavailable; }
+
+  /// Check if the symbol is unconditionally deprecated.
+  ///
+  /// i.e. \code __attribute__((deprecated)) \endcode
+  bool isUnconditionallyDeprecated() const { return UnconditionallyDeprecated; }
+
+  /// Check if the symbol is unconditionally unavailable.
+  ///
+  /// i.e. \code __attribute__((unavailable)) \endcode
+  bool isUnconditionallyUnavailable() const {
+    return UnconditionallyUnavailable;
+  }
+
+  AvailabilityInfo() = default;
 
   AvailabilityInfo(VersionTuple I, VersionTuple D, VersionTuple O, bool U,
                    bool UD, bool UU)
       : Introduced(I), Deprecated(D), Obsoleted(O), Unavailable(U),
         UnconditionallyDeprecated(UD), UnconditionallyUnavailable(UU) {}
-
-  bool isDefault() const { return *this == AvailabilityInfo(); }
-  bool isUnavailable() const { return Unavailable; }
-  bool isUnconditionallyDeprecated() const { return UnconditionallyDeprecated; }
-  bool isUnconditionallyUnavailable() const {
-    return UnconditionallyUnavailable;
-  }
 
   friend bool operator==(const AvailabilityInfo &Lhs,
                          const AvailabilityInfo &Rhs);
@@ -60,7 +72,7 @@ inline bool operator==(const AvailabilityInfo &Lhs,
                   Rhs.UnconditionallyUnavailable);
 }
 
-} // namespace symbolgraph
+} // namespace extractapi
 } // namespace clang
 
-#endif // LLVM_CLANG_SYMBOLGRAPH_AVAILABILITY_INFO_H
+#endif // LLVM_CLANG_EXTRACTAPI_AVAILABILITY_INFO_H

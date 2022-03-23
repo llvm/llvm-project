@@ -785,7 +785,16 @@ BreakableLineCommentSection::BreakableLineCommentSection(
                 Lines[i].substr(IndentPrefix.size(), FirstCharByteSize),
                 Encoding) != 1)
           return false;
-        if (FirstCommentChar == '#')
+        // In C-like comments, add a space before #. For example this is useful
+        // to preserve the relative indentation when commenting out code with
+        // #includes.
+        //
+        // In languages using # as the comment leader such as proto, don't
+        // add a space to support patterns like:
+        // #########
+        // # section
+        // #########
+        if (FirstCommentChar == '#' && !TokenText.startswith("#"))
           return false;
         return FirstCommentChar == '\\' || isPunctuation(FirstCommentChar) ||
                isHorizontalWhitespace(FirstCommentChar);

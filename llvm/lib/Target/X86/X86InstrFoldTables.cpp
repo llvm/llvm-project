@@ -292,7 +292,7 @@ static const X86MemoryFoldTableEntry MemoryFoldTable0[] = {
   { X86::JMP32r_NT,           X86::JMP32m_NT,           TB_FOLDED_LOAD },
   { X86::JMP64r,              X86::JMP64m,              TB_FOLDED_LOAD },
   { X86::JMP64r_NT,           X86::JMP64m_NT,           TB_FOLDED_LOAD },
-  { X86::MMX_MOVD64from64rr,  X86::MMX_MOVD64from64rm,  TB_FOLDED_STORE | TB_NO_REVERSE },
+  { X86::MMX_MOVD64from64rr,  X86::MMX_MOVQ64mr,        TB_FOLDED_STORE | TB_NO_REVERSE },
   { X86::MMX_MOVD64grr,       X86::MMX_MOVD64mr,        TB_FOLDED_STORE | TB_NO_REVERSE },
   { X86::MOV16ri,             X86::MOV16mi,             TB_FOLDED_STORE },
   { X86::MOV16rr,             X86::MOV16mr,             TB_FOLDED_STORE },

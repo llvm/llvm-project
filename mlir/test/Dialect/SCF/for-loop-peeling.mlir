@@ -149,8 +149,8 @@ func @no_loop_results(%ub : index, %d : memref<i32>) {
 // does not rewrite ops that should not be rewritten.
 
 //  CHECK-DAG: #[[MAP1:.*]] = affine_map<()[s0] -> (s0 + 1)>
-//  CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0)[s0, s1] -> (s0, -d0 + s1 - 1)>
-//  CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0)[s0, s1, s2] -> (s0, -d0 + s1, s2)>
+//  CHECK-DAG: #[[MAP2:.*]] = affine_map<(d0)[s0, s1] -> (-d0 + s1 - 1, s0)>
+//  CHECK-DAG: #[[MAP3:.*]] = affine_map<(d0)[s0, s1, s2] -> (-d0 + s1, s2, s0)>
 //  CHECK-DAG: #[[MAP4:.*]] = affine_map<()[s0] -> (-s0)>
 //  CHECK-DAG: #[[MAP5:.*]] = affine_map<(d0)[s0] -> (-d0 + s0)>
 //  CHECK-DAG: #[[MAP6:.*]] = affine_map<(d0)[s0] -> (-d0 + s0 + 1)>

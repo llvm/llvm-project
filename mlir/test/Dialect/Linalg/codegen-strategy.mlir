@@ -42,7 +42,7 @@ func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<7
 
 // -----
 
-//     CHECK-PAD-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (16, -d0 + 72)>
+//     CHECK-PAD-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<(d0) -> (-d0 + 72, 16)>
 
 //         CHECK-PAD: func @matmul(
 func @matmul(%arg0: tensor<72x72xf32>, %arg1: tensor<72x72xf32>, %arg2: tensor<72x72xf32>) -> tensor<72x72xf32> {

@@ -15,16 +15,18 @@
 
 namespace fir {
 
-/// return true iff the Operation is a non-volatile LoadOp
+/// Return true iff the Operation is a non-volatile LoadOp or ArrayLoadOp.
 inline bool nonVolatileLoad(mlir::Operation *op) {
   if (auto load = mlir::dyn_cast<fir::LoadOp>(op))
     return !load->getAttr("volatile");
+  if (auto arrLoad = mlir::dyn_cast<fir::ArrayLoadOp>(op))
+    return !arrLoad->getAttr("volatile");
   return false;
 }
 
-/// return true iff the Operation is a call
+/// Return true iff the Operation is a call.
 inline bool isaCall(mlir::Operation *op) {
-  return mlir::isa<fir::CallOp>(op) || llvm::isa<fir::DispatchOp>(op) ||
+  return mlir::isa<fir::CallOp>(op) || mlir::isa<fir::DispatchOp>(op) ||
          mlir::isa<mlir::func::CallOp>(op) ||
          mlir::isa<mlir::func::CallIndirectOp>(op);
 }

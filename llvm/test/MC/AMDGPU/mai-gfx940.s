@@ -3,7 +3,6 @@
 
 v_accvgpr_write_b32 a10, s20
 // GFX940: v_accvgpr_write_b32 a10, s20    ; encoding: [0x0a,0x40,0xd9,0xd3,0x14,0x00,0x00,0x18]
-// GFX90A: error: source operand must be either a VGPR or an inline constant
 
 v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3]
 // GFX940: v_mfma_f64_4x4x4_4b_f64 a[0:1], v[0:1], a[2:3], a[2:3] ; encoding: [0x00,0x80,0xef,0xd3,0x00,0x05,0x0a,0x14]

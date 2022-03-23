@@ -49,6 +49,17 @@ struct SparseCompilerOptions
                                  vectorLength, enableSIMDIndex32);
   }
 
+  // These options must be kept in sync with `SparseTensorConversionBase`.
+  PassOptions::Option<int32_t> sparseToSparse{
+      *this, "s2s-strategy",
+      desc("Set the strategy for sparse-to-sparse conversion"), init(0)};
+
+  /// Projects out the options for `createSparsificationPass`.
+  SparseTensorConversionOptions sparseTensorConversionOptions() const {
+    return SparseTensorConversionOptions(
+        sparseToSparseConversionStrategy(sparseToSparse));
+  }
+
   // These options must be kept in sync with `ConvertVectorToLLVMBase`.
   // TODO(wrengr): does `indexOptimizations` differ from `enableSIMDIndex32`?
   PassOptions::Option<bool> reassociateFPReductions{

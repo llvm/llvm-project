@@ -24,7 +24,12 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 
-static constexpr std::size_t nameLengthHashSize = 32;
+static llvm::cl::opt<std::size_t>
+    nameLengthHashSize("length-to-hash-string-literal",
+                       llvm::cl::desc("string literals that exceed this length"
+                                      " will use a hash value as their symbol "
+                                      "name"),
+                       llvm::cl::init(32));
 
 mlir::FuncOp fir::FirOpBuilder::createFunction(mlir::Location loc,
                                                mlir::ModuleOp module,
@@ -480,11 +485,12 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         return create<fir::LoadOp>(
             loc, fir::factory::getMutableIRBox(*this, loc, x));
       },
-      // UnboxedValue, ProcBoxValue or BoxValue.
       [&](const auto &) -> mlir::Value {
         return create<fir::EmboxOp>(loc, boxTy, itemAddr);
       });
 }
+
+void fir::FirOpBuilder::dumpFunc() { getFunction().dump(); }
 
 static mlir::Value
 genNullPointerComparison(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -576,9 +582,9 @@ mlir::Value fir::factory::readExtent(fir::FirOpBuilder &builder,
             .getResult(1);
       },
       [&](const fir::MutableBoxValue &x) -> mlir::Value {
-        // MutableBoxValue must be read into another category to work with them
-        // outside of allocation/assignment contexts.
-        fir::emitFatalError(loc, "readExtents on MutableBoxValue");
+        return readExtent(builder, loc,
+                          fir::factory::genMutableBoxRead(builder, loc, x),
+                          dim);
       },
       [&](const auto &) -> mlir::Value {
         fir::emitFatalError(loc, "extent inquiry on scalar");
@@ -894,35 +900,6 @@ fir::ExtendedValue fir::factory::arraySectionElementToExtendedValue(
   return fir::factory::componentToExtendedValue(builder, loc, element);
 }
 
-mlir::TupleType
-fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
-  mlir::IntegerType i64Ty = builder.getIntegerType(64);
-  auto arrTy = fir::SequenceType::get(builder.getIntegerType(8), 1);
-  auto buffTy = fir::HeapType::get(arrTy);
-  auto extTy = fir::SequenceType::get(i64Ty, 1);
-  auto shTy = fir::HeapType::get(extTy);
-  return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
-}
-
-mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
-                                          mlir::Location loc, mlir::Type type) {
-  mlir::Type i1 = builder.getIntegerType(1);
-  if (type.isa<fir::LogicalType>() || type == i1)
-    return builder.createConvert(loc, type, builder.createBool(loc, false));
-  if (fir::isa_integer(type))
-    return builder.createIntegerConstant(loc, type, 0);
-  if (fir::isa_real(type))
-    return builder.createRealZeroConstant(loc, type);
-  if (fir::isa_complex(type)) {
-    fir::factory::Complex complexHelper(builder, loc);
-    mlir::Type partType = complexHelper.getComplexPartType(type);
-    mlir::Value zeroPart = builder.createRealZeroConstant(loc, partType);
-    return complexHelper.createComplex(type, zeroPart, zeroPart);
-  }
-  fir::emitFatalError(loc, "internal: trying to generate zero value of non "
-                           "numeric or logical type");
-}
-
 void fir::factory::genScalarAssignment(fir::FirOpBuilder &builder,
                                        mlir::Location loc,
                                        const fir::ExtendedValue &lhs,
@@ -1072,6 +1049,16 @@ void fir::factory::genRecordAssignment(fir::FirOpBuilder &builder,
   genComponentByComponentAssignment(builder, loc, lhs, rhs);
 }
 
+mlir::TupleType
+fir::factory::getRaggedArrayHeaderType(fir::FirOpBuilder &builder) {
+  mlir::IntegerType i64Ty = builder.getIntegerType(64);
+  auto arrTy = fir::SequenceType::get(builder.getIntegerType(8), 1);
+  auto buffTy = fir::HeapType::get(arrTy);
+  auto extTy = fir::SequenceType::get(i64Ty, 1);
+  auto shTy = fir::HeapType::get(extTy);
+  return mlir::TupleType::get(builder.getContext(), {i64Ty, buffTy, shTy});
+}
+
 mlir::Value fir::factory::genLenOfCharacter(
     fir::FirOpBuilder &builder, mlir::Location loc, fir::ArrayLoadOp arrLoad,
     llvm::ArrayRef<mlir::Value> path, llvm::ArrayRef<mlir::Value> substring) {
@@ -1128,4 +1115,23 @@ mlir::Value fir::factory::genLenOfCharacter(
     return typeParams.front();
   }
   TODO(loc, "LEN of character must be computed at runtime");
+}
+
+mlir::Value fir::factory::createZeroValue(fir::FirOpBuilder &builder,
+                                          mlir::Location loc, mlir::Type type) {
+  mlir::Type i1 = builder.getIntegerType(1);
+  if (type.isa<fir::LogicalType>() || type == i1)
+    return builder.createConvert(loc, type, builder.createBool(loc, false));
+  if (fir::isa_integer(type))
+    return builder.createIntegerConstant(loc, type, 0);
+  if (fir::isa_real(type))
+    return builder.createRealZeroConstant(loc, type);
+  if (fir::isa_complex(type)) {
+    fir::factory::Complex complexHelper(builder, loc);
+    mlir::Type partType = complexHelper.getComplexPartType(type);
+    mlir::Value zeroPart = builder.createRealZeroConstant(loc, partType);
+    return complexHelper.createComplex(type, zeroPart, zeroPart);
+  }
+  fir::emitFatalError(loc, "internal: trying to generate zero value of non "
+                           "numeric or logical type");
 }
