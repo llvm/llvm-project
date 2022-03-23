@@ -3427,6 +3427,7 @@ Sema::ActOnCXXMemberDeclarator(Scope *S, AccessSpecifier AS, Declarator &D,
           << SourceRange(D.getName().TemplateId->LAngleLoc,
                          D.getName().TemplateId->RAngleLoc)
           << D.getName().TemplateId->LAngleLoc;
+      D.SetIdentifier(Name.getAsIdentifierInfo(), Loc);
     }
 
     if (SS.isSet() && !SS.isInvalid()) {
