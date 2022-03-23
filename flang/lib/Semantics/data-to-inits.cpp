@@ -123,7 +123,7 @@ private:
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(
     const parser::DataStmtObject &object) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const common::Indirection<parser::Variable> &var) {
             return Scan(var.value());
@@ -218,7 +218,7 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::DataImpliedDo &ido) {
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(
     const parser::DataIDoObject &object) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const parser::Scalar<common::Indirection<parser::Designator>>
                   &var) { return Scan(var.thing.value()); },

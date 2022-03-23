@@ -13,6 +13,7 @@
 // canonically for use in semantic checking.
 
 #include "flang/Common/Fortran.h"
+#include "flang/Common/visit.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/type.h"
@@ -239,7 +240,7 @@ const Symbol *FindExternallyVisibleObject(
 template <typename T>
 const Symbol *FindExternallyVisibleObject(
     const evaluate::Expr<T> &expr, const Scope &scope) {
-  return std::visit(
+  return common::visit(
       [&](const auto &x) { return FindExternallyVisibleObject(x, scope); },
       expr.u);
 }

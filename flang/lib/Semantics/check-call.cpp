@@ -672,7 +672,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
   }
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &object) {
             ConvertBOZLiteralArg(arg, object.type.type());

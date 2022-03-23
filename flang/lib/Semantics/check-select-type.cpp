@@ -51,7 +51,7 @@ private:
 
   std::optional<evaluate::DynamicType> GetGuardType(
       const parser::TypeGuardStmt::Guard &guard) {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const parser::Default &)
                 -> std::optional<evaluate::DynamicType> {
@@ -75,7 +75,7 @@ private:
       const evaluate::DynamicType &guardDynamicType) {
     const parser::TypeGuardStmt &typeGuardStmt{stmt.statement};
     const auto &guard{std::get<parser::TypeGuardStmt::Guard>(typeGuardStmt.t)};
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const parser::Default &) { return true; },
             [&](const parser::TypeSpec &typeSpec) {
@@ -159,10 +159,10 @@ private:
 
     void SetGuardType(std::optional<evaluate::DynamicType> guardTypeDynamic) {
       const auto &guard{GetGuardFromStmt(stmt)};
-      std::visit(common::visitors{
-                     [&](const parser::Default &) {},
-                     [&](const auto &) { guardType_ = *guardTypeDynamic; },
-                 },
+      common::visit(common::visitors{
+                        [&](const parser::Default &) {},
+                        [&](const auto &) { guardType_ = *guardTypeDynamic; },
+                    },
           guard.u);
     }
 
@@ -268,6 +268,6 @@ void SelectTypeChecker::Enter(const parser::SelectTypeConstruct &construct) {
 
 const SomeExpr *SelectTypeChecker::GetExprFromSelector(
     const parser::Selector &selector) {
-  return std::visit([](const auto &x) { return GetExpr(x); }, selector.u);
+  return common::visit([](const auto &x) { return GetExpr(x); }, selector.u);
 }
 } // namespace Fortran::semantics

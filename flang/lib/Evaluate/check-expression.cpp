@@ -173,13 +173,13 @@ struct IsActuallyConstantHelper {
     return (*this)(x.left());
   }
   template <typename T> bool operator()(const Expr<T> &x) {
-    return std::visit([=](const auto &y) { return (*this)(y); }, x.u);
+    return common::visit([=](const auto &y) { return (*this)(y); }, x.u);
   }
   bool operator()(const Expr<SomeType> &x) {
     if (IsNullPointer(x)) {
       return true;
     }
-    return std::visit([this](const auto &y) { return (*this)(y); }, x.u);
+    return common::visit([this](const auto &y) { return (*this)(y); }, x.u);
   }
   template <typename A> bool operator()(const A *x) { return x && (*this)(*x); }
   template <typename A> bool operator()(const std::optional<A> &x) {
@@ -256,13 +256,13 @@ public:
         IsConstantExpr(x.stride());
   }
   bool operator()(const Subscript &x) const {
-    return std::visit(common::visitors{
-                          [&](const Triplet &t) { return (*this)(t); },
-                          [&](const auto &y) {
-                            return y.value().Rank() == 0 &&
-                                IsConstantExpr(y.value());
-                          },
-                      },
+    return common::visit(common::visitors{
+                             [&](const Triplet &t) { return (*this)(t); },
+                             [&](const auto &y) {
+                               return y.value().Rank() == 0 &&
+                                   IsConstantExpr(y.value());
+                             },
+                         },
         x.u);
   }
   bool operator()(const CoarrayRef &) const { return false; }
@@ -334,7 +334,7 @@ bool IsInitialDataTarget(
 
 bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
   const auto &ultimate{symbol.GetUltimate()};
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const semantics::SubprogramDetails &subp) {
             return !subp.isDummy();
@@ -383,7 +383,7 @@ public:
         std::move(x.left())); // Constant<> can be parenthesized
   }
   template <typename T> Expr<T> ChangeLbounds(Expr<T> &&x) {
-    return std::visit(
+    return common::visit(
         [&](auto &&x) { return Expr<T>{ChangeLbounds(std::move(x))}; },
         std::move(x.u)); // recurse until we hit a constant
   }

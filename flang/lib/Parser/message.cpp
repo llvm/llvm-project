@@ -85,7 +85,7 @@ const char *MessageFormattedText::Convert(CharBlock x) {
 }
 
 std::string MessageExpectedText::ToString() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](CharBlock cb) {
             return MessageFormattedText("expected '%s'"_err_en_US, cb)
@@ -124,13 +124,13 @@ std::string MessageExpectedText::ToString() const {
 }
 
 bool MessageExpectedText::Merge(const MessageExpectedText &that) {
-  return std::visit(common::visitors{
-                        [](SetOfChars &s1, const SetOfChars &s2) {
-                          s1 = s1.Union(s2);
-                          return true;
-                        },
-                        [](const auto &, const auto &) { return false; },
-                    },
+  return common::visit(common::visitors{
+                           [](SetOfChars &s1, const SetOfChars &s2) {
+                             s1 = s1.Union(s2);
+                             return true;
+                           },
+                           [](const auto &, const auto &) { return false; },
+                       },
       u_, that.u_);
 }
 
@@ -141,7 +141,7 @@ bool Message::SortBefore(const Message &that) const {
   // free and needs to be deferred, and many messages created during parsing
   // are speculative.  Messages with ProvenanceRange locations are ordered
   // before others for sorting.
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](CharBlock cb1, CharBlock cb2) {
             return cb1.begin() < cb2.begin();
@@ -158,7 +158,7 @@ bool Message::SortBefore(const Message &that) const {
 bool Message::IsFatal() const { return severity() == Severity::Error; }
 
 Severity Message::severity() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const MessageExpectedText &) { return Severity::Error; },
           [](const MessageFixedText &x) { return x.severity(); },
@@ -168,7 +168,7 @@ Severity Message::severity() const {
 }
 
 Message &Message::set_severity(Severity severity) {
-  std::visit(
+  common::visit(
       common::visitors{
           [](const MessageExpectedText &) {},
           [severity](MessageFixedText &x) { x.set_severity(severity); },
@@ -179,7 +179,7 @@ Message &Message::set_severity(Severity severity) {
 }
 
 std::string Message::ToString() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const MessageFixedText &t) {
             return t.text().NULTerminatedToString();
@@ -204,7 +204,7 @@ void Message::ResolveProvenances(const AllCookedSources &allCooked) {
 
 std::optional<ProvenanceRange> Message::GetProvenanceRange(
     const AllCookedSources &allCooked) const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](CharBlock cb) { return allCooked.GetProvenanceRange(cb); },
           [](const ProvenanceRange &pr) { return std::make_optional(pr); },
@@ -271,7 +271,7 @@ bool Message::Merge(const Message &that) {
   return AtSameLocation(that) &&
       (!that.attachment_.get() ||
           attachment_.get() == that.attachment_.get()) &&
-      std::visit(
+      common::visit(
           common::visitors{
               [](MessageExpectedText &e1, const MessageExpectedText &e2) {
                 return e1.Merge(e2);
@@ -299,7 +299,7 @@ Message &Message::Attach(std::unique_ptr<Message> &&m) {
 }
 
 bool Message::AtSameLocation(const Message &that) const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](CharBlock cb1, CharBlock cb2) {
             return cb1.begin() == cb2.begin();

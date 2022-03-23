@@ -303,7 +303,7 @@ std::optional<Constant<T>> Folder<T>::ApplyComponent(
 template <typename T>
 std::optional<Constant<T>> Folder<T>::GetConstantComponent(Component &component,
     const std::vector<Constant<SubscriptInteger>> *subscripts) {
-  if (std::optional<Constant<SomeDerived>> structures{std::visit(
+  if (std::optional<Constant<SomeDerived>> structures{common::visit(
           common::visitors{
               [&](const Symbol &symbol) {
                 return Folder<SomeDerived>{context_}.GetNamedConstant(symbol);
@@ -342,7 +342,7 @@ template <typename T> Expr<T> Folder<T>::Folding(Designator<T> &&designator) {
       }
     }
   }
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](SymbolRef &&symbol) {
             if (auto constant{GetNamedConstant(*symbol)}) {
@@ -523,7 +523,7 @@ template <typename A, typename B>
 std::optional<std::vector<A>> GetIntegerVector(const B &x) {
   static_assert(std::is_integral_v<A>);
   if (const auto *someInteger{UnwrapExpr<Expr<SomeInteger>>(x)}) {
-    return std::visit(
+    return common::visit(
         [](const auto &typedExpr) -> std::optional<std::vector<A>> {
           using T = ResultType<decltype(typedExpr)>;
           if (const auto *constant{UnwrapConstantValue<T>(typedExpr)}) {
@@ -1039,10 +1039,10 @@ Expr<T> RewriteSpecificMINorMAX(
     return Fold(context, ConvertToType<T>(AsCategoryExpr(std::move(maxRef))));
   }};
   if (auto *sx{UnwrapExpr<Expr<SomeReal>>(*resultTypeArg)}) {
-    return std::visit(insertConversion, sx->u);
+    return common::visit(insertConversion, sx->u);
   }
   auto &sx{DEREF(UnwrapExpr<Expr<SomeInteger>>(*resultTypeArg))};
-  return std::visit(insertConversion, sx.u);
+  return common::visit(insertConversion, sx.u);
 }
 
 template <typename T>
@@ -1164,7 +1164,7 @@ private:
     }
   }
   bool FoldArray(const ArrayConstructorValue<T> &x) {
-    return std::visit([&](const auto &y) { return FoldArray(y); }, x.u);
+    return common::visit([&](const auto &y) { return FoldArray(y); }, x.u);
   }
   bool FoldArray(const ArrayConstructorValues<T> &xs) {
     for (const auto &x : xs) {
@@ -1227,7 +1227,7 @@ template <TypeCategory CAT>
 std::enable_if_t<CAT != TypeCategory::Derived,
     std::optional<Expr<SomeKind<CAT>>>>
 AsFlatArrayConstructor(const Expr<SomeKind<CAT>> &expr) {
-  return std::visit(
+  return common::visit(
       [&](const auto &kindExpr) -> std::optional<Expr<SomeKind<CAT>>> {
         if (auto flattened{AsFlatArrayConstructor(kindExpr)}) {
           return Expr<SomeKind<CAT>>{std::move(*flattened)};
@@ -1268,7 +1268,7 @@ Expr<RESULT> MapOperation(FoldingContext &context,
     Expr<OPERAND> &&values) {
   ArrayConstructor<RESULT> result{values};
   if constexpr (common::HasMember<OPERAND, AllIntrinsicCategoryTypes>) {
-    std::visit(
+    common::visit(
         [&](auto &&kindExpr) {
           using kindType = ResultType<decltype(kindExpr)>;
           auto &aConst{std::get<ArrayConstructor<kindType>>(kindExpr.u)};
@@ -1309,7 +1309,7 @@ Expr<RESULT> MapOperation(FoldingContext &context,
   auto result{ArrayConstructorFromMold<RESULT>(leftValues, std::move(length))};
   auto &leftArrConst{std::get<ArrayConstructor<LEFT>>(leftValues.u)};
   if constexpr (common::HasMember<RIGHT, AllIntrinsicCategoryTypes>) {
-    std::visit(
+    common::visit(
         [&](auto &&kindExpr) {
           using kindType = ResultType<decltype(kindExpr)>;
 
@@ -1366,7 +1366,7 @@ Expr<RESULT> MapOperation(FoldingContext &context,
     const Expr<LEFT> &leftScalar, Expr<RIGHT> &&rightValues) {
   auto result{ArrayConstructorFromMold<RESULT>(leftScalar, std::move(length))};
   if constexpr (common::HasMember<RIGHT, AllIntrinsicCategoryTypes>) {
-    std::visit(
+    common::visit(
         [&](auto &&kindExpr) {
           using kindType = ResultType<decltype(kindExpr)>;
           auto &rightArrConst{std::get<ArrayConstructor<kindType>>(kindExpr.u)};
@@ -1518,7 +1518,7 @@ Expr<TO> FoldOperation(
     FoldingContext &context;
     Convert<TO, FROMCAT> &convert;
   } msvcWorkaround{context, convert};
-  return std::visit(
+  return common::visit(
       [&msvcWorkaround](auto &kindExpr) -> Expr<TO> {
         using Operand = ResultType<decltype(kindExpr)>;
         // This variable is a workaround for msvc which emits an error when
@@ -1839,7 +1839,7 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
   if (auto array{ApplyElementwise(context, x)}) {
     return *array;
   }
-  return std::visit(
+  return common::visit(
       [&](auto &y) -> Expr<T> {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
           auto power{evaluate::IntPower(folded->first, folded->second)};
@@ -1897,7 +1897,7 @@ Expr<Type<TypeCategory::Real, KIND>> ToReal(
     FoldingContext &context, Expr<SomeType> &&expr) {
   using Result = Type<TypeCategory::Real, KIND>;
   std::optional<Expr<Result>> result;
-  std::visit(
+  common::visit(
       [&](auto &&x) {
         using From = std::decay_t<decltype(x)>;
         if constexpr (std::is_same_v<From, BOZLiteralConstant>) {
@@ -1924,7 +1924,7 @@ Expr<Type<TypeCategory::Real, KIND>> ToReal(
 
 template <typename T>
 Expr<T> ExpressionBase<T>::Rewrite(FoldingContext &context, Expr<T> &&expr) {
-  return std::visit(
+  return common::visit(
       [&](auto &&x) -> Expr<T> {
         if constexpr (IsSpecificIntrinsicType<T>) {
           return FoldOperation(context, std::move(x));

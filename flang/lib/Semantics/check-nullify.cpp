@@ -23,7 +23,7 @@ void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
   parser::ContextualMessages messages{
       *context_.location(), &context_.messages()};
   for (const parser::PointerObject &pointerObject : nullifyStmt.v) {
-    std::visit(
+    common::visit(
         common::visitors{
             [&](const parser::Name &name) {
               const Symbol *symbol{name.symbol};

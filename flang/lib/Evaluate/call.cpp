@@ -157,18 +157,19 @@ const Component *ProcedureDesignator::GetComponent() const {
 }
 
 const Symbol *ProcedureDesignator::GetSymbol() const {
-  return std::visit(common::visitors{
-                        [](SymbolRef symbol) { return &*symbol; },
-                        [](const common::CopyableIndirection<Component> &c) {
-                          return &c.value().GetLastSymbol();
-                        },
-                        [](const auto &) -> const Symbol * { return nullptr; },
-                    },
+  return common::visit(
+      common::visitors{
+          [](SymbolRef symbol) { return &*symbol; },
+          [](const common::CopyableIndirection<Component> &c) {
+            return &c.value().GetLastSymbol();
+          },
+          [](const auto &) -> const Symbol * { return nullptr; },
+      },
       u);
 }
 
 std::string ProcedureDesignator::GetName() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const SpecificIntrinsic &i) { return i.name; },
           [](const Symbol &symbol) { return symbol.name().ToString(); },

@@ -259,78 +259,79 @@ static llvm::raw_ostream &PutGenericName(
 // procedures, type-bound generics, final procedures) which go to typeBindings.
 void ModFileWriter::PutSymbol(
     llvm::raw_ostream &typeBindings, const Symbol &symbol) {
-  std::visit(common::visitors{
-                 [&](const ModuleDetails &) { /* should be current module */ },
-                 [&](const DerivedTypeDetails &) { PutDerivedType(symbol); },
-                 [&](const SubprogramDetails &) { PutSubprogram(symbol); },
-                 [&](const GenericDetails &x) {
-                   if (symbol.owner().IsDerivedType()) {
-                     // generic binding
-                     for (const Symbol &proc : x.specificProcs()) {
-                       PutGenericName(typeBindings << "generic::", symbol)
-                           << "=>" << proc.name() << '\n';
-                     }
-                   } else {
-                     PutGeneric(symbol);
-                     if (x.specific()) {
-                       PutSymbol(typeBindings, *x.specific());
-                     }
-                     if (x.derivedType()) {
-                       PutSymbol(typeBindings, *x.derivedType());
-                     }
-                   }
-                 },
-                 [&](const UseDetails &) { PutUse(symbol); },
-                 [](const UseErrorDetails &) {},
-                 [&](const ProcBindingDetails &x) {
-                   bool deferred{symbol.attrs().test(Attr::DEFERRED)};
-                   typeBindings << "procedure";
-                   if (deferred) {
-                     typeBindings << '(' << x.symbol().name() << ')';
-                   }
-                   PutPassName(typeBindings, x.passName());
-                   auto attrs{symbol.attrs()};
-                   if (x.passName()) {
-                     attrs.reset(Attr::PASS);
-                   }
-                   PutAttrs(typeBindings, attrs);
-                   typeBindings << "::" << symbol.name();
-                   if (!deferred && x.symbol().name() != symbol.name()) {
-                     typeBindings << "=>" << x.symbol().name();
-                   }
-                   typeBindings << '\n';
-                 },
-                 [&](const NamelistDetails &x) {
-                   decls_ << "namelist/" << symbol.name();
-                   char sep{'/'};
-                   for (const Symbol &object : x.objects()) {
-                     decls_ << sep << object.name();
-                     sep = ',';
-                   }
-                   decls_ << '\n';
-                 },
-                 [&](const CommonBlockDetails &x) {
-                   decls_ << "common/" << symbol.name();
-                   char sep = '/';
-                   for (const auto &object : x.objects()) {
-                     decls_ << sep << object->name();
-                     sep = ',';
-                   }
-                   decls_ << '\n';
-                   if (symbol.attrs().test(Attr::BIND_C)) {
-                     PutAttrs(decls_, symbol.attrs(), x.bindName(), ""s);
-                     decls_ << "::/" << symbol.name() << "/\n";
-                   }
-                 },
-                 [](const HostAssocDetails &) {},
-                 [](const MiscDetails &) {},
-                 [&](const auto &) {
-                   PutEntity(decls_, symbol);
-                   if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
-                     decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
-                   }
-                 },
-             },
+  common::visit(
+      common::visitors{
+          [&](const ModuleDetails &) { /* should be current module */ },
+          [&](const DerivedTypeDetails &) { PutDerivedType(symbol); },
+          [&](const SubprogramDetails &) { PutSubprogram(symbol); },
+          [&](const GenericDetails &x) {
+            if (symbol.owner().IsDerivedType()) {
+              // generic binding
+              for (const Symbol &proc : x.specificProcs()) {
+                PutGenericName(typeBindings << "generic::", symbol)
+                    << "=>" << proc.name() << '\n';
+              }
+            } else {
+              PutGeneric(symbol);
+              if (x.specific()) {
+                PutSymbol(typeBindings, *x.specific());
+              }
+              if (x.derivedType()) {
+                PutSymbol(typeBindings, *x.derivedType());
+              }
+            }
+          },
+          [&](const UseDetails &) { PutUse(symbol); },
+          [](const UseErrorDetails &) {},
+          [&](const ProcBindingDetails &x) {
+            bool deferred{symbol.attrs().test(Attr::DEFERRED)};
+            typeBindings << "procedure";
+            if (deferred) {
+              typeBindings << '(' << x.symbol().name() << ')';
+            }
+            PutPassName(typeBindings, x.passName());
+            auto attrs{symbol.attrs()};
+            if (x.passName()) {
+              attrs.reset(Attr::PASS);
+            }
+            PutAttrs(typeBindings, attrs);
+            typeBindings << "::" << symbol.name();
+            if (!deferred && x.symbol().name() != symbol.name()) {
+              typeBindings << "=>" << x.symbol().name();
+            }
+            typeBindings << '\n';
+          },
+          [&](const NamelistDetails &x) {
+            decls_ << "namelist/" << symbol.name();
+            char sep{'/'};
+            for (const Symbol &object : x.objects()) {
+              decls_ << sep << object.name();
+              sep = ',';
+            }
+            decls_ << '\n';
+          },
+          [&](const CommonBlockDetails &x) {
+            decls_ << "common/" << symbol.name();
+            char sep = '/';
+            for (const auto &object : x.objects()) {
+              decls_ << sep << object->name();
+              sep = ',';
+            }
+            decls_ << '\n';
+            if (symbol.attrs().test(Attr::BIND_C)) {
+              PutAttrs(decls_, symbol.attrs(), x.bindName(), ""s);
+              decls_ << "::/" << symbol.name() << "/\n";
+            }
+          },
+          [](const HostAssocDetails &) {},
+          [](const MiscDetails &) {},
+          [&](const auto &) {
+            PutEntity(decls_, symbol);
+            if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
+              decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
+            }
+          },
+      },
       symbol.details());
 }
 
@@ -601,7 +602,7 @@ void CollectSymbols(
 }
 
 void ModFileWriter::PutEntity(llvm::raw_ostream &os, const Symbol &symbol) {
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const ObjectEntityDetails &) { PutObjectEntity(os, symbol); },
           [&](const ProcEntityDetails &) { PutProcEntity(os, symbol); },
@@ -1114,27 +1115,27 @@ void SubprogramSymbolCollector::DoSymbol(
   if (!needSet_.insert(symbol).second) {
     return; // already done
   }
-  std::visit(common::visitors{
-                 [this](const ObjectEntityDetails &details) {
-                   for (const ShapeSpec &spec : details.shape()) {
-                     DoBound(spec.lbound());
-                     DoBound(spec.ubound());
-                   }
-                   for (const ShapeSpec &spec : details.coshape()) {
-                     DoBound(spec.lbound());
-                     DoBound(spec.ubound());
-                   }
-                   if (const Symbol * commonBlock{details.commonBlock()}) {
-                     DoSymbol(*commonBlock);
-                   }
-                 },
-                 [this](const CommonBlockDetails &details) {
-                   for (const auto &object : details.objects()) {
-                     DoSymbol(*object);
-                   }
-                 },
-                 [](const auto &) {},
-             },
+  common::visit(common::visitors{
+                    [this](const ObjectEntityDetails &details) {
+                      for (const ShapeSpec &spec : details.shape()) {
+                        DoBound(spec.lbound());
+                        DoBound(spec.ubound());
+                      }
+                      for (const ShapeSpec &spec : details.coshape()) {
+                        DoBound(spec.lbound());
+                        DoBound(spec.ubound());
+                      }
+                      if (const Symbol * commonBlock{details.commonBlock()}) {
+                        DoSymbol(*commonBlock);
+                      }
+                    },
+                    [this](const CommonBlockDetails &details) {
+                      for (const auto &object : details.objects()) {
+                        DoSymbol(*object);
+                      }
+                    },
+                    [](const auto &) {},
+                },
       symbol.details());
   if (!symbol.has<UseDetails>()) {
     DoType(symbol.GetType());

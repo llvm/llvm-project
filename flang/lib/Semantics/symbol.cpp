@@ -223,7 +223,7 @@ void GenericDetails::CopyFrom(const GenericDetails &from) {
 // The name of the kind of details for this symbol.
 // This is primarily for debugging.
 std::string DetailsToString(const Details &details) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const UnknownDetails &) { return "Unknown"; },
           [](const MainProgramDetails &) { return "MainProgram"; },
@@ -261,7 +261,7 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
   if (has<UnknownDetails>()) {
     return true; // can always replace UnknownDetails
   } else {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const UseErrorDetails &) { return true; },
             [&](const ObjectEntityDetails &) { return has<EntityDetails>(); },
@@ -291,14 +291,14 @@ void Symbol::ReplaceName(const SourceName &name) {
 }
 
 void Symbol::SetType(const DeclTypeSpec &type) {
-  std::visit(common::visitors{
-                 [&](EntityDetails &x) { x.set_type(type); },
-                 [&](ObjectEntityDetails &x) { x.set_type(type); },
-                 [&](AssocEntityDetails &x) { x.set_type(type); },
-                 [&](ProcEntityDetails &x) { x.interface().set_type(type); },
-                 [&](TypeParamDetails &x) { x.set_type(type); },
-                 [](auto &) {},
-             },
+  common::visit(common::visitors{
+                    [&](EntityDetails &x) { x.set_type(type); },
+                    [&](ObjectEntityDetails &x) { x.set_type(type); },
+                    [&](AssocEntityDetails &x) { x.set_type(type); },
+                    [&](ProcEntityDetails &x) { x.interface().set_type(type); },
+                    [&](TypeParamDetails &x) { x.set_type(type); },
+                    [](auto &) {},
+                },
       details_);
 }
 
@@ -306,7 +306,7 @@ template <typename T>
 constexpr bool HasBindName{std::is_convertible_v<T, const WithBindName *>};
 
 const std::string *Symbol::GetBindName() const {
-  return std::visit(
+  return common::visit(
       [&](auto &x) -> const std::string * {
         if constexpr (HasBindName<decltype(&x)>) {
           return x.bindName();
@@ -318,7 +318,7 @@ const std::string *Symbol::GetBindName() const {
 }
 
 void Symbol::SetBindName(std::string &&name) {
-  std::visit(
+  common::visit(
       [&](auto &x) {
         if constexpr (HasBindName<decltype(&x)>) {
           x.set_bindName(std::move(name));
@@ -330,7 +330,7 @@ void Symbol::SetBindName(std::string &&name) {
 }
 
 bool Symbol::IsFuncResult() const {
-  return std::visit(
+  return common::visit(
       common::visitors{[](const EntityDetails &x) { return x.isFuncResult(); },
           [](const ObjectEntityDetails &x) { return x.isFuncResult(); },
           [](const ProcEntityDetails &x) { return x.isFuncResult(); },
@@ -345,7 +345,7 @@ bool Symbol::IsObjectArray() const {
 }
 
 bool Symbol::IsSubprogram() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const SubprogramDetails &) { return true; },
           [](const SubprogramNameDetails &) { return true; },
@@ -444,7 +444,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const GenericDetails &x) {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
   os << DetailsToString(details);
-  std::visit( //
+  common::visit( //
       common::visitors{
           [&](const UnknownDetails &) {},
           [&](const MainProgramDetails &) {},
@@ -667,7 +667,7 @@ bool GenericKind::IsOperator() const {
 }
 
 std::string GenericKind::ToString() const {
-  return std::visit(
+  return common::visit(
       common::visitors {
         [](const OtherKind &x) { return EnumToString(x); },
             [](const DefinedIo &x) { return AsFortran(x).ToString(); },
