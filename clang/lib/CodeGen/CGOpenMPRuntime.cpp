@@ -4651,17 +4651,15 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
   RecordDecl *KmpDependInfoRD =
       cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
-  LValue Base = CGF.EmitLoadOfPointerLValue(
-      DepobjLVal.getAddress(CGF),
-      C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
   QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
-  Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy),
-      CGF.ConvertTypeForMem(KmpDependInfoTy));
-  Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
-                            Base.getTBAAInfo());
+  LValue Base = CGF.EmitLoadOfPointerLValue(
+      CGF.Builder.CreateElementBitCast(
+          DepobjLVal.getAddress(CGF),
+          CGF.ConvertTypeForMem(KmpDependInfoPtrTy)),
+      KmpDependInfoPtrTy->castAs<PointerType>());
   Address DepObjAddr = CGF.Builder.CreateGEP(
-      Addr, llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+      Base.getAddress(CGF),
+      llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
   LValue NumDepsBase = CGF.MakeAddrLValue(
       DepObjAddr, KmpDependInfoTy, Base.getBaseInfo(), Base.getTBAAInfo());
   // NumDeps = deps[i].base_addr;
