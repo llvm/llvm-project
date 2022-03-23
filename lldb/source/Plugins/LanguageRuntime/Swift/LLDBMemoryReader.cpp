@@ -12,9 +12,17 @@ namespace lldb_private {
 bool LLDBMemoryReader::queryDataLayout(DataLayoutQueryType type, void *inBuffer,
                                        void *outBuffer) {
   switch (type) {
-  // FIXME: add support for case DLQ_GetPtrAuthMask rdar://70729149
-  case DLQ_GetPtrAuthMask:
-    return false;
+  case DLQ_GetPtrAuthMask: {
+    assert(m_process.GetCodeAddressMask() == m_process.GetDataAddressMask() &&
+           "not supported");
+    lldb::addr_t ptrauth_mask = m_process.GetCodeAddressMask();
+    if (!ptrauth_mask)
+      return false;
+    // The mask returned by the process masks out the non-addressable bits.
+    uint64_t mask_pattern = ~ptrauth_mask;
+    memcpy(outBuffer, &mask_pattern, sizeof(uint64_t));
+    return true;
+  }
   case DLQ_GetObjCReservedLowBits: {
     auto *result = static_cast<uint8_t *>(outBuffer);
     auto &triple = m_process.GetTarget().GetArchitecture().GetTriple();
