@@ -621,7 +621,8 @@ public:
         break;
       }
       case MCCFIInstruction::OpDefCfaOffset: {
-        assert(StackSize == 0 && "We already have the CFA offset!");
+        if (StackSize != 0)
+          return CU::UNWIND_ARM64_MODE_DWARF;
         StackSize = std::abs(Inst.getOffset());
         break;
       }
