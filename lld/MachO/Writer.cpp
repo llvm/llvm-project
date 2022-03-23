@@ -860,7 +860,7 @@ static void sortSegmentsAndSections() {
   sortOutputSegments();
 
   DenseMap<const InputSection *, size_t> isecPriorities =
-      buildInputSectionPriorities();
+      priorityBuilder.buildInputSectionPriorities();
 
   uint32_t sectionIndex = 0;
   for (OutputSegment *seg : outputSegments) {
