@@ -30,25 +30,6 @@
 #include "llvm/Support/Casting.h"
 #include <memory>
 
-namespace {
-
-/// \brief A custom deleter used for ``std::unique_ptr`` to APIRecords stored
-/// in the BumpPtrAllocator.
-///
-/// \tparam T the exact type of the APIRecord subclass.
-template <typename T> struct UniquePtrBumpPtrAllocatorDeleter {
-  void operator()(T *Instance) { Instance->~T(); }
-};
-
-/// A unique pointer to an APIRecord stored in the BumpPtrAllocator.
-///
-/// \tparam T the exact type of the APIRecord subclass.
-template <typename T>
-using APIRecordUniquePtr =
-    std::unique_ptr<T, UniquePtrBumpPtrAllocatorDeleter<T>>;
-
-} // anonymous namespace
-
 namespace clang {
 namespace extractapi {
 
@@ -165,7 +146,7 @@ struct EnumConstantRecord : APIRecord {
 
 /// This holds information associated with enums.
 struct EnumRecord : APIRecord {
-  SmallVector<APIRecordUniquePtr<EnumConstantRecord>> Constants;
+  SmallVector<std::unique_ptr<EnumConstantRecord>> Constants;
 
   EnumRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
              const AvailabilityInfo &Availability, const DocComment &Comment,
@@ -194,7 +175,7 @@ struct StructFieldRecord : APIRecord {
 
 /// This holds information associated with structs.
 struct StructRecord : APIRecord {
-  SmallVector<APIRecordUniquePtr<StructFieldRecord>> Fields;
+  SmallVector<std::unique_ptr<StructFieldRecord>> Fields;
 
   StructRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
                const AvailabilityInfo &Availability, const DocComment &Comment,
@@ -302,17 +283,16 @@ public:
   /// A map to store the set of GlobalRecord%s with the declaration name as the
   /// key.
   using GlobalRecordMap =
-      llvm::MapVector<StringRef, APIRecordUniquePtr<GlobalRecord>>;
+      llvm::MapVector<StringRef, std::unique_ptr<GlobalRecord>>;
 
   /// A map to store the set of EnumRecord%s with the declaration name as the
   /// key.
-  using EnumRecordMap =
-      llvm::MapVector<StringRef, APIRecordUniquePtr<EnumRecord>>;
+  using EnumRecordMap = llvm::MapVector<StringRef, std::unique_ptr<EnumRecord>>;
 
   /// A map to store the set of StructRecord%s with the declaration name as the
   /// key.
   using StructRecordMap =
-      llvm::MapVector<StringRef, APIRecordUniquePtr<StructRecord>>;
+      llvm::MapVector<StringRef, std::unique_ptr<StructRecord>>;
 
   /// Get the target triple for the ExtractAPI invocation.
   const llvm::Triple &getTarget() const { return Target; }
@@ -340,8 +320,10 @@ public:
       : Target(Target), LangOpts(LangOpts) {}
 
 private:
-  /// BumpPtrAllocator to store APIRecord%s and generated/copied strings.
-  llvm::BumpPtrAllocator Allocator;
+  /// BumpPtrAllocator to store generated/copied strings.
+  ///
+  /// Note: The main use for this is being able to deduplicate strings.
+  llvm::BumpPtrAllocator StringAllocator;
 
   const llvm::Triple Target;
   const LangOptions LangOpts;
