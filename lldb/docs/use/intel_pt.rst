@@ -227,5 +227,8 @@ Then it's like in the live session case
 References
 ----------
 
-- Original RFC document: https://docs.google.com/document/d/1cOVTGp1sL_HBXjP9eB7qjVtDNr5xnuZvUUtv43G5eVI.
-- Some details about how Meta is using Intel Processor Trace can be found in this blog post https://engineering.fb.com/2021/04/27/developer-tools/reverse-debugging/.
+- Original RFC document_ for this feature.
+- Some details about how Meta is using Intel Processor Trace can be found in this blog_ post.
+
+.. _document: https://docs.google.com/document/d/1cOVTGp1sL_HBXjP9eB7qjVtDNr5xnuZvUUtv43G5eVI
+.. _blog: https://engineering.fb.com/2021/04/27/developer-tools/reverse-debugging/
