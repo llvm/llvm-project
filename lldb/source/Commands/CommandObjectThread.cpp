@@ -2185,7 +2185,7 @@ public:
       : CommandObjectIterateOverThreads(
             interpreter, "thread trace dump instructions",
             "Dump the traced instructions for one or more threads. If no "
-            "threads are specified, show the current thread.  Use the "
+            "threads are specified, show the current thread. Use the "
             "thread-index \"all\" to see all threads.",
             nullptr,
             eCommandRequiresProcess | eCommandTryTargetAPILock |
@@ -2304,7 +2304,7 @@ public:
       : CommandObjectIterateOverThreads(
             interpreter, "thread trace dump info",
             "Dump the traced information for one or more threads.  If no "
-            "threads are specified, show the current thread.  Use the "
+            "threads are specified, show the current thread. Use the "
             "thread-index \"all\" to see all threads.",
             nullptr,
             eCommandRequiresProcess | eCommandTryTargetAPILock |
