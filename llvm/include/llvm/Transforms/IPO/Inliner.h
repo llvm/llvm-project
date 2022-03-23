@@ -16,7 +16,6 @@
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/Utils/ImportedFunctionsInliningStatistics.h"
 #include "llvm/IR/PassManager.h"
-#include <utility>
 
 namespace llvm {
 

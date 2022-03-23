@@ -15,13 +15,9 @@
 #ifndef LLVM_TRANSFORMS_IPO_SAMPLECONTEXTTRACKER_H
 #define LLVM_TRANSFORMS_IPO_SAMPLECONTEXTTRACKER_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/ProfileData/SampleProf.h"
-#include <list>
 #include <map>
 #include <vector>
 
@@ -29,6 +25,10 @@ using namespace llvm;
 using namespace sampleprof;
 
 namespace llvm {
+class CallBase;
+class DILocation;
+class Function;
+class Instruction;
 
 // Internal trie tree representation used for tracking context tree and sample
 // profiles. The path from root node to a given node represents the context of
