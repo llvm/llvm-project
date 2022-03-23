@@ -813,13 +813,136 @@ GCNHazardRecognizer::checkVALUHazardsHelper(const MachineOperand &Def,
 }
 
 int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) {
+  int WaitStatesNeeded = 0;
+
+  if (ST.hasTransForwardingHazard() && !SIInstrInfo::isTRANS(*VALU)) {
+    const int TransDefWaitstates = 1;
+
+    auto IsTransDefFn = [this, VALU](const MachineInstr &MI) {
+      if (!SIInstrInfo::isTRANS(MI))
+        return false;
+      const SIRegisterInfo *TRI = ST.getRegisterInfo();
+      const SIInstrInfo *TII = ST.getInstrInfo();
+      Register Def = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
+
+      for (const MachineOperand &Use : VALU->explicit_uses()) {
+        if (Use.isReg() && TRI->regsOverlap(Def, Use.getReg()))
+          return true;
+      }
+
+      return false;
+    };
+
+    int WaitStatesNeededForDef =
+        TransDefWaitstates -
+        getWaitStatesSince(IsTransDefFn, TransDefWaitstates);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+  }
+
+  if (ST.hasDstSelForwardingHazard()) {
+    const int Shift16DefWaitstates = 1;
+
+    auto IsShift16BitDefFn = [this, VALU](const MachineInstr &MI) {
+      if (!SIInstrInfo::isVALU(MI))
+        return false;
+      const SIInstrInfo *TII = ST.getInstrInfo();
+      if (SIInstrInfo::isSDWA(MI)) {
+        if (auto *DstSel = TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel))
+          if (DstSel->getImm() == AMDGPU::SDWA::DWORD)
+            return false;
+      } else {
+        if ((AMDGPU::getNamedOperandIdx(MI.getOpcode(),
+                                        AMDGPU::OpName::op_sel) == -1) ||
+            !(TII->getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)
+                  ->getImm() &
+              SISrcMods::DST_OP_SEL))
+          return false;
+      }
+      const SIRegisterInfo *TRI = ST.getRegisterInfo();
+      if (auto *Dst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)) {
+        Register Def = Dst->getReg();
+
+        for (const MachineOperand &Use : VALU->explicit_uses()) {
+          if (Use.isReg() && TRI->regsOverlap(Def, Use.getReg()))
+            return true;
+        }
+      }
+
+      return false;
+    };
+
+    int WaitStatesNeededForDef =
+        Shift16DefWaitstates -
+        getWaitStatesSince(IsShift16BitDefFn, Shift16DefWaitstates);
+    WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+  }
+
+  if (ST.hasVDecCoExecHazard()) {
+    const int VALUWriteSGPRVALUReadWaitstates = 2;
+    const int VALUWriteEXECRWLane = 4;
+    const int VALUWriteVGPRReadlaneRead = 1;
+
+    const SIRegisterInfo *TRI = ST.getRegisterInfo();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    Register UseReg;
+    auto IsVALUDefSGPRFn = [&UseReg, TRI](const MachineInstr &MI) {
+      if (!SIInstrInfo::isVALU(MI))
+        return false;
+      return MI.modifiesRegister(UseReg, TRI);
+    };
+
+    for (const MachineOperand &Use : VALU->explicit_uses()) {
+      if (!Use.isReg())
+        continue;
+
+      UseReg = Use.getReg();
+      if (TRI->isSGPRReg(MRI, UseReg)) {
+        int WaitStatesNeededForDef =
+            VALUWriteSGPRVALUReadWaitstates -
+            getWaitStatesSince(IsVALUDefSGPRFn,
+                               VALUWriteSGPRVALUReadWaitstates);
+        WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+      }
+    }
+
+    if (VALU->readsRegister(AMDGPU::VCC, TRI)) {
+      UseReg = AMDGPU::VCC;
+      int WaitStatesNeededForDef =
+          VALUWriteSGPRVALUReadWaitstates -
+          getWaitStatesSince(IsVALUDefSGPRFn, VALUWriteSGPRVALUReadWaitstates);
+      WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+    }
+
+    switch (VALU->getOpcode()) {
+    case AMDGPU::V_READLANE_B32:
+    case AMDGPU::V_READFIRSTLANE_B32: {
+      MachineOperand *Src = TII.getNamedOperand(*VALU, AMDGPU::OpName::src0);
+      UseReg = Src->getReg();
+      int WaitStatesNeededForDef =
+          VALUWriteVGPRReadlaneRead -
+          getWaitStatesSince(IsVALUDefSGPRFn, VALUWriteVGPRReadlaneRead);
+      WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+    }
+      LLVM_FALLTHROUGH;
+    case AMDGPU::V_WRITELANE_B32: {
+      UseReg = AMDGPU::EXEC;
+      int WaitStatesNeededForDef =
+          VALUWriteEXECRWLane -
+          getWaitStatesSince(IsVALUDefSGPRFn, VALUWriteEXECRWLane);
+      WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForDef);
+      break;
+    }
+    default:
+      break;
+    }
+  }
+
   // This checks for the hazard where VMEM instructions that store more than
   // 8 bytes can have there store data over written by the next instruction.
   if (!ST.has12DWordStoreHazard())
-    return 0;
+    return WaitStatesNeeded;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  int WaitStatesNeeded = 0;
 
   for (const MachineOperand &Def : VALU->defs()) {
     WaitStatesNeeded = std::max(WaitStatesNeeded, checkVALUHazardsHelper(Def, MRI));
