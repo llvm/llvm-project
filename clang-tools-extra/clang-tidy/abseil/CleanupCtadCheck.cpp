@@ -23,7 +23,7 @@ namespace clang {
 namespace tidy {
 namespace abseil {
 
-RewriteRule CleanupCtadCheckImpl() {
+RewriteRuleWith<std::string> CleanupCtadCheckImpl() {
   auto warning_message = cat("prefer absl::Cleanup's class template argument "
                              "deduction pattern in C++17 and higher");
 
