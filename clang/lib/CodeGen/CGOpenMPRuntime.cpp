@@ -937,8 +937,7 @@ static LValue loadToBegin(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
 }
 
 static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
-                          llvm::Type *BaseLVType, CharUnits BaseLVAlignment,
-                          llvm::Value *Addr) {
+                          Address OriginalBaseAddress, llvm::Value *Addr) {
   Address Tmp = Address::invalid();
   Address TopTmp = Address::invalid();
   Address MostTopTmp = Address::invalid();
@@ -953,15 +952,17 @@ static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
     TopTmp = Tmp;
     BaseTy = BaseTy->getPointeeType();
   }
-  llvm::Type *Ty = BaseLVType;
-  if (Tmp.isValid())
-    Ty = Tmp.getElementType();
-  Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Ty);
+
   if (Tmp.isValid()) {
+    Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+        Addr, Tmp.getElementType());
     CGF.Builder.CreateStore(Addr, Tmp);
     return MostTopTmp;
   }
-  return Address::deprecated(Addr, BaseLVAlignment);
+
+  Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+      Addr, OriginalBaseAddress.getType());
+  return OriginalBaseAddress.withPointer(Addr);
 }
 
 static const VarDecl *getBaseDecl(const Expr *Ref, const DeclRefExpr *&DE) {
@@ -1004,8 +1005,7 @@ Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
         SharedAddr.getElementType(), PrivatePointer, Adjustment);
     return castToBase(CGF, OrigVD->getType(),
                       SharedAddresses[N].first.getType(),
-                      OriginalBaseLValue.getAddress(CGF).getType(),
-                      OriginalBaseLValue.getAlignment(), Ptr);
+                      OriginalBaseLValue.getAddress(CGF), Ptr);
   }
   BaseDecls.emplace_back(
       cast<VarDecl>(cast<DeclRefExpr>(ClausesData[N].Ref)->getDecl()));
@@ -4046,12 +4046,12 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
         KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
     LValue Base = CGF.EmitLValueForField(
         TDBase, *KmpTaskTWithPrivatesQTyRD->field_begin());
-    KmpTaskSharedsPtr = Address::deprecated(
+    KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(CGF.EmitLValueForField(
                                  Base, *std::next(KmpTaskTQTyRD->field_begin(),
                                                   KmpTaskTShareds)),
                              Loc),
-        CGM.getNaturalTypeAlignment(SharedsTy));
+        CGF.Int8Ty, CGM.getNaturalTypeAlignment(SharedsTy));
   }
   emitPrivatesInit(CGF, D, KmpTaskSharedsPtr, TDBase, KmpTaskTWithPrivatesQTyRD,
                    SharedsTy, SharedsPtrTy, Data, Privates, /*ForDup=*/true);
@@ -4531,13 +4531,13 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
   if (!SharedsTy->getAsStructureType()->getDecl()->field_empty()) {
-    KmpTaskSharedsPtr = Address::deprecated(
+    KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(
             CGF.EmitLValueForField(
                 TDBase,
                 *std::next(KmpTaskTQTyRD->field_begin(), KmpTaskTShareds)),
             Loc),
-        CGM.getNaturalTypeAlignment(SharedsTy));
+        CGF.Int8Ty, CGM.getNaturalTypeAlignment(SharedsTy));
     LValue Dest = CGF.MakeAddrLValue(KmpTaskSharedsPtr, SharedsTy);
     LValue Src = CGF.MakeAddrLValue(Shareds, SharedsTy);
     CGF.EmitAggregateCopy(Dest, Src, SharedsTy, AggValueSlot::DoesNotOverlap);
@@ -7847,8 +7847,9 @@ private:
       BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress(CGF);
     } else if (OAShE &&
                isa<CXXThisExpr>(OAShE->getBase()->IgnoreParenCasts())) {
-      BP = Address::deprecated(
+      BP = Address(
           CGF.EmitScalarExpr(OAShE->getBase()),
+          CGF.ConvertTypeForMem(OAShE->getBase()->getType()->getPointeeType()),
           CGF.getContext().getTypeAlignInChars(OAShE->getBase()->getType()));
     } else {
       // The base is the reference to the variable.
@@ -8019,9 +8020,11 @@ private:
         };
         if (OAShE) {
           LowestElem = LB =
-              Address::deprecated(CGF.EmitScalarExpr(OAShE->getBase()),
-                                  CGF.getContext().getTypeAlignInChars(
-                                      OAShE->getBase()->getType()));
+              Address(CGF.EmitScalarExpr(OAShE->getBase()),
+                      CGF.ConvertTypeForMem(
+                          OAShE->getBase()->getType()->getPointeeType()),
+                      CGF.getContext().getTypeAlignInChars(
+                          OAShE->getBase()->getType()));
         } else if (IsMemberReference) {
           const auto *ME = cast<MemberExpr>(I->getAssociatedExpression());
           LValue BaseLVal = EmitMemberExprBase(CGF, ME);
