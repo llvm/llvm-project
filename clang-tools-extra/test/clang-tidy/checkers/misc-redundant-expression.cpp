@@ -369,6 +369,11 @@ struct S {
 bool operator<=(const S &s, int i) { return s.x <= i; } // not modifying
 bool operator>=(const S &s, const int &i) { return s.x >= i; } // not modifying
 
+bool operator==(int i, const S &s) { return s == i; } // not modifying
+bool operator<(const int &i, const S &s) { return s > i; } // not modifying
+bool operator<=(const int &i, const S &s) { return s >= i; } // not modifying
+bool operator>(const int &i, const S &s) { return s < i; } // not modifying
+
 struct S2 {
   S2() { x = 1; }
   int x;
@@ -452,6 +457,25 @@ int TestLogical(int X, int Y){
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
   if (s1 >= 1 || s1 <= 1) return true;
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+  if (s1 >= 2 && s1 <= 0) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+
+  // Same test as above but with swapped LHS/RHS on one side of the logical operator.
+  if (1 == s1 && s1 == 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: equivalent expression on both sides of logical operator
+  if (1 == s1 || s1 != 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+  if (1 < s1 && s1 < 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+  if (1 <= s1 || s1 <= 1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+  if (2 < s1 && 0 > s1) return true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+
+  // Test for absence of false positives (issue #54011).
+  if (s1 == 1 || s1 == 2) return true;
+  if (s1 > 1 && s1 < 3) return true;
+  if (s1 >= 2 || s1 <= 0) return true;
 
   // Test for overloaded operators that may modify their params.
   S2 s2;
