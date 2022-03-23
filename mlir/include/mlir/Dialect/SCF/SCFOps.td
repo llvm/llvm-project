@@ -106,7 +106,6 @@ def ExecuteRegionOp : SCF_Op<"execute_region", [
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
 
-  let hasFolder = 0;
   let hasVerifier = 1;
 }
 

@@ -1,4 +1,4 @@
-//===- SymbolGraph/DeclarationFragments.cpp ---------------------*- C++ -*-===//
+//===- ExtractAPI/DeclarationFragments.cpp ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,22 +7,24 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines SymbolGraph Declaration Fragments related classes.
+/// This file implements Declaration Fragments related classes.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/SymbolGraph/DeclarationFragments.h"
+#include "clang/ExtractAPI/DeclarationFragments.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/StringSwitch.h"
 
-namespace clang {
-namespace symbolgraph {
+using namespace clang::extractapi;
+using namespace llvm;
 
 DeclarationFragments &DeclarationFragments::appendSpace() {
   if (!Fragments.empty()) {
     Fragment Last = Fragments.back();
     if (Last.Kind == FragmentKind::Text) {
-      if (Last.Spelling.back() != ' ') {
+      // Merge the extra space into the last fragment if the last fragment is
+      // also text.
+      if (Last.Spelling.back() != ' ') { // avoid extra trailing spaces.
         Last.Spelling.push_back(' ');
       }
     } else {
@@ -429,6 +431,3 @@ DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
                      DeclarationFragments::FragmentKind::Identifier);
   return Fragments;
 }
-
-} // namespace symbolgraph
-} // namespace clang

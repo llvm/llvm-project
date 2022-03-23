@@ -1,4 +1,4 @@
-//===- ExtractAPIConsumer.cpp -----------------------------------*- C++ -*-===//
+//===- ExtractAPI/ExtractAPIConsumer.cpp ------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the ExtractAPI AST visitor to collect API information.
+/// This file implements the ExtractAPIAction, and ASTVisitor/Consumer to
+/// collect API information.
 ///
 //===----------------------------------------------------------------------===//
-//
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -20,19 +20,22 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/AvailabilityInfo.h"
+#include "clang/ExtractAPI/DeclarationFragments.h"
+#include "clang/ExtractAPI/FrontendActions.h"
+#include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/SymbolGraph/API.h"
-#include "clang/SymbolGraph/AvailabilityInfo.h"
-#include "clang/SymbolGraph/DeclarationFragments.h"
-#include "clang/SymbolGraph/FrontendActions.h"
-#include "clang/SymbolGraph/Serialization.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
-using namespace symbolgraph;
+using namespace extractapi;
 
 namespace {
+
+/// The RecursiveASTVisitor to traverse symbol declarations and collect API
+/// information.
 class ExtractAPIVisitor : public RecursiveASTVisitor<ExtractAPIVisitor> {
 public:
   explicit ExtractAPIVisitor(ASTContext &Context)
@@ -59,6 +62,7 @@ public:
         Decl->getTemplateSpecializationKind() == TSK_Undeclared)
       return true;
 
+    // Collect symbol information.
     StringRef Name = Decl->getName();
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
@@ -69,11 +73,14 @@ public:
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                               Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the variable.
     DeclarationFragments Declaration =
         DeclarationFragmentsBuilder::getFragmentsForVar(Decl);
     DeclarationFragments SubHeading =
         DeclarationFragmentsBuilder::getSubHeading(Decl);
 
+    // Add the global variable record to the API set.
     API.addGlobalVar(Name, USR, Loc, Availability, Linkage, Comment,
                      Declaration, SubHeading);
     return true;
@@ -112,6 +119,7 @@ public:
       return true;
     }
 
+    // Collect symbol information.
     StringRef Name = Decl->getName();
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
@@ -122,6 +130,8 @@ public:
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
                                               Context.getDiagnostics());
+
+    // Build declaration fragments, sub-heading, and signature of the function.
     DeclarationFragments Declaration =
         DeclarationFragmentsBuilder::getFragmentsForFunction(Decl);
     DeclarationFragments SubHeading =
@@ -129,16 +139,19 @@ public:
     FunctionSignature Signature =
         DeclarationFragmentsBuilder::getFunctionSignature(Decl);
 
+    // Add the function record to the API set.
     API.addFunction(Name, USR, Loc, Availability, Linkage, Comment, Declaration,
                     SubHeading, Signature);
     return true;
   }
 
 private:
+  /// Get availability information of the declaration \p D.
   AvailabilityInfo getAvailability(const Decl *D) const {
     StringRef PlatformName = Context.getTargetInfo().getPlatformName();
 
     AvailabilityInfo Availability;
+    // Collect availability attributes from all redeclarations.
     for (const auto *RD : D->redecls()) {
       for (const auto *A : RD->specific_attrs<AvailabilityAttr>()) {
         if (A->getPlatform()->getName() != PlatformName)
@@ -174,15 +187,21 @@ public:
       : Visitor(Context), OS(std::move(OS)) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
+    // Use ExtractAPIVisitor to traverse symbol declarations in the context.
     Visitor.TraverseDecl(Context.getTranslationUnitDecl());
-    Serializer Serializer(Visitor.getAPI());
-    Serializer.serialize(*OS);
+
+    // Setup a SymbolGraphSerializer to write out collected API information in
+    // the Symbol Graph format.
+    // FIXME: Make the kind of APISerializer configurable.
+    SymbolGraphSerializer SGSerializer(Visitor.getAPI());
+    SGSerializer.serialize(*OS);
   }
 
 private:
   ExtractAPIVisitor Visitor;
   std::unique_ptr<raw_pwrite_stream> OS;
 };
+
 } // namespace
 
 std::unique_ptr<ASTConsumer>

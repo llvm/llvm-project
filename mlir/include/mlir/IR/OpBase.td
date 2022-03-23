@@ -38,6 +38,12 @@ class StrFunc<string r> {
   string result = r;
 }
 
+// Helper for marking deprecated classes or defs. To mark a def as deprecated,
+// mix in the `Deprecate` class with a reason.
+class Deprecated<string reason> {
+  string odsDeprecated = reason;
+}
+
 //===----------------------------------------------------------------------===//
 // Predicate definitions
 //===----------------------------------------------------------------------===//

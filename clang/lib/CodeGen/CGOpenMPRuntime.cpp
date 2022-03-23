@@ -6232,12 +6232,12 @@ Address CGOpenMPRuntime::getTaskReductionItem(CodeGenFunction &CGF,
                          ReductionsPtr,
                          CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                              SharedLVal.getPointer(CGF), CGM.VoidPtrTy)};
-  return Address::deprecated(
+  return Address(
       CGF.EmitRuntimeCall(
           OMPBuilder.getOrCreateRuntimeFunction(
               CGM.getModule(), OMPRTL___kmpc_task_reduction_get_th_data),
           Args),
-      SharedLVal.getAlignment());
+      CGF.Int8Ty, SharedLVal.getAlignment());
 }
 
 void CGOpenMPRuntime::emitTaskwaitCall(CodeGenFunction &CGF, SourceLocation Loc,
@@ -9053,16 +9053,13 @@ public:
   void generateInfoForLambdaCaptures(
       const ValueDecl *VD, llvm::Value *Arg, MapCombinedInfoTy &CombinedInfo,
       llvm::DenseMap<llvm::Value *, llvm::Value *> &LambdaPointers) const {
-    const auto *RD = VD->getType()
-                         .getCanonicalType()
-                         .getNonReferenceType()
-                         ->getAsCXXRecordDecl();
+    QualType VDType = VD->getType().getCanonicalType().getNonReferenceType();
+    const auto *RD = VDType->getAsCXXRecordDecl();
     if (!RD || !RD->isLambda())
       return;
-    Address VDAddr =
-        Address::deprecated(Arg, CGF.getContext().getDeclAlign(VD));
-    LValue VDLVal = CGF.MakeAddrLValue(
-        VDAddr, VD->getType().getCanonicalType().getNonReferenceType());
+    Address VDAddr(Arg, CGF.ConvertTypeForMem(VDType),
+                   CGF.getContext().getDeclAlign(VD));
+    LValue VDLVal = CGF.MakeAddrLValue(VDAddr, VDType);
     llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
     FieldDecl *ThisCapture = nullptr;
     RD->getCaptureFields(Captures, ThisCapture);
@@ -10622,13 +10619,13 @@ void CGOpenMPRuntime::emitTargetCall(
 
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray =
-        Address::deprecated(Info.BasePointersArray, CGM.getPointerAlign());
+        Address(Info.BasePointersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     InputInfo.PointersArray =
-        Address::deprecated(Info.PointersArray, CGM.getPointerAlign());
+        Address(Info.PointersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     InputInfo.SizesArray =
-        Address::deprecated(Info.SizesArray, CGM.getPointerAlign());
+        Address(Info.SizesArray, CGF.Int64Ty, CGM.getPointerAlign());
     InputInfo.MappersArray =
-        Address::deprecated(Info.MappersArray, CGM.getPointerAlign());
+        Address(Info.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     MapTypesArray = Info.MapTypesArray;
     MapNamesArray = Info.MapNamesArray;
     if (RequiresOuterTask)
@@ -11505,13 +11502,13 @@ void CGOpenMPRuntime::emitTargetDataStandAloneCall(
         {/*ForEndCall=*/false});
     InputInfo.NumberOfTargetItems = Info.NumberOfPtrs;
     InputInfo.BasePointersArray =
-        Address::deprecated(Info.BasePointersArray, CGM.getPointerAlign());
+        Address(Info.BasePointersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     InputInfo.PointersArray =
-        Address::deprecated(Info.PointersArray, CGM.getPointerAlign());
+        Address(Info.PointersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     InputInfo.SizesArray =
-        Address::deprecated(Info.SizesArray, CGM.getPointerAlign());
+        Address(Info.SizesArray, CGF.Int64Ty, CGM.getPointerAlign());
     InputInfo.MappersArray =
-        Address::deprecated(Info.MappersArray, CGM.getPointerAlign());
+        Address(Info.MappersArray, CGF.VoidPtrTy, CGM.getPointerAlign());
     MapTypesArray = Info.MapTypesArray;
     MapNamesArray = Info.MapNamesArray;
     if (RequiresOuterTask)
@@ -12362,9 +12359,10 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
         CGF.EmitRuntimeCall(RTLFn, Args);
       }
     };
-    Address VDAddr = UntiedRealAddr.isValid()
-                         ? UntiedRealAddr
-                         : Address::deprecated(Addr, Align);
+    Address VDAddr =
+        UntiedRealAddr.isValid()
+            ? UntiedRealAddr
+            : Address(Addr, CGF.ConvertTypeForMem(CVD->getType()), Align);
     CGF.EHStack.pushCleanup<OMPAllocateCleanupTy>(
         NormalAndEHCleanup, FiniRTLFn, CVD->getLocation().getRawEncoding(),
         VDAddr, Allocator);

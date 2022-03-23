@@ -402,6 +402,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
     llvm_unreachable("target teams loop directive not supported yet.");
     break;
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+    llvm_unreachable("parallel loop directive not supported yet.");
+    break;
   }
 }
 
@@ -2741,9 +2744,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       QualType Ty = getContext().getIntTypeForBitwidth(Size, /*Signed*/ false);
       if (Ty.isNull()) {
         const Expr *OutExpr = S.getOutputExpr(i);
-        CGM.Error(
-            OutExpr->getExprLoc(),
-            "impossible constraint in asm: can't store value into a register");
+        CGM.getDiags().Report(OutExpr->getExprLoc(),
+                              diag::err_store_value_to_reg);
         return;
       }
       Dest = MakeAddrLValue(A, Ty);

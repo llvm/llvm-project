@@ -511,8 +511,8 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
         M, VPID, {ReturnType, Params[0]->getType()});
     break;
   case Intrinsic::experimental_vp_strided_load:
-    VPFunc =
-        Intrinsic::getDeclaration(M, VPID, {ReturnType, Params[1]->getType()});
+    VPFunc = Intrinsic::getDeclaration(
+        M, VPID, {ReturnType, Params[0]->getType(), Params[1]->getType()});
     break;
   case Intrinsic::vp_gather:
     VPFunc = Intrinsic::getDeclaration(
@@ -524,7 +524,8 @@ Function *VPIntrinsic::getDeclarationForParams(Module *M, Intrinsic::ID VPID,
     break;
   case Intrinsic::experimental_vp_strided_store:
     VPFunc = Intrinsic::getDeclaration(
-        M, VPID, {Params[0]->getType(), Params[2]->getType()});
+        M, VPID,
+        {Params[0]->getType(), Params[1]->getType(), Params[2]->getType()});
     break;
   case Intrinsic::vp_scatter:
     VPFunc = Intrinsic::getDeclaration(

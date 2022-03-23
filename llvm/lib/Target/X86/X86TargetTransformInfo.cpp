@@ -5140,7 +5140,7 @@ bool X86TTIImpl::isLegalNTStore(Type *DataType, Align Alignment) {
 bool X86TTIImpl::isLegalBroadcastLoad(Type *ElementTy,
                                       unsigned NumElements) const {
   // movddup
-  return ST->hasSSSE3() && NumElements == 2 &&
+  return ST->hasSSE3() && NumElements == 2 &&
          ElementTy == Type::getDoubleTy(ElementTy->getContext());
 }
 
