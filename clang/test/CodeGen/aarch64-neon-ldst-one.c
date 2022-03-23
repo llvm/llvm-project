@@ -947,8 +947,8 @@ poly64x1_t test_vld1_lane_p64(poly64_t  *a, poly64x1_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int8x16x2_t @test_vld2q_lane_s8(i8* noundef %ptr, [2 x <16 x i8>] %src.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int8x16x2_t, align 16
 // CHECK:   [[SRC:%.*]] = alloca %struct.int8x16x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int8x16x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int8x16x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x2_t, %struct.int8x16x2_t* [[SRC]], i32 0, i32 0
 // CHECK:   store [2 x <16 x i8>] [[SRC]].coerce, [2 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x16x2_t* [[__S1]] to i8*
@@ -976,8 +976,8 @@ int8x16x2_t test_vld2q_lane_s8(int8_t const * ptr, int8x16x2_t src) {
 // CHECK-LABEL: define{{.*}} %struct.uint8x16x2_t @test_vld2q_lane_u8(i8* noundef %ptr, [2 x <16 x i8>] %src.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint8x16x2_t, align 16
 // CHECK:   [[SRC:%.*]] = alloca %struct.uint8x16x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x16x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint8x16x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[SRC]], i32 0, i32 0
 // CHECK:   store [2 x <16 x i8>] [[SRC]].coerce, [2 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x16x2_t* [[__S1]] to i8*
@@ -1005,8 +1005,8 @@ uint8x16x2_t test_vld2q_lane_u8(uint8_t const * ptr, uint8x16x2_t src) {
 // CHECK-LABEL: define{{.*}} %struct.poly8x16x2_t @test_vld2q_lane_p8(i8* noundef %ptr, [2 x <16 x i8>] %src.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly8x16x2_t, align 16
 // CHECK:   [[SRC:%.*]] = alloca %struct.poly8x16x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x16x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly8x16x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[SRC]], i32 0, i32 0
 // CHECK:   store [2 x <16 x i8>] [[SRC]].coerce, [2 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x16x2_t* [[__S1]] to i8*
@@ -1034,8 +1034,8 @@ poly8x16x2_t test_vld2q_lane_p8(poly8_t const * ptr, poly8x16x2_t src) {
 // CHECK-LABEL: define{{.*}} %struct.int8x16x3_t @test_vld3q_lane_s8(i8* noundef %ptr, [3 x <16 x i8>] %src.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int8x16x3_t, align 16
 // CHECK:   [[SRC:%.*]] = alloca %struct.int8x16x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int8x16x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int8x16x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x3_t, %struct.int8x16x3_t* [[SRC]], i32 0, i32 0
 // CHECK:   store [3 x <16 x i8>] [[SRC]].coerce, [3 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x16x3_t* [[__S1]] to i8*
@@ -1066,8 +1066,8 @@ int8x16x3_t test_vld3q_lane_s8(int8_t const * ptr, int8x16x3_t src) {
 // CHECK-LABEL: define{{.*}} %struct.uint8x16x3_t @test_vld3q_lane_u8(i8* noundef %ptr, [3 x <16 x i8>] %src.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint8x16x3_t, align 16
 // CHECK:   [[SRC:%.*]] = alloca %struct.uint8x16x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x16x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint8x16x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x3_t, %struct.uint8x16x3_t* [[SRC]], i32 0, i32 0
 // CHECK:   store [3 x <16 x i8>] [[SRC]].coerce, [3 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x16x3_t* [[__S1]] to i8*
@@ -1098,8 +1098,8 @@ uint8x16x3_t test_vld3q_lane_u8(uint8_t const * ptr, uint8x16x3_t src) {
 // CHECK-LABEL: define{{.*}} %struct.uint16x8x2_t @test_vld2q_lane_u16(i16* noundef %a, [2 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint16x8x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint16x8x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x8x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint16x8x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x8x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint16x8x2_t, %struct.uint16x8x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <8 x i16>] [[B]].coerce, [2 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint16x8x2_t* [[__S1]] to i8*
@@ -1132,8 +1132,8 @@ uint16x8x2_t test_vld2q_lane_u16(uint16_t  *a, uint16x8x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint32x4x2_t @test_vld2q_lane_u32(i32* noundef %a, [2 x <4 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint32x4x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint32x4x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x4x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint32x4x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x4x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint32x4x2_t, %struct.uint32x4x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <4 x i32>] [[B]].coerce, [2 x <4 x i32>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint32x4x2_t* [[__S1]] to i8*
@@ -1166,8 +1166,8 @@ uint32x4x2_t test_vld2q_lane_u32(uint32_t  *a, uint32x4x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint64x2x2_t @test_vld2q_lane_u64(i64* noundef %a, [2 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint64x2x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint64x2x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x2x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint64x2x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x2x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint64x2x2_t, %struct.uint64x2x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <2 x i64>] [[B]].coerce, [2 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint64x2x2_t* [[__S1]] to i8*
@@ -1200,8 +1200,8 @@ uint64x2x2_t test_vld2q_lane_u64(uint64_t  *a, uint64x2x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int16x8x2_t @test_vld2q_lane_s16(i16* noundef %a, [2 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int16x8x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int16x8x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int16x8x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int16x8x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int16x8x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int16x8x2_t, %struct.int16x8x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <8 x i16>] [[B]].coerce, [2 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int16x8x2_t* [[__S1]] to i8*
@@ -1234,8 +1234,8 @@ int16x8x2_t test_vld2q_lane_s16(int16_t  *a, int16x8x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int32x4x2_t @test_vld2q_lane_s32(i32* noundef %a, [2 x <4 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int32x4x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int32x4x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int32x4x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int32x4x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int32x4x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int32x4x2_t, %struct.int32x4x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <4 x i32>] [[B]].coerce, [2 x <4 x i32>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int32x4x2_t* [[__S1]] to i8*
@@ -1268,8 +1268,8 @@ int32x4x2_t test_vld2q_lane_s32(int32_t  *a, int32x4x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int64x2x2_t @test_vld2q_lane_s64(i64* noundef %a, [2 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int64x2x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int64x2x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int64x2x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int64x2x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int64x2x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int64x2x2_t, %struct.int64x2x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <2 x i64>] [[B]].coerce, [2 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int64x2x2_t* [[__S1]] to i8*
@@ -1302,8 +1302,8 @@ int64x2x2_t test_vld2q_lane_s64(int64_t  *a, int64x2x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float16x8x2_t @test_vld2q_lane_f16(half* noundef %a, [2 x <8 x half>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float16x8x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float16x8x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float16x8x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float16x8x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float16x8x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float16x8x2_t, %struct.float16x8x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <8 x half>] [[B]].coerce, [2 x <8 x half>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float16x8x2_t* [[__S1]] to i8*
@@ -1336,8 +1336,8 @@ float16x8x2_t test_vld2q_lane_f16(float16_t  *a, float16x8x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float32x4x2_t @test_vld2q_lane_f32(float* noundef %a, [2 x <4 x float>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float32x4x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float32x4x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float32x4x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float32x4x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float32x4x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float32x4x2_t, %struct.float32x4x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <4 x float>] [[B]].coerce, [2 x <4 x float>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float32x4x2_t* [[__S1]] to i8*
@@ -1370,8 +1370,8 @@ float32x4x2_t test_vld2q_lane_f32(float32_t  *a, float32x4x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float64x2x2_t @test_vld2q_lane_f64(double* noundef %a, [2 x <2 x double>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float64x2x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float64x2x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float64x2x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float64x2x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float64x2x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float64x2x2_t, %struct.float64x2x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <2 x double>] [[B]].coerce, [2 x <2 x double>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float64x2x2_t* [[__S1]] to i8*
@@ -1404,8 +1404,8 @@ float64x2x2_t test_vld2q_lane_f64(float64_t  *a, float64x2x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly16x8x2_t @test_vld2q_lane_p16(i16* noundef %a, [2 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly16x8x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly16x8x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x8x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly16x8x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x8x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly16x8x2_t, %struct.poly16x8x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <8 x i16>] [[B]].coerce, [2 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly16x8x2_t* [[__S1]] to i8*
@@ -1438,8 +1438,8 @@ poly16x8x2_t test_vld2q_lane_p16(poly16_t  *a, poly16x8x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly64x2x2_t @test_vld2q_lane_p64(i64* noundef %a, [2 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly64x2x2_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x2x2_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x2_t, %struct.poly64x2x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <2 x i64>] [[B]].coerce, [2 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly64x2x2_t* [[__S1]] to i8*
@@ -1472,8 +1472,8 @@ poly64x2x2_t test_vld2q_lane_p64(poly64_t  *a, poly64x2x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint8x8x2_t @test_vld2_lane_u8(i8* noundef %a, [2 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint8x8x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint8x8x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x8x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint8x8x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x8x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x8x2_t, %struct.uint8x8x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <8 x i8>] [[B]].coerce, [2 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x8x2_t* [[__S1]] to i8*
@@ -1501,8 +1501,8 @@ uint8x8x2_t test_vld2_lane_u8(uint8_t  *a, uint8x8x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint16x4x2_t @test_vld2_lane_u16(i16* noundef %a, [2 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint16x4x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint16x4x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x4x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint16x4x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x4x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint16x4x2_t, %struct.uint16x4x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <4 x i16>] [[B]].coerce, [2 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint16x4x2_t* [[__S1]] to i8*
@@ -1535,8 +1535,8 @@ uint16x4x2_t test_vld2_lane_u16(uint16_t  *a, uint16x4x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint32x2x2_t @test_vld2_lane_u32(i32* noundef %a, [2 x <2 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint32x2x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint32x2x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x2x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint32x2x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x2x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint32x2x2_t, %struct.uint32x2x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <2 x i32>] [[B]].coerce, [2 x <2 x i32>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint32x2x2_t* [[__S1]] to i8*
@@ -1569,8 +1569,8 @@ uint32x2x2_t test_vld2_lane_u32(uint32_t  *a, uint32x2x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint64x1x2_t @test_vld2_lane_u64(i64* noundef %a, [2 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint64x1x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint64x1x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x1x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint64x1x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x1x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint64x1x2_t, %struct.uint64x1x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <1 x i64>] [[B]].coerce, [2 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint64x1x2_t* [[__S1]] to i8*
@@ -1603,8 +1603,8 @@ uint64x1x2_t test_vld2_lane_u64(uint64_t  *a, uint64x1x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int8x8x2_t @test_vld2_lane_s8(i8* noundef %a, [2 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int8x8x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int8x8x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int8x8x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int8x8x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int8x8x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x8x2_t, %struct.int8x8x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <8 x i8>] [[B]].coerce, [2 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x8x2_t* [[__S1]] to i8*
@@ -1632,8 +1632,8 @@ int8x8x2_t test_vld2_lane_s8(int8_t  *a, int8x8x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int16x4x2_t @test_vld2_lane_s16(i16* noundef %a, [2 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int16x4x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int16x4x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int16x4x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int16x4x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int16x4x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int16x4x2_t, %struct.int16x4x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <4 x i16>] [[B]].coerce, [2 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int16x4x2_t* [[__S1]] to i8*
@@ -1666,8 +1666,8 @@ int16x4x2_t test_vld2_lane_s16(int16_t  *a, int16x4x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int32x2x2_t @test_vld2_lane_s32(i32* noundef %a, [2 x <2 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int32x2x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int32x2x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int32x2x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int32x2x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int32x2x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int32x2x2_t, %struct.int32x2x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <2 x i32>] [[B]].coerce, [2 x <2 x i32>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int32x2x2_t* [[__S1]] to i8*
@@ -1700,8 +1700,8 @@ int32x2x2_t test_vld2_lane_s32(int32_t  *a, int32x2x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int64x1x2_t @test_vld2_lane_s64(i64* noundef %a, [2 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int64x1x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int64x1x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int64x1x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int64x1x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int64x1x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int64x1x2_t, %struct.int64x1x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <1 x i64>] [[B]].coerce, [2 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int64x1x2_t* [[__S1]] to i8*
@@ -1734,8 +1734,8 @@ int64x1x2_t test_vld2_lane_s64(int64_t  *a, int64x1x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float16x4x2_t @test_vld2_lane_f16(half* noundef %a, [2 x <4 x half>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float16x4x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float16x4x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float16x4x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float16x4x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float16x4x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float16x4x2_t, %struct.float16x4x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <4 x half>] [[B]].coerce, [2 x <4 x half>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float16x4x2_t* [[__S1]] to i8*
@@ -1768,8 +1768,8 @@ float16x4x2_t test_vld2_lane_f16(float16_t  *a, float16x4x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float32x2x2_t @test_vld2_lane_f32(float* noundef %a, [2 x <2 x float>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float32x2x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float32x2x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float32x2x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float32x2x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float32x2x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float32x2x2_t, %struct.float32x2x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <2 x float>] [[B]].coerce, [2 x <2 x float>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float32x2x2_t* [[__S1]] to i8*
@@ -1802,8 +1802,8 @@ float32x2x2_t test_vld2_lane_f32(float32_t  *a, float32x2x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float64x1x2_t @test_vld2_lane_f64(double* noundef %a, [2 x <1 x double>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float64x1x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float64x1x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float64x1x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float64x1x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float64x1x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float64x1x2_t, %struct.float64x1x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <1 x double>] [[B]].coerce, [2 x <1 x double>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float64x1x2_t* [[__S1]] to i8*
@@ -1836,8 +1836,8 @@ float64x1x2_t test_vld2_lane_f64(float64_t  *a, float64x1x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly8x8x2_t @test_vld2_lane_p8(i8* noundef %a, [2 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly8x8x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x8x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x8x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly8x8x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x8x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x8x2_t, %struct.poly8x8x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <8 x i8>] [[B]].coerce, [2 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x8x2_t* [[__S1]] to i8*
@@ -1865,8 +1865,8 @@ poly8x8x2_t test_vld2_lane_p8(poly8_t  *a, poly8x8x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly16x4x2_t @test_vld2_lane_p16(i16* noundef %a, [2 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly16x4x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly16x4x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x4x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly16x4x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x4x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly16x4x2_t, %struct.poly16x4x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <4 x i16>] [[B]].coerce, [2 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly16x4x2_t* [[__S1]] to i8*
@@ -1899,8 +1899,8 @@ poly16x4x2_t test_vld2_lane_p16(poly16_t  *a, poly16x4x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly64x1x2_t @test_vld2_lane_p64(i64* noundef %a, [2 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly64x1x2_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x1x2_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x2_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x2_t, %struct.poly64x1x2_t* [[B]], i32 0, i32 0
 // CHECK:   store [2 x <1 x i64>] [[B]].coerce, [2 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly64x1x2_t* [[__S1]] to i8*
@@ -1933,8 +1933,8 @@ poly64x1x2_t test_vld2_lane_p64(poly64_t  *a, poly64x1x2_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint16x8x3_t @test_vld3q_lane_u16(i16* noundef %a, [3 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint16x8x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint16x8x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x8x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint16x8x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x8x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint16x8x3_t, %struct.uint16x8x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <8 x i16>] [[B]].coerce, [3 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint16x8x3_t* [[__S1]] to i8*
@@ -1972,8 +1972,8 @@ uint16x8x3_t test_vld3q_lane_u16(uint16_t  *a, uint16x8x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint32x4x3_t @test_vld3q_lane_u32(i32* noundef %a, [3 x <4 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint32x4x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint32x4x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x4x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint32x4x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x4x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint32x4x3_t, %struct.uint32x4x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <4 x i32>] [[B]].coerce, [3 x <4 x i32>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint32x4x3_t* [[__S1]] to i8*
@@ -2011,8 +2011,8 @@ uint32x4x3_t test_vld3q_lane_u32(uint32_t  *a, uint32x4x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint64x2x3_t @test_vld3q_lane_u64(i64* noundef %a, [3 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint64x2x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint64x2x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x2x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint64x2x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x2x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint64x2x3_t, %struct.uint64x2x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <2 x i64>] [[B]].coerce, [3 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint64x2x3_t* [[__S1]] to i8*
@@ -2050,8 +2050,8 @@ uint64x2x3_t test_vld3q_lane_u64(uint64_t  *a, uint64x2x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int16x8x3_t @test_vld3q_lane_s16(i16* noundef %a, [3 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int16x8x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int16x8x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int16x8x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int16x8x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int16x8x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int16x8x3_t, %struct.int16x8x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <8 x i16>] [[B]].coerce, [3 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int16x8x3_t* [[__S1]] to i8*
@@ -2089,8 +2089,8 @@ int16x8x3_t test_vld3q_lane_s16(int16_t  *a, int16x8x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int32x4x3_t @test_vld3q_lane_s32(i32* noundef %a, [3 x <4 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int32x4x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int32x4x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int32x4x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int32x4x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int32x4x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int32x4x3_t, %struct.int32x4x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <4 x i32>] [[B]].coerce, [3 x <4 x i32>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int32x4x3_t* [[__S1]] to i8*
@@ -2128,8 +2128,8 @@ int32x4x3_t test_vld3q_lane_s32(int32_t  *a, int32x4x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int64x2x3_t @test_vld3q_lane_s64(i64* noundef %a, [3 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int64x2x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int64x2x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int64x2x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int64x2x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int64x2x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int64x2x3_t, %struct.int64x2x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <2 x i64>] [[B]].coerce, [3 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int64x2x3_t* [[__S1]] to i8*
@@ -2167,8 +2167,8 @@ int64x2x3_t test_vld3q_lane_s64(int64_t  *a, int64x2x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float16x8x3_t @test_vld3q_lane_f16(half* noundef %a, [3 x <8 x half>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float16x8x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float16x8x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float16x8x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float16x8x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float16x8x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float16x8x3_t, %struct.float16x8x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <8 x half>] [[B]].coerce, [3 x <8 x half>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float16x8x3_t* [[__S1]] to i8*
@@ -2206,8 +2206,8 @@ float16x8x3_t test_vld3q_lane_f16(float16_t  *a, float16x8x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float32x4x3_t @test_vld3q_lane_f32(float* noundef %a, [3 x <4 x float>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float32x4x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float32x4x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float32x4x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float32x4x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float32x4x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float32x4x3_t, %struct.float32x4x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <4 x float>] [[B]].coerce, [3 x <4 x float>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float32x4x3_t* [[__S1]] to i8*
@@ -2245,8 +2245,8 @@ float32x4x3_t test_vld3q_lane_f32(float32_t  *a, float32x4x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float64x2x3_t @test_vld3q_lane_f64(double* noundef %a, [3 x <2 x double>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float64x2x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float64x2x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float64x2x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float64x2x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float64x2x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float64x2x3_t, %struct.float64x2x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <2 x double>] [[B]].coerce, [3 x <2 x double>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float64x2x3_t* [[__S1]] to i8*
@@ -2284,8 +2284,8 @@ float64x2x3_t test_vld3q_lane_f64(float64_t  *a, float64x2x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly8x16x3_t @test_vld3q_lane_p8(i8* noundef %a, [3 x <16 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly8x16x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x16x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x16x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly8x16x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x3_t, %struct.poly8x16x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <16 x i8>] [[B]].coerce, [3 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x16x3_t* [[__S1]] to i8*
@@ -2316,8 +2316,8 @@ poly8x16x3_t test_vld3q_lane_p8(poly8_t  *a, poly8x16x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly16x8x3_t @test_vld3q_lane_p16(i16* noundef %a, [3 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly16x8x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly16x8x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x8x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly16x8x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x8x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly16x8x3_t, %struct.poly16x8x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <8 x i16>] [[B]].coerce, [3 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly16x8x3_t* [[__S1]] to i8*
@@ -2355,8 +2355,8 @@ poly16x8x3_t test_vld3q_lane_p16(poly16_t  *a, poly16x8x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly64x2x3_t @test_vld3q_lane_p64(i64* noundef %a, [3 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly64x2x3_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x2x3_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x3_t, %struct.poly64x2x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <2 x i64>] [[B]].coerce, [3 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly64x2x3_t* [[__S1]] to i8*
@@ -2394,8 +2394,8 @@ poly64x2x3_t test_vld3q_lane_p64(poly64_t  *a, poly64x2x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint8x8x3_t @test_vld3_lane_u8(i8* noundef %a, [3 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint8x8x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint8x8x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x8x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint8x8x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x8x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x8x3_t, %struct.uint8x8x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <8 x i8>] [[B]].coerce, [3 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x8x3_t* [[__S1]] to i8*
@@ -2426,8 +2426,8 @@ uint8x8x3_t test_vld3_lane_u8(uint8_t  *a, uint8x8x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint16x4x3_t @test_vld3_lane_u16(i16* noundef %a, [3 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint16x4x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint16x4x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x4x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint16x4x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x4x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint16x4x3_t, %struct.uint16x4x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <4 x i16>] [[B]].coerce, [3 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint16x4x3_t* [[__S1]] to i8*
@@ -2465,8 +2465,8 @@ uint16x4x3_t test_vld3_lane_u16(uint16_t  *a, uint16x4x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint32x2x3_t @test_vld3_lane_u32(i32* noundef %a, [3 x <2 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint32x2x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint32x2x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x2x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint32x2x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x2x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint32x2x3_t, %struct.uint32x2x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <2 x i32>] [[B]].coerce, [3 x <2 x i32>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint32x2x3_t* [[__S1]] to i8*
@@ -2504,8 +2504,8 @@ uint32x2x3_t test_vld3_lane_u32(uint32_t  *a, uint32x2x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint64x1x3_t @test_vld3_lane_u64(i64* noundef %a, [3 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint64x1x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint64x1x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x1x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint64x1x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x1x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint64x1x3_t, %struct.uint64x1x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <1 x i64>] [[B]].coerce, [3 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint64x1x3_t* [[__S1]] to i8*
@@ -2543,8 +2543,8 @@ uint64x1x3_t test_vld3_lane_u64(uint64_t  *a, uint64x1x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int8x8x3_t @test_vld3_lane_s8(i8* noundef %a, [3 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int8x8x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int8x8x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int8x8x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int8x8x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int8x8x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x8x3_t, %struct.int8x8x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <8 x i8>] [[B]].coerce, [3 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x8x3_t* [[__S1]] to i8*
@@ -2575,8 +2575,8 @@ int8x8x3_t test_vld3_lane_s8(int8_t  *a, int8x8x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int16x4x3_t @test_vld3_lane_s16(i16* noundef %a, [3 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int16x4x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int16x4x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int16x4x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int16x4x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int16x4x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int16x4x3_t, %struct.int16x4x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <4 x i16>] [[B]].coerce, [3 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int16x4x3_t* [[__S1]] to i8*
@@ -2614,8 +2614,8 @@ int16x4x3_t test_vld3_lane_s16(int16_t  *a, int16x4x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int32x2x3_t @test_vld3_lane_s32(i32* noundef %a, [3 x <2 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int32x2x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int32x2x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int32x2x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int32x2x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int32x2x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int32x2x3_t, %struct.int32x2x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <2 x i32>] [[B]].coerce, [3 x <2 x i32>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int32x2x3_t* [[__S1]] to i8*
@@ -2653,8 +2653,8 @@ int32x2x3_t test_vld3_lane_s32(int32_t  *a, int32x2x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int64x1x3_t @test_vld3_lane_s64(i64* noundef %a, [3 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int64x1x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int64x1x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int64x1x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int64x1x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int64x1x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int64x1x3_t, %struct.int64x1x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <1 x i64>] [[B]].coerce, [3 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int64x1x3_t* [[__S1]] to i8*
@@ -2692,8 +2692,8 @@ int64x1x3_t test_vld3_lane_s64(int64_t  *a, int64x1x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float16x4x3_t @test_vld3_lane_f16(half* noundef %a, [3 x <4 x half>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float16x4x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float16x4x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float16x4x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float16x4x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float16x4x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float16x4x3_t, %struct.float16x4x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <4 x half>] [[B]].coerce, [3 x <4 x half>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float16x4x3_t* [[__S1]] to i8*
@@ -2731,8 +2731,8 @@ float16x4x3_t test_vld3_lane_f16(float16_t  *a, float16x4x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float32x2x3_t @test_vld3_lane_f32(float* noundef %a, [3 x <2 x float>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float32x2x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float32x2x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float32x2x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float32x2x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float32x2x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float32x2x3_t, %struct.float32x2x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <2 x float>] [[B]].coerce, [3 x <2 x float>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float32x2x3_t* [[__S1]] to i8*
@@ -2770,8 +2770,8 @@ float32x2x3_t test_vld3_lane_f32(float32_t  *a, float32x2x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float64x1x3_t @test_vld3_lane_f64(double* noundef %a, [3 x <1 x double>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float64x1x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float64x1x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float64x1x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float64x1x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float64x1x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float64x1x3_t, %struct.float64x1x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <1 x double>] [[B]].coerce, [3 x <1 x double>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float64x1x3_t* [[__S1]] to i8*
@@ -2809,8 +2809,8 @@ float64x1x3_t test_vld3_lane_f64(float64_t  *a, float64x1x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly8x8x3_t @test_vld3_lane_p8(i8* noundef %a, [3 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly8x8x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x8x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x8x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly8x8x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x8x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x8x3_t, %struct.poly8x8x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <8 x i8>] [[B]].coerce, [3 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x8x3_t* [[__S1]] to i8*
@@ -2841,8 +2841,8 @@ poly8x8x3_t test_vld3_lane_p8(poly8_t  *a, poly8x8x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly16x4x3_t @test_vld3_lane_p16(i16* noundef %a, [3 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly16x4x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly16x4x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x4x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly16x4x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x4x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly16x4x3_t, %struct.poly16x4x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <4 x i16>] [[B]].coerce, [3 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly16x4x3_t* [[__S1]] to i8*
@@ -2880,8 +2880,8 @@ poly16x4x3_t test_vld3_lane_p16(poly16_t  *a, poly16x4x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly64x1x3_t @test_vld3_lane_p64(i64* noundef %a, [3 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly64x1x3_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x1x3_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x3_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x3_t, %struct.poly64x1x3_t* [[B]], i32 0, i32 0
 // CHECK:   store [3 x <1 x i64>] [[B]].coerce, [3 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly64x1x3_t* [[__S1]] to i8*
@@ -2919,8 +2919,8 @@ poly64x1x3_t test_vld3_lane_p64(poly64_t  *a, poly64x1x3_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint8x16x4_t @test_vld4q_lane_u8(i8* noundef %a, [4 x <16 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint8x16x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint8x16x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x16x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint8x16x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x4_t, %struct.uint8x16x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <16 x i8>] [[B]].coerce, [4 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x16x4_t* [[__S1]] to i8*
@@ -2954,8 +2954,8 @@ uint8x16x4_t test_vld4q_lane_u8(uint8_t  *a, uint8x16x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint16x8x4_t @test_vld4q_lane_u16(i16* noundef %a, [4 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint16x8x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint16x8x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x8x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint16x8x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x8x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint16x8x4_t, %struct.uint16x8x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <8 x i16>] [[B]].coerce, [4 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint16x8x4_t* [[__S1]] to i8*
@@ -2998,8 +2998,8 @@ uint16x8x4_t test_vld4q_lane_u16(uint16_t  *a, uint16x8x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint32x4x4_t @test_vld4q_lane_u32(i32* noundef %a, [4 x <4 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint32x4x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint32x4x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x4x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint32x4x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x4x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint32x4x4_t, %struct.uint32x4x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <4 x i32>] [[B]].coerce, [4 x <4 x i32>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint32x4x4_t* [[__S1]] to i8*
@@ -3042,8 +3042,8 @@ uint32x4x4_t test_vld4q_lane_u32(uint32_t  *a, uint32x4x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint64x2x4_t @test_vld4q_lane_u64(i64* noundef %a, [4 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint64x2x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint64x2x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x2x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint64x2x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x2x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint64x2x4_t, %struct.uint64x2x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <2 x i64>] [[B]].coerce, [4 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint64x2x4_t* [[__S1]] to i8*
@@ -3086,8 +3086,8 @@ uint64x2x4_t test_vld4q_lane_u64(uint64_t  *a, uint64x2x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int8x16x4_t @test_vld4q_lane_s8(i8* noundef %a, [4 x <16 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int8x16x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int8x16x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int8x16x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int8x16x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x4_t, %struct.int8x16x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <16 x i8>] [[B]].coerce, [4 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x16x4_t* [[__S1]] to i8*
@@ -3121,8 +3121,8 @@ int8x16x4_t test_vld4q_lane_s8(int8_t  *a, int8x16x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int16x8x4_t @test_vld4q_lane_s16(i16* noundef %a, [4 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int16x8x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int16x8x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int16x8x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int16x8x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int16x8x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int16x8x4_t, %struct.int16x8x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <8 x i16>] [[B]].coerce, [4 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int16x8x4_t* [[__S1]] to i8*
@@ -3165,8 +3165,8 @@ int16x8x4_t test_vld4q_lane_s16(int16_t  *a, int16x8x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int32x4x4_t @test_vld4q_lane_s32(i32* noundef %a, [4 x <4 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int32x4x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int32x4x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int32x4x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int32x4x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int32x4x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int32x4x4_t, %struct.int32x4x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <4 x i32>] [[B]].coerce, [4 x <4 x i32>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int32x4x4_t* [[__S1]] to i8*
@@ -3209,8 +3209,8 @@ int32x4x4_t test_vld4q_lane_s32(int32_t  *a, int32x4x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int64x2x4_t @test_vld4q_lane_s64(i64* noundef %a, [4 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int64x2x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int64x2x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.int64x2x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.int64x2x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.int64x2x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int64x2x4_t, %struct.int64x2x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <2 x i64>] [[B]].coerce, [4 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int64x2x4_t* [[__S1]] to i8*
@@ -3253,8 +3253,8 @@ int64x2x4_t test_vld4q_lane_s64(int64_t  *a, int64x2x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float16x8x4_t @test_vld4q_lane_f16(half* noundef %a, [4 x <8 x half>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float16x8x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float16x8x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float16x8x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float16x8x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float16x8x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float16x8x4_t, %struct.float16x8x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <8 x half>] [[B]].coerce, [4 x <8 x half>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float16x8x4_t* [[__S1]] to i8*
@@ -3297,8 +3297,8 @@ float16x8x4_t test_vld4q_lane_f16(float16_t  *a, float16x8x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float32x4x4_t @test_vld4q_lane_f32(float* noundef %a, [4 x <4 x float>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float32x4x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float32x4x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float32x4x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float32x4x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float32x4x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float32x4x4_t, %struct.float32x4x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <4 x float>] [[B]].coerce, [4 x <4 x float>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float32x4x4_t* [[__S1]] to i8*
@@ -3341,8 +3341,8 @@ float32x4x4_t test_vld4q_lane_f32(float32_t  *a, float32x4x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float64x2x4_t @test_vld4q_lane_f64(double* noundef %a, [4 x <2 x double>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float64x2x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.float64x2x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.float64x2x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.float64x2x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.float64x2x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float64x2x4_t, %struct.float64x2x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <2 x double>] [[B]].coerce, [4 x <2 x double>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float64x2x4_t* [[__S1]] to i8*
@@ -3385,8 +3385,8 @@ float64x2x4_t test_vld4q_lane_f64(float64_t  *a, float64x2x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly8x16x4_t @test_vld4q_lane_p8(i8* noundef %a, [4 x <16 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly8x16x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x16x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x16x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly8x16x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x4_t, %struct.poly8x16x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <16 x i8>] [[B]].coerce, [4 x <16 x i8>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x16x4_t* [[__S1]] to i8*
@@ -3420,8 +3420,8 @@ poly8x16x4_t test_vld4q_lane_p8(poly8_t  *a, poly8x16x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly16x8x4_t @test_vld4q_lane_p16(i16* noundef %a, [4 x <8 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly16x8x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly16x8x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x8x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly16x8x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x8x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly16x8x4_t, %struct.poly16x8x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <8 x i16>] [[B]].coerce, [4 x <8 x i16>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly16x8x4_t* [[__S1]] to i8*
@@ -3464,8 +3464,8 @@ poly16x8x4_t test_vld4q_lane_p16(poly16_t  *a, poly16x8x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly64x2x4_t @test_vld4q_lane_p64(i64* noundef %a, [4 x <2 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly64x2x4_t, align 16
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x2x4_t, align 16
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x2x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x2x4_t, %struct.poly64x2x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <2 x i64>] [[B]].coerce, [4 x <2 x i64>]* [[COERCE_DIVE]], align 16
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly64x2x4_t* [[__S1]] to i8*
@@ -3508,8 +3508,8 @@ poly64x2x4_t test_vld4q_lane_p64(poly64_t  *a, poly64x2x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint8x8x4_t @test_vld4_lane_u8(i8* noundef %a, [4 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint8x8x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint8x8x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x8x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint8x8x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint8x8x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x8x4_t, %struct.uint8x8x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <8 x i8>] [[B]].coerce, [4 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint8x8x4_t* [[__S1]] to i8*
@@ -3543,8 +3543,8 @@ uint8x8x4_t test_vld4_lane_u8(uint8_t  *a, uint8x8x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint16x4x4_t @test_vld4_lane_u16(i16* noundef %a, [4 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint16x4x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint16x4x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x4x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint16x4x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint16x4x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint16x4x4_t, %struct.uint16x4x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <4 x i16>] [[B]].coerce, [4 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint16x4x4_t* [[__S1]] to i8*
@@ -3587,8 +3587,8 @@ uint16x4x4_t test_vld4_lane_u16(uint16_t  *a, uint16x4x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint32x2x4_t @test_vld4_lane_u32(i32* noundef %a, [4 x <2 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint32x2x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint32x2x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x2x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint32x2x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint32x2x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint32x2x4_t, %struct.uint32x2x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <2 x i32>] [[B]].coerce, [4 x <2 x i32>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint32x2x4_t* [[__S1]] to i8*
@@ -3631,8 +3631,8 @@ uint32x2x4_t test_vld4_lane_u32(uint32_t  *a, uint32x2x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.uint64x1x4_t @test_vld4_lane_u64(i64* noundef %a, [4 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.uint64x1x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.uint64x1x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x1x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.uint64x1x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.uint64x1x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint64x1x4_t, %struct.uint64x1x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <1 x i64>] [[B]].coerce, [4 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.uint64x1x4_t* [[__S1]] to i8*
@@ -3675,8 +3675,8 @@ uint64x1x4_t test_vld4_lane_u64(uint64_t  *a, uint64x1x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int8x8x4_t @test_vld4_lane_s8(i8* noundef %a, [4 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int8x8x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int8x8x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int8x8x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int8x8x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int8x8x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x8x4_t, %struct.int8x8x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <8 x i8>] [[B]].coerce, [4 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int8x8x4_t* [[__S1]] to i8*
@@ -3710,8 +3710,8 @@ int8x8x4_t test_vld4_lane_s8(int8_t  *a, int8x8x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int16x4x4_t @test_vld4_lane_s16(i16* noundef %a, [4 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int16x4x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int16x4x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int16x4x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int16x4x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int16x4x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int16x4x4_t, %struct.int16x4x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <4 x i16>] [[B]].coerce, [4 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int16x4x4_t* [[__S1]] to i8*
@@ -3754,8 +3754,8 @@ int16x4x4_t test_vld4_lane_s16(int16_t  *a, int16x4x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int32x2x4_t @test_vld4_lane_s32(i32* noundef %a, [4 x <2 x i32>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int32x2x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int32x2x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int32x2x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int32x2x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int32x2x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int32x2x4_t, %struct.int32x2x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <2 x i32>] [[B]].coerce, [4 x <2 x i32>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int32x2x4_t* [[__S1]] to i8*
@@ -3798,8 +3798,8 @@ int32x2x4_t test_vld4_lane_s32(int32_t  *a, int32x2x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.int64x1x4_t @test_vld4_lane_s64(i64* noundef %a, [4 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.int64x1x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.int64x1x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.int64x1x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.int64x1x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.int64x1x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int64x1x4_t, %struct.int64x1x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <1 x i64>] [[B]].coerce, [4 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.int64x1x4_t* [[__S1]] to i8*
@@ -3842,8 +3842,8 @@ int64x1x4_t test_vld4_lane_s64(int64_t  *a, int64x1x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float16x4x4_t @test_vld4_lane_f16(half* noundef %a, [4 x <4 x half>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float16x4x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float16x4x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float16x4x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float16x4x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float16x4x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float16x4x4_t, %struct.float16x4x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <4 x half>] [[B]].coerce, [4 x <4 x half>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float16x4x4_t* [[__S1]] to i8*
@@ -3886,8 +3886,8 @@ float16x4x4_t test_vld4_lane_f16(float16_t  *a, float16x4x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float32x2x4_t @test_vld4_lane_f32(float* noundef %a, [4 x <2 x float>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float32x2x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float32x2x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float32x2x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float32x2x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float32x2x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float32x2x4_t, %struct.float32x2x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <2 x float>] [[B]].coerce, [4 x <2 x float>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float32x2x4_t* [[__S1]] to i8*
@@ -3930,8 +3930,8 @@ float32x2x4_t test_vld4_lane_f32(float32_t  *a, float32x2x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.float64x1x4_t @test_vld4_lane_f64(double* noundef %a, [4 x <1 x double>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.float64x1x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.float64x1x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.float64x1x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.float64x1x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.float64x1x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.float64x1x4_t, %struct.float64x1x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <1 x double>] [[B]].coerce, [4 x <1 x double>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.float64x1x4_t* [[__S1]] to i8*
@@ -3974,8 +3974,8 @@ float64x1x4_t test_vld4_lane_f64(float64_t  *a, float64x1x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly8x8x4_t @test_vld4_lane_p8(i8* noundef %a, [4 x <8 x i8>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly8x8x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x8x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x8x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly8x8x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly8x8x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x8x4_t, %struct.poly8x8x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <8 x i8>] [[B]].coerce, [4 x <8 x i8>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly8x8x4_t* [[__S1]] to i8*
@@ -4009,8 +4009,8 @@ poly8x8x4_t test_vld4_lane_p8(poly8_t  *a, poly8x8x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly16x4x4_t @test_vld4_lane_p16(i16* noundef %a, [4 x <4 x i16>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly16x4x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly16x4x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x4x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly16x4x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly16x4x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly16x4x4_t, %struct.poly16x4x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <4 x i16>] [[B]].coerce, [4 x <4 x i16>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly16x4x4_t* [[__S1]] to i8*
@@ -4053,8 +4053,8 @@ poly16x4x4_t test_vld4_lane_p16(poly16_t  *a, poly16x4x4_t b) {
 // CHECK-LABEL: define{{.*}} %struct.poly64x1x4_t @test_vld4_lane_p64(i64* noundef %a, [4 x <1 x i64>] %b.coerce) #2 {
 // CHECK:   [[RETVAL:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[B:%.*]] = alloca %struct.poly64x1x4_t, align 8
-// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[__RET:%.*]] = alloca %struct.poly64x1x4_t, align 8
+// CHECK:   [[__S1:%.*]] = alloca %struct.poly64x1x4_t, align 8
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly64x1x4_t, %struct.poly64x1x4_t* [[B]], i32 0, i32 0
 // CHECK:   store [4 x <1 x i64>] [[B]].coerce, [4 x <1 x i64>]* [[COERCE_DIVE]], align 8
 // CHECK:   [[TMP0:%.*]] = bitcast %struct.poly64x1x4_t* [[__S1]] to i8*
