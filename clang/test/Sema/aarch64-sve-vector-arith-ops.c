@@ -20,6 +20,12 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i8 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(i8 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(i8 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i8 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u8 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(u8 + i16); // expected-error{{invalid operands to binary expression}}
@@ -31,6 +37,12 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u8 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(u8 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(u8 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u8 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i16 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(i16 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -42,6 +54,12 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i16 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(i16 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(i16 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i16 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u16 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(u16 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -53,6 +71,12 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u16 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(u16 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(u16 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u16 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i32 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(i32 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -64,6 +88,11 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i32 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(i32 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(i32 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u32 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(u32 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -75,6 +104,11 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u32 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(u32 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(u32 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u32 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u32 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i64 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(i64 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -86,6 +120,11 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i64 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(i64 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(i64 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i64 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i64 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u64 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(u64 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -97,6 +136,11 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u64 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(u64 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(u64 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u64 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f16 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(f16 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -108,6 +152,12 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f16 + u64); // expected-error{{invalid operands to binary expression}}
   (void)(f16 + f32); // expected-error{{invalid operands to binary expression}}
   (void)(f16 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f16 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 + 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f32 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(f32 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -119,6 +169,11 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f32 + u64); // expected-error{{invalid operands to binary expression}}
   (void)(f32 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(f32 + f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f32 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 + 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f64 + b);   // expected-error{{invalid operands to binary expression}}
   (void)(f64 + i8);  // expected-error{{invalid operands to binary expression}}
@@ -130,6 +185,11 @@ void add(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f64 + u32); // expected-error{{invalid operands to binary expression}}
   (void)(f64 + f16); // expected-error{{invalid operands to binary expression}}
   (void)(f64 + f32); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 + 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f64 + 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 + 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 + 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 + 0.f); // expected-error{{invalid operands to binary expression}}
 }
 
 void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
@@ -148,6 +208,12 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i8 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(i8 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(i8 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i8 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u8 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(u8 - i16); // expected-error{{invalid operands to binary expression}}
@@ -159,6 +225,12 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u8 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(u8 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(u8 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u8 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i16 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(i16 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -170,6 +242,12 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i16 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(i16 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(i16 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i16 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u16 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(u16 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -181,6 +259,12 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u16 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(u16 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(u16 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u16 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i32 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(i32 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -192,6 +276,11 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i32 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(i32 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(i32 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u32 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(u32 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -203,6 +292,11 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u32 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(u32 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(u32 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u32 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u32 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i64 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(i64 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -214,6 +308,11 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i64 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(i64 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(i64 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i64 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i64 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u64 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(u64 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -225,6 +324,11 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u64 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(u64 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(u64 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u64 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f16 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(f16 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -236,6 +340,12 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f16 - u64); // expected-error{{invalid operands to binary expression}}
   (void)(f16 - f32); // expected-error{{invalid operands to binary expression}}
   (void)(f16 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f16 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 - 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f32 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(f32 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -247,6 +357,11 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f32 - u64); // expected-error{{invalid operands to binary expression}}
   (void)(f32 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(f32 - f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f32 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 - 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f64 - b);   // expected-error{{invalid operands to binary expression}}
   (void)(f64 - i8);  // expected-error{{invalid operands to binary expression}}
@@ -258,6 +373,11 @@ void sub(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f64 - u32); // expected-error{{invalid operands to binary expression}}
   (void)(f64 - f16); // expected-error{{invalid operands to binary expression}}
   (void)(f64 - f32); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 - 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f64 - 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 - 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 - 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 - 0.f); // expected-error{{invalid operands to binary expression}}
 }
 
 void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
@@ -276,6 +396,12 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i8 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(i8 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(i8 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i8 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u8 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(u8 * i16); // expected-error{{invalid operands to binary expression}}
@@ -287,6 +413,12 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u8 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(u8 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(u8 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u8 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i16 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(i16 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -298,6 +430,12 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i16 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(i16 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(i16 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i16 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u16 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(u16 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -309,6 +447,12 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u16 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(u16 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(u16 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u16 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i32 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(i32 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -320,6 +464,11 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i32 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(i32 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(i32 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u32 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(u32 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -331,6 +480,11 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u32 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(u32 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(u32 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u32 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u32 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i64 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(i64 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -342,6 +496,11 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i64 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(i64 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(i64 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i64 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i64 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u64 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(u64 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -353,6 +512,11 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u64 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(u64 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(u64 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u64 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f16 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(f16 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -364,6 +528,12 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f16 * u64); // expected-error{{invalid operands to binary expression}}
   (void)(f16 * f32); // expected-error{{invalid operands to binary expression}}
   (void)(f16 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f16 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 * 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f32 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(f32 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -375,6 +545,11 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f32 * u64); // expected-error{{invalid operands to binary expression}}
   (void)(f32 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(f32 * f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f32 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 * 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f64 * b);   // expected-error{{invalid operands to binary expression}}
   (void)(f64 * i8);  // expected-error{{invalid operands to binary expression}}
@@ -386,6 +561,11 @@ void mul(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f64 * u32); // expected-error{{invalid operands to binary expression}}
   (void)(f64 * f16); // expected-error{{invalid operands to binary expression}}
   (void)(f64 * f32); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 * 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f64 * 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 * 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 * 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 * 0.f); // expected-error{{invalid operands to binary expression}}
 }
 
 void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
@@ -404,6 +584,12 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i8 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(i8 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(i8 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i8 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u8 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(u8 / i16); // expected-error{{invalid operands to binary expression}}
@@ -415,6 +601,12 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u8 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(u8 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(u8 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u8 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i16 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(i16 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -426,6 +618,12 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i16 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(i16 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(i16 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i16 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u16 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(u16 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -437,6 +635,12 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u16 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(u16 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(u16 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u16 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i32 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(i32 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -448,6 +652,11 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i32 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(i32 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(i32 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u32 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(u32 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -459,6 +668,11 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u32 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(u32 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(u32 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u32 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u32 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i64 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(i64 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -470,6 +684,11 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i64 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(i64 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(i64 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i64 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i64 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u64 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(u64 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -481,6 +700,11 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u64 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(u64 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(u64 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u64 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f16 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(f16 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -492,6 +716,12 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f16 / u64); // expected-error{{invalid operands to binary expression}}
   (void)(f16 / f32); // expected-error{{invalid operands to binary expression}}
   (void)(f16 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f16 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 / 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f32 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(f32 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -503,6 +733,11 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f32 / u64); // expected-error{{invalid operands to binary expression}}
   (void)(f32 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(f32 / f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f32 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 / 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f64 / b);   // expected-error{{invalid operands to binary expression}}
   (void)(f64 / i8);  // expected-error{{invalid operands to binary expression}}
@@ -514,6 +749,11 @@ void div(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f64 / u32); // expected-error{{invalid operands to binary expression}}
   (void)(f64 / f16); // expected-error{{invalid operands to binary expression}}
   (void)(f64 / f32); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 / 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f64 / 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 / 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 / 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 / 0.f); // expected-error{{invalid operands to binary expression}}
 }
 
 void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
@@ -532,6 +772,12 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i8 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(i8 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(i8 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i8 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i8 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i8 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u8 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(u8 % i16); // expected-error{{invalid operands to binary expression}}
@@ -543,6 +789,12 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u8 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(u8 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(u8 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u8 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u8 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u8 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i16 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(i16 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -554,6 +806,12 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i16 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(i16 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(i16 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i16 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i16 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i16 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u16 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(u16 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -565,6 +823,12 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u16 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(u16 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(u16 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u16 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u16 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u16 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i32 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(i32 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -576,6 +840,11 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i32 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(i32 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(i32 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i32 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i32 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u32 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(u32 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -587,6 +856,11 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u32 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(u32 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(u32 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u32 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u32 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u32 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(i64 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(i64 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -598,6 +872,11 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(i64 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(i64 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(i64 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(i64 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(i64 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(i64 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(u64 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(u64 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -609,6 +888,11 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(u64 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(u64 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(u64 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(u64 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(u64 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(u64 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f16 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(f16 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -620,6 +904,12 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f16 % u64); // expected-error{{invalid operands to binary expression}}
   (void)(f16 % f32); // expected-error{{invalid operands to binary expression}}
   (void)(f16 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f16 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f16 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(f16 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f32 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(f32 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -631,6 +921,12 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f32 % u64); // expected-error{{invalid operands to binary expression}}
   (void)(f32 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(f32 % f64); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f32 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f32 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(f32 % 0.);  // expected-error{{invalid operands to binary expression}}
 
   (void)(f64 % b);   // expected-error{{invalid operands to binary expression}}
   (void)(f64 % i8);  // expected-error{{invalid operands to binary expression}}
@@ -642,4 +938,10 @@ void mod(svint8_t i8, svint16_t i16, svint32_t i32, svint64_t i64,
   (void)(f64 % u32); // expected-error{{invalid operands to binary expression}}
   (void)(f64 % f16); // expected-error{{invalid operands to binary expression}}
   (void)(f64 % f32); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 % 0);   // expected-error{{invalid operands to binary expression}}
+  (void)(f64 % 0l);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 % 0u);  // expected-error{{invalid operands to binary expression}}
+  (void)(f64 % 0ul); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 % 0.f); // expected-error{{invalid operands to binary expression}}
+  (void)(f64 % 0.);  // expected-error{{invalid operands to binary expression}}
 }

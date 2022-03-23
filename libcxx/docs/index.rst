@@ -200,25 +200,24 @@ and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
 If you think you've found a bug in libc++, please report it using
 the `LLVM bug tracker`_. If you're not sure, you
-can post a message to the `libcxx-dev mailing list`_ or on IRC.
+can ask for support on the `libcxx forum`_ or on IRC.
 
 **Patches**
 
 If you want to contribute a patch to libc++, the best place for that is
 `Phabricator <https://llvm.org/docs/Phabricator.html>`_. Please add `libcxx-commits` as a subscriber.
-Also make sure you are subscribed to the `libcxx-commits mailing list <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_.
+Also make sure you are subscribed to the `libcxx-commits mailing list`_.
 
 **Discussion and Questions**
 
-Send discussions and questions to the
-`libcxx-dev mailing list <http://lists.llvm.org/mailman/listinfo/libcxx-dev>`_.
+Send discussions and questions to the `libcxx forum`_.
 
 
 Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
 * `libc++abi Homepage <http://libcxxabi.llvm.org/>`_
-* `LLVM bug tracker <https://github.com/llvm/llvm-project/labels/libc++/>`_
-* `libcxx-commits Mailing List`_
-* `libcxx-dev Mailing List`_
+* `LLVM Bug Tracker <https://github.com/llvm/llvm-project/labels/libc++/>`_
+* `libcxx-commits Mailing List <http://lists.llvm.org/mailman/listinfo/libcxx-commits>`_
+* `libcxx Forum <https://discourse.llvm.org/c/runtimes/libcxx/>`_
 * `Browse libc++ Sources <https://github.com/llvm/llvm-project/tree/main/libcxx/>`_

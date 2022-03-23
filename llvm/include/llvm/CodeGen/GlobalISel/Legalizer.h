@@ -22,13 +22,15 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
 namespace llvm {
 
+class LegalizerInfo;
+class MachineIRBuilder;
+class MachineInstr;
+class GISelChangeObserver;
 class LostDebugLocObserver;
 
 class Legalizer : public MachineFunctionPass {
