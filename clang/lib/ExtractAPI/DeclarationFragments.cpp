@@ -401,6 +401,59 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   return Fragments;
 }
 
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForEnumConstant(
+    const EnumConstantDecl *EnumConstDecl) {
+  DeclarationFragments Fragments;
+  return Fragments.append(EnumConstDecl->getName(),
+                          DeclarationFragments::FragmentKind::Identifier);
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForEnum(const EnumDecl *EnumDecl) {
+  // TODO: After we support typedef records, if there's a typedef for this enum
+  // just use the declaration fragments of the typedef decl.
+
+  DeclarationFragments Fragments, After;
+  Fragments.append("enum", DeclarationFragments::FragmentKind::Keyword);
+
+  if (!EnumDecl->getName().empty())
+    Fragments.appendSpace().append(
+        EnumDecl->getName(), DeclarationFragments::FragmentKind::Identifier);
+
+  QualType IntegerType = EnumDecl->getIntegerType();
+  if (!IntegerType.isNull())
+    Fragments.append(": ", DeclarationFragments::FragmentKind::Text)
+        .append(
+            getFragmentsForType(IntegerType, EnumDecl->getASTContext(), After))
+        .append(std::move(After));
+
+  return Fragments;
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
+  DeclarationFragments After;
+  return getFragmentsForType(Field->getType(), Field->getASTContext(), After)
+      .appendSpace()
+      .append(Field->getName(), DeclarationFragments::FragmentKind::Identifier)
+      .append(std::move(After));
+}
+
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
+  // TODO: After we support typedef records, if there's a typedef for this
+  // struct just use the declaration fragments of the typedef decl.
+
+  DeclarationFragments Fragments;
+  Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
+
+  if (!Record->getName().empty())
+    Fragments.appendSpace().append(
+        Record->getName(), DeclarationFragments::FragmentKind::Identifier);
+
+  return Fragments;
+}
+
 FunctionSignature
 DeclarationFragmentsBuilder::getFunctionSignature(const FunctionDecl *Func) {
   FunctionSignature Signature;

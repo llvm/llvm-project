@@ -188,6 +188,20 @@ public:
   /// Build DeclarationFragments for a function declaration FunctionDecl.
   static DeclarationFragments getFragmentsForFunction(const FunctionDecl *);
 
+  /// Build DeclarationFragments for an enum constant declaration
+  /// EnumConstantDecl.
+  static DeclarationFragments
+  getFragmentsForEnumConstant(const EnumConstantDecl *);
+
+  /// Build DeclarationFragments for an enum declaration EnumDecl.
+  static DeclarationFragments getFragmentsForEnum(const EnumDecl *);
+
+  /// Build DeclarationFragments for a field declaration FieldDecl.
+  static DeclarationFragments getFragmentsForField(const FieldDecl *);
+
+  /// Build DeclarationFragments for a struct record declaration RecordDecl.
+  static DeclarationFragments getFragmentsForStruct(const RecordDecl *);
+
   /// Build sub-heading fragments for a NamedDecl.
   static DeclarationFragments getSubHeading(const NamedDecl *);
 
