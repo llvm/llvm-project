@@ -42,7 +42,6 @@ enum class Level {
   LocationsAndVariables
 };
 
-// Used for the synthetic mode only.
 cl::opt<Level> DebugifyLevel(
     "debugify-level", cl::desc("Kind of debug info to add"),
     cl::values(clEnumValN(Level::Locations, "locations", "Locations only"),
@@ -321,20 +320,22 @@ bool llvm::collectDebugInfoMetadata(Module &M,
         if (isa<PHINode>(I))
           continue;
 
-        // Collect dbg.values and dbg.declares.
-        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-          if (!SP)
-            continue;
-          // Skip inlined variables.
-          if (I.getDebugLoc().getInlinedAt())
-            continue;
-          // Skip undef values.
-          if (DVI->isUndef())
-            continue;
+        // Cllect dbg.values and dbg.declare.
+        if (DebugifyLevel > Level::Locations) {
+          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+            if (!SP)
+              continue;
+            // Skip inlined variables.
+            if (I.getDebugLoc().getInlinedAt())
+              continue;
+            // Skip undef values.
+            if (DVI->isUndef())
+              continue;
 
-          auto *Var = DVI->getVariable();
-          DebugInfoBeforePass.DIVariables[Var]++;
-          continue;
+            auto *Var = DVI->getVariable();
+            DebugInfoBeforePass.DIVariables[Var]++;
+            continue;
+          }
         }
 
         // Skip debug instructions other than dbg.value and dbg.declare.
@@ -556,19 +557,21 @@ bool llvm::checkDebugInfoMetadata(Module &M,
           continue;
 
         // Collect dbg.values and dbg.declares.
-        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
-          if (!SP)
-            continue;
-          // Skip inlined variables.
-          if (I.getDebugLoc().getInlinedAt())
-            continue;
-          // Skip undef values.
-          if (DVI->isUndef())
-            continue;
+        if (DebugifyLevel > Level::Locations) {
+          if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I)) {
+            if (!SP)
+              continue;
+            // Skip inlined variables.
+            if (I.getDebugLoc().getInlinedAt())
+              continue;
+            // Skip undef values.
+            if (DVI->isUndef())
+              continue;
 
-          auto *Var = DVI->getVariable();
-          DebugInfoAfterPass.DIVariables[Var]++;
-          continue;
+            auto *Var = DVI->getVariable();
+            DebugInfoAfterPass.DIVariables[Var]++;
+            continue;
+          }
         }
 
         // Skip debug instructions other than dbg.value and dbg.declare.
