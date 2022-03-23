@@ -22,6 +22,7 @@
 #include "support/Path.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticSema.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
@@ -1680,6 +1681,28 @@ $fix[[  $diag[[#include "unused.h"]]
   EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
 }
 
+TEST(DiagnosticsTest, FixItFromHeader) {
+  llvm::StringLiteral Header(R"cpp(
+    void foo(int *);
+    void foo(int *, int);)cpp");
+  Annotations Source(R"cpp(
+  /*error-ok*/
+    void bar() {
+      int x;
+      $diag[[foo]]($fix[[]]x, 1);
+    })cpp");
+  TestTU TU;
+  TU.Code = Source.code().str();
+  TU.HeaderCode = Header.str();
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      UnorderedElementsAre(AllOf(
+          Diag(Source.range("diag"), "no matching function for call to 'foo'"),
+          withFix(Fix(Source.range("fix"), "&",
+                      "candidate function not viable: no known conversion from "
+                      "'int' to 'int *' for 1st argument; take the address of "
+                      "the argument with &")))));
+}
 } // namespace
 } // namespace clangd
 } // namespace clang
