@@ -129,6 +129,7 @@ class StreamedHTTPResponseHandler : public HTTPResponseHandler {
 public:
   StreamedHTTPResponseHandler(CreateStreamFn CreateStream, HTTPClient &Client)
       : CreateStream(CreateStream), Client(Client) {}
+  virtual ~StreamedHTTPResponseHandler() = default;
 
   virtual ~StreamedHTTPResponseHandler() = default;
 
