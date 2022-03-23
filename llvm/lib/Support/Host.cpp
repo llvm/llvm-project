@@ -36,11 +36,13 @@
 #ifdef __MVS__
 #include "llvm/Support/BCD.h"
 #endif
-#if defined(__APPLE__) && (!defined(__x86_64__))
+#if defined(__APPLE__)
 #include <mach/host_info.h>
 #include <mach/mach.h>
 #include <mach/mach_host.h>
 #include <mach/machine.h>
+#include <sys/param.h>
+#include <sys/sysctl.h>
 #endif
 #ifdef _AIX
 #include <sys/systemcfg.h>
@@ -1297,32 +1299,45 @@ StringRef sys::getHostCPUName() {
   bool HaveVectorSupport = CVT[244] & 0x80;
   return getCPUNameFromS390Model(Id, HaveVectorSupport);
 }
-#elif defined(__APPLE__) && defined(__aarch64__)
-StringRef sys::getHostCPUName() {
-  return "cyclone";
-}
-#elif defined(__APPLE__) && defined(__arm__)
-StringRef sys::getHostCPUName() {
-  host_basic_info_data_t hostInfo;
-  mach_msg_type_number_t infoCount;
+#elif defined(__APPLE__) && (defined(__arm__) || defined(__aarch64__))
+#define CPUFAMILY_ARM_SWIFT 0x1e2d6381
+#define CPUFAMILY_ARM_CYCLONE 0x37a09642
+#define CPUFAMILY_ARM_TYPHOON 0x2c91a47e
+#define CPUFAMILY_ARM_TWISTER 0x92fb37c8
+#define CPUFAMILY_ARM_HURRICANE 0x67ceee93
+#define CPUFAMILY_ARM_MONSOON_MISTRAL 0xe81e7ef6
+#define CPUFAMILY_ARM_VORTEX_TEMPEST 0x07d34b9f
+#define CPUFAMILY_ARM_LIGHTNING_THUNDER 0x462504d2
+#define CPUFAMILY_ARM_FIRESTORM_ICESTORM 0x1b588bb3
 
-  infoCount = HOST_BASIC_INFO_COUNT;
-  mach_port_t hostPort = mach_host_self();
-  host_info(hostPort, HOST_BASIC_INFO, (host_info_t)&hostInfo,
-            &infoCount);
-  mach_port_deallocate(mach_task_self(), hostPort);
+StringRef sys::getHostCPUName() {
+  uint32_t Family;
+  size_t Length = sizeof(Family);
+  sysctlbyname("hw.cpufamily", &Family, &Length, NULL, 0);
 
-  if (hostInfo.cpu_type != CPU_TYPE_ARM) {
-    assert(false && "CPUType not equal to ARM should not be possible on ARM");
-    return "generic";
+  switch (Family) {
+  case CPUFAMILY_ARM_SWIFT:
+    return "swift";
+  case CPUFAMILY_ARM_CYCLONE:
+    return "apple-a7";
+  case CPUFAMILY_ARM_TYPHOON:
+    return "apple-a8";
+  case CPUFAMILY_ARM_TWISTER:
+    return "apple-a9";
+  case CPUFAMILY_ARM_HURRICANE:
+    return "apple-a10";
+  case CPUFAMILY_ARM_MONSOON_MISTRAL:
+    return "apple-a11";
+  case CPUFAMILY_ARM_VORTEX_TEMPEST:
+    return "apple-a12";
+  case CPUFAMILY_ARM_LIGHTNING_THUNDER:
+    return "apple-a13";
+  case CPUFAMILY_ARM_FIRESTORM_ICESTORM:
+    return "apple-m1";
+  default:
+    // Default to the newest CPU we know about.
+    return "apple-m1";
   }
-  switch (hostInfo.cpu_subtype) {
-    case CPU_SUBTYPE_ARM_V7S:
-      return "swift";
-    default:;
-    }
-
-  return "generic";
 }
 #elif defined(_AIX)
 StringRef sys::getHostCPUName() {
@@ -1453,9 +1468,6 @@ int computeHostNumPhysicalCores() {
 #elif defined(__linux__) && defined(__s390x__)
 int computeHostNumPhysicalCores() { return sysconf(_SC_NPROCESSORS_ONLN); }
 #elif defined(__APPLE__)
-#include <sys/param.h>
-#include <sys/sysctl.h>
-
 // Gets the number of *physical cores* on the machine.
 int computeHostNumPhysicalCores() {
   uint32_t count;
