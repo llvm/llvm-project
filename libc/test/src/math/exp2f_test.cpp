@@ -51,51 +51,29 @@ TEST(LlvmLibcExp2fTest, Overflow) {
   EXPECT_MATH_ERRNO(ERANGE);
 }
 
-// Test with inputs which are the borders of underflow/overflow but still
-// produce valid results without setting errno.
-TEST(LlvmLibcExp2fTest, Borderline) {
-  float x;
-
-  errno = 0;
-  x = float(FPBits(0x42fa0001U));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
-
-  x = float(FPBits(0x42ffffffU));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
-
-  x = float(FPBits(0xc2fa0001U));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
-
-  x = float(FPBits(0xc2fc0000U));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
-
-  x = float(FPBits(0xc2fc0001U));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
-
-  x = float(FPBits(0xc3150000U));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
-
-  x = float(FPBits(0x3b42'9d37U));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
-
-  x = float(FPBits(0xbcf3'a937U));
-  EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
-                                 __llvm_libc::exp2f(x), 0.5);
-  EXPECT_MATH_ERRNO(0);
+TEST(LlvmLibcExp2fTest, TrickyInputs) {
+  constexpr int N = 12;
+  constexpr uint32_t INPUTS[N] = {
+      0x3b429d37U, /*0x1.853a6ep-9f*/
+      0x3c02a9adU, /*0x1.05535ap-7f*/
+      0x3ca66e26U, /*0x1.4cdc4cp-6f*/
+      0x3d92a282U, /*0x1.254504p-4f*/
+      0x42fa0001U, /*0x1.f40002p+6f*/
+      0x42ffffffU, /*0x1.fffffep+6f*/
+      0xb8d3d026U, /*-0x1.a7a04cp-14f*/
+      0xbcf3a937U, /*-0x1.e7526ep-6f*/
+      0xc2fa0001U, /*-0x1.f40002p+6f*/
+      0xc2fc0000U, /*-0x1.f8p+6f*/
+      0xc2fc0001U, /*-0x1.f80002p+6f*/
+      0xc3150000U, /*-0x1.2ap+7f*/
+  };
+  for (int i = 0; i < N; ++i) {
+    errno = 0;
+    float x = float(FPBits(INPUTS[i]));
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Exp2, x,
+                                   __llvm_libc::exp2f(x), 0.5);
+    EXPECT_MATH_ERRNO(0);
+  }
 }
 
 TEST(LlvmLibcExp2fTest, Underflow) {
