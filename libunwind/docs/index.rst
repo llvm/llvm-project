@@ -78,27 +78,25 @@ and `Getting started with LLVM <https://llvm.org/docs/GettingStarted.html>`__.
 
 If you think you've found a bug in libunwind, please report it using
 the `LLVM bug tracker`_. If you're not sure, you
-can post a message to the `cfe-dev mailing list`_ or on IRC.
-Please include "libunwind" in your subject.
+can ask for support on the `Runtimes forum`_ or on IRC.
+Please use the tag "libunwind" for new threads.
 
 **Patches**
 
 If you want to contribute a patch to libunwind, the best place for that is
 `Phabricator <https://llvm.org/docs/Phabricator.html>`_. Please include [libunwind] in the subject and
-add `cfe-commits` as a subscriber. Also make sure you are subscribed to the
-`cfe-commits mailing list <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_.
+add `cfe-commits` as a subscriber. Also make sure you are subscribed to the `cfe-commits mailing list`_.
 
 **Discussion and Questions**
 
-Send discussions and questions to the
-`cfe-dev mailing list <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_.
-Please include [libunwind] in the subject.
+Send discussions and questions to the `Runtimes forum`_. Please add the tag "libunwind" to your post.
 
 
 Quick Links
 ===========
 * `LLVM Homepage <https://llvm.org/>`_
-* `LLVM bug tracker <https://github.com/llvm/llvm-project/labels/libunwind/>`_
-* `cfe-commits Mailing List`_
-* `cfe-dev Mailing List`_
+* `LLVM Bug Tracker <https://github.com/llvm/llvm-project/labels/libunwind/>`_
+* `cfe-dev Mailing List <http://lists.llvm.org/mailman/listinfo/cfe-dev>`_
+* `cfe-commits Mailing List <http://lists.llvm.org/mailman/listinfo/cfe-commits>`_
+* `Runtimes Forum <https://discourse.llvm.org/tags/c/runtimes>`_
 * `Browse libunwind Sources <https://github.com/llvm/llvm-project/blob/main/libunwind/>`_

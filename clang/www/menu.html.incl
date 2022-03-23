@@ -33,8 +33,7 @@
 
   <div class="submenu">
     <label>Communication</label>
-    <a href="http://lists.llvm.org/mailman/listinfo/cfe-users">cfe-users List</a>
-    <a href="http://lists.llvm.org/mailman/listinfo/cfe-dev">cfe-dev List</a>
+    <a href="https://discourse.llvm.org/c/clang">Clang Forum</a>
     <a href="http://lists.llvm.org/mailman/listinfo/cfe-commits">cfe-commits List</a>
     <a href="https://github.com/llvm/llvm-project/issues">Bug Reports</a>
     <a href="http://planet.clang.org/">Planet Clang</a>
