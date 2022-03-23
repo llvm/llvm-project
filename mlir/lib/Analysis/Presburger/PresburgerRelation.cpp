@@ -107,29 +107,6 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
   return result;
 }
 
-/// Return `coeffs` with all the elements negated.
-static SmallVector<int64_t, 8> getNegatedCoeffs(ArrayRef<int64_t> coeffs) {
-  SmallVector<int64_t, 8> negatedCoeffs;
-  negatedCoeffs.reserve(coeffs.size());
-  for (int64_t coeff : coeffs)
-    negatedCoeffs.emplace_back(-coeff);
-  return negatedCoeffs;
-}
-
-/// Return the complement of the given inequality.
-///
-/// The complement of a_1 x_1 + ... + a_n x_ + c >= 0 is
-/// a_1 x_1 + ... + a_n x_ + c < 0, i.e., -a_1 x_1 - ... - a_n x_ - c - 1 >= 0,
-/// since all the variables are constrained to be integers.
-static SmallVector<int64_t, 8> getComplementIneq(ArrayRef<int64_t> ineq) {
-  SmallVector<int64_t, 8> coeffs;
-  coeffs.reserve(ineq.size());
-  for (int64_t coeff : ineq)
-    coeffs.emplace_back(-coeff);
-  --coeffs.back();
-  return coeffs;
-}
-
 /// Return the set difference b \ s and accumulate the result into `result`.
 /// `simplex` must correspond to b.
 ///
