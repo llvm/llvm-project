@@ -5,8 +5,8 @@ expr := IDENTIFIER
 # RUN: clang-pseudo -grammar %s -print-graph | FileCheck %s --check-prefix=GRAPH
 #      GRAPH: States
 # GRAPH-NEXT: State 0
-# GRAPH-NEXT:     _ :=  • expr
 # GRAPH-NEXT:     expr :=  • expr - expr
+# GRAPH-NEXT:     _ :=  • expr
 # GRAPH-NEXT:     expr :=  • IDENTIFIER
 # GRAPH-NEXT: State 1
 # GRAPH-NEXT:     _ := expr • 
@@ -42,6 +42,6 @@ expr := IDENTIFIER
 # TABLE-NEXT:     'IDENTIFIER': shift state 2
 # TABLE-NEXT:     'expr': go to state 4
 # TABLE-NEXT: State 4
-# TABLE-NEXT:     'EOF': reduce by rule 2 'expr := expr - expr'
+# TABLE-NEXT:     'EOF': reduce by rule 0 'expr := expr - expr'
 # TABLE-NEXT:     '-': shift state 3
-# TABLE-NEXT:     '-': reduce by rule 2 'expr := expr - expr'
+# TABLE-NEXT:     '-': reduce by rule 0 'expr := expr - expr'
