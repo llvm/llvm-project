@@ -1,4 +1,5 @@
 import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/tools/cctools_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
@@ -31,6 +32,12 @@ if (llvm_install_binutils_symlinks) {
   symlinks += [
     "objcopy",
     "strip",
+  ]
+}
+if (llvm_install_cctools_symlinks) {
+  symlinks += [
+    "bitcode_strip",
+    "install_name_tool",
   ]
 }
 foreach(target, symlinks) {

@@ -1,8 +1,25 @@
+import("//llvm/tools/cctools_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 tablegen("LipoOpts") {
   visibility = [ ":llvm-lipo" ]
   args = [ "-gen-opt-parser-defs" ]
+}
+
+if (llvm_install_cctools_symlinks) {
+  symlink_or_copy("lipo") {
+    deps = [ ":llvm-lipo" ]
+    source = "llvm-lipo"
+    output = "$root_out_dir/bin/lipo"
+  }
+}
+
+# //:llvm-lipo depends on this symlink target, see comment in //BUILD.gn.
+group("symlinks") {
+  if (llvm_install_cctools_symlinks) {
+    deps = [ ":lipo" ]
+  }
 }
 
 executable("llvm-lipo") {

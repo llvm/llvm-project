@@ -78,6 +78,12 @@ group("llvm-cxxfilt") {
 group("llvm-debuginfod-find") {
   deps = [ "//llvm/tools/llvm-debuginfod-find:symlinks" ]
 }
+group("llvm-libtool-darwin") {
+  deps = [ "//llvm/tools/llvm-libtool-darwin:symlinks" ]
+}
+group("llvm-lipo") {
+  deps = [ "//llvm/tools/llvm-lipo:symlinks" ]
+}
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]
 }
