@@ -381,6 +381,11 @@ Arm and AArch64 Support in Clang
 - The ``attribute((target("branch-protection=...)))`` attributes will now also
   work for the ARM backend.
 
+- When using ``-mbranch-protection=bti`` with AArch64, calls to setjmp will
+  now be followed by a BTI instruction. This is done to be compatible with
+  setjmp implementations that return with a br instead of a ret. You can
+  disable this behaviour using the ``-mno-bti-at-return-twice`` option.
+
 SPIR-V Support in Clang
 -----------------------
 
@@ -390,7 +395,6 @@ SPIR-V Support in Clang
   be used for HIP or OpenCL.
 - Added linking of separate object files in SPIR-V format using external
   ``spirv-link`` tool.
-
 
 Floating Point Support in Clang
 -------------------------------

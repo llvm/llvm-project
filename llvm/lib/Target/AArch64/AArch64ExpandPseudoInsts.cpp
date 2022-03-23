@@ -86,6 +86,7 @@ private:
                           unsigned N);
   bool expandCALL_RVMARKER(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI);
+  bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
 };
@@ -759,6 +760,37 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
   return true;
 }
 
+bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator MBBI) {
+  // Expand CALL_BTI pseudo to:
+  // - a branch to the call target
+  // - a BTI instruction
+  // Mark the sequence as a bundle, to avoid passes moving other code in
+  // between.
+
+  MachineInstr &MI = *MBBI;
+  MachineOperand &CallTarget = MI.getOperand(0);
+  assert((CallTarget.isGlobal() || CallTarget.isReg()) &&
+         "invalid operand for regular call");
+  unsigned Opc = CallTarget.isGlobal() ? AArch64::BL : AArch64::BLR;
+  MachineInstr *Call =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+  Call->addOperand(CallTarget);
+
+  MachineInstr *BTI =
+      BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::HINT))
+          // BTI J so that setjmp can to BR to this.
+          .addImm(36)
+          .getInstr();
+
+  if (MI.shouldUpdateCallSiteInfo())
+    MBB.getParent()->moveCallSiteInfo(&MI, Call);
+
+  MI.eraseFromParent();
+  finalizeBundle(MBB, Call->getIterator(), std::next(BTI->getIterator()));
+  return true;
+}
+
 bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   Register CtxReg = MBBI->getOperand(0).getReg();
@@ -1238,6 +1270,8 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandSVESpillFill(MBB, MBBI, AArch64::LDR_ZXI, 2);
    case AArch64::BLR_RVMARKER:
      return expandCALL_RVMARKER(MBB, MBBI);
+   case AArch64::BLR_BTI:
+     return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
   }
