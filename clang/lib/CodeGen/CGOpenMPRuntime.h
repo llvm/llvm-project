@@ -920,6 +920,14 @@ private:
                                                      LValue DepobjLVal,
                                                      SourceLocation Loc);
 
+  SmallVector<llvm::Value *, 4>
+  emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+                          const OMPTaskDataTy::DependData &Data);
+
+  void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+                          LValue PosLVal, const OMPTaskDataTy::DependData &Data,
+                          Address DependenciesArray);
+
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM)
       : CGOpenMPRuntime(CGM, ".", ".") {}

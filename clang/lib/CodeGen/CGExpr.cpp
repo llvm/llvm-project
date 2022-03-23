@@ -2547,10 +2547,10 @@ Address CodeGenFunction::EmitLoadOfPointer(Address Ptr,
                                            LValueBaseInfo *BaseInfo,
                                            TBAAAccessInfo *TBAAInfo) {
   llvm::Value *Addr = Builder.CreateLoad(Ptr);
-  return Address(Addr, ConvertTypeForMem(PtrTy->getPointeeType()),
-                 CGM.getNaturalTypeAlignment(PtrTy->getPointeeType(), BaseInfo,
-                                             TBAAInfo,
-                                             /*forPointeeType=*/true));
+  return Address::deprecated(
+      Addr,
+      CGM.getNaturalTypeAlignment(PtrTy->getPointeeType(), BaseInfo, TBAAInfo,
+                                  /*forPointeeType=*/true));
 }
 
 LValue CodeGenFunction::EmitLoadOfPointerLValue(Address PtrAddr,

@@ -2527,9 +2527,6 @@ public:
     return EmitLoadOfReferenceLValue(RefLVal);
   }
 
-  /// Load a pointer with type \p PtrTy stored at address \p Ptr.
-  /// Note that \p PtrTy is the type of the loaded pointer, not the addresses
-  /// it is loaded from.
   Address EmitLoadOfPointer(Address Ptr, const PointerType *PtrTy,
                             LValueBaseInfo *BaseInfo = nullptr,
                             TBAAAccessInfo *TBAAInfo = nullptr);

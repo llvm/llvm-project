@@ -68,8 +68,8 @@ int main(int argc, char **argv) {
 // CHECK: [[B_REF:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[B_BASE]], i{{.+}} -1
 // CHECK: [[B:%.+]] = bitcast %struct.kmp_depend_info* [[B_REF]] to i8*
 // CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[B]], i8* null)
-// CHECK: [[B:%.+]] = load i8*, i8** [[B_ADDR]],
-// CHECK: [[B_BASE:%.+]] = bitcast i8* [[B]] to %struct.kmp_depend_info*
+// CHECK: [[B_ADDR_CAST:%.+]] = bitcast i8** [[B_ADDR]] to %struct.kmp_depend_info**
+// CHECK: [[B_BASE:%.+]] = load %struct.kmp_depend_info*, %struct.kmp_depend_info** [[B_ADDR_CAST]], align 8
 // CHECK: [[NUMDEPS_BASE:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[B_BASE]], i64 -1
 // CHECK: [[NUMDEPS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[NUMDEPS_BASE]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[NUMDEPS:%.+]] = load i64, i64* [[NUMDEPS_ADDR]],
@@ -226,8 +226,8 @@ int main(int argc, char **argv) {
 // CHECK: [[ARGC_REF:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[ARGC_BASE]], i{{.+}} -1
 // CHECK: [[ARGC:%.+]] = bitcast %struct.kmp_depend_info* [[ARGC_REF]] to i8*
 // CHECK: call void @__kmpc_free(i32 [[GTID]], i8* [[ARGC]], i8* null)
-// CHECK: [[ARGC:%.+]] = load i8*, i8** [[ARGC_ADDR]],
-// CHECK: [[ARGC_BASE:%.+]] = bitcast i8* [[ARGC]] to %struct.kmp_depend_info*
+// CHECK: [[ARGC_ADDR_CAST:%.+]] = bitcast i8** [[ARGC_ADDR]] to %struct.kmp_depend_info**
+// CHECK: [[ARGC_BASE:%.+]] = load %struct.kmp_depend_info*, %struct.kmp_depend_info** [[ARGC_ADDR_CAST]], align 8
 // CHECK: [[NUMDEPS_BASE:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[ARGC_BASE]], i64 -1
 // CHECK: [[NUMDEPS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[NUMDEPS_BASE]], i{{.+}} 0, i{{.+}} 0
 // CHECK: [[NUMDEPS:%.+]] = load i64, i64* [[NUMDEPS_ADDR]],
