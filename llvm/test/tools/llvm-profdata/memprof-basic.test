@@ -26,7 +26,7 @@ recorded.
 ```
 clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
       -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
-      -fno-optimize-sibling-calls -m64 -Wl,-build-id source.c -o basic.memprofexe 
+      -fno-optimize-sibling-calls -m64 -Wl,-build-id source.c -o basic.memprofexe
 
 env MEMPROF_OPTIONS=log_path=stdout ./rawprofile.out > basic.memprofraw
 ```
@@ -46,56 +46,59 @@ CHECK-NEXT:     NumMibInfo: 3
 CHECK-NEXT:     NumStackOffsets: 3
 CHECK-NEXT:   Records:
 CHECK-NEXT:   -
-CHECK-NEXT:     Callstack:
+CHECK-NEXT:     FunctionGUID: {{[0-9]+}}
+CHECK-NEXT:     AllocSites:
 CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 1
-CHECK-NEXT:       Column: 21
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     MemInfoBlock:
-CHECK-NEXT:       AllocCount: 1
-CHECK-NEXT:       TotalAccessCount: 2
-CHECK-NEXT:       MinAccessCount: 2
-CHECK-NEXT:       MaxAccessCount: 2
-CHECK-NEXT:       TotalSize: 10
-CHECK-NEXT:       MinSize: 10
-CHECK-NEXT:       MaxSize: 10
-CHECK-NEXT:       AllocTimestamp: 986
-CHECK-NEXT:       DeallocTimestamp: 986
-CHECK-NEXT:       TotalLifetime: 0
-CHECK-NEXT:       MinLifetime: 0
-CHECK-NEXT:       MaxLifetime: 0
-CHECK-NEXT:       AllocCpuId: 56
-CHECK-NEXT:       DeallocCpuId: 56
-CHECK-NEXT:       NumMigratedCpu: 0
-CHECK-NEXT:       NumLifetimeOverlaps: 0
-CHECK-NEXT:       NumSameAllocCpu: 0
-CHECK-NEXT:       NumSameDeallocCpu: 0
-CHECK-NEXT:       DataTypeId: {{[0-9]+}}
-CHECK-NEXT:   -
-CHECK-NEXT:     Callstack:
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         LineOffset: 1
+CHECK-NEXT:         Column: 21
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 1
+CHECK-NEXT:         TotalAccessCount: 2
+CHECK-NEXT:         MinAccessCount: 2
+CHECK-NEXT:         MaxAccessCount: 2
+CHECK-NEXT:         TotalSize: 10
+CHECK-NEXT:         MinSize: 10
+CHECK-NEXT:         MaxSize: 10
+CHECK-NEXT:         AllocTimestamp: 986
+CHECK-NEXT:         DeallocTimestamp: 986
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: 56
+CHECK-NEXT:         DeallocCpuId: 56
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 0
+CHECK-NEXT:         NumSameDeallocCpu: 0
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
 CHECK-NEXT:     -
-CHECK-NEXT:       Function: {{[0-9]+}}
-CHECK-NEXT:       LineOffset: 5
-CHECK-NEXT:       Column: 15
-CHECK-NEXT:       Inline: 0
-CHECK-NEXT:     MemInfoBlock:
-CHECK-NEXT:       AllocCount: 1
-CHECK-NEXT:       TotalAccessCount: 2
-CHECK-NEXT:       MinAccessCount: 2
-CHECK-NEXT:       MaxAccessCount: 2
-CHECK-NEXT:       TotalSize: 10
-CHECK-NEXT:       MinSize: 10
-CHECK-NEXT:       MaxSize: 10
-CHECK-NEXT:       AllocTimestamp: 987
-CHECK-NEXT:       DeallocTimestamp: 987
-CHECK-NEXT:       TotalLifetime: 0
-CHECK-NEXT:       MinLifetime: 0
-CHECK-NEXT:       MaxLifetime: 0
-CHECK-NEXT:       AllocCpuId: 56
-CHECK-NEXT:       DeallocCpuId: 56
-CHECK-NEXT:       NumMigratedCpu: 0
-CHECK-NEXT:       NumLifetimeOverlaps: 0
-CHECK-NEXT:       NumSameAllocCpu: 0
-CHECK-NEXT:       NumSameDeallocCpu: 0
-CHECK-NEXT:       DataTypeId: {{[0-9]+}}
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         LineOffset: 5
+CHECK-NEXT:         Column: 15
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 1
+CHECK-NEXT:         TotalAccessCount: 2
+CHECK-NEXT:         MinAccessCount: 2
+CHECK-NEXT:         MaxAccessCount: 2
+CHECK-NEXT:         TotalSize: 10
+CHECK-NEXT:         MinSize: 10
+CHECK-NEXT:         MaxSize: 10
+CHECK-NEXT:         AllocTimestamp: 987
+CHECK-NEXT:         DeallocTimestamp: 987
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: 56
+CHECK-NEXT:         DeallocCpuId: 56
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 0
+CHECK-NEXT:         NumSameDeallocCpu: 0
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
