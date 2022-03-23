@@ -1,4 +1,4 @@
-//===-- Simple checkers for loader tests ------------------------*- C++ -*-===//
+//===-- Simple checkers for integrations tests ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TEST_LOADER_LINUX_LOADER_TEST_H
-#define LLVM_LIBC_TEST_LOADER_LINUX_LOADER_TEST_H
+#ifndef LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
+#define LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H
 
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/OSUtil/quick_exit.h"
@@ -34,4 +34,4 @@
 #define EXPECT_FALSE(val) __CHECK_NE(__FILE__, __LINE__, val, false)
 #define ASSERT_FALSE(val) __CHECK_NE(__FILE__, __LINE__, val, true)
 
-#endif // LLVM_LIBC_TEST_LOADER_LINUX_LOADER_TEST_H
+#endif // LLVM_LIBC_UTILS_INTEGRATION_TEST_TEST_H

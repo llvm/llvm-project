@@ -11,6 +11,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/BuiltinAttributes.h"
 
 using namespace mlir;
 
@@ -319,11 +320,9 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   }
 
   // Create the operation through state since we don't know its C++ type.
-  OperationState state(op->getLoc(), targetOp);
-  state.addTypes(packedType);
-  state.addOperands(operands);
-  state.addAttributes(op->getAttrs());
-  Operation *newOp = rewriter.createOperation(state);
+  Operation *newOp =
+      rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
+                      packedType, op->getAttrs());
 
   // If the operation produced 0 or 1 result, return them immediately.
   if (numResults == 0)

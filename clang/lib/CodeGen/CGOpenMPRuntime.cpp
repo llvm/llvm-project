@@ -3325,6 +3325,13 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
         }
         break;
       }
+
+      // Hidden or internal symbols on the device are not externally visible. We
+      // should not attempt to register them by creating an offloading entry.
+      if (auto *GV = dyn_cast<llvm::GlobalValue>(CE->getAddress()))
+        if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
+          continue;
+
       createOffloadEntry(CE->getAddress(), CE->getAddress(),
                          CE->getVarSize().getQuantity(), Flags,
                          CE->getLinkage());

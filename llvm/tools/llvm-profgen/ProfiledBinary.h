@@ -218,6 +218,9 @@ class ProfiledBinary {
   // A map of mapping function name to BinaryFunction info.
   std::unordered_map<std::string, BinaryFunction> BinaryFunctions;
 
+  // A list of binary functions that have samples.
+  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
+
   // An ordered map of mapping function's start offset to function range
   // relevant info. Currently to determine if the offset of ELF is the start of
   // a real function, we leverage the function range info from DWARF.
@@ -278,6 +281,8 @@ class ProfiledBinary {
   template <class ELFT>
   void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName);
 
+  void checkPseudoProbe(const ELFObjectFileBase *Obj);
+
   void decodePseudoProbe(const ELFObjectFileBase *Obj);
 
   void
@@ -331,6 +336,9 @@ public:
     setupSymbolizer();
     load();
   }
+
+  void decodePseudoProbe();
+
   uint64_t virtualAddrToOffset(uint64_t VirtualAddress) const {
     return VirtualAddress - BaseAddress;
   }
@@ -451,6 +459,14 @@ public:
   const std::unordered_map<std::string, BinaryFunction> &
   getAllBinaryFunctions() {
     return BinaryFunctions;
+  }
+
+  std::unordered_set<const BinaryFunction *> &getProfiledFunctions() {
+    return ProfiledFunctions;
+  }
+
+  void setProfiledFunctions(std::unordered_set<const BinaryFunction *> &Funcs) {
+    ProfiledFunctions = Funcs;
   }
 
   BinaryFunction *getBinaryFunction(StringRef FName) {
