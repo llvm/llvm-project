@@ -64,6 +64,12 @@ class FPFMASDynFrmAlias<FPFMAS_rrr_frm Inst, string OpcodeStr>
                 (Inst FPR32:$rd, FPR32:$rs1, FPR32:$rs2, FPR32:$rs3, 0b111)>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+class FPALUS_rrr<RISCVOpcode opcode, bits<3> funct3, string opcodestr>
+    : RVInstR4<0b00, funct3, opcode, (outs FPR32:$rd),
+               (ins FPR32:$rs1, FPR32:$rs2, FPR32:$rs3),
+               opcodestr, "$rd, $rs1, $rs2, $rs3">;
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class FPALUS_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_OP_FP, (outs FPR32:$rd),
               (ins FPR32:$rs1, FPR32:$rs2), opcodestr, "$rd, $rs1, $rs2">;
@@ -134,6 +140,15 @@ def          : FPFMASDynFrmAlias<FNMSUB_S, "fnmsub.s">;
 def FNMADD_S : FPFMAS_rrr_frm<OPC_NMADD, "fnmadd.s">,
                Sched<[WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32]>;
 def          : FPFMASDynFrmAlias<FNMADD_S, "fnmadd.s">;
+
+def FCMV_EQ_S : FPALUS_rrr<OPC_CMV_FP, 0b000, "fcmv.eq.s">,
+                Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
+
+def FCMV_LE_S : FPALUS_rrr<OPC_CMV_FP, 0b001, "fcmv.le.s">,
+                Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
+
+def FCMV_LT_S : FPALUS_rrr<OPC_CMV_FP, 0b010, "fcmv.lt.s">,
+                Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
 
 def FADD_S : FPALUS_rr_frm<0b0000000, "fadd.s">,
              Sched<[WriteFALU32, ReadFALU32, ReadFALU32]>;
