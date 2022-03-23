@@ -816,7 +816,7 @@ let TargetPrefix = "riscv" in {
   }
   // Output: (vector)
   // Input: (passthru, vl)
-  class RISCVNullaryIntrinsicTU
+  class RISCVID
         : Intrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, llvm_anyint_ty],
                     [IntrNoMem]>, RISCVVIntrinsic {
@@ -1460,26 +1460,26 @@ let TargetPrefix = "riscv" in {
     let VLOperand = 2;
   }
   // Output: (vector)
-  // Input: (maskedoff, mask type vector_in, mask, vl)
+  // Input: (maskedoff, mask type vector_in, mask, vl, policy)
   def int_riscv_viota_mask : Intrinsic<[llvm_anyvector_ty],
                                        [LLVMMatchType<0>,
                                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                         LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                        llvm_anyint_ty],
-                                       [IntrNoMem]>, RISCVVIntrinsic {
+                                        llvm_anyint_ty, LLVMMatchType<1>],
+                                       [ImmArg<ArgIndex<4>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 3;
   }
   // Output: (vector)
   // Input: (passthru, vl)
-  def int_riscv_vid : RISCVNullaryIntrinsicTU;
+  def int_riscv_vid : RISCVID;
 
   // Output: (vector)
-  // Input: (maskedoff, mask, vl)
+  // Input: (maskedoff, mask, vl, policy)
   def int_riscv_vid_mask : Intrinsic<[llvm_anyvector_ty],
                                      [LLVMMatchType<0>,
                                       LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-                                      llvm_anyint_ty],
-                                     [IntrNoMem]>, RISCVVIntrinsic {
+                                      llvm_anyint_ty, LLVMMatchType<1>],
+                                     [ImmArg<ArgIndex<3>>, IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 2;
   }
 
