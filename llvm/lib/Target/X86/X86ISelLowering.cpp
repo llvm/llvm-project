@@ -18942,7 +18942,18 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     Offset += NumElts; // Increment for next iteration.
   }
 
-
+  // If we're broadcasting a SETCC result, try to broadcast the ops instead.
+  // TODO: What other unary shuffles would benefit from this?
+  if (isBroadcastShuffleMask(Mask) && V1.getOpcode() == ISD::SETCC &&
+      V1->hasOneUse()) {
+    SDValue Op0 = V1.getOperand(0);
+    SDValue Op1 = V1.getOperand(1);
+    ISD::CondCode CC = cast<CondCodeSDNode>(V1.getOperand(2))->get();
+    EVT OpVT = Op0.getValueType();
+    return DAG.getSetCC(
+        DL, VT, DAG.getVectorShuffle(OpVT, DL, Op0, DAG.getUNDEF(OpVT), Mask),
+        DAG.getVectorShuffle(OpVT, DL, Op1, DAG.getUNDEF(OpVT), Mask), CC);
+  }
 
   MVT ExtVT;
   switch (VT.SimpleTy) {
