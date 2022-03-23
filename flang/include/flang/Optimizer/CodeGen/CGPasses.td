@@ -64,4 +64,14 @@ def TargetRewrite : Pass<"target-rewrite", "mlir::ModuleOp"> {
   ];
 }
 
+def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
+  let constructor = "::fir::createBoxedProcedurePass()";
+  let options = [
+    Option<"useThunks", "use-thunks",
+           "bool", /*default=*/"true",
+           "Convert procedure pointer abstractions to a single code pointer, "
+           "deploying thunks wherever required.">
+  ];
+}
+
 #endif // FORTRAN_OPTIMIZER_CODEGEN_FIR_PASSES

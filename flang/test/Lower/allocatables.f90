@@ -124,8 +124,11 @@ end subroutine
 subroutine char_explicit_dyn(l1, l2)
   integer :: l1, l2
   character(l1), allocatable :: c
-  ! CHECK-DAG: %[[cLen:.*]] = fir.load %arg0 : !fir.ref<i32>
-  ! CHECK-DAG: %[[cAddrVar:.*]] = fir.alloca !fir.heap<!fir.char<1,?>> {{{.*}}uniq_name = "_QFchar_explicit_dynEc.addr"}
+  ! CHECK: %[[l1:.*]] = fir.load %arg0 : !fir.ref<i32>
+  ! CHECK: %[[c0_i32:.*]] = arith.constant 0 : i32
+  ! CHECK: %[[cmp:.*]] = arith.cmpi sgt, %[[l1]], %[[c0_i32]] : i32
+  ! CHECK: %[[cLen:.*]] = arith.select %[[cmp]], %[[l1]], %[[c0_i32]] : i32
+  ! CHECK: %[[cAddrVar:.*]] = fir.alloca !fir.heap<!fir.char<1,?>> {{{.*}}uniq_name = "_QFchar_explicit_dynEc.addr"}
   ! CHECK-NOT: "_QFchar_explicit_dynEc.len"
   allocate(c)
   ! CHECK: %[[cLenCast1:.*]] = fir.convert %[[cLen]] : (i32) -> index
