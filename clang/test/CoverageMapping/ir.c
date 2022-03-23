@@ -1,5 +1,6 @@
 // Check the data structures emitted by coverage mapping
-// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple x86_64-apple-macosx10.9 -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false | FileCheck %s -check-prefixes=COMMON,DARWIN
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple x86_64-apple-macosx10.9 -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false -mllvm -opaque-pointers=0 | FileCheck %s -check-prefixes=COMMON,DARWIN
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple x86_64-apple-macosx10.9 -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false -mllvm -opaque-pointers=1 | FileCheck %s -check-prefixes=COMMON,DARWIN
 // RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -triple x86_64--windows-msvc -main-file-name ir.c %s -o - -emit-llvm -fprofile-instrument=clang -fcoverage-mapping -mllvm -enable-name-compression=false | FileCheck %s -check-prefixes=COMMON,WINDOWS
 
 static inline void unused(void) {}
@@ -24,7 +25,7 @@ int main(void) {
 // WINDOWS: [[FuncRecord3:@__covrec_[0-9A-F]+]] = linkonce_odr hidden constant <{ i64, i32, i64, i64, [{{.*}} x i8] }> <{ {{.*}} }>, section ".lcovfun$M", comdat, align 8
 // WINDOWS: @__llvm_coverage_mapping = private constant { { i32, i32, i32, i32 }, [{{.*}} x i8] } { {{.*}} }, section ".lcovmap$M", align 8
 
-// COMMON: @llvm.used = appending global [{{.*}} x i8*]
+// COMMON: @llvm.used = appending global [{{.*}}] [
 // COMMON-SAME: [[FuncRecord1]]
 // COMMON-SAME: [[FuncRecord2]]
 // COMMON-SAME: [[FuncRecord3]]
