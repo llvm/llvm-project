@@ -6,19 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
-#include <fstream>
-#include <sstream>
+#include "IntelPTCollector.h"
+
+#include "Perf.h"
+
+#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
+#include "lldb/Host/linux/Support.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "IntelPTCollector.h"
-#include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "lldb/Host/linux/Support.h"
-#include "lldb/Utility/StreamString.h"
-
+#include <algorithm>
+#include <cstddef>
+#include <fstream>
+#include <linux/perf_event.h>
+#include <sstream>
 #include <sys/ioctl.h>
 #include <sys/syscall.h>
 
@@ -52,6 +56,21 @@ enum IntelPTConfigFileType {
   // store a given configuration.
   BitOffset
 };
+
+/// Get the content of /proc/cpuinfo that can be later used to decode traces.
+static Expected<ArrayRef<uint8_t>> GetCPUInfo() {
+  static llvm::Optional<std::vector<uint8_t>> cpu_info;
+  if (!cpu_info) {
+    auto buffer_or_error = errorOrToExpected(getProcFile("cpuinfo"));
+    if (!buffer_or_error)
+      return buffer_or_error.takeError();
+    MemoryBuffer &buffer = **buffer_or_error;
+    cpu_info = std::vector<uint8_t>(
+        reinterpret_cast<const uint8_t *>(buffer.getBufferStart()),
+        reinterpret_cast<const uint8_t *>(buffer.getBufferEnd()));
+  }
+  return *cpu_info;
+}
 
 static Expected<uint32_t> ReadIntelPTConfigFile(const char *file,
                                                 IntelPTConfigFileType type) {
@@ -106,6 +125,7 @@ static Expected<uint32_t> ReadIntelPTConfigFile(const char *file,
   }
   return value;
 }
+
 /// Return the Linux perf event type for Intel PT.
 static Expected<uint32_t> GetOSEventType() {
   return ReadIntelPTConfigFile(kOSEventIntelPTTypeFile,
@@ -148,7 +168,7 @@ size_t IntelPTThreadTrace::GetTraceBufferSize() const {
 #ifndef PERF_ATTR_SIZE_VER5
   llvm_unreachable("Intel PT Linux perf event not supported");
 #else
-  return m_mmap_meta->aux_size;
+  return m_perf_event.GetAuxBuffer().size();
 #endif
 }
 
@@ -176,30 +196,9 @@ GeneratePerfEventConfigValue(bool enable_tsc, Optional<size_t> psb_period) {
   return config;
 }
 
-Error IntelPTThreadTrace::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
-                                     uint64_t buffer_size, bool enable_tsc,
-                                     Optional<size_t> psb_period) {
-#ifndef PERF_ATTR_SIZE_VER5
-  llvm_unreachable("Intel PT Linux perf event not supported");
-#else
-  Log *log = GetLog(POSIXLog::Ptrace);
-
-  m_tid = tid;
-  LLDB_LOG(log, "called thread id {0}", tid);
-  uint64_t page_size = getpagesize();
-
-  if (__builtin_popcount(buffer_size) != 1 || buffer_size < 4096) {
-    return createStringError(
-        inconvertibleErrorCode(),
-        "The trace buffer size must be a power of 2 greater than or equal to "
-        "4096 (2^12) bytes. It was %" PRIu64 ".",
-        buffer_size);
-  }
-  uint64_t numpages = static_cast<uint64_t>(
-      llvm::PowerOf2Floor((buffer_size + page_size - 1) / page_size));
-  numpages = std::max<uint64_t>(1, numpages);
-  buffer_size = page_size * numpages;
-
+llvm::Expected<perf_event_attr>
+IntelPTThreadTrace::CreateIntelPTPerfEventConfiguration(
+    bool enable_tsc, Optional<size_t> psb_period) {
   perf_event_attr attr;
   memset(&attr, 0, sizeof(attr));
   attr.size = sizeof(attr);
@@ -213,106 +212,59 @@ Error IntelPTThreadTrace::StartTrace(lldb::pid_t pid, lldb::tid_t tid,
   if (Expected<uint64_t> config_value =
           GeneratePerfEventConfigValue(enable_tsc, psb_period)) {
     attr.config = *config_value;
-    LLDB_LOG(log, "intel pt config {0}", attr.config);
   } else {
     return config_value.takeError();
   }
 
   if (Expected<uint32_t> intel_pt_type = GetOSEventType()) {
     attr.type = *intel_pt_type;
-    LLDB_LOG(log, "intel pt type {0}", attr.type);
   } else {
     return intel_pt_type.takeError();
   }
 
-  LLDB_LOG(log, "buffer size {0} ", buffer_size);
-
-  errno = 0;
-  auto fd =
-      syscall(SYS_perf_event_open, &attr, static_cast<::tid_t>(tid), -1, -1, 0);
-  if (fd == -1) {
-    LLDB_LOG(log, "syscall error {0}", errno);
-    return createStringError(inconvertibleErrorCode(),
-                             "perf event syscall failed");
-  }
-
-  m_fd = std::unique_ptr<int, file_close>(new int(fd), file_close());
-
-  errno = 0;
-  auto base =
-      mmap(nullptr, (buffer_size + page_size), PROT_WRITE, MAP_SHARED, fd, 0);
-
-  if (base == MAP_FAILED) {
-    LLDB_LOG(log, "mmap base error {0}", errno);
-    return createStringError(inconvertibleErrorCode(),
-                             "Meta buffer allocation failed");
-  }
-
-  m_mmap_meta = std::unique_ptr<perf_event_mmap_page, munmap_delete>(
-      reinterpret_cast<perf_event_mmap_page *>(base),
-      munmap_delete(buffer_size + page_size));
-
-  m_mmap_meta->aux_offset = m_mmap_meta->data_offset + m_mmap_meta->data_size;
-  m_mmap_meta->aux_size = buffer_size;
-
-  errno = 0;
-  auto mmap_aux = mmap(nullptr, buffer_size, PROT_READ, MAP_SHARED, fd,
-                       static_cast<long int>(m_mmap_meta->aux_offset));
-
-  if (mmap_aux == MAP_FAILED) {
-    LLDB_LOG(log, "second mmap done {0}", errno);
-    return createStringError(inconvertibleErrorCode(),
-                             "Trace buffer allocation failed");
-  }
-  m_mmap_aux = std::unique_ptr<uint8_t, munmap_delete>(
-      reinterpret_cast<uint8_t *>(mmap_aux), munmap_delete(buffer_size));
-  return Error::success();
-#endif
-}
-
-llvm::MutableArrayRef<uint8_t> IntelPTThreadTrace::GetDataBuffer() const {
-#ifndef PERF_ATTR_SIZE_VER5
-  llvm_unreachable("Intel PT Linux perf event not supported");
-#else
-  return MutableArrayRef<uint8_t>(
-      (reinterpret_cast<uint8_t *>(m_mmap_meta.get()) +
-       m_mmap_meta->data_offset),
-      m_mmap_meta->data_size);
-#endif
-}
-
-llvm::MutableArrayRef<uint8_t> IntelPTThreadTrace::GetAuxBuffer() const {
-#ifndef PERF_ATTR_SIZE_VER5
-  llvm_unreachable("Intel PT Linux perf event not supported");
-#else
-  return MutableArrayRef<uint8_t>(m_mmap_aux.get(), m_mmap_meta->aux_size);
-#endif
-}
-
-Expected<ArrayRef<uint8_t>> IntelPTThreadTrace::GetCPUInfo() {
-  static llvm::Optional<std::vector<uint8_t>> cpu_info;
-  if (!cpu_info) {
-    auto buffer_or_error = getProcFile("cpuinfo");
-    if (!buffer_or_error)
-      return Status(buffer_or_error.getError()).ToError();
-    MemoryBuffer &buffer = **buffer_or_error;
-    cpu_info = std::vector<uint8_t>(
-        reinterpret_cast<const uint8_t *>(buffer.getBufferStart()),
-        reinterpret_cast<const uint8_t *>(buffer.getBufferEnd()));
-  }
-  return *cpu_info;
+  return attr;
 }
 
 llvm::Expected<IntelPTThreadTraceUP>
 IntelPTThreadTrace::Create(lldb::pid_t pid, lldb::tid_t tid, size_t buffer_size,
                            bool enable_tsc, Optional<size_t> psb_period) {
-  IntelPTThreadTraceUP thread_trace_up(new IntelPTThreadTrace());
+#ifndef PERF_ATTR_SIZE_VER5
+  llvm_unreachable("Intel PT Linux perf event not supported");
+#else
+  Log *log = GetLog(POSIXLog::Ptrace);
 
-  if (llvm::Error err = thread_trace_up->StartTrace(pid, tid, buffer_size,
-                                                    enable_tsc, psb_period))
-    return std::move(err);
+  LLDB_LOG(log, "called thread id {0}", tid);
 
-  return std::move(thread_trace_up);
+  if (__builtin_popcount(buffer_size) != 1 || buffer_size < 4096) {
+    return createStringError(
+        inconvertibleErrorCode(),
+        "The trace buffer size must be a power of 2 greater than or equal to "
+        "4096 (2^12) bytes. It was %" PRIu64 ".",
+        buffer_size);
+  }
+  uint64_t page_size = getpagesize();
+  uint64_t buffer_numpages = static_cast<uint64_t>(
+      llvm::PowerOf2Floor((buffer_size + page_size - 1) / page_size));
+
+  Expected<perf_event_attr> attr =
+      IntelPTThreadTrace::CreateIntelPTPerfEventConfiguration(enable_tsc,
+                                                              psb_period);
+  if (!attr)
+    return attr.takeError();
+
+  LLDB_LOG(log, "buffer size {0} ", buffer_size);
+
+  if (Expected<PerfEvent> perf_event = PerfEvent::Init(*attr, tid)) {
+    if (Error mmap_err = perf_event->MmapMetadataAndBuffers(buffer_numpages,
+                                                            buffer_numpages)) {
+      return std::move(mmap_err);
+    }
+    return IntelPTThreadTraceUP(
+        new IntelPTThreadTrace(std::move(*perf_event), tid));
+  } else {
+    return perf_event.takeError();
+  }
+#endif
 }
 
 Expected<std::vector<uint8_t>>
@@ -331,6 +283,8 @@ IntelPTThreadTrace::ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
 #ifndef PERF_ATTR_SIZE_VER5
   llvm_unreachable("perf event not supported");
 #else
+  auto fd = m_perf_event.GetFd();
+  perf_event_mmap_page &mmap_metadata = m_perf_event.GetMetadataPage();
   // Disable the perf event to force a flush out of the CPU's internal buffer.
   // Besides, we can guarantee that the CPU won't override any data as we are
   // reading the buffer.
@@ -346,13 +300,13 @@ IntelPTThreadTrace::ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
   //
   // This is achieved by the PERF_EVENT_IOC_DISABLE ioctl request, as mentioned
   // in the man page of perf_event_open.
-  ioctl(*m_fd, PERF_EVENT_IOC_DISABLE);
+  ioctl(fd, PERF_EVENT_IOC_DISABLE);
 
   Log *log = GetLog(POSIXLog::Ptrace);
   Status error;
-  uint64_t head = m_mmap_meta->aux_head;
+  uint64_t head = mmap_metadata.aux_head;
 
-  LLDB_LOG(log, "Aux size -{0} , Head - {1}", m_mmap_meta->aux_size, head);
+  LLDB_LOG(log, "Aux size -{0} , Head - {1}", mmap_metadata.aux_size, head);
 
   /**
    * When configured as ring buffer, the aux buffer keeps wrapping around
@@ -366,11 +320,12 @@ IntelPTThreadTrace::ReadPerfTraceAux(llvm::MutableArrayRef<uint8_t> &buffer,
    *
    * */
 
-  ReadCyclicBuffer(buffer, GetAuxBuffer(), static_cast<size_t>(head), offset);
-  LLDB_LOG(log, "ReadCyclic BUffer Done");
+  ReadCyclicBuffer(buffer, m_perf_event.GetAuxBuffer(),
+                   static_cast<size_t>(head), offset);
+  LLDB_LOG(log, "ReadCyclic Buffer Done");
 
   // Reenable tracing now we have read the buffer
-  ioctl(*m_fd, PERF_EVENT_IOC_ENABLE);
+  ioctl(fd, PERF_EVENT_IOC_ENABLE);
   return error;
 #endif
 }
@@ -385,7 +340,8 @@ IntelPTThreadTrace::ReadPerfTraceData(llvm::MutableArrayRef<uint8_t> &buffer,
   uint64_t bytes_remaining = buffer.size();
   Status error;
 
-  uint64_t head = m_mmap_meta->data_head;
+  perf_event_mmap_page &mmap_metadata = m_perf_event.GetMetadataPage();
+  uint64_t head = mmap_metadata.data_head;
 
   /*
    * The data buffer and aux buffer have different implementations
@@ -397,11 +353,11 @@ IntelPTThreadTrace::ReadPerfTraceData(llvm::MutableArrayRef<uint8_t> &buffer,
 
   LLDB_LOG(log, "bytes_remaining - {0}", bytes_remaining);
 
-  auto data_buffer = GetDataBuffer();
+  auto data_buffer = m_perf_event.GetDataBuffer();
 
   if (head > data_buffer.size()) {
     head = head % data_buffer.size();
-    LLDB_LOG(log, "Data size -{0} Head - {1}", m_mmap_meta->data_size, head);
+    LLDB_LOG(log, "Data size -{0} Head - {1}", mmap_metadata.data_size, head);
 
     ReadCyclicBuffer(buffer, data_buffer, static_cast<size_t>(head), offset);
     bytes_remaining -= buffer.size();
@@ -424,7 +380,7 @@ IntelPTThreadTrace::ReadPerfTraceData(llvm::MutableArrayRef<uint8_t> &buffer,
 }
 
 void IntelPTThreadTrace::ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
-                                          llvm::MutableArrayRef<uint8_t> src,
+                                          llvm::ArrayRef<uint8_t> src,
                                           size_t src_cyc_index, size_t offset) {
 
   Log *log = GetLog(POSIXLog::Ptrace);
@@ -450,7 +406,7 @@ void IntelPTThreadTrace::ReadCyclicBuffer(llvm::MutableArrayRef<uint8_t> &dst,
     return;
   }
 
-  llvm::SmallVector<MutableArrayRef<uint8_t>, 2> parts = {
+  llvm::SmallVector<ArrayRef<uint8_t>, 2> parts = {
       src.slice(src_cyc_index), src.take_front(src_cyc_index)};
 
   if (offset > parts[0].size()) {
@@ -624,7 +580,7 @@ Error IntelPTCollector::OnThreadDestroyed(lldb::tid_t tid) {
 }
 
 Expected<json::Value> IntelPTCollector::GetState() const {
-  Expected<ArrayRef<uint8_t>> cpu_info = IntelPTThreadTrace::GetCPUInfo();
+  Expected<ArrayRef<uint8_t>> cpu_info = GetCPUInfo();
   if (!cpu_info)
     return cpu_info.takeError();
 
@@ -661,7 +617,7 @@ IntelPTCollector::GetBinaryData(const TraceGetBinaryDataRequest &request) const 
     else
       return trace.takeError();
   } else if (request.kind == "cpuInfo") {
-    return IntelPTThreadTrace::GetCPUInfo();
+    return GetCPUInfo();
   }
   return createStringError(inconvertibleErrorCode(),
                            "Unsuported trace binary data kind: %s",
