@@ -1019,6 +1019,8 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     // ceil is used for CEILING but is different, it returns a real.
     {"ceil", "llvm.ceil.f32", genF32F32FuncType},
     {"ceil", "llvm.ceil.f64", genF64F64FuncType},
+    {"cos", "llvm.cos.f32", genF32F32FuncType},
+    {"cos", "llvm.cos.f64", genF64F64FuncType},
     {"cosh", "coshf", genF32F32FuncType},
     {"cosh", "cosh", genF64F64FuncType},
     {"exp", "llvm.exp.f32", genF32F32FuncType},
@@ -1040,6 +1042,8 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"sign", "llvm.copysign.f64", genF64F64F64FuncType},
     {"sign", "llvm.copysign.f80", genF80F80F80FuncType},
     {"sign", "llvm.copysign.f128", genF128F128F128FuncType},
+    {"sin", "llvm.sin.f32", genF32F32FuncType},
+    {"sin", "llvm.sin.f64", genF64F64FuncType},
     {"sinh", "sinhf", genF32F32FuncType},
     {"sinh", "sinh", genF64F64FuncType},
     {"sqrt", "llvm.sqrt.f32", genF32F32FuncType},

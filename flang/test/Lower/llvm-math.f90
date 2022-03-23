@@ -176,3 +176,43 @@
 ! CHECK-NEXT:  %0 = fir.call @llvm.sqrt.f64(%arg0) : (f64) -> f64
 ! CHECK-NEXT:   return %0 : f64
 ! CHECK-NEXT: }
+
+      SUBROUTINE COS_WRAPPER(IN, OUT)
+      REAL :: IN, OUT
+      OUT = COS(IN)
+      END SUBROUTINE
+
+! CHECK-LABEL: func private @fir.cos.f32.f32(%arg0: f32)
+! CHECK-NEXT:  %0 = fir.call @llvm.cos.f32(%arg0) : (f32) -> f32
+! CHECK-NEXT:   return %0 : f32
+! CHECK-NEXT: }
+
+      SUBROUTINE COSD_WRAPPER(IN, OUT)
+      REAL(KIND=8) :: IN, OUT
+      OUT = COS(IN)
+      END SUBROUTINE
+
+! CHECK-LABEL: func private @fir.cos.f64.f64(%arg0: f64)
+! CHECK-NEXT:  %0 = fir.call @llvm.cos.f64(%arg0) : (f64) -> f64
+! CHECK-NEXT:   return %0 : f64
+! CHECK-NEXT: }
+
+      SUBROUTINE SIN_WRAPPER(IN, OUT)
+      REAL :: IN, OUT
+      OUT = SIN(IN)
+      END SUBROUTINE
+
+! CHECK-LABEL: func private @fir.sin.f32.f32(%arg0: f32)
+! CHECK-NEXT:  %0 = fir.call @llvm.sin.f32(%arg0) : (f32) -> f32
+! CHECK-NEXT:   return %0 : f32
+! CHECK-NEXT: }
+
+      SUBROUTINE SIND_WRAPPER(IN, OUT)
+      REAL(KIND=8) :: IN, OUT
+      OUT = SIN(IN)
+      END SUBROUTINE
+
+! CHECK-LABEL: func private @fir.sin.f64.f64(%arg0: f64)
+! CHECK-NEXT:  %0 = fir.call @llvm.sin.f64(%arg0) : (f64) -> f64
+! CHECK-NEXT:   return %0 : f64
+! CHECK-NEXT: }
