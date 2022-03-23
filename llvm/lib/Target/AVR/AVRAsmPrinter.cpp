@@ -14,6 +14,7 @@
 #include "AVR.h"
 #include "AVRMCInstLower.h"
 #include "AVRSubtarget.h"
+#include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRInstPrinter.h"
 #include "MCTargetDesc/AVRMCExpr.h"
 #include "TargetInfo/AVRTargetInfo.h"
@@ -21,6 +22,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Mangler.h"
@@ -59,6 +61,8 @@ public:
   void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
 
   bool doFinalization(Module &M) override;
+
+  void emitStartOfAsmFile(Module &M) override;
 
 private:
   const MCRegisterInfo &MRI;
@@ -234,6 +238,45 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
   OutStreamer->emitSymbolAttribute(DoClearBss, MCSA_Global);
 
   return AsmPrinter::doFinalization(M);
+}
+
+void AVRAsmPrinter::emitStartOfAsmFile(Module &M) {
+  const AVRTargetMachine &TM = (const AVRTargetMachine &)MMI->getTarget();
+  const AVRSubtarget *SubTM = (const AVRSubtarget *)TM.getSubtargetImpl();
+  if (!SubTM)
+    return;
+
+  // Emit __tmp_reg__.
+  OutStreamer->emitAssignment(
+      MMI->getContext().getOrCreateSymbol(StringRef("__tmp_reg__")),
+      MCConstantExpr::create(SubTM->getRegTmpIndex(), MMI->getContext()));
+  // Emit __zero_reg__.
+  OutStreamer->emitAssignment(
+      MMI->getContext().getOrCreateSymbol(StringRef("__zero_reg__")),
+      MCConstantExpr::create(SubTM->getRegZeroIndex(), MMI->getContext()));
+  // Emit __SREG__.
+  OutStreamer->emitAssignment(
+      MMI->getContext().getOrCreateSymbol(StringRef("__SREG__")),
+      MCConstantExpr::create(SubTM->getIORegSREG(), MMI->getContext()));
+  // Emit __SP_H__ if available.
+  if (!SubTM->hasSmallStack())
+    OutStreamer->emitAssignment(
+        MMI->getContext().getOrCreateSymbol(StringRef("__SP_H__")),
+        MCConstantExpr::create(SubTM->getIORegSPH(), MMI->getContext()));
+  // Emit __SP_L__.
+  OutStreamer->emitAssignment(
+      MMI->getContext().getOrCreateSymbol(StringRef("__SP_L__")),
+      MCConstantExpr::create(SubTM->getIORegSPL(), MMI->getContext()));
+  // Emit __EIND__ if available.
+  if (SubTM->hasEIJMPCALL())
+    OutStreamer->emitAssignment(
+        MMI->getContext().getOrCreateSymbol(StringRef("__EIND__")),
+        MCConstantExpr::create(SubTM->getIORegEIND(), MMI->getContext()));
+  // Emit __RAMPZ__ if available.
+  if (SubTM->hasELPM())
+    OutStreamer->emitAssignment(
+        MMI->getContext().getOrCreateSymbol(StringRef("__RAMPZ__")),
+        MCConstantExpr::create(SubTM->getIORegRAMPZ(), MMI->getContext()));
 }
 
 } // end of namespace llvm

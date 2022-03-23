@@ -174,15 +174,13 @@ def FamilyAVR35
     : Family<"avr35",
              [FamilyAVR3, FeatureMOVW, FeatureLPMX, FeatureSPM, FeatureBREAK]>;
 
-def FamilyAVR4 : Family<"avr4", [
-  FamilyAVR2, FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM,
-  FeatureBREAK
-]>;
+def FamilyAVR4 : Family<"avr4",
+                        [FamilyAVR2, FeatureMultiplication, FeatureMOVW,
+                         FeatureLPMX, FeatureSPM, FeatureBREAK]>;
 
-def FamilyAVR5 : Family<"avr5", [
-  FamilyAVR3, FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM,
-  FeatureBREAK
-]>;
+def FamilyAVR5 : Family<"avr5",
+                        [FamilyAVR3, FeatureMultiplication, FeatureMOVW,
+                         FeatureLPMX, FeatureSPM, FeatureBREAK]>;
 
 def FamilyAVR51 : Family<"avr51", [FamilyAVR5, FeatureELPM, FeatureELPMX]>;
 
@@ -190,14 +188,15 @@ def FamilyAVR6 : Family<"avr6", [FamilyAVR51]>;
 
 def FamilyTiny
     : Family<"avrtiny",
-             [FamilyAVR0, FeatureBREAK, FeatureSRAM, FeatureTinyEncoding]>;
+             [FamilyAVR0, FeatureBREAK, FeatureSRAM, FeatureTinyEncoding,
+              FeatureSmallStack]>;
 
-def FamilyXMEGA : Family<"xmega", [
-  FamilyAVR0, FeatureLPM, FeatureIJMPCALL, FeatureADDSUBIW, FeatureSRAM,
-  FeatureJMPCALL, FeatureMultiplication, FeatureMOVW, FeatureLPMX, FeatureSPM,
-  FeatureBREAK, FeatureEIJMPCALL, FeatureSPMX, FeatureDES, FeatureELPM,
-  FeatureELPMX
-]>;
+def FamilyXMEGA : Family<"xmega",
+                         [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
+                          FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
+                          FeatureMultiplication, FeatureMOVW, FeatureLPMX,
+                          FeatureSPM, FeatureBREAK, FeatureEIJMPCALL,
+                          FeatureSPMX, FeatureDES, FeatureELPM, FeatureELPMX]>;
 
 def FamilyXMEGAU : Family<"xmegau", [FamilyXMEGA, FeatureRMW]>;
 
@@ -246,41 +245,42 @@ def : Device<"avrtiny", FamilyTiny, ELFArchTiny>;
 
 // Specific MCUs
 // NOTE: This list has been synchronized with gcc-avr 5.4.0 and avr-libc 2.0.0.
-def : Device<"at90s1200", FamilyAVR0, ELFArchAVR1>;
-def : Device<"attiny11", FamilyAVR1, ELFArchAVR1>;
-def : Device<"attiny12", FamilyAVR1, ELFArchAVR1>;
-def : Device<"attiny15", FamilyAVR1, ELFArchAVR1>;
-def : Device<"attiny28", FamilyAVR1, ELFArchAVR1>;
-def : Device<"at90s2313", FamilyAVR2, ELFArchAVR2>;
-def : Device<"at90s2323", FamilyAVR2, ELFArchAVR2>;
-def : Device<"at90s2333", FamilyAVR2, ELFArchAVR2>;
-def : Device<"at90s2343", FamilyAVR2, ELFArchAVR2>;
-def : Device<"attiny22", FamilyAVR2, ELFArchAVR2>;
-def : Device<"attiny26", FamilyAVR2, ELFArchAVR2, [FeatureLPMX]>;
+def : Device<"at90s1200", FamilyAVR0, ELFArchAVR1, [FeatureSmallStack]>;
+def : Device<"attiny11", FamilyAVR1, ELFArchAVR1, [FeatureSmallStack]>;
+def : Device<"attiny12", FamilyAVR1, ELFArchAVR1, [FeatureSmallStack]>;
+def : Device<"attiny15", FamilyAVR1, ELFArchAVR1, [FeatureSmallStack]>;
+def : Device<"attiny28", FamilyAVR1, ELFArchAVR1, [FeatureSmallStack]>;
+def : Device<"at90s2313", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
+def : Device<"at90s2323", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
+def : Device<"at90s2333", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
+def : Device<"at90s2343", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
+def : Device<"attiny22", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
+def : Device<"attiny26", FamilyAVR2, ELFArchAVR2,
+             [FeatureLPMX, FeatureSmallStack]>;
 def : Device<"at86rf401", FamilyAVR2, ELFArchAVR25, [FeatureMOVW, FeatureLPMX]>;
-def : Device<"at90s4414", FamilyAVR2, ELFArchAVR2>;
-def : Device<"at90s4433", FamilyAVR2, ELFArchAVR2>;
-def : Device<"at90s4434", FamilyAVR2, ELFArchAVR2>;
+def : Device<"at90s4414", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
+def : Device<"at90s4433", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
+def : Device<"at90s4434", FamilyAVR2, ELFArchAVR2, [FeatureSmallStack]>;
 def : Device<"at90s8515", FamilyAVR2, ELFArchAVR2>;
 def : Device<"at90c8534", FamilyAVR2, ELFArchAVR2>;
 def : Device<"at90s8535", FamilyAVR2, ELFArchAVR2>;
 def : Device<"ata5272", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny13", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny13a", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny2313", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny2313a", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny24", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny24a", FamilyAVR25, ELFArchAVR25>;
+def : Device<"attiny13", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
+def : Device<"attiny13a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
+def : Device<"attiny2313", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
+def : Device<"attiny2313a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
+def : Device<"attiny24", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
+def : Device<"attiny24a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny4313", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny44", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny44a", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny84", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny84a", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny25", FamilyAVR25, ELFArchAVR25>;
+def : Device<"attiny25", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny45", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny85", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny261", FamilyAVR25, ELFArchAVR25>;
-def : Device<"attiny261a", FamilyAVR25, ELFArchAVR25>;
+def : Device<"attiny261", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
+def : Device<"attiny261a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny441", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny461", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny461a", FamilyAVR25, ELFArchAVR25>;
