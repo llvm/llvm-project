@@ -72,8 +72,6 @@ S cd = doo() + car() + caz() + baz();
 // DEVICE-DAG: call void
 // DEVICE-DAG: ret void
 
-// HOST-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[C_ADDR]]\00"
-// HOST-DAG: @.omp_offloading.entry.[[C_ADDR]] = weak{{.*}} constant %struct.__tgt_offload_entry { i8* bitcast (i32* @[[C_ADDR]] to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // HOST-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[CD_ADDR]]\00"
 // HOST-DAG: @.omp_offloading.entry.[[CD_ADDR]] = weak{{.*}} constant %struct.__tgt_offload_entry { i8* bitcast (%struct.S* @[[CD_ADDR]] to i8*), i8* getelementptr inbounds ([{{[0-9]+}} x i8], [{{[0-9]+}} x i8]* @.omp_offloading.entry_name{{.*}}, i32 0, i32 0), i64 4, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // HOST-DAG: @.omp_offloading.entry_name{{.*}} = internal unnamed_addr constant [{{[0-9]+}} x i8] c"[[C_CTOR]]\00"
