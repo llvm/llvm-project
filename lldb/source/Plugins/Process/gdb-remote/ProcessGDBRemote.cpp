@@ -212,10 +212,6 @@ ArchSpec ProcessGDBRemote::GetSystemArchitecture() {
   return m_gdb_comm.GetHostArchitecture();
 }
 
-llvm::Optional<uint32_t> ProcessGDBRemote::GetAddressingBits() {
-  return m_gdb_comm.GetAddressingBits();
-}
-
 bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
                                 bool plugin_specified_by_name) {
   if (plugin_specified_by_name)
