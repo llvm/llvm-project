@@ -13,7 +13,9 @@ ulong
 OCKL_MANGLE_U64(wfbcast)(ulong a, uint i)
 {
     uint j = __builtin_amdgcn_readfirstlane(i);
-    return ((ulong)__builtin_amdgcn_readlane((uint)(a >> 32), j) << 32) |
-            (ulong)__builtin_amdgcn_readlane((uint)a, j);
+    uint2 aa = __builtin_astype(a, uint2);
+    aa.x = __builtin_amdgcn_readlane(aa.x, j);
+    aa.y = __builtin_amdgcn_readlane(aa.y, j);
+    return __builtin_astype(aa, ulong);
 }
 
