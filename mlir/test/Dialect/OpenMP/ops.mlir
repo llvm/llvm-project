@@ -720,3 +720,63 @@ func @omp_sectionsop(%data_var1 : memref<i32>, %data_var2 : memref<i32>,
   }
   return
 }
+
+// CHECK-LABEL: func @omp_single
+func @omp_single() {
+  omp.parallel {
+    // CHECK: omp.single {
+    omp.single {
+      "test.payload"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func @omp_single_nowait
+func @omp_single_nowait() {
+  omp.parallel {
+    // CHECK: omp.single nowait {
+    omp.single nowait {
+      "test.payload"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func @omp_single_allocate
+func @omp_single_allocate(%data_var: memref<i32>) {
+  omp.parallel {
+    // CHECK: omp.single allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) {
+    omp.single allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+      "test.payload"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func @omp_single_allocate_nowait
+func @omp_single_allocate_nowait(%data_var: memref<i32>) {
+  omp.parallel {
+    // CHECK: omp.single allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>) nowait {
+    omp.single allocate(%data_var : memref<i32> -> %data_var : memref<i32>) nowait {
+      "test.payload"() : () -> ()
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}

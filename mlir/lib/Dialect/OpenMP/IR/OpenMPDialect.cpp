@@ -492,6 +492,15 @@ LogicalResult SectionsOp::verifyRegions() {
   return success();
 }
 
+LogicalResult SingleOp::verify() {
+  // Check for allocate clause restrictions
+  if (allocate_vars().size() != allocators_vars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // WsLoopOp
 //===----------------------------------------------------------------------===//
