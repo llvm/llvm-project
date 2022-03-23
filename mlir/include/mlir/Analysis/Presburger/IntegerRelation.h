@@ -95,6 +95,10 @@ public:
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerRelation &other);
 
+  /// Return the intersection of the two sets.
+  /// If there are locals, they will be merged.
+  IntegerRelation intersect(IntegerRelation other) const;
+
   /// Return whether `this` and `other` are equal. This is integer-exact
   /// and somewhat expensive, since it uses the integer emptiness check
   /// (see IntegerRelation::findIntegerSample()).

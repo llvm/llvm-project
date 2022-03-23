@@ -86,13 +86,14 @@ static constexpr char NormalizeIdChar(char32_t ch) {
 
 static bool GetLowerCaseName(
     IoStatementState &io, char buffer[], std::size_t maxLength) {
-  if (auto ch{io.GetNextNonBlank()}) {
+  std::size_t byteLength{0};
+  if (auto ch{io.GetNextNonBlank(byteLength)}) {
     if (IsLegalIdStart(*ch)) {
       std::size_t j{0};
       do {
         buffer[j] = NormalizeIdChar(*ch);
-        io.HandleRelativePosition(1);
-        ch = io.GetCurrentChar();
+        io.HandleRelativePosition(byteLength);
+        ch = io.GetCurrentChar(byteLength);
       } while (++j < maxLength && ch && IsLegalIdChar(*ch));
       buffer[j++] = '\0';
       if (j <= maxLength) {
@@ -107,19 +108,20 @@ static bool GetLowerCaseName(
 
 static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
   std::optional<SubscriptValue> value;
-  std::optional<char32_t> ch{io.GetCurrentChar()};
+  std::size_t byteCount{0};
+  std::optional<char32_t> ch{io.GetCurrentChar(byteCount)};
   bool negate{ch && *ch == '-'};
   if ((ch && *ch == '+') || negate) {
-    io.HandleRelativePosition(1);
-    ch = io.GetCurrentChar();
+    io.HandleRelativePosition(byteCount);
+    ch = io.GetCurrentChar(byteCount);
   }
   bool overflow{false};
   while (ch && *ch >= '0' && *ch <= '9') {
     SubscriptValue was{value.value_or(0)};
     overflow |= was >= std::numeric_limits<SubscriptValue>::max() / 10;
     value = 10 * was + *ch - '0';
-    io.HandleRelativePosition(1);
-    ch = io.GetCurrentChar();
+    io.HandleRelativePosition(byteCount);
+    ch = io.GetCurrentChar(byteCount);
   }
   if (overflow) {
     io.GetIoErrorHandler().SignalError(
@@ -130,7 +132,7 @@ static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
     if (value) {
       return -*value;
     } else {
-      io.HandleRelativePosition(-1); // give back '-' with no digits
+      io.HandleRelativePosition(-byteCount); // give back '-' with no digits
     }
   }
   return value;
@@ -146,7 +148,8 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   int j{0};
   std::size_t contiguousStride{source.ElementBytes()};
   bool ok{true};
-  std::optional<char32_t> ch{io.GetNextNonBlank()};
+  std::size_t byteCount{0};
+  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   char32_t comma{GetComma(io)};
   for (; ch && *ch != ')'; ++j) {
     SubscriptValue dimLower{0}, dimUpper{0}, dimStride{0};
@@ -176,11 +179,11 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
       } else {
         dimLower = *low;
       }
-      ch = io.GetNextNonBlank();
+      ch = io.GetNextNonBlank(byteCount);
     }
     if (ch && *ch == ':') {
-      io.HandleRelativePosition(1);
-      ch = io.GetNextNonBlank();
+      io.HandleRelativePosition(byteCount);
+      ch = io.GetNextNonBlank(byteCount);
       if (auto high{GetSubscriptValue(io)}) {
         if (*high > dimUpper) {
           if (ok) {
@@ -194,14 +197,14 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
         } else {
           dimUpper = *high;
         }
-        ch = io.GetNextNonBlank();
+        ch = io.GetNextNonBlank(byteCount);
       }
       if (ch && *ch == ':') {
-        io.HandleRelativePosition(1);
-        ch = io.GetNextNonBlank();
+        io.HandleRelativePosition(byteCount);
+        ch = io.GetNextNonBlank(byteCount);
         if (auto str{GetSubscriptValue(io)}) {
           dimStride = *str;
-          ch = io.GetNextNonBlank();
+          ch = io.GetNextNonBlank(byteCount);
         }
       }
     } else { // scalar
@@ -209,8 +212,8 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
       dimStride = 0;
     }
     if (ch && *ch == comma) {
-      io.HandleRelativePosition(1);
-      ch = io.GetNextNonBlank();
+      io.HandleRelativePosition(byteCount);
+      ch = io.GetNextNonBlank(byteCount);
     }
     if (ok) {
       lower[j] = dimLower;
@@ -220,7 +223,7 @@ static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
   }
   if (ok) {
     if (ch && *ch == ')') {
-      io.HandleRelativePosition(1);
+      io.HandleRelativePosition(byteCount);
       if (desc.EstablishPointerSection(source, lower, upper, stride)) {
         return true;
       } else {
@@ -250,29 +253,30 @@ static bool HandleSubstring(
   // ambiguous within the parentheses.
   io.HandleRelativePosition(1); // skip '('
   std::optional<SubscriptValue> lower, upper;
-  std::optional<char32_t> ch{io.GetNextNonBlank()};
+  std::size_t byteCount{0};
+  std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
   if (ch) {
     if (*ch == ':') {
       lower = 1;
     } else {
       lower = GetSubscriptValue(io);
-      ch = io.GetNextNonBlank();
+      ch = io.GetNextNonBlank(byteCount);
     }
   }
   if (ch && ch == ':') {
-    io.HandleRelativePosition(1);
-    ch = io.GetNextNonBlank();
+    io.HandleRelativePosition(byteCount);
+    ch = io.GetNextNonBlank(byteCount);
     if (ch) {
       if (*ch == ')') {
         upper = chars;
       } else {
         upper = GetSubscriptValue(io);
-        ch = io.GetNextNonBlank();
+        ch = io.GetNextNonBlank(byteCount);
       }
     }
   }
   if (ch && *ch == ')') {
-    io.HandleRelativePosition(1);
+    io.HandleRelativePosition(byteCount);
     if (lower && upper) {
       if (*lower > *upper) {
         // An empty substring, whatever the values are
@@ -335,16 +339,17 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
 
 // Advance to the terminal '/' of a namelist group.
 static void SkipNamelistGroup(IoStatementState &io) {
-  while (auto ch{io.GetNextNonBlank()}) {
-    io.HandleRelativePosition(1);
+  std::size_t byteCount{0};
+  while (auto ch{io.GetNextNonBlank(byteCount)}) {
+    io.HandleRelativePosition(byteCount);
     if (*ch == '/') {
       break;
     } else if (*ch == '\'' || *ch == '"') {
       // Skip quoted character literal
       char32_t quote{*ch};
       while (true) {
-        if ((ch = io.GetCurrentChar())) {
-          io.HandleRelativePosition(1);
+        if ((ch = io.GetCurrentChar(byteCount))) {
+          io.HandleRelativePosition(byteCount);
           if (*ch == quote) {
             break;
           }
@@ -369,14 +374,15 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   char name[nameBufferSize];
   RUNTIME_CHECK(handler, group.groupName != nullptr);
   char32_t comma{GetComma(io)};
+  std::size_t byteCount{0};
   while (true) {
-    next = io.GetNextNonBlank();
+    next = io.GetNextNonBlank(byteCount);
     while (next && *next != '&') {
       // Extension: comment lines without ! before namelist groups
       if (!io.AdvanceRecord()) {
         next.reset();
       } else {
-        next = io.GetNextNonBlank();
+        next = io.GetNextNonBlank(byteCount);
       }
     }
     if (!next || *next != '&') {
@@ -384,7 +390,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
           "NAMELIST input group does not begin with '&' (at '%lc')", *next);
       return false;
     }
-    io.HandleRelativePosition(1);
+    io.HandleRelativePosition(byteCount);
     if (!GetLowerCaseName(io, name, sizeof name)) {
       handler.SignalError("NAMELIST input group has no name");
       return false;
@@ -396,7 +402,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
   }
   // Read the group's items
   while (true) {
-    next = io.GetNextNonBlank();
+    next = io.GetNextNonBlank(byteCount);
     if (!next || *next == '/') {
       break;
     }
@@ -423,7 +429,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     const Descriptor *useDescriptor{&itemDescriptor};
     StaticDescriptor<maxRank, true, 16> staticDesc[2];
     int whichStaticDesc{0};
-    next = io.GetCurrentChar();
+    next = io.GetCurrentChar(byteCount);
     bool hadSubscripts{false};
     bool hadSubstring{false};
     if (next && (*next == '(' || *next == '%')) {
@@ -456,25 +462,25 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
           hadSubstring = false;
         }
         useDescriptor = &mutableDescriptor;
-        next = io.GetCurrentChar();
+        next = io.GetCurrentChar(byteCount);
       } while (next && (*next == '(' || *next == '%'));
     }
     // Skip the '='
-    next = io.GetNextNonBlank();
+    next = io.GetNextNonBlank(byteCount);
     if (!next || *next != '=') {
       handler.SignalError("No '=' found after item '%s' in NAMELIST group '%s'",
           name, group.groupName);
       return false;
     }
-    io.HandleRelativePosition(1);
+    io.HandleRelativePosition(byteCount);
     // Read the values into the descriptor.  An array can be short.
     listInput->ResetForNextNamelistItem();
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
     }
-    next = io.GetNextNonBlank();
+    next = io.GetNextNonBlank(byteCount);
     if (next && *next == comma) {
-      io.HandleRelativePosition(1);
+      io.HandleRelativePosition(byteCount);
     }
   }
   if (!next || *next != '/') {
@@ -490,13 +496,14 @@ bool IsNamelistName(IoStatementState &io) {
   if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
     if (io.mutableModes().inNamelist) {
       SavedPosition savedPosition{io};
-      if (auto ch{io.GetNextNonBlank()}) {
+      std::size_t byteCount{0};
+      if (auto ch{io.GetNextNonBlank(byteCount)}) {
         if (IsLegalIdStart(*ch)) {
           do {
-            io.HandleRelativePosition(1);
-            ch = io.GetCurrentChar();
+            io.HandleRelativePosition(byteCount);
+            ch = io.GetCurrentChar(byteCount);
           } while (ch && IsLegalIdChar(*ch));
-          ch = io.GetNextNonBlank();
+          ch = io.GetNextNonBlank(byteCount);
           // TODO: how to deal with NaN(...) ambiguity?
           return ch && (*ch == '=' || *ch == '(' || *ch == '%');
         }

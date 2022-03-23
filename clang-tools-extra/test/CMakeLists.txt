@@ -81,11 +81,13 @@ foreach(dep ${LLVM_UTILS_DEPS})
 endforeach()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  llvm_add_library(
-      CTTestTidyModule
-      MODULE clang-tidy/CTTestTidyModule.cpp
-      PLUGIN_TOOL clang-tidy
-      DEPENDS clang-tidy-headers)
+  if (NOT WIN32 AND NOT LLVM_LINK_LLVM_DYLIB)
+    llvm_add_library(
+        CTTestTidyModule
+        MODULE clang-tidy/CTTestTidyModule.cpp
+        PLUGIN_TOOL clang-tidy
+        DEPENDS clang-tidy-headers)
+  endif()
 
   if(CLANG_BUILT_STANDALONE)
     # LLVMHello library is needed below

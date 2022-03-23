@@ -66,6 +66,7 @@ unsigned SimplexBase::addZeroRow(bool makeRestricted) {
     tableau.resizeVertically(nRow);
   rowUnknown.push_back(~con.size());
   con.emplace_back(Orientation::Row, makeRestricted, nRow - 1);
+  undoLog.push_back(UndoLogEntry::RemoveLastConstraint);
 
   // Zero out the new row.
   tableau.fillRow(nRow - 1, 0);
@@ -131,7 +132,6 @@ unsigned SimplexBase::addRow(ArrayRef<int64_t> coeffs, bool makeRestricted) {
 
   normalizeRow(nRow - 1);
   // Push to undo log along with the index of the new constraint.
-  undoLog.push_back(UndoLogEntry::RemoveLastConstraint);
   return con.size() - 1;
 }
 

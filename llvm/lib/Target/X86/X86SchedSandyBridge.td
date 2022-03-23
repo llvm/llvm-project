@@ -816,8 +816,7 @@ def SBWriteResGroup48 : SchedWriteRes<[SBPort23]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[SBWriteResGroup48], (instrs MMX_MOVD64from64rm,
-                                         VBROADCASTSSrm)>;
+def: InstRW<[SBWriteResGroup48], (instrs VBROADCASTSSrm)>;
 def: InstRW<[SBWriteResGroup48], (instregex "POP(16|32|64)r",
                                             "(V?)MOV64toPQIrm",
                                             "(V?)MOVDDUPrm",

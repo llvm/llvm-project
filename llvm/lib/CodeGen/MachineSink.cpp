@@ -1294,6 +1294,45 @@ bool MachineSinking::SinkIntoLoop(MachineLoop *L, MachineInstr &I) {
   return true;
 }
 
+/// Return true if a target defined block prologue instruction interferes
+/// with a sink candidate.
+static bool blockPrologueInterferes(MachineBasicBlock *BB,
+                                    MachineBasicBlock::iterator End,
+                                    MachineInstr &MI,
+                                    const TargetRegisterInfo *TRI,
+                                    const TargetInstrInfo *TII,
+                                    const MachineRegisterInfo *MRI) {
+  if (BB->begin() == End)
+    return false; // no prologue
+  for (MachineBasicBlock::iterator PI = BB->getFirstNonPHI(); PI != End; ++PI) {
+    // Only check target defined prologue instructions
+    if (!TII->isBasicBlockPrologue(*PI))
+      continue;
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg())
+        continue;
+      Register Reg = MO.getReg();
+      if (!Reg)
+        continue;
+      if (MO.isUse()) {
+        if (Register::isPhysicalRegister(Reg) &&
+            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
+          continue;
+        if (PI->modifiesRegister(Reg, TRI))
+          return true;
+      } else {
+        if (PI->readsRegister(Reg, TRI))
+          return true;
+        // Check for interference with non-dead defs
+        auto *DefOp = PI->findRegisterDefOperand(Reg, false, true, TRI);
+        if (DefOp && !DefOp->isDead())
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 /// SinkInstruction - Determine whether it is safe to sink the specified machine
 /// instruction out of its current block into a successor.
 bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
@@ -1407,6 +1446,10 @@ bool MachineSinking::SinkInstruction(MachineInstr &MI, bool &SawStore,
   // Determine where to insert into. Skip phi nodes.
   MachineBasicBlock::iterator InsertPos =
       SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
+  if (blockPrologueInterferes(SuccToSinkTo, InsertPos, MI, TRI, TII, MRI)) {
+    LLVM_DEBUG(dbgs() << " *** Not sinking: prologue interference\n");
+    return false;
+  }
 
   // Collect debug users of any vreg that this inst defines.
   SmallVector<MIRegs, 4> DbgUsersToSink;
@@ -1805,11 +1848,19 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
     }
     auto DbgValsToSink = DbgValsToSinkMap.takeVector();
 
+    LLVM_DEBUG(dbgs() << "Sink instr " << MI << "\tinto block " << *SuccBB);
+
+    MachineBasicBlock::iterator InsertPos =
+        SuccBB->SkipPHIsAndLabels(SuccBB->begin());
+    if (blockPrologueInterferes(SuccBB, InsertPos, MI, TRI, TII, nullptr)) {
+      LLVM_DEBUG(
+          dbgs() << " *** Not sinking: prologue interference\n");
+      continue;
+    }
+
     // Clear the kill flag if SrcReg is killed between MI and the end of the
     // block.
     clearKillFlags(&MI, CurBB, UsedOpsInCopy, UsedRegUnits, TRI);
-    MachineBasicBlock::iterator InsertPos =
-        SuccBB->SkipPHIsAndLabels(SuccBB->begin());
     performSink(MI, *SuccBB, InsertPos, DbgValsToSink);
     updateLiveIn(&MI, SuccBB, UsedOpsInCopy, DefedRegsInCopy);
 

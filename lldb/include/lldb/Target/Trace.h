@@ -253,7 +253,7 @@ protected:
   /// \return
   ///     A vector of bytes with the requested data, or an \a llvm::Error in
   ///     case of failures.
-  llvm::Expected<llvm::ArrayRef<uint8_t>>
+  llvm::Expected<std::vector<uint8_t>>
   GetLiveThreadBinaryData(lldb::tid_t tid, llvm::StringRef kind);
 
   /// Get binary data of the current process given a data identifier.
@@ -264,7 +264,7 @@ protected:
   /// \return
   ///     A vector of bytes with the requested data, or an \a llvm::Error in
   ///     case of failures.
-  llvm::Expected<llvm::ArrayRef<uint8_t>>
+  llvm::Expected<std::vector<uint8_t>>
   GetLiveProcessBinaryData(llvm::StringRef kind);
 
   /// Get the size of the data returned by \a GetLiveThreadBinaryData

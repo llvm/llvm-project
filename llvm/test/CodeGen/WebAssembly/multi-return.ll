@@ -8,7 +8,7 @@ declare { i64, i128, i192, i128, i64 } @return_multi_multi()
 ; Test returning a single value from @return_multi_multi.
 
 define i64 @test0() {
-; CHECK-LABEL: test0
+; CHECK-LABEL: test0:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i64.load	$[[RV:[0-9]+]]=, 8(${{[0-9]+}})
 ; CHECK: local.copy	$push8=, $[[RV]]
@@ -18,7 +18,7 @@ define i64 @test0() {
 }
 
 define i128 @test1() {
-; CHECK-LABEL: test1
+; CHECK-LABEL: test1:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i64.load	$[[RV:[0-9]+]]=, 16($[[SP:[0-9]+]])
 ; CHECK: i32.const	$push0=, 24
@@ -32,7 +32,7 @@ define i128 @test1() {
 }
 
 define i192 @test2() {
-; CHECK-LABEL: test2
+; CHECK-LABEL: test2:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i32.const	$push0=, 40
 ; CHECK: i32.add 	$push1=, $[[SP:[0-9]+]], $pop0
@@ -50,7 +50,7 @@ define i192 @test2() {
 }
 
 define i128 @test3() {
-; CHECK-LABEL: test3
+; CHECK-LABEL: test3:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i64.load	$[[L1:[0-9]+]]=, 56($[[SP:[0-9]+]])
 ; CHECK: i32.const	$push0=, 64
@@ -64,7 +64,7 @@ define i128 @test3() {
 }
 
 define i64 @test4() {
-; CHECK-LABEL: test4
+; CHECK-LABEL: test4:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i64.load	$[[L1:[0-9]+]]=, 72($[[SP:[0-9]+]])
 ; CHECK: local.copy	$push8=, $[[L1]]
@@ -76,7 +76,7 @@ define i64 @test4() {
 ; Test returning multiple values from @return_multi_multi.
 
 define { i64, i128 } @test5() {
-; CHECK-LABEL: test5
+; CHECK-LABEL: test5:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i32.const	$push10=, 8
 ; CHECK: i32.add 	$push11=, $[[SP:[0-9]+]], $pop10
@@ -99,7 +99,7 @@ define { i64, i128 } @test5() {
 }
 
 define { i128, i128 } @test6() {
-; CHECK-LABEL: test6
+; CHECK-LABEL: test6:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i32.const	$push0=, 64
 ; CHECK: i32.add 	$push1=, $[[SP:[0-9]+]], $pop0
@@ -124,7 +124,7 @@ define { i128, i128 } @test6() {
 }
 
 define { i64, i192 } @test7() {
-; CHECK-LABEL: test7
+; CHECK-LABEL: test7:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i32.const	$push0=, 40
 ; CHECK: i32.add 	$push1=, $[[SP:[0-9]+]], $pop0
@@ -151,7 +151,7 @@ define { i64, i192 } @test7() {
 }
 
 define { i128, i192, i128, i64 } @test8() {
-; CHECK-LABEL: test8
+; CHECK-LABEL: test8:
 ; CHECK: call    	return_multi_multi
 ; CHECK: i32.const	$push20=, 8
 ; CHECK: i32.add 	$push21=, $[[SP:[0-9]+]], $pop20

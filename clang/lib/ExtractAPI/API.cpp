@@ -1,4 +1,4 @@
-//===- SymbolGraph/API.cpp --------------------------------------*- C++ -*-===//
+//===- ExtractAPI/API.cpp ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,21 +7,20 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines SymbolGraph API records.
+/// This file implements the APIRecord and derived record structs,
+/// and the APISet class.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "clang/SymbolGraph/API.h"
+#include "clang/ExtractAPI/API.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentLexer.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/Support/Allocator.h"
 
-namespace clang {
-namespace symbolgraph {
-
-APIRecord::~APIRecord() {}
+using namespace clang::extractapi;
+using namespace llvm;
 
 GlobalRecord *APISet::addGlobal(GVKind Kind, StringRef Name, StringRef USR,
                                 PresumedLoc Loc,
@@ -32,6 +31,7 @@ GlobalRecord *APISet::addGlobal(GVKind Kind, StringRef Name, StringRef USR,
                                 FunctionSignature Signature) {
   auto Result = Globals.insert({Name, nullptr});
   if (Result.second) {
+    // Create the record if it does not already exist.
     auto Record = APIRecordUniquePtr<GlobalRecord>(new (Allocator) GlobalRecord{
         Kind, Name, USR, Loc, Availability, Linkage, Comment, Fragments,
         SubHeading, Signature});
@@ -65,11 +65,11 @@ StringRef APISet::recordUSR(const Decl *D) {
   return copyString(USR);
 }
 
-StringRef APISet::copyString(StringRef String,
-                             llvm::BumpPtrAllocator &Allocator) {
+StringRef APISet::copyString(StringRef String) {
   if (String.empty())
     return {};
 
+  // No need to allocate memory and copy if the string has already been stored.
   if (Allocator.identifyObject(String.data()))
     return String;
 
@@ -78,9 +78,6 @@ StringRef APISet::copyString(StringRef String,
   return StringRef(reinterpret_cast<const char *>(Ptr), String.size());
 }
 
-StringRef APISet::copyString(StringRef String) {
-  return copyString(String, Allocator);
-}
+APIRecord::~APIRecord() {}
 
-} // namespace symbolgraph
-} // namespace clang
+void GlobalRecord::anchor() {}

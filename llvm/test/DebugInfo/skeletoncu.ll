@@ -3,7 +3,7 @@
 ; CHECK: DW_TAG_compile_unit
 ; CHECK: DW_AT_GNU_dwo_id {{.*}}abcd
 ; CHECK: DW_AT_GNU_dwo_name {{.*}}"my.dwo"
-; REQUIRES: default_triple, object-emission
+; REQUIRES: object-emission
  
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}
@@ -13,4 +13,3 @@
 !2 = !{}
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-

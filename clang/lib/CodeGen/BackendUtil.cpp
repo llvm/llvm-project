@@ -1003,10 +1003,10 @@ void EmitAssemblyHelper::EmitAssemblyWithLegacyPassManager(
     TheModule->setDataLayout(TM->createDataLayout());
 
   DebugifyCustomPassManager PerModulePasses;
-  DebugInfoPerPassMap DIPreservationMap;
+  DebugInfoPerPass DebugInfoBeforePass;
   if (CodeGenOpts.EnableDIPreservationVerify) {
     PerModulePasses.setDebugifyMode(DebugifyMode::OriginalDebugInfo);
-    PerModulePasses.setDIPreservationMap(DIPreservationMap);
+    PerModulePasses.setDebugInfoBeforePass(DebugInfoBeforePass);
 
     if (!CodeGenOpts.DIBugsReportFilePath.empty())
       PerModulePasses.setOrigDIVerifyBugsReportFilePath(

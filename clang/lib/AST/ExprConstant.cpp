@@ -5003,6 +5003,18 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
   llvm_unreachable("Invalid EvalStmtResult!");
 }
 
+static bool CheckLocalVariableDeclaration(EvalInfo &Info, const VarDecl *VD) {
+  // An expression E is a core constant expression unless the evaluation of E
+  // would evaluate one of the following: [C++2b] - a control flow that passes
+  // through a declaration of a variable with static or thread storage duration.
+  if (VD->isLocalVarDecl() && VD->isStaticLocal()) {
+    Info.CCEDiag(VD->getLocation(), diag::note_constexpr_static_local)
+        << (VD->getTSCSpec() == TSCS_unspecified ? 0 : 1) << VD;
+    return false;
+  }
+  return true;
+}
+
 // Evaluate a statement.
 static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
                                    const Stmt *S, const SwitchCase *Case) {
@@ -5113,6 +5125,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       const DeclStmt *DS = cast<DeclStmt>(S);
       for (const auto *D : DS->decls()) {
         if (const auto *VD = dyn_cast<VarDecl>(D)) {
+          if (!CheckLocalVariableDeclaration(Info, VD))
+            return ESR_Failed;
           if (VD->hasLocalStorage() && !VD->getInit())
             if (!EvaluateVarDecl(Info, VD))
               return ESR_Failed;
@@ -5156,6 +5170,9 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::DeclStmtClass: {
     const DeclStmt *DS = cast<DeclStmt>(S);
     for (const auto *D : DS->decls()) {
+      const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
+      if (VD && !CheckLocalVariableDeclaration(Info, VD))
+        return ESR_Failed;
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
       if (!EvaluateDecl(Info, D) && !Info.noteFailure())

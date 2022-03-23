@@ -885,7 +885,8 @@ def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
     then the form takes only the procedure's symbol.
 
     ```mlir
-      %0 = fir.emboxproc @f : ((i32) -> i32) -> !fir.boxproc<(i32) -> i32>
+      %f = ... : (i32) -> i32
+      %0 = fir.emboxproc %f : ((i32) -> i32) -> !fir.boxproc<(i32) -> i32>
     ```
 
     An internal procedure requiring a host instance for correct execution uses
@@ -895,16 +896,20 @@ def fir_EmboxProcOp : fir_Op<"emboxproc", [NoSideEffect]> {
     promotion of local values.
 
     ```mlir
-      %4 = ... : !fir.ref<tuple<i32, i32>>
-      %5 = fir.emboxproc @g, %4 : ((i32) -> i32, !fir.ref<tuple<i32, i32>>) -> !fir.boxproc<(i32) -> i32>
+      %4 = ... : !fir.ref<tuple<!fir.ref<i32>, !fir.ref<i32>>>
+      %g = ... : (i32) -> i32
+      %5 = fir.emboxproc %g, %4 : ((i32) -> i32, !fir.ref<tuple<!fir.ref<i32>, !fir.ref<i32>>>) -> !fir.boxproc<(i32) -> i32>
     ```
   }];
 
-  let arguments = (ins SymbolRefAttr:$funcname, AnyReferenceLike:$host);
+  let arguments = (ins FuncType:$func, Optional<fir_ReferenceType>:$host);
 
   let results = (outs fir_BoxProcType);
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $func (`,` $host^)? attr-dict `:` functional-type(operands, results)
+  }];
+
   let hasVerifier = 1;
 }
 
@@ -958,13 +963,13 @@ def fir_BoxAddrOp : fir_SimpleOneResultOp<"box_addr", [NoSideEffect]> {
     ```mlir
       %51 = fir.box_addr %box : (!fir.box<f64>) -> !fir.ref<f64>
       %52 = fir.box_addr %boxchar : (!fir.boxchar<1>) -> !fir.ref<!fir.char<1>>
-      %53 = fir.box_addr %boxproc : (!fir.boxproc<!P>) -> !fir.ref<!P>
+      %53 = fir.box_addr %boxproc : (!fir.boxproc<!P>) -> !P
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins AnyBoxLike:$val);
 
-  let results = (outs AnyReferenceLike);
+  let results = (outs AnyCodeOrDataRefLike);
 
   let hasFolder = 1;
 }

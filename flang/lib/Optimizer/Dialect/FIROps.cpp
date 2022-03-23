@@ -1095,57 +1095,13 @@ mlir::LogicalResult EmboxCharOp::verify() {
 // EmboxProcOp
 //===----------------------------------------------------------------------===//
 
-mlir::ParseResult EmboxProcOp::parse(mlir::OpAsmParser &parser,
-                                     mlir::OperationState &result) {
-  mlir::SymbolRefAttr procRef;
-  if (parser.parseAttribute(procRef, "funcname", result.attributes))
-    return mlir::failure();
-  bool hasTuple = false;
-  mlir::OpAsmParser::UnresolvedOperand tupleRef;
-  if (!parser.parseOptionalComma()) {
-    if (parser.parseOperand(tupleRef))
-      return mlir::failure();
-    hasTuple = true;
-  }
-  mlir::FunctionType type;
-  if (parser.parseColon() || parser.parseLParen() || parser.parseType(type))
-    return mlir::failure();
-  result.addAttribute("functype", mlir::TypeAttr::get(type));
-  if (hasTuple) {
-    mlir::Type tupleType;
-    if (parser.parseComma() || parser.parseType(tupleType) ||
-        parser.resolveOperand(tupleRef, tupleType, result.operands))
-      return mlir::failure();
-  }
-  mlir::Type boxType;
-  if (parser.parseRParen() || parser.parseArrow() ||
-      parser.parseType(boxType) || parser.addTypesToList(boxType, result.types))
-    return mlir::failure();
-  return mlir::success();
-}
-
-void EmboxProcOp::print(mlir::OpAsmPrinter &p) {
-  p << ' ' << getOperation()->getAttr("funcname");
-  auto h = getHost();
-  if (h) {
-    p << ", ";
-    p.printOperand(h);
-  }
-  p << " : (" << getOperation()->getAttr("functype");
-  if (h)
-    p << ", " << h.getType();
-  p << ") -> " << getType();
-}
-
 mlir::LogicalResult EmboxProcOp::verify() {
   // host bindings (optional) must be a reference to a tuple
   if (auto h = getHost()) {
-    if (auto r = h.getType().dyn_cast<ReferenceType>()) {
-      if (!r.getEleTy().dyn_cast<mlir::TupleType>())
-        return mlir::failure();
-    } else {
-      return mlir::failure();
-    }
+    if (auto r = h.getType().dyn_cast<ReferenceType>())
+      if (r.getEleTy().dyn_cast<mlir::TupleType>())
+        return mlir::success();
+    return mlir::failure();
   }
   return mlir::success();
 }

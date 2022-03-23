@@ -14,7 +14,6 @@
 #include "llvm-c/Linker.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/IR/Comdat.h"
-#include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
