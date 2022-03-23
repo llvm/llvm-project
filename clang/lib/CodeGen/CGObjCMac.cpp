@@ -7408,7 +7408,7 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
            : llvm::GlobalValue::ExternalLinkage;
 
   llvm::GlobalVariable *GV = CGM.getModule().getGlobalVariable(Name);
-  if (!GV || GV->getType() != ObjCTypes.ClassnfABITy->getPointerTo()) {
+  if (!GV || GV->getValueType() != ObjCTypes.ClassnfABITy) {
     auto *NewGV = new llvm::GlobalVariable(ObjCTypes.ClassnfABITy, false, L,
                                            nullptr, Name);
 
