@@ -1255,6 +1255,29 @@ def expect_state_changes(test, listener, process, states, timeout=30):
             lldb.SBProcess.GetStateFromEvent(event),
             expected_state)
 
+def start_listening_from(broadcaster, event_mask):
+    """Creates a listener for a specific event mask and add it to the source broadcaster."""
+
+    listener = lldb.SBListener("lldb.test.listener")
+    broadcaster.AddListener(listener, event_mask)
+    return listener
+
+def fetch_next_event(test, listener, broadcaster, timeout=10):
+    """Fetch one event from the listener and return it if it matches the provided broadcaster.
+    Fails otherwise."""
+
+    event = lldb.SBEvent()
+
+    if listener.WaitForEvent(timeout, event):
+        if event.BroadcasterMatchesRef(broadcaster):
+            return event
+
+        test.fail("received event '%s' from unexpected broadcaster '%s'." %
+                  (event.GetDescription(), event.GetBroadcaster().GetName()))
+
+    test.fail("couldn't fetch an event before reaching the timeout.")
+
+
 # ===================================
 # Utility functions related to Frames
 # ===================================
