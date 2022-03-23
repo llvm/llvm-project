@@ -80,16 +80,7 @@ static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
   if (CPU.empty() || CPU == "generic")
     CPU = TT.isArch64Bit() ? "generic-rv64" : "generic-rv32";
 
-  MCSubtargetInfo *STI =
-      createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
-
-  // Check if Feature string is valid
-  auto ISAInfo =
-      RISCVFeatures::parseFeatureBits(TT.isArch64Bit(), STI->getFeatureBits());
-  if (!ISAInfo)
-    report_fatal_error(ISAInfo.takeError());
-  else
-    return STI;
+  return createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 
 static MCInstPrinter *createRISCVMCInstPrinter(const Triple &T,
