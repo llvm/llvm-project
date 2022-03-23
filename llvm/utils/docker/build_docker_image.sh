@@ -23,7 +23,7 @@ Available options:
   General:
     -h|--help               show this help message
   Docker-specific:
-    -s|--source             image source dir (i.e. debian8, nvidia-cuda, etc)
+    -s|--source             image source dir (i.e. debian10, nvidia-cuda, etc)
     -d|--docker-repository  docker repository for the image
     -t|--docker-tag         docker tag for the image
   Checkout arguments:
@@ -54,18 +54,18 @@ Required options: --source and --docker-repository, at least one
 All options after '--' are passed to CMake invocation.
 
 For example, running:
-$ build_docker_image.sh -s debian8 -d mydocker/debian8-clang -t latest \ 
+$ build_docker_image.sh -s debian10 -d mydocker/debian10-clang -t latest \
   -p clang -i install-clang -i install-clang-resource-headers
 will produce two docker images:
-    mydocker/debian8-clang-build:latest - an intermediate image used to compile
+    mydocker/debian10-clang-build:latest - an intermediate image used to compile
       clang.
-    mydocker/clang-debian8:latest       - a small image with preinstalled clang.
+    mydocker/clang-debian10:latest       - a small image with preinstalled clang.
 Please note that this example produces a not very useful installation, since it
 doesn't override CMake defaults, which produces a Debug and non-boostrapped
 version of clang.
 
 To get a 2-stage clang build, you could use this command:
-$ ./build_docker_image.sh -s debian8 -d mydocker/clang-debian8 -t "latest" \ 
+$ ./build_docker_image.sh -s debian10 -d mydocker/clang-debian10 -t "latest" \
     -p clang -i stage2-install-clang -i stage2-install-clang-resource-headers \ 
     -- \ 
     -DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \ 
