@@ -7,7 +7,8 @@ func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!fir.a
   omp.parallel  {
     %1 = fir.alloca i32 {adapt.valuebyref, pinned}
     %2 = fir.load %arg0 : !fir.ref<i32>
-    omp.wsloop (%arg2) : i32 = (%c1_i32) to (%2) inclusive step (%c1_i32) nowait  {
+    omp.wsloop nowait
+    for (%arg2) : i32 = (%c1_i32) to (%2) inclusive step (%c1_i32)  {
       fir.store %arg2 to %1 : !fir.ref<i32>
       %3 = fir.load %1 : !fir.ref<i32>
       %4 = fir.convert %3 : (i32) -> i64
@@ -29,7 +30,8 @@ func @_QPsb1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.ref<!fir.a
 // CHECK:      %[[ONE_3:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:      %[[I_VAR:.*]] = llvm.alloca %[[ONE_3]] x i32 {adapt.valuebyref, in_type = i32, operand_segment_sizes = dense<0> : vector<2xi32>, pinned} : (i64) -> !llvm.ptr<i32>
 // CHECK:      %[[N:.*]] = llvm.load %[[N_REF]] : !llvm.ptr<i32>
-// CHECK: omp.wsloop (%[[I:.*]]) : i32 = (%[[ONE_2]]) to (%[[N]]) inclusive step (%[[ONE_2]]) nowait  {
+// CHECK: omp.wsloop nowait
+// CHECK-SAME: for (%[[I:.*]]) : i32 = (%[[ONE_2]]) to (%[[N]]) inclusive step (%[[ONE_2]]) {
 // CHECK:   llvm.store %[[I]], %[[I_VAR]] : !llvm.ptr<i32>
 // CHECK:   %[[I1:.*]] = llvm.load %[[I_VAR]] : !llvm.ptr<i32>
 // CHECK:   %[[I1_EXT:.*]] = llvm.sext %[[I1]] : i32 to i64

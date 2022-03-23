@@ -32,7 +32,7 @@ llvm.func @repeated_successor_no_args(%arg0: i1) {
 
 // CHECK: @repeated_successor_openmp
 llvm.func @repeated_successor_openmp(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
-  omp.wsloop (%arg4) : i64 = (%arg0) to (%arg1) step (%arg2)  {
+  omp.wsloop for (%arg4) : i64 = (%arg0) to (%arg1) step (%arg2) {
     // CHECK: llvm.cond_br %{{.*}}, ^[[BB1:.*]]({{.*}}), ^[[BB2:.*]]({{.*}})
     llvm.cond_br %arg3, ^bb1(%arg0 : i64), ^bb1(%arg1 : i64)
   // CHECK: ^[[BB1]]

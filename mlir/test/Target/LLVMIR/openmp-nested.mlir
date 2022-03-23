@@ -11,9 +11,9 @@ module {
       %2 = llvm.mlir.constant(0 : index) : i64
       %4 = llvm.mlir.constant(0 : i32) : i32
       %12 = llvm.alloca %0 x i64 : (i64) -> !llvm.ptr<i64>
-      omp.wsloop (%arg2) : i64 = (%2) to (%1) step (%0)  {
+      omp.wsloop for (%arg2) : i64 = (%2) to (%1) step (%0)  {
         omp.parallel   {
-          omp.wsloop (%arg3) : i64 = (%2) to (%0) step (%0)  {
+          omp.wsloop for (%arg3) : i64 = (%2) to (%0) step (%0)  {
             llvm.store %2, %12 : !llvm.ptr<i64>
             omp.yield
           }
