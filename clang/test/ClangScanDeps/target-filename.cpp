@@ -21,27 +21,3 @@
 
 // CHECK: target-filename_input.o:
 // CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-a.o:
-// CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-b.o:
-// CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-c.o:
-// CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-d.o:
-// CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-e.o:
-// CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-lastf.o:
-// CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-lastg.o:
-// CHECK-NEXT: target-filename_input.cpp
-
-// CHECK-NEXT: clangcl-lasth.o:
-// CHECK-NEXT: target-filename_input.cpp
