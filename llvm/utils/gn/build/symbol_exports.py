@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Converts a .exports file to a format consumable by linkers.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """Symlinks, or on Windows copies, an existing file to a second location.
 
