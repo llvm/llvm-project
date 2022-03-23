@@ -814,7 +814,7 @@ public:
 
   /// Return true if this instruction doesn't produce any output in the form of
   /// executable instructions.
-  bool isMetaInstruction(QueryType Type = AnyInBundle) const {
+  bool isMetaInstruction(QueryType Type = IgnoreBundle) const {
     return hasProperty(MCID::Meta, Type);
   }
 
