@@ -69,6 +69,12 @@ public:
 
   /// Emit an error and return failure.
   InFlightDiagnostic emitError(const Twine &message = {}) {
+    // If the error is to be emitted at EOF, move it back one character.
+    if (state.curToken.is(Token::eof)) {
+      return emitError(
+          SMLoc::getFromPointer(state.curToken.getLoc().getPointer() - 1),
+          message);
+    }
     return emitError(state.curToken.getLoc(), message);
   }
   InFlightDiagnostic emitError(SMLoc loc, const Twine &message = {});
