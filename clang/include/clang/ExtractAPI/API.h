@@ -142,6 +142,9 @@ struct EnumConstantRecord : APIRecord {
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_EnumConstant;
   }
+
+private:
+  virtual void anchor();
 };
 
 /// This holds information associated with enums.
@@ -157,6 +160,9 @@ struct EnumRecord : APIRecord {
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_Enum;
   }
+
+private:
+  virtual void anchor();
 };
 
 /// This holds information associated with struct fields.
@@ -171,6 +177,9 @@ struct StructFieldRecord : APIRecord {
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_StructField;
   }
+
+private:
+  virtual void anchor();
 };
 
 /// This holds information associated with structs.
@@ -187,6 +196,9 @@ struct StructRecord : APIRecord {
   static bool classof(const APIRecord *Record) {
     return Record->getKind() == RK_Struct;
   }
+
+private:
+  virtual void anchor();
 };
 
 /// APISet holds the set of API records collected from given inputs.
