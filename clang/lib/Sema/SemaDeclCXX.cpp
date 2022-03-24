@@ -2641,12 +2641,11 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
 /// example:
 ///    class foo : public bar, virtual private baz {
 /// 'public bar' and 'virtual private baz' are each base-specifiers.
-BaseResult
-Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
-                         ParsedAttributes &Attributes,
-                         bool Virtual, AccessSpecifier Access,
-                         ParsedType basetype, SourceLocation BaseLoc,
-                         SourceLocation EllipsisLoc) {
+BaseResult Sema::ActOnBaseSpecifier(Decl *classdecl, SourceRange SpecifierRange,
+                                    const ParsedAttributesView &Attributes,
+                                    bool Virtual, AccessSpecifier Access,
+                                    ParsedType basetype, SourceLocation BaseLoc,
+                                    SourceLocation EllipsisLoc) {
   if (!classdecl)
     return true;
 

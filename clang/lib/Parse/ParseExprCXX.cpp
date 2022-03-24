@@ -1252,7 +1252,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
   Actions.PushLambdaScope();
 
-  ParsedAttributesWithRange Attr(AttrFactory);
+  ParsedAttributes Attr(AttrFactory);
   if (getLangOpts().CUDA) {
     // In CUDA code, GNU attributes are allowed to appear immediately after the
     // "[...]", even if there is no "(...)" before the lambda body.
@@ -1913,7 +1913,7 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 
 Parser::DeclGroupPtrTy
 Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
-                                             ParsedAttributesWithRange &Attrs) {
+                                             ParsedAttributes &Attrs) {
   assert(Tok.is(tok::kw_using) && "Expected using");
   assert((Context == DeclaratorContext::ForInit ||
           Context == DeclaratorContext::SelectionInit) &&
@@ -1992,7 +1992,7 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
     return Sema::ConditionError();
   }
 
-  ParsedAttributesWithRange attrs(AttrFactory);
+  ParsedAttributes attrs(AttrFactory);
   MaybeParseCXX11Attributes(attrs);
 
   const auto WarnOnInit = [this, &CK] {

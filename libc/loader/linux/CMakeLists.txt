@@ -71,3 +71,15 @@ add_loader_object(
   DEPENDS
     .${LIBC_TARGET_ARCHITECTURE}.crt1
 )
+
+add_loader_object(
+  crti
+  SRC
+    crti.cpp
+)
+
+add_loader_object(
+  crtn
+  SRC
+    crtn.cpp
+)
