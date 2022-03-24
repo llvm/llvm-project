@@ -106,6 +106,9 @@ add_subdirectory(BLAKE3)
 if (MSVC)
   enable_language(ASM_MASM)
 endif()
+# FIXME: Figure out what is wrong with the builders when using the assembly files.
+add_definitions(-DBLAKE3_NO_AVX512 -DBLAKE3_NO_AVX2 -DBLAKE3_NO_SSE41 -DBLAKE3_NO_SSE2)
+
 
 add_llvm_component_library(LLVMSupport
   AArch64TargetParser.cpp
