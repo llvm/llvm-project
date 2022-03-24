@@ -56,21 +56,19 @@ static bool isRSLargeReturnCall(llvm::CallInst *call_inst) {
              ->getPrimitiveSizeInBits() > 128;
 }
 
-static bool isRSAllocationPtrTy(const llvm::Type *type) {
-  if (!type->isPointerTy())
-    return false;
-  auto ptr_type = type->getPointerElementType();
-
-  return ptr_type->isStructTy() &&
-         ptr_type->getStructName().startswith("struct.rs_allocation");
+static bool isRSAllocationTy(const llvm::Type *type) {
+  return type->isStructTy() &&
+         type->getStructName().startswith("struct.rs_allocation");
 }
 
 static bool isRSAllocationTyCallSite(llvm::CallInst *call_inst) {
   if (!call_inst->hasByValArgument())
     return false;
-  for (const auto *param : call_inst->operand_values())
-    if (isRSAllocationPtrTy(param->getType()))
-      return true;
+  for (unsigned i = 0; i < call_inst->arg_size(); ++i) {
+    if (llvm::Type *ByValTy = call_inst->getParamByValType(i))
+      if (isRSAllocationTy(ByValTy))
+        return true;
+  }
   return false;
 }
 
