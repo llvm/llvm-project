@@ -277,18 +277,19 @@ def SPV_DeviceTypeAttr : SPV_EnumAttr<
   ]>;
 
 def SPV_V_AMD         : I32EnumAttrCase<"AMD", 0>;
-def SPV_V_ARM         : I32EnumAttrCase<"ARM", 1>;
-def SPV_V_Imagination : I32EnumAttrCase<"Imagination", 2>;
-def SPV_V_Intel       : I32EnumAttrCase<"Intel", 3>;
-def SPV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 4>;
-def SPV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 5>;
-def SPV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 6>;
-def SPV_V_Unknown     : I32EnumAttrCase<"Unknown", 7>;
+def SPV_V_Apple       : I32EnumAttrCase<"Apple", 1>;
+def SPV_V_ARM         : I32EnumAttrCase<"ARM", 2>;
+def SPV_V_Imagination : I32EnumAttrCase<"Imagination", 3>;
+def SPV_V_Intel       : I32EnumAttrCase<"Intel", 4>;
+def SPV_V_NVIDIA      : I32EnumAttrCase<"NVIDIA", 5>;
+def SPV_V_Qualcomm    : I32EnumAttrCase<"Qualcomm", 6>;
+def SPV_V_SwiftShader : I32EnumAttrCase<"SwiftShader", 7>;
+def SPV_V_Unknown     : I32EnumAttrCase<"Unknown", 0xff>;
 
 def SPV_VendorAttr : SPV_EnumAttr<
   "Vendor", "recognized SPIR-V vendor strings", "vendor", [
-    SPV_V_AMD, SPV_V_ARM, SPV_V_Imagination, SPV_V_Intel,
-    SPV_V_NVIDIA, SPV_V_Qualcomm, SPV_V_SwiftShader,
+    SPV_V_AMD, SPV_V_Apple, SPV_V_ARM, SPV_V_Imagination,
+    SPV_V_Intel, SPV_V_NVIDIA, SPV_V_Qualcomm, SPV_V_SwiftShader,
     SPV_V_Unknown
   ]>;
 
