@@ -5611,8 +5611,18 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
 
       // Build vector (integer) scalar operands may need implicit
       // truncation - do this before constant folding.
-      if (ScalarVT.isInteger() && ScalarVT.bitsGT(InSVT))
+      if (ScalarVT.isInteger() && ScalarVT.bitsGT(InSVT)) {
+        // Don't create illegally-typed nodes unless they're constants or undef
+        // - if we fail to constant fold we can't guarantee the (dead) nodes
+        // we're creating will be cleaned up before being visited for
+        // legalization.
+        if (NewNodesMustHaveLegalTypes && !ScalarOp.isUndef() &&
+            !isa<ConstantSDNode>(ScalarOp) &&
+            TLI->getTypeAction(*getContext(), InSVT) !=
+                TargetLowering::TypeLegal)
+          return SDValue();
         ScalarOp = getNode(ISD::TRUNCATE, DL, InSVT, ScalarOp);
+      }
 
       ScalarOps.push_back(ScalarOp);
     }
