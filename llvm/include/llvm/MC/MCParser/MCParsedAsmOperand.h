@@ -62,6 +62,13 @@ public:
   /// isMem - Is this a memory operand?
   virtual bool isMem() const = 0;
 
+  /// isMemUseUpRegs - Is memory operand use up regs, for example, intel MS
+  /// inline asm may use ARR[baseReg + IndexReg + ...] which may use up regs
+  /// in [...] expr, so ARR[baseReg + IndexReg + ...] can not use extra reg
+  /// for ARR. For example, calculating ARR address to a reg or use another
+  /// base reg in PIC model.
+  virtual bool isMemUseUpRegs() const { return false; }
+
   /// getStartLoc - Get the location of the first token of this operand.
   virtual SMLoc getStartLoc() const = 0;
   /// getEndLoc - Get the location of the last token of this operand.
