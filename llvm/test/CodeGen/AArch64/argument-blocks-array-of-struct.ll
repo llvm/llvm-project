@@ -452,8 +452,8 @@ define void @caller_in_memory() {
 ; CHECK-LABEL: caller_in_memory:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    add x8, sp, #8
 ; CHECK-NEXT:    bl return_in_memory
@@ -496,8 +496,8 @@ define void @argument_in_memory() {
 ; CHECK-LABEL: argument_in_memory:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    adrp x8, in_memory_store
 ; CHECK-NEXT:    add x8, x8, :lo12:in_memory_store

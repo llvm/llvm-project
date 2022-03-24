@@ -462,8 +462,8 @@ define i128 @i128_saturating_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_saturating_mul:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
