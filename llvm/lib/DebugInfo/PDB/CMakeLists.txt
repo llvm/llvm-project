@@ -47,12 +47,15 @@ add_pdb_impl_folder(Native
   Native/DbiStream.cpp
   Native/DbiStreamBuilder.cpp
   Native/EnumTables.cpp
+  Native/FormatUtil.cpp
   Native/GlobalsStream.cpp
   Native/Hash.cpp
   Native/HashTable.cpp
   Native/InfoStream.cpp
   Native/InfoStreamBuilder.cpp
   Native/InjectedSourceStream.cpp
+  Native/InputFile.cpp
+  Native/LinePrinter.cpp
   Native/ModuleDebugStream.cpp
   Native/NativeCompilandSymbol.cpp
   Native/NativeEnumGlobals.cpp

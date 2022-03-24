@@ -8,7 +8,6 @@
 
 #include "BytesOutputStyle.h"
 
-#include "FormatUtil.h"
 #include "StreamUtil.h"
 #include "llvm-pdbutil.h"
 
@@ -17,6 +16,7 @@
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
@@ -83,7 +83,7 @@ static void printHeader(LinePrinter &P, const Twine &S) {
 }
 
 BytesOutputStyle::BytesOutputStyle(PDBFile &File)
-    : File(File), P(2, false, outs()) {}
+    : File(File), P(2, false, outs(), opts::Filters) {}
 
 Error BytesOutputStyle::dump() {
 

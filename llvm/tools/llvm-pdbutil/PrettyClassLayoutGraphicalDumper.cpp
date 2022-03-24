@@ -8,7 +8,6 @@
 
 #include "PrettyClassLayoutGraphicalDumper.h"
 
-#include "LinePrinter.h"
 #include "PrettyClassDefinitionDumper.h"
 #include "PrettyEnumDumper.h"
 #include "PrettyFunctionDumper.h"

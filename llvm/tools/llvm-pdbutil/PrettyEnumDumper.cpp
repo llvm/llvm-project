@@ -8,7 +8,6 @@
 
 #include "PrettyEnumDumper.h"
 
-#include "LinePrinter.h"
 #include "PrettyBuiltinDumper.h"
 #include "llvm-pdbutil.h"
 
