@@ -1233,8 +1233,15 @@ void IRLinker::linkNamedMDNodes() {
       continue;
     // Don't import pseudo probe descriptors here for thinLTO. They will be
     // emitted by the originating module.
-    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName)
+    if (IsPerformingImport && NMD.getName() == PseudoProbeDescMetadataName) {
+      if (!DstM.getNamedMetadata(NMD.getName()))
+        emitWarning("Pseudo-probe ignored: source module '" +
+                    SrcM->getModuleIdentifier() +
+                    "' is compiled with -fpseudo-probe-for-profiling while "
+                    "destination module '" +
+                    DstM.getModuleIdentifier() + "' is not\n");
       continue;
+    }
     NamedMDNode *DestNMD = DstM.getOrInsertNamedMetadata(NMD.getName());
     // Add Src elements into Dest node.
     for (const MDNode *Op : NMD.operands())
