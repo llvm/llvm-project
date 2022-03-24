@@ -1366,11 +1366,7 @@ cc_library(
     hdrs = [
         "include/llvm-c/Transforms/Coroutines.h",
         "include/llvm/Transforms/Coroutines.h",
-        "include/llvm/Transforms/Coroutines/CoroCleanup.h",
-        "include/llvm/Transforms/Coroutines/CoroEarly.h",
-        "include/llvm/Transforms/Coroutines/CoroElide.h",
-        "include/llvm/Transforms/Coroutines/CoroSplit.h",
-    ],
+    ] + glob(["include/llvm/Transforms/Coroutines/*.h"]),
     copts = llvm_copts,
     deps = [
         ":Analysis",
