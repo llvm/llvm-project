@@ -14,13 +14,13 @@
 #include <cstdint>
 #include <type_traits>
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
-#include "llvm/IR/Function.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -163,11 +163,6 @@ bool mergeStackMap(const CallStackMap &From, CallStackMap &To) {
   return false;
 }
 
-StringRef trimSuffix(const StringRef Name) {
-  const auto Pos = Name.find(".llvm.");
-  return Name.take_front(Pos);
-}
-
 Error report(Error E, const StringRef Context) {
   return joinErrors(createStringError(inconvertibleErrorCode(), Context),
                     std::move(E));
@@ -233,9 +228,10 @@ void RawMemProfReader::printYAML(raw_ostream &OS) {
   printSummaries(OS);
   // Print out the merged contents of the profiles.
   OS << "  Records:\n";
-  for (const auto &Record : *this) {
+  for (const auto &Entry : *this) {
     OS << "  -\n";
-    Record.print(OS);
+    OS << "    FunctionGUID: " << Entry.first << "\n";
+    Entry.second.print(OS);
   }
 }
 
@@ -288,7 +284,90 @@ Error RawMemProfReader::initialize() {
   if (Error E = readRawProfile())
     return E;
 
-  return symbolizeAndFilterStackFrames();
+  if (Error E = symbolizeAndFilterStackFrames())
+    return E;
+
+  return mapRawProfileToRecords();
+}
+
+Error RawMemProfReader::mapRawProfileToRecords() {
+  // Hold a mapping from function to each callsite location we encounter within
+  // it that is part of some dynamic allocation context. The location is stored
+  // as a pointer to a symbolized list of inline frames.
+  using LocationPtr = const llvm::SmallVector<MemProfRecord::Frame> *;
+  llvm::DenseMap<GlobalValue::GUID, llvm::SetVector<LocationPtr>>
+      PerFunctionCallSites;
+
+  // Convert the raw profile callstack data into memprof records. While doing so
+  // keep track of related contexts so that we can fill these in later.
+  for (const auto &Entry : CallstackProfileData) {
+    const uint64_t StackId = Entry.first;
+
+    auto It = StackMap.find(StackId);
+    if (It == StackMap.end())
+      return make_error<InstrProfError>(
+          instrprof_error::malformed,
+          "memprof callstack record does not contain id: " + Twine(StackId));
+
+    // Construct the symbolized callstack.
+    llvm::SmallVector<MemProfRecord::Frame> Callstack;
+    Callstack.reserve(It->getSecond().size());
+
+    llvm::ArrayRef<uint64_t> Addresses = It->getSecond();
+    for (size_t I = 0; I < Addresses.size(); I++) {
+      const uint64_t Address = Addresses[I];
+      assert(SymbolizedFrame.count(Address) > 0 &&
+             "Address not found in SymbolizedFrame map");
+      const SmallVector<MemProfRecord::Frame> &Frames =
+          SymbolizedFrame[Address];
+
+      assert(!Frames.back().IsInlineFrame &&
+             "The last frame should not be inlined");
+
+      // Record the callsites for each function. Skip the first frame of the
+      // first address since it is the allocation site itself that is recorded
+      // as an alloc site.
+      for (size_t J = 0; J < Frames.size(); J++) {
+        if (I == 0 && J == 0)
+          continue;
+        // We attach the entire bottom-up frame here for the callsite even
+        // though we only need the frames up to and including the frame for
+        // Frames[J].Function. This will enable better deduplication for
+        // compression in the future.
+        PerFunctionCallSites[Frames[J].Function].insert(&Frames);
+      }
+
+      // Add all the frames to the current allocation callstack.
+      Callstack.append(Frames.begin(), Frames.end());
+    }
+
+    // We attach the memprof record to each function bottom-up including the
+    // first non-inline frame.
+    for (size_t I = 0; /*Break out using the condition below*/; I++) {
+      auto Result =
+          FunctionProfileData.insert({Callstack[I].Function, MemProfRecord()});
+      MemProfRecord &Record = Result.first->second;
+      Record.AllocSites.emplace_back(Callstack, Entry.second);
+
+      if (!Callstack[I].IsInlineFrame)
+        break;
+    }
+  }
+
+  // Fill in the related callsites per function.
+  for (auto I = PerFunctionCallSites.begin(), E = PerFunctionCallSites.end();
+       I != E; I++) {
+    const GlobalValue::GUID Id = I->first;
+    // Some functions may have only callsite data and no allocation data. Here
+    // we insert a new entry for callsite data if we need to.
+    auto Result = FunctionProfileData.insert({Id, MemProfRecord()});
+    MemProfRecord &Record = Result.first->second;
+    for (LocationPtr Loc : I->getSecond()) {
+      Record.CallSites.push_back(*Loc);
+    }
+  }
+
+  return Error::success();
 }
 
 Error RawMemProfReader::symbolizeAndFilterStackFrames() {
@@ -331,15 +410,10 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
         LLVM_DEBUG(
             // Print out the name to guid mapping for debugging.
             llvm::dbgs() << "FunctionName: " << Frame.FunctionName << " GUID: "
-                         << Function::getGUID(trimSuffix(Frame.FunctionName))
+                         << MemProfRecord::getGUID(Frame.FunctionName)
                          << "\n";);
         SymbolizedFrame[VAddr].emplace_back(
-            // We use the function guid which we expect to be a uint64_t. At
-            // this time, it is the lower 64 bits of the md5 of the function
-            // name. Any suffix with .llvm. is trimmed since these are added by
-            // thinLTO global promotion. At the time the profile is consumed,
-            // these suffixes will not be present.
-            Function::getGUID(trimSuffix(Frame.FunctionName)),
+            MemProfRecord::getGUID(Frame.FunctionName),
             Frame.Line - Frame.StartLine, Frame.Column,
             // Only the last entry is not an inlined location.
             I != NumFrames - 1);
@@ -359,7 +433,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
   // Drop the entries where the callstack is empty.
   for (const uint64_t Id : EntriesToErase) {
     StackMap.erase(Id);
-    ProfileData.erase(Id);
+    CallstackProfileData.erase(Id);
   }
 
   if (StackMap.empty())
@@ -394,10 +468,10 @@ Error RawMemProfReader::readRawProfile() {
     // raw profiles in the same binary file are from the same process so the
     // stackdepot ids are the same.
     for (const auto &Value : readMemInfoBlocks(Next + Header->MIBOffset)) {
-      if (ProfileData.count(Value.first)) {
-        ProfileData[Value.first].Merge(Value.second);
+      if (CallstackProfileData.count(Value.first)) {
+        CallstackProfileData[Value.first].Merge(Value.second);
       } else {
-        ProfileData[Value.first] = Value.second;
+        CallstackProfileData[Value.first] = Value.second;
       }
     }
 
@@ -438,29 +512,14 @@ RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
   return object::SectionedAddress{VirtualAddress};
 }
 
-Error RawMemProfReader::fillRecord(const uint64_t Id, const MemInfoBlock &MIB,
-                                   MemProfRecord &Record) {
-  auto &CallStack = StackMap[Id];
-  for (const uint64_t Address : CallStack) {
-    assert(SymbolizedFrame.count(Address) &&
-           "Address not found in symbolized frame cache.");
-    Record.CallStack.append(SymbolizedFrame[Address]);
-  }
-  Record.Info = PortableMemInfoBlock(MIB);
-  return Error::success();
-}
-
-Error RawMemProfReader::readNextRecord(MemProfRecord &Record) {
-  if (ProfileData.empty())
+Error RawMemProfReader::readNextRecord(GuidMemProfRecordPair &GuidRecord) {
+  if (FunctionProfileData.empty())
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
-  if (Iter == ProfileData.end())
+  if (Iter == FunctionProfileData.end())
     return make_error<InstrProfError>(instrprof_error::eof);
 
-  Record.clear();
-  if (Error E = fillRecord(Iter->first, Iter->second, Record)) {
-    return E;
-  }
+  GuidRecord = {Iter->first, Iter->second};
   Iter++;
   return Error::success();
 }

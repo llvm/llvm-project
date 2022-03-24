@@ -267,8 +267,8 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     }
 
     // Add the records into the writer context.
-    for (const memprof::MemProfRecord &MR : *Reader) {
-      WC->Writer.addRecord(MR, [&](Error E) {
+    for (auto I = Reader->begin(), E = Reader->end(); I != E; ++I) {
+      WC->Writer.addRecord(/*Id=*/I->first, /*Record=*/I->second, [&](Error E) {
         instrprof_error IPE = InstrProfError::take(std::move(E));
         WC->Errors.emplace_back(make_error<InstrProfError>(IPE), Filename);
       });
@@ -2133,7 +2133,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
   auto ReaderOrErr = InstrProfReader::create(Filename);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
-    Cutoffs = {800000, 900000, 950000, 990000, 999000, 999900, 999990};
+    Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
   }
   InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())

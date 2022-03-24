@@ -1129,12 +1129,20 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
 
+  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+  unsigned Opc = 0;
   // Calls with operand bundle "clang.arc.attachedcall" are special. They should
   // be expanded to the call, directly followed by a special marker sequence and
   // a call to an ObjC library function.
-  unsigned Opc = 0;
   if (Info.CB && objcarc::hasAttachedCallOpBundle(Info.CB))
     Opc = AArch64::BLR_RVMARKER;
+  // A call to a returns twice function like setjmp must be followed by a bti
+  // instruction.
+  else if (Info.CB &&
+           Info.CB->getAttributes().hasFnAttr(Attribute::ReturnsTwice) &&
+           !Subtarget.noBTIAtReturnTwice() &&
+           MF.getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
+    Opc = AArch64::BLR_BTI;
   else
     Opc = getCallOpcode(MF, Info.Callee.isReg(), false);
 
@@ -1153,7 +1161,6 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Tell the call which registers are clobbered.
   const uint32_t *Mask;
-  const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const auto *TRI = Subtarget.getRegisterInfo();
 
   AArch64OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg,

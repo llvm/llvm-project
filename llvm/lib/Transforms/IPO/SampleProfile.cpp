@@ -172,10 +172,14 @@ static cl::opt<bool> ProfileSizeInline(
     cl::desc("Inline cold call sites in profile loader if it's beneficial "
              "for code size."));
 
+// Since profiles are consumed by many passes, turning on this option has
+// side effects. For instance, pre-link SCC inliner would see merged profiles
+// and inline the hot functions (that are skipped in this pass).
 static cl::opt<bool> DisableSampleLoaderInlining(
     "disable-sample-loader-inlining", cl::Hidden, cl::init(false),
-    cl::desc("If true, turn off inliner in sample profile loader. Used for "
-             "evaluation or debugging."));
+    cl::desc("If true, artifically skip inline transformation in sample-loader "
+             "pass, and merge (or scale) profiles (as configured by "
+             "--sample-profile-merge-inlinee)."));
 
 cl::opt<int> ProfileInlineGrowthLimit(
     "sample-profile-inline-growth-limit", cl::Hidden, cl::init(12),
@@ -925,6 +929,10 @@ updateIDTMetaData(Instruction &Inst,
 bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
+  // Bail out early if sample-loader inliner is disabled.
+  if (DisableSampleLoaderInlining)
+    return false;
+
   // Bail out early if MaxNumPromotions is zero.
   // This prevents allocating an array of zero length in callees below.
   if (MaxNumPromotions == 0)
@@ -1105,11 +1113,20 @@ void SampleProfileLoader::findExternalInlineCandidate(
 
 /// Iteratively inline hot callsites of a function.
 ///
-/// Iteratively traverse all callsites of the function \p F, and find if
-/// the corresponding inlined instance exists and is hot in profile. If
-/// it is hot enough, inline the callsites and adds new callsites of the
-/// callee into the caller. If the call is an indirect call, first promote
-/// it to direct call. Each indirect call is limited with a single target.
+/// Iteratively traverse all callsites of the function \p F, so as to
+/// find out callsites with corresponding inline instances.
+///
+/// For such callsites,
+/// - If it is hot enough, inline the callsites and adds callsites of the callee
+///   into the caller. If the call is an indirect call, first promote
+///   it to direct call. Each indirect call is limited with a single target.
+///
+/// - If a callsite is not inlined, merge the its profile to the outline
+///   version (if --sample-profile-merge-inlinee is true), or scale the
+///   counters of standalone function based on the profile of inlined
+///   instances (if --sample-profile-merge-inlinee is false).
+///
+///   Later passes may consume the updated profiles.
 ///
 /// \param F function to perform iterative inlining.
 /// \param InlinedGUIDs a set to be updated to include all GUIDs that are
@@ -1118,8 +1135,6 @@ void SampleProfileLoader::findExternalInlineCandidate(
 /// \returns True if there is any inline happened.
 bool SampleProfileLoader::inlineHotFunctions(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
-  if (DisableSampleLoaderInlining)
-    return false;
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||
@@ -1216,6 +1231,10 @@ bool SampleProfileLoader::inlineHotFunctions(
 
 bool SampleProfileLoader::tryInlineCandidate(
     InlineCandidate &Candidate, SmallVector<CallBase *, 8> *InlinedCallSites) {
+  // Do not attempt to inline a candidate if
+  // --disable-sample-loader-inlining is true.
+  if (DisableSampleLoaderInlining)
+    return false;
 
   CallBase &CB = *Candidate.CallInstr;
   Function *CalledFunction = CB.getCalledFunction();
@@ -1390,8 +1409,6 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
 
 bool SampleProfileLoader::inlineHotFunctionsWithPriority(
     Function &F, DenseSet<GlobalValue::GUID> &InlinedGUIDs) {
-  if (DisableSampleLoaderInlining)
-    return false;
   // ProfAccForSymsInList is used in callsiteIsHot. The assertion makes sure
   // Profile symbol list is ignored when profile-sample-accurate is on.
   assert((!ProfAccForSymsInList ||

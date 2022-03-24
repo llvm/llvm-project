@@ -153,16 +153,12 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
   // rollback b to its initial state before returning, which we will do by
   // removing all constraints beyond the original number of inequalities
   // and equalities, so we store these counts first.
-  const unsigned bInitNumIneqs = b.getNumInequalities();
-  const unsigned bInitNumEqs = b.getNumEqualities();
-  const unsigned bInitNumLocals = b.getNumLocalIds();
+  const IntegerRelation::CountsSnapshot bCounts = b.getCounts();
   // Similarly, we also want to rollback simplex to its original state.
   const unsigned initialSnapshot = simplex.getSnapshot();
 
   auto restoreState = [&]() {
-    b.removeIdRange(IdKind::Local, bInitNumLocals, b.getNumLocalIds());
-    b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
-    b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
+    b.truncate(bCounts);
     simplex.rollback(initialSnapshot);
   };
 
@@ -198,7 +194,8 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
   }
 
   unsigned offset = simplex.getNumConstraints();
-  unsigned numLocalsAdded = b.getNumLocalIds() - bInitNumLocals;
+  unsigned numLocalsAdded =
+      b.getNumLocalIds() - bCounts.getSpace().getNumLocalIds();
   simplex.appendVariable(numLocalsAdded);
 
   unsigned snapshotBeforeIntersect = simplex.getSnapshot();
@@ -235,12 +232,11 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
   // inequality, s_{i,j+1}. This function recurses into the next level i + 1
   // with the part b ^ s_i1 ^ s_i2 ^ ... ^ s_ij ^ ~s_{i,j+1}.
   auto recurseWithInequality = [&, i](ArrayRef<int64_t> ineq) {
-    size_t snapshot = simplex.getSnapshot();
+    SimplexRollbackScopeExit scopeExit(simplex);
     b.addInequality(ineq);
     simplex.addInequality(ineq);
     subtractRecursively(b, simplex, s, i + 1, result);
     b.removeInequality(b.getNumInequalities() - 1);
-    simplex.rollback(snapshot);
   };
 
   // For each inequality ineq, we first recurse with the part where ineq
@@ -522,16 +518,11 @@ PresburgerRelation SetCoalescer::coalesce() {
 /// that all inequalities of `cuttingIneqsB` are redundant for the facet of
 /// `simp` where `ineq` holds as an equality is contained within `a`.
 bool SetCoalescer::isFacetContained(ArrayRef<int64_t> ineq, Simplex &simp) {
-  unsigned snapshot = simp.getSnapshot();
+  SimplexRollbackScopeExit scopeExit(simp);
   simp.addEquality(ineq);
-  if (llvm::any_of(cuttingIneqsB, [&simp](ArrayRef<int64_t> curr) {
-        return !simp.isRedundantInequality(curr);
-      })) {
-    simp.rollback(snapshot);
-    return false;
-  }
-  simp.rollback(snapshot);
-  return true;
+  return llvm::all_of(cuttingIneqsB, [&simp](ArrayRef<int64_t> curr) {
+    return simp.isRedundantInequality(curr);
+  });
 }
 
 void SetCoalescer::addCoalescedDisjunct(unsigned i, unsigned j,

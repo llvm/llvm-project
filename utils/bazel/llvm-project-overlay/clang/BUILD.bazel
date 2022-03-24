@@ -1284,24 +1284,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "symbol_graph",
-    srcs = glob([
-        "lib/SymbolGraph/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/clang/SymbolGraph/*.h",
-    ]),
-    includes = ["include"],
-    deps = [
-        ":ast",
-        ":basic",
-        ":frontend",
-        ":index",
-        "//llvm:Support",
-    ],
-)
-
 gentbl(
     name = "driver_options_inc_gen",
     tbl_outs = [(
@@ -1731,10 +1713,10 @@ cc_library(
         ":codegen",
         ":config",
         ":driver",
+        ":extract_api",
         ":frontend",
         ":frontend_rewrite",
         ":static_analyzer_frontend",
-        ":symbol_graph",
         "//llvm:Option",
         "//llvm:Support",
     ],
@@ -2158,6 +2140,24 @@ cc_binary(
         ":frontend",
         ":tooling",
         ":tooling_dependency_scanning",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "extract_api",
+    srcs = glob([
+        "lib/ExtractAPI/**/*.cpp",
+        "lib/ExtractAPI/**/*.h",
+    ]),
+    hdrs = glob(["include/clang/ExtractAPI/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":frontend",
+        ":index",
+        "//llvm:Option",
         "//llvm:Support",
     ],
 )

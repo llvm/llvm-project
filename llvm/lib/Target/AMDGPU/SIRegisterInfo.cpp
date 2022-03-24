@@ -546,6 +546,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
   Reserved.set(AMDGPU::MODE);
 
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // Reserve special purpose registers.
+  //
   // EXEC_LO and EXEC_HI could be allocated and used as regular register, but
   // this seems likely to result in bugs, so I'm marking them as reserved.
   reserveRegisterTuples(Reserved, AMDGPU::EXEC);
@@ -596,47 +600,12 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     Reserved.set(AMDGPU::VCC_HI);
   }
 
+  // Reserve SGPRs.
+  //
   unsigned MaxNumSGPRs = ST.getMaxNumSGPRs(MF);
   unsigned TotalNumSGPRs = AMDGPU::SGPR_32RegClass.getNumRegs();
   for (unsigned i = MaxNumSGPRs; i < TotalNumSGPRs; ++i) {
     unsigned Reg = AMDGPU::SGPR_32RegClass.getRegister(i);
-    reserveRegisterTuples(Reserved, Reg);
-  }
-
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
-  unsigned MaxNumAGPRs = MaxNumVGPRs;
-  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
-
-  if (ST.hasGFX90AInsts()) {
-    // In an entry function without calls and AGPRs used it is possible to use
-    // the whole register budget for VGPRs.
-
-    // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and
-    //       split register file accordingly.
-    if (MFI->usesAGPRs(MF)) {
-      MaxNumVGPRs /= 2;
-      MaxNumAGPRs = MaxNumVGPRs;
-    } else {
-      if (MaxNumVGPRs > TotalNumVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
-        MaxNumVGPRs = TotalNumVGPRs;
-      } else
-        MaxNumAGPRs = 0;
-    }
-  } else if (ST.hasMAIInsts()) {
-    // In order to guarantee copying between AGPRs, we need a scratch VGPR
-    // available at all times.
-    reserveRegisterTuples(Reserved, AMDGPU::VGPR32);
-  }
-
-  for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
-    unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
-    reserveRegisterTuples(Reserved, Reg);
-  }
-
-  for (unsigned i = MaxNumAGPRs; i < TotalNumVGPRs; ++i) {
-    unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
     reserveRegisterTuples(Reserved, Reg);
   }
 
@@ -648,22 +617,10 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       Reserved.set(Low);
   }
 
-  for (auto Reg : AMDGPU::AGPR_32RegClass) {
-    Reserved.set(getSubReg(Reg, AMDGPU::hi16));
-  }
-
-  // Reserve all the rest AGPRs if there are no instructions to use it.
-  if (!ST.hasMAIInsts()) {
-    for (unsigned i = 0; i < MaxNumVGPRs; ++i) {
-      unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
-      reserveRegisterTuples(Reserved, Reg);
-    }
-  }
-
   Register ScratchRSrcReg = MFI->getScratchRSrcReg();
   if (ScratchRSrcReg != AMDGPU::NoRegister) {
-    // Reserve 4 SGPRs for the scratch buffer resource descriptor in case we need
-    // to spill.
+    // Reserve 4 SGPRs for the scratch buffer resource descriptor in case we
+    // need to spill.
     // TODO: May need to reserve a VGPR if doing LDS spilling.
     reserveRegisterTuples(Reserved, ScratchRSrcReg);
   }
@@ -672,7 +629,6 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // which is detected after the function is lowered. If we aren't really going
   // to need SP, don't bother reserving it.
   MCRegister StackPtrReg = MFI->getStackPtrOffsetReg();
-
   if (StackPtrReg) {
     reserveRegisterTuples(Reserved, StackPtrReg);
     assert(!isSubRegister(ScratchRSrcReg, StackPtrReg));
@@ -690,20 +646,64 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     assert(!isSubRegister(ScratchRSrcReg, BasePtrReg));
   }
 
+  // Reserve VGPRs/AGPRs.
+  //
+  unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
+  unsigned MaxNumAGPRs = MaxNumVGPRs;
+  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+
+  // Reserve all the AGPRs if there are no instructions to use it.
+  if (!ST.hasMAIInsts()) {
+    for (unsigned i = 0; i < MaxNumAGPRs; ++i) {
+      unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
+      reserveRegisterTuples(Reserved, Reg);
+    }
+  }
+
+  for (auto Reg : AMDGPU::AGPR_32RegClass) {
+    Reserved.set(getSubReg(Reg, AMDGPU::hi16));
+  }
+
+  // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
+  // a wave may have up to 512 total vector registers combining together both
+  // VGPRs and AGPRs. Hence, in an entry function without calls and without
+  // AGPRs used within it, it is possible to use the whole vector register
+  // budget for VGPRs.
+  //
+  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
+  //       register file accordingly.
+  if (ST.hasGFX90AInsts()) {
+    if (MFI->usesAGPRs(MF)) {
+      MaxNumVGPRs /= 2;
+      MaxNumAGPRs = MaxNumVGPRs;
+    } else {
+      if (MaxNumVGPRs > TotalNumVGPRs) {
+        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
+        MaxNumVGPRs = TotalNumVGPRs;
+      } else
+        MaxNumAGPRs = 0;
+    }
+  }
+
+  for (unsigned i = MaxNumVGPRs; i < TotalNumVGPRs; ++i) {
+    unsigned Reg = AMDGPU::VGPR_32RegClass.getRegister(i);
+    reserveRegisterTuples(Reserved, Reg);
+  }
+
+  for (unsigned i = MaxNumAGPRs; i < TotalNumVGPRs; ++i) {
+    unsigned Reg = AMDGPU::AGPR_32RegClass.getRegister(i);
+    reserveRegisterTuples(Reserved, Reg);
+  }
+
+  // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
+  // VGPR available at all times.
+  if (ST.hasMAIInsts() && !ST.hasGFX90AInsts()) {
+    reserveRegisterTuples(Reserved, AMDGPU::VGPR32);
+  }
+
   for (auto Reg : MFI->WWMReservedRegs) {
     reserveRegisterTuples(Reserved, Reg.first);
   }
-
-  // Reserve VGPRs used for SGPR spilling.
-  // Note we treat freezeReservedRegs unusually because we run register
-  // allocation in two phases. It's OK to re-freeze with new registers for the
-  // second run.
-#if 0
-  for (auto &SpilledFI : MFI->sgpr_spill_vgprs()) {
-    for (auto &SpilledVGPR : SpilledFI.second)
-      reserveRegisterTuples(Reserved, SpilledVGPR.VGPR);
-  }
-#endif
 
   // FIXME: Stop using reserved registers for this.
   for (MCPhysReg Reg : MFI->getAGPRSpillVGPRs())

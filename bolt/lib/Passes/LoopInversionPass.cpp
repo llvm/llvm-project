@@ -54,11 +54,16 @@ bool LoopInversionPass::runOnFunction(BinaryFunction &BF) {
         }
       }
 
-      assert(SecondSucc != nullptr && "Unable to find second BB successor");
-      const uint64_t BBCount = SuccBB->getBranchInfo(*BB).Count;
-      const uint64_t OtherCount = SuccBB->getBranchInfo(*SecondSucc).Count;
-      if ((BBCount < OtherCount) && (BBIndex > SuccBBIndex))
+      assert(SecondSucc != nullptr && "Unable to find a second BB successor");
+      const uint64_t LoopCount = SuccBB->getBranchInfo(*BB).Count;
+      const uint64_t ExitCount = SuccBB->getBranchInfo(*SecondSucc).Count;
+
+      if (LoopCount < ExitCount) {
+        if (BBIndex > SuccBBIndex)
+          continue;
+      } else if (BBIndex < SuccBBIndex) {
         continue;
+      }
 
       IsChanged = true;
       BB->setLayoutIndex(SuccBBIndex);

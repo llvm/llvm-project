@@ -1028,9 +1028,8 @@ struct ReorderCastOpsOnBroadcast
     Type castResTy = getElementTypeOrSelf(op->getResult(0));
     if (auto vecTy = bcastOp.getSourceType().dyn_cast<VectorType>())
       castResTy = VectorType::get(vecTy.getShape(), castResTy);
-    OperationState state(op->getLoc(), op->getName(), bcastOp.source(),
-                         castResTy, op->getAttrs());
-    auto castOp = rewriter.createOperation(state);
+    auto castOp = rewriter.create(op->getLoc(), op->getName().getIdentifier(),
+                                  bcastOp.source(), castResTy, op->getAttrs());
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         op, op->getResult(0).getType(), castOp->getResult(0));
     return success();
@@ -1068,9 +1067,8 @@ struct ReorderCastOpsOnTranspose
     auto castResTy = transpOp.getVectorType();
     castResTy = VectorType::get(castResTy.getShape(),
                                 getElementTypeOrSelf(op->getResult(0)));
-    OperationState state(op->getLoc(), op->getName(), transpOp.vector(),
-                         castResTy, op->getAttrs());
-    auto castOp = rewriter.createOperation(state);
+    auto castOp = rewriter.create(op->getLoc(), op->getName().getIdentifier(),
+                                  transpOp.vector(), castResTy, op->getAttrs());
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(
         op, op->getResult(0).getType(), castOp->getResult(0),
         transpOp.getTransp());

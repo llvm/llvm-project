@@ -70,10 +70,41 @@ static llvm::cl::opt<std::string>
     outputFilename("o", llvm::cl::desc("Specify the output filename"),
                    llvm::cl::value_desc("filename"));
 
+static llvm::cl::list<std::string>
+    includeDirs("I", llvm::cl::desc("include module search paths"));
+
+static llvm::cl::alias includeAlias("module-directory",
+                                    llvm::cl::desc("module search directory"),
+                                    llvm::cl::aliasopt(includeDirs));
+
+static llvm::cl::list<std::string>
+    intrinsicIncludeDirs("J", llvm::cl::desc("intrinsic module search paths"));
+
+static llvm::cl::alias
+    intrinsicIncludeAlias("intrinsic-module-directory",
+                          llvm::cl::desc("intrinsic module directory"),
+                          llvm::cl::aliasopt(intrinsicIncludeDirs));
+
+static llvm::cl::opt<std::string>
+    moduleDir("module", llvm::cl::desc("module output directory (default .)"),
+              llvm::cl::init("."));
+
+static llvm::cl::opt<std::string>
+    moduleSuffix("module-suffix", llvm::cl::desc("module file suffix override"),
+                 llvm::cl::init(".mod"));
+
 static llvm::cl::opt<bool>
     emitFIR("emit-fir",
             llvm::cl::desc("Dump the FIR created by lowering and exit"),
             llvm::cl::init(false));
+
+static llvm::cl::opt<bool> warnStdViolation("Mstandard",
+                                            llvm::cl::desc("emit warnings"),
+                                            llvm::cl::init(false));
+
+static llvm::cl::opt<bool> warnIsError("Werror",
+                                       llvm::cl::desc("warnings are errors"),
+                                       llvm::cl::init(false));
 
 static llvm::cl::opt<bool> pftDumpTest(
     "pft-test",
@@ -240,6 +271,18 @@ int main(int argc, char **argv) {
   ProgramName programPrefix;
   programPrefix = argv[0] + ": "s;
 
+  if (includeDirs.size() == 0) {
+    includeDirs.push_back(".");
+    // Default Fortran modules should be installed in include/flang (a sibling
+    // to the bin) directory.
+    intrinsicIncludeDirs.push_back(
+        llvm::sys::path::parent_path(
+            llvm::sys::path::parent_path(
+                llvm::sys::fs::getMainExecutable(argv[0], nullptr)))
+            .str() +
+        "/include/flang");
+  }
+
   Fortran::parser::Options options;
   options.predefinitions.emplace_back("__flang__"s, "1"s);
   options.predefinitions.emplace_back("__flang_major__"s,
@@ -266,6 +309,12 @@ int main(int argc, char **argv) {
   Fortran::parser::AllCookedSources allCookedSources(allSources);
   Fortran::semantics::SemanticsContext semanticsContext{
       defaultKinds, options.features, allCookedSources};
+  semanticsContext.set_moduleDirectory(moduleDir)
+      .set_moduleFileSuffix(moduleSuffix)
+      .set_searchDirectories(includeDirs)
+      .set_intrinsicModuleDirectories(intrinsicIncludeDirs)
+      .set_warnOnNonstandardUsage(warnStdViolation)
+      .set_warningsAreErrors(warnIsError);
 
   return mlir::failed(convertFortranSourceToMLIR(
       inputFilename, options, programPrefix, semanticsContext, passPipe));

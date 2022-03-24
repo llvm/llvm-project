@@ -187,7 +187,7 @@ def Builtin_Index : Builtin_Type<"Index"> {
     ```
 
     The index type is a signless integer whose size is equal to the natural
-    machine word of the target ( [rationale](https://mlir.llvm.org/docs/Rationale/Rationale/#integer-signedness-semantics) )
+    machine word of the target ( [rationale](../../Rationale/Rationale/#integer-signedness-semantics) )
     and is used by the affine constructs in MLIR.
 
     **Rationale:** integers of platform-specific bit widths are practical to
@@ -755,7 +755,7 @@ def Builtin_Tuple : Builtin_Type<"Tuple", [
 
     **Rationale:** Though this type is first class in the type system, MLIR
     provides no standard operations for operating on `tuple` types
-    ([rationale](Rationale/Rationale/#tuple-types)).
+    ([rationale](../../Rationale/Rationale/#tuple-types)).
 
     Examples:
 

@@ -38,14 +38,7 @@
 ; CHECK-DEFAULT-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-MATRIX: Running pass: LowerMatrixIntrinsicsPass
 ; CHECK-MATRIX-NEXT: Running analysis: TargetIRAnalysis
-; CHECK-CORO-NEXT: Running pass: CoroEarlyPass
-; CHECK-CORO-NEXT: Running analysis: InnerAnalysisManagerProxy
-; CHECK-CORO-NEXT: Running analysis: LazyCallGraphAnalysis
-; CHECK-CORO-NEXT: Running analysis: TargetLibraryAnalysis
-; CHECK-CORO-NEXT: Running analysis: FunctionAnalysisManagerCGSCCProxy
-; CHECK-CORO-NEXT: Running analysis: OuterAnalysisManagerProxy
-; CHECK-CORO-NEXT: Running pass: CoroSplitPass
-; CHECK-CORO-NEXT: Running pass: CoroCleanupPass
+; CHECK-CORO-NEXT: Running pass: CoroConditionalWrapper
 ; CHECK-PRE-LINK: Running pass: CanonicalizeAliasesPass
 ; CHECK-PRE-LINK-NEXT: Running pass: NameAnonGlobalPass
 ; CHECK-THINLTO: Running pass: Annotation2MetadataPass
@@ -59,6 +52,7 @@
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-LTO-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-CORO-NEXT: Running pass: AnnotationRemarksPass
+; CHECK-CORO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass
 ; CHECK-LTO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-NEXT: Running pass: PrintModulePass

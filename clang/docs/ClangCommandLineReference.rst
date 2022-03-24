@@ -3329,7 +3329,7 @@ Work around VLLDM erratum CVE-2021-35465 (ARM only)
 
 .. option:: -mno-bti-at-return-twice
 
-Do not add a BTI instruction after a setjmp or other return-twice construct (Arm only)
+Do not add a BTI instruction after a setjmp or other return-twice construct (AArch32/AArch64 only)
 
 .. option:: -mno-movt
 

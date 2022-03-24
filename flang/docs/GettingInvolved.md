@@ -16,12 +16,11 @@ The Flang Project welcomes contributions of all kinds.
 Please feel free to join the mailing list or the slack channel for discussions related to development of Flang.
 To understand the status of various developments in Flang please join the respective call.
 
-## Mailing Lists
+## Forum and Mailing Lists
 
-[Developer's List (flang-dev)](http://lists.llvm.org/mailman/listinfo/flang-dev)
+[Forum](https://discourse.llvm.org/c/subprojects/flang)
 
-  This list is for people who want to be included in technical discussions related to Flang. People post to this list when they have questions about writing code
-  for or using the Flang tools. It is relatively low volume.
+  Flang forums are for technical discussions, questions about writing code for, or using Flang tools.
 
 
 [Commits Archive (flang-commits)](http://lists.llvm.org/pipermail/flang-commits)
@@ -49,7 +48,7 @@ To understand the status of various developments in Flang please join the respec
 -   Time: On Wednesdays 8:30 Pacific Time, on the weeks alternating with regular Flang Community Technical Biweekly Call.
 -   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/10T-S2J3GrahpG4Ooif93NSTz2zBW0MQc_RlwHi0-afY/edit?usp=sharing).
     If you can not access the Google Doc, please send an email to Alexis Perry-Holby at aperry@lanl.gov requesting to be added to the access list.
--   Minutes from older meetings were sent to [flang-dev](http://lists.llvm.org/mailman/listinfo/flang-dev). Search for `Flang Biweekly Sync - Notes`.
+-   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 
 ### Flang Community Technical Biweekly Call
 

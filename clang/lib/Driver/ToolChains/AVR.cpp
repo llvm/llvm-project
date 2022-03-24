@@ -28,6 +28,7 @@ using namespace llvm::opt;
 
 namespace {
 
+// NOTE: This list has been synchronized with gcc-avr 5.4.0 and avr-libc 2.0.0.
 constexpr struct {
   StringRef Name;
   StringRef SubPath;
@@ -88,6 +89,8 @@ constexpr struct {
     {"at90usb82", "avr35", "avr35", 0x800100},
     {"at90usb162", "avr35", "avr35", 0x800100},
     {"ata5505", "avr35", "avr35", 0x800100},
+    {"ata6617c", "avr35", "avr35", 0x800100},
+    {"ata664251", "avr35", "avr35", 0x800100},
     {"atmega8u2", "avr35", "avr35", 0x800100},
     {"atmega16u2", "avr35", "avr35", 0x800100},
     {"atmega32u2", "avr35", "avr35", 0x800100},
@@ -97,6 +100,7 @@ constexpr struct {
     {"atmega8a", "avr4", "avr4", 0x800060},
     {"ata6285", "avr4", "avr4", 0x800100},
     {"ata6286", "avr4", "avr4", 0x800100},
+    {"ata6612c", "avr4", "avr4", 0x800100},
     {"atmega48", "avr4", "avr4", 0x800100},
     {"atmega48a", "avr4", "avr4", 0x800100},
     {"atmega48pa", "avr4", "avr4", 0x800100},
@@ -116,8 +120,17 @@ constexpr struct {
     {"at90pwm3", "avr4", "avr4", 0x800100},
     {"at90pwm3b", "avr4", "avr4", 0x800100},
     {"at90pwm81", "avr4", "avr4", 0x800100},
+    {"ata5702m322", "avr5", "avr5", 0x800200},
+    {"ata5782", "avr5", "avr5", 0x800200},
     {"ata5790", "avr5", "avr5", 0x800100},
+    {"ata5790n", "avr5", "avr5", 0x800100},
+    {"ata5791", "avr5", "avr5", 0x800100},
     {"ata5795", "avr5", "avr5", 0x800100},
+    {"ata5831", "avr5", "avr5", 0x800200},
+    {"ata6613c", "avr5", "avr5", 0x800100},
+    {"ata6614q", "avr5", "avr5", 0x800100},
+    {"ata8210", "avr5", "avr5", 0x800200},
+    {"ata8510", "avr5", "avr5", 0x800200},
     {"atmega16", "avr5", "avr5", 0x800060},
     {"atmega16a", "avr5", "avr5", 0x800060},
     {"atmega161", "avr5", "avr5", 0x800060},
@@ -192,6 +205,7 @@ constexpr struct {
     {"atmega32hvb", "avr5", "avr5", 0x800100},
     {"atmega32hvbrevb", "avr5", "avr5", 0x800100},
     {"atmega64hve", "avr5", "avr5", 0x800100},
+    {"atmega64hve2", "avr5", "avr5", 0x800100},
     {"at90can32", "avr5", "avr5", 0x800100},
     {"at90can64", "avr5", "avr5", 0x800100},
     {"at90pwm161", "avr5", "avr5", 0x800100},
@@ -238,11 +252,14 @@ constexpr struct {
     {"atxmega16d4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32a4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32a4u", "avrxmega2", "avrxmega2", 0x802000},
+    {"atxmega32c3", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32c4", "avrxmega2", "avrxmega2", 0x802000},
+    {"atxmega32d3", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32d4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega32e5", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega16e5", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega8e5", "avrxmega2", "avrxmega2", 0x802000},
+    {"atxmega64a3", "avrxmega4", "avrxmega4", 0x802000},
     {"atxmega64a3u", "avrxmega4", "avrxmega4", 0x802000},
     {"atxmega64a4u", "avrxmega4", "avrxmega4", 0x802000},
     {"atxmega64b1", "avrxmega4", "avrxmega4", 0x802000},

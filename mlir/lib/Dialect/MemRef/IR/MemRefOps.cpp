@@ -761,7 +761,8 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
 
   // Early exit for the case where the number of unused dims matches the number
   // of ranks reduced.
-  if (unusedDims.count() + reducedType.getRank() == originalType.getRank())
+  if (static_cast<int64_t>(unusedDims.count()) + reducedType.getRank() ==
+      originalType.getRank())
     return unusedDims;
 
   SmallVector<int64_t> originalStrides, candidateStrides;

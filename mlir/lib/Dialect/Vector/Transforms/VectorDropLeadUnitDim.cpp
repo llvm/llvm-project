@@ -368,11 +368,9 @@ public:
         newOperands.push_back(operand);
       }
     }
-    OperationState state(op->getLoc(), op->getName());
-    state.addAttributes(op->getAttrs());
-    state.addOperands(newOperands);
-    state.addTypes(newVecType);
-    Operation *newOp = rewriter.createOperation(state);
+    Operation *newOp =
+        rewriter.create(op->getLoc(), op->getName().getIdentifier(),
+                        newOperands, newVecType, op->getAttrs());
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, vecType,
                                                      newOp->getResult(0));
     return success();
