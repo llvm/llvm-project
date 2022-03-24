@@ -9,6 +9,9 @@
 // RUN: %clang -x c++ -fsyntax-only -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns
 
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-P10
+
 // RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 // RUN: %clang -x c++ -fsyntax-only -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -ffreestanding -nostdlibinc -DNO_WARN_X86_INTRINSICS %s \
@@ -26,11 +29,11 @@ float fs[4];
 int i, i2;
 long long i64;
 
-// CHECK-LE-DAG: @_mm_shuffle_pi16.permute_selectors = internal constant [4 x i16] [i16 2312, i16 2826, i16 3340, i16 3854], align 2
-// CHECK-BE-DAG: @_mm_shuffle_pi16.permute_selectors = internal constant [4 x i16] [i16 1543, i16 1029, i16 515, i16 1], align 2
+// CHECK-LE-DAG: @_mm_shuffle_pi16.__permute_selectors = internal constant [4 x i16] [i16 2312, i16 2826, i16 3340, i16 3854], align 2
+// CHECK-BE-DAG: @_mm_shuffle_pi16.__permute_selectors = internal constant [4 x i16] [i16 1543, i16 1029, i16 515, i16 1], align 2
 
-// CHECK-LE-DAG: @_mm_shuffle_ps.permute_selectors = internal constant [4 x i32] [i32 50462976, i32 117835012, i32 185207048, i32 252579084], align 4
-// CHECK-BE-DAG: @_mm_shuffle_ps.permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
+// CHECK-LE-DAG: @_mm_shuffle_ps.__permute_selectors = internal constant [4 x i32] [i32 50462976, i32 117835012, i32 185207048, i32 252579084], align 4
+// CHECK-BE-DAG: @_mm_shuffle_ps.__permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
 
 void __attribute__((noinline))
 test_add() {
@@ -383,12 +386,12 @@ test_convert() {
 // CHECK: extractelement <4 x float> %{{[0-9a-zA-Z_.]+}}, i32 0
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_cvtss_si32
-// CHECK-LE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i64, double } asm "xxsldwi ${0:x},${0:x},${0:x},3;\0Axscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
-// CHECK-BE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i64, double } asm "xscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
-// CHECK: extractvalue { <4 x float>, i64, double } %[[VEC]], 0
-// CHECK: extractvalue { <4 x float>, i64, double } %[[VEC]], 1
-// CHECK: extractvalue { <4 x float>, i64, double } %[[VEC]], 2
-// CHECK: trunc i64 %{{[0-9a-zA-Z_.]+}} to i32
+// CHECK-LE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xxsldwi ${0:x},${0:x},${0:x},3;\0Axscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
+// CHECK-BE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
+// CHECK-P10: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i32, double } asm "xxsldwi ${0:x},${0:x},${0:x},3;\0Axscvspdp ${2:x},${0:x};\0Afctiw  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
+// CHECK: extractvalue { <4 x float>, i32, double } %[[VEC]], 0
+// CHECK: extractvalue { <4 x float>, i32, double } %[[VEC]], 1
+// CHECK: extractvalue { <4 x float>, i32, double } %[[VEC]], 2
 
 // CHECK-LABEL: define available_externally i64 @_mm_cvtss_si64
 // CHECK-LE: %[[VEC:[0-9a-zA-Z_.]+]] = call { <4 x float>, i64, double } asm "xxsldwi ${0:x},${0:x},${0:x},3;\0Axscvspdp ${2:x},${0:x};\0Afctid  $2,$2;\0Amfvsrd  $1,${2:x};\0A", "=^wa,=r,=f,0"
@@ -681,9 +684,11 @@ test_move() {
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_ps
 // CHECK-LE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef bitcast (<4 x i32> <i32 2113632, i32 -2139062144, i32 -2139062144, i32 -2139062144> to <16 x i8>))
 // CHECK-LE: extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 1
+// CHECK-LE: trunc i64 %[[EXT]] to i32
 // CHECK-BE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef bitcast (<4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 2113632> to <16 x i8>))
 // CHECK-BE: %[[EXT:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: trunc i64 %[[EXT]] to i32
+// CHECK-BE: trunc i64 %[[EXT]] to i32
+// CHECK-P10: call zeroext i32 @vec_extractm(unsigned int vector[4])(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}})
 
 void __attribute__((noinline))
 test_alt_name_move() {
@@ -882,16 +887,16 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
 // CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
 // CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
 // CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shuffle_pi16.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK-LE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
 // CHECK-BE: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
@@ -911,14 +916,14 @@ test_shuffle() {
 // CHECK: %[[SHR3:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR3]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.permute_selectors, i64 0, i64
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_ps.__permute_selectors, i64 0, i64
 // CHECK: %[[ADD2:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD2]], i32 3
 // CHECK: call <4 x float> @vec_perm(float vector[4], float vector[4], unsigned char vector[16])
