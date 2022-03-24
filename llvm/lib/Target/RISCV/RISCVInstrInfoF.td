@@ -141,13 +141,11 @@ def FNMADD_S : FPFMAS_rrr_frm<OPC_NMADD, "fnmadd.s">,
                Sched<[WriteFMA32, ReadFMA32, ReadFMA32, ReadFMA32]>;
 def          : FPFMASDynFrmAlias<FNMADD_S, "fnmadd.s">;
 
-def FCMV_EQ_S : FPALUS_rrr<OPC_CMV_FP, 0b000, "fcmv.eq.s">,
+def FCMV_LE_S : FPALUS_rrr<OPC_CMV_FP, 0b000, "fcmv.le.s">,
                 Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
-
-def FCMV_LE_S : FPALUS_rrr<OPC_CMV_FP, 0b001, "fcmv.le.s">,
+def FCMV_LT_S : FPALUS_rrr<OPC_CMV_FP, 0b001, "fcmv.lt.s">,
                 Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
-
-def FCMV_LT_S : FPALUS_rrr<OPC_CMV_FP, 0b010, "fcmv.lt.s">,
+def FCMV_EQ_S : FPALUS_rrr<OPC_CMV_FP, 0b010, "fcmv.eq.s">,
                 Sched<[WriteFALU32, ReadFALU32, ReadFALU32, ReadFALU32]>;
 
 def FADD_S : FPALUS_rr_frm<0b0000000, "fadd.s">,
