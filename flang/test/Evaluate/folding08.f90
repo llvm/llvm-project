@@ -3,6 +3,7 @@
 
 module m
   real :: a3(42:52)
+  real :: empty(52:42, 2:3, 10:1)
   integer, parameter :: lba3(*) = lbound(a3)
   logical, parameter :: test_lba3 = all(lba3 == [42])
   type :: t
@@ -38,6 +39,13 @@ module m
   logical, parameter :: test_lbfoo = all(lbfoo == [1,1])
   integer, parameter :: ubfoo(*) = ubound(foo())
   logical, parameter :: test_ubfoo = all(ubfoo == [2,3])
+
+  integer, parameter :: lbs_empty(*) = lbound(empty)
+  logical, parameter :: test_lbs_empty = all(lbs_empty == [1, 2, 1])
+  integer, parameter :: ubs_empty(*) = ubound(empty)
+  logical, parameter :: test_ubs_empty = all(ubs_empty == [0, 3, 0])
+  logical, parameter :: test_lb_empty_dim = lbound(empty, 1) == 1
+  logical, parameter :: test_ub_empty_dim = ubound(empty, 1) == 0
  contains
   function foo()
     real :: foo(2:3,4:6)

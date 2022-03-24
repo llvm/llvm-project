@@ -140,11 +140,11 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
                                      "rank-%d assumed-size array"_err_en_US,
                   rank, rank);
               return MakeInvalidIntrinsic<T>(std::move(funcRef));
-            } else if (auto ub{GetUpperBound(context, *named, *dim)}) {
+            } else if (auto ub{GetUBOUND(context, *named, *dim)}) {
               return Fold(context, ConvertToType<T>(std::move(*ub)));
             }
           } else {
-            Shape ubounds{GetUpperBounds(context, *named)};
+            Shape ubounds{GetUBOUNDs(context, *named)};
             if (semantics::IsAssumedSizeArray(symbol)) {
               CHECK(!ubounds.back());
               ubounds.back() = ExtentExpr{-1};
