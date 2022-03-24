@@ -184,6 +184,7 @@ void TestLinalgCodegenStrategy::runStrategy(
     LinalgPaddingOptions paddingOptions,
     vector::VectorContractLowering vectorContractLowering,
     vector::VectorTransferSplit vectorTransferSplit) {
+  std::string anchorOpNameOrWildcard = fuse ? "" : anchorOpName.getValue();
   CodegenStrategy strategy;
   strategy
       .tileAndFuseIf(fuse && !tileSizes.empty(), anchorOpName,
@@ -199,11 +200,11 @@ void TestLinalgCodegenStrategy::runStrategy(
                  LinalgPromotionOptions()
                      .setAlignment(16)
                      .setUseFullTileBuffersByDefault(registerPromoteFullTile))
-      .padIf(pad, "", std::move(paddingOptions))
+      .padIf(pad, anchorOpNameOrWildcard, std::move(paddingOptions))
       .decomposeIf(decompose)
-      .generalizeIf(generalize, "")
+      .generalizeIf(generalize, anchorOpNameOrWildcard)
       .interchangeIf(!iteratorInterchange.empty(), iteratorInterchange)
-      .vectorizeIf(vectorize, "", nullptr, vectorizePadding)
+      .vectorizeIf(vectorize, anchorOpNameOrWildcard, nullptr, vectorizePadding)
       .vectorLowering(
           LinalgVectorLoweringOptions()
               .setVectorTransformsOptions(
