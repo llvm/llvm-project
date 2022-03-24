@@ -960,7 +960,7 @@ void UpdateValueTypeFromLocationDescription(Log *log, const DWARFUnit *dwarf_cu,
 ///          check_sectionoffset is true we consider LLDB_INVALID_ADDRESS a
 ///          success if so_addr.IsSectionOffset() is true.
 static llvm::Optional<lldb::addr_t>
-ResolveAndLoadFileAddress(ExecutionContext *exe_ctx, lldb::ModuleSP module_sp,
+ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
                           Status *error_ptr, const char *dw_op_type,
                           lldb::addr_t file_addr, Address &so_addr,
                           bool check_sectionoffset = false) {
@@ -1003,18 +1003,10 @@ static Scalar DerefSizeExtractDataHelper(uint8_t *addr_bytes,
   DataExtractor addr_data(addr_bytes, size_addr_bytes, byte_order, size);
 
   lldb::offset_t addr_data_offset = 0;
-  switch (size) {
-  case 1:
-    return addr_data.GetU8(&addr_data_offset);
-  case 2:
-    return addr_data.GetU16(&addr_data_offset);
-  case 4:
-    return addr_data.GetU32(&addr_data_offset);
-  case 8:
-    return addr_data.GetU64(&addr_data_offset);
-  default:
+  if (size <= 8)
+    return addr_data.GetMaxU64(&addr_data_offset, size);
+  else
     return addr_data.GetAddress(&addr_data_offset);
-  }
 }
 
 bool DWARFExpression::Evaluate(
@@ -1099,7 +1091,6 @@ bool DWARFExpression::Evaluate(
       if (frame)
         stack.back().ConvertToLoadAddress(module_sp.get(),
                                           frame->CalculateTarget().get());
-
       break;
 
     // The DW_OP_addr_sect_offset4 is used for any location expressions in
@@ -1165,7 +1156,7 @@ bool DWARFExpression::Evaluate(
             LLDB_INVALID_ADDRESS);
 
         Address so_addr;
-        auto maybe_load_addr = ResolveAndLoadFileAddress(
+        auto maybe_load_addr = ResolveLoadAddress(
             exe_ctx, module_sp, error_ptr, "DW_OP_deref", file_addr, so_addr);
 
         if (!maybe_load_addr)
@@ -1287,7 +1278,7 @@ bool DWARFExpression::Evaluate(
             stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
         Address so_addr;
         auto maybe_load_addr =
-            ResolveAndLoadFileAddress(exe_ctx, module_sp, error_ptr,
+            ResolveLoadAddress(exe_ctx, module_sp, error_ptr,
                                       "DW_OP_deref_size", file_addr, so_addr,
                                       /*check_sectionoffset=*/true);
 
