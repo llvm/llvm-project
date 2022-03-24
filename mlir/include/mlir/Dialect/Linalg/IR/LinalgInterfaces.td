@@ -1090,6 +1090,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodName=*/"getRegionBuilder",
       (ins),
       [{ return ConcreteOp::getRegionBuilder(); }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return true if all the indexing maps are projected permutations.
+        Otherwise return false.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasOnlyProjectedPermutations",
+      (ins),
+      [{
+        return llvm::all_of($_op.getIndexingMaps(),
+                            [](AffineMap map) { return map.isProjectedPermutation(); });
+      }]
     >
   ];
 
