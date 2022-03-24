@@ -1,4 +1,4 @@
-//===-- Implementation header of fwrite -------------------------*- C++ -*-===//
+//===-- Implementation of fclose ------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_FWRITE_H
-#define LLVM_LIBC_SRC_STDIO_FWRITE_H
+#include "src/stdio/fclose.h"
+#include "src/__support/File/file.h"
 
 #include <stdio.h>
 
 namespace __llvm_libc {
 
-size_t fwrite(const void *__restrict ptr, size_t size, size_t nmemb,
-              ::FILE *__restrict stream);
+LLVM_LIBC_FUNCTION(int, fclose, (::FILE * stream)) {
+  return reinterpret_cast<__llvm_libc::File *>(stream)->close();
+}
 
 } // namespace __llvm_libc
-
-#endif // LLVM_LIBC_SRC_STDIO_FWRITE_H
