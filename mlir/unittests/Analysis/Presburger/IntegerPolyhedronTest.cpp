@@ -707,7 +707,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprTightUpperBound) {
     IntegerPolyhedron poly =
         parsePoly("(i, j, q) : (4*q - i - j + 2 >= 0, -4*q + i + j >= 0)");
     // Convert `q` to a local variable.
-    poly.convertDimToLocal(2, 3);
+    poly.convertToLocal(IdKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 1}};
     SmallVector<unsigned, 8> denoms = {4};
@@ -721,7 +721,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
   {
     IntegerPolyhedron poly = parsePoly("(i, j, q) : (-4*q + i + j == 0)");
     // Convert `q` to a local variable.
-    poly.convertDimToLocal(2, 3);
+    poly.convertToLocal(IdKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{-1, -1, 0, 0}};
     SmallVector<unsigned, 8> denoms = {4};
@@ -731,7 +731,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
   {
     IntegerPolyhedron poly = parsePoly("(i, j, q) : (4*q - i - j == 0)");
     // Convert `q` to a local variable.
-    poly.convertDimToLocal(2, 3);
+    poly.convertToLocal(IdKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{-1, -1, 0, 0}};
     SmallVector<unsigned, 8> denoms = {4};
@@ -741,7 +741,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEquality) {
   {
     IntegerPolyhedron poly = parsePoly("(i, j, q) : (3*q + i + j - 2 == 0)");
     // Convert `q` to a local variable.
-    poly.convertDimToLocal(2, 3);
+    poly.convertToLocal(IdKind::SetDim, 2, 3);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, -2}};
     SmallVector<unsigned, 8> denoms = {3};
@@ -756,7 +756,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprFromEqualityAndInequality) {
         parsePoly("(i, j, q, k) : (-3*k + i + j == 0, 4*q - "
                   "i - j + 2 >= 0, -4*q + i + j >= 0)");
     // Convert `q` and `k` to local variables.
-    poly.convertDimToLocal(2, 4);
+    poly.convertToLocal(IdKind::SetDim, 2, 4);
 
     std::vector<SmallVector<int64_t, 8>> divisions = {{1, 1, 0, 0, 1},
                                                       {-1, -1, 0, 0, 0}};
@@ -770,7 +770,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprNoRepr) {
   IntegerPolyhedron poly =
       parsePoly("(x, q) : (x - 3 * q >= 0, -x + 3 * q + 3 >= 0)");
   // Convert q to a local variable.
-  poly.convertDimToLocal(1, 2);
+  poly.convertToLocal(IdKind::SetDim, 1, 2);
 
   std::vector<SmallVector<int64_t, 8>> divisions = {{0, 0, 0}};
   SmallVector<unsigned, 8> denoms = {0};
@@ -783,7 +783,7 @@ TEST(IntegerPolyhedronTest, computeLocalReprNegConstNormalize) {
   IntegerPolyhedron poly =
       parsePoly("(x, q) : (-1 - 3*x - 6 * q >= 0, 6 + 3*x + 6*q >= 0)");
   // Convert q to a local variable.
-  poly.convertDimToLocal(1, 2);
+  poly.convertToLocal(IdKind::SetDim, 1, 2);
 
   // q = floor((-1/3 - x)/2)
   //   = floor((1/3) + (-1 - x)/2)
