@@ -558,7 +558,7 @@ int X86LoadValueInjectionLoadHardeningPass::elimMitigatedEdgesAndNodes(
   }
 
   // Find and eliminate gadget edges that have been mitigated.
-  int MitigatedGadgets = 0, RemainingGadgets = 0;
+  int RemainingGadgets = 0;
   NodeSet ReachableNodes{G};
   for (const Node &RootN : G.nodes()) {
     if (llvm::none_of(RootN.edges(), MachineGadgetGraph::isGadgetEdge))
@@ -586,7 +586,6 @@ int X86LoadValueInjectionLoadHardeningPass::elimMitigatedEdgesAndNodes(
           // This gadget's sink is reachable
           ++RemainingGadgets;
         } else { // This gadget's sink is unreachable, and therefore mitigated
-          ++MitigatedGadgets;
           ElimEdges.insert(E);
         }
       }
