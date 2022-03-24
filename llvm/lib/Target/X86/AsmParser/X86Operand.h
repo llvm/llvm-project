@@ -37,6 +37,10 @@ struct X86Operand final : public MCParsedAsmOperand {
   void *OpDecl;
   bool AddressOf;
 
+  /// This used for inline asm which may specify base reg and index reg for
+  /// MemOp. e.g. ARR[eax + ecx*4], so no extra reg can be used for MemOp.
+  bool UseUpRegs = false;
+
   struct TokOp {
     const char *Data;
     unsigned Length;
@@ -68,10 +72,6 @@ struct X86Operand final : public MCParsedAsmOperand {
     /// If the memory operand is unsized and there are multiple instruction
     /// matches, prefer the one with this size.
     unsigned FrontendSize;
-
-    /// This used for inline asm which may specify base reg and index reg for
-    /// MemOp. e.g. ARR[eax + ecx*4], so no extra reg can be used for MemOp.
-    bool UseUpRegs;
   };
 
   union {
@@ -384,9 +384,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     return isAbsMem() && Mem.ModeSize == 16;
   }
 
-  bool isMemUseUpRegs() const override {
-    return Mem.UseUpRegs;
-  }
+  bool isMemUseUpRegs() const override { return UseUpRegs; }
 
   bool isSrcIdx() const {
     return !getMemIndexReg() && getMemScale() == 1 &&
@@ -685,7 +683,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
-    Res->Mem.UseUpRegs = UseUpRegs;
+    Res->UseUpRegs = UseUpRegs;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
     Res->AddressOf    = false;
@@ -718,7 +716,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     Res->Mem.Size     = Size;
     Res->Mem.ModeSize = ModeSize;
     Res->Mem.FrontendSize = FrontendSize;
-    Res->Mem.UseUpRegs = UseUpRegs;
+    Res->UseUpRegs = UseUpRegs;
     Res->SymName      = SymName;
     Res->OpDecl       = OpDecl;
     Res->AddressOf    = false;
