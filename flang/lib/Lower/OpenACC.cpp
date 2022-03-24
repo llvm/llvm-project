@@ -514,24 +514,21 @@ genACCParallelOp(Fortran::lower::AbstractConverter &converter,
 static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
                          const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond;
-  SmallVector<Value, 2> copyOperands, copyinOperands, copyinReadonlyOperands,
+  SmallVector<mlir::Value> copyOperands, copyinOperands, copyinReadonlyOperands,
       copyoutOperands, copyoutZeroOperands, createOperands, createZeroOperands,
       noCreateOperands, presentOperands, deviceptrOperands, attachOperands;
 
-  auto &firOpBuilder = converter.getFirOpBuilder();
-  auto currentLocation = converter.getCurrentLocation();
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
 
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separatly as clauses can appear
   // more than once.
-  for (const auto &clause : accClauseList.v) {
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *ifClause =
             std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
-      Value cond = fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(ifClause->v), stmtCtx));
-      ifCond = firOpBuilder.createConvert(currentLocation,
-                                          firOpBuilder.getI1Type(), cond);
+      genIfClause(converter, ifClause, ifCond, stmtCtx);
     } else if (const auto *copyClause =
                    std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
       genObjectList(copyClause->v, converter, copyOperands);
@@ -573,8 +570,8 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
   }
 
   // Prepare the operand segement size attribute and the operands value range.
-  SmallVector<Value, 8> operands;
-  SmallVector<int32_t, 8> operandSegments;
+  SmallVector<mlir::Value> operands;
+  SmallVector<int32_t> operandSegments;
   addOperand(operands, operandSegments, ifCond);
   addOperands(operands, operandSegments, copyOperands);
   addOperands(operands, operandSegments, copyinOperands);
