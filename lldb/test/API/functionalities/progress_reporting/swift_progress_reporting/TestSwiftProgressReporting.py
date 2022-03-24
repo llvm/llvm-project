@@ -7,14 +7,16 @@ import lldbsuite.test.lldbutil as lldbutil
 
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
-from lldbsuite.test.eventlistener import EventListenerTestBase
 
-class TestSwiftProgressReporting(EventListenerTestBase):
+class TestSwiftProgressReporting(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
-    event_mask = lldb.SBDebugger.eBroadcastBitProgress
-    event_data_extractor = lldb.SBDebugger.GetProgressFromEvent
 
+    def setUp(self):
+        TestBase.setUp(self)
+        self.broadcaster = self.dbg.GetBroadcaster()
+        self.listener = lldbutil.start_listening_from(self.broadcaster,
+                                        lldb.SBDebugger.eBroadcastBitProgress)
     @swiftTest
     @skipIf(oslist=no_match(["macosx"]))
     def test_swift_progress_report(self):
@@ -31,14 +33,15 @@ class TestSwiftProgressReporting(EventListenerTestBase):
         # Resolve variable to exercise the type-system
         self.runCmd("expr boo")
 
-        self.assertGreater(len(self.events), 0)
-
         beacons = [ "Loading Swift module",
                     "Caching Swift user imports from",
                     "Setting up Swift reflection for",
                     "Getting Swift compile unit imports for"]
 
-        for beacon in beacons:
-            filtered_events = list(filter(lambda event: beacon in event[0],
-                                          self.events))
-            self.assertGreater(len(filtered_events), 0)
+        while len(beacons):
+            event = lldbutil.fetch_next_event(self, self.listener, self.broadcaster)
+            ret_args = lldb.SBDebugger.GetProgressFromEvent(event)
+
+            for beacon in beacons:
+                if beacon in ret_args[0]:
+                    beacons.remove(beacon)
