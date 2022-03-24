@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-metadata.prof -S | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile-metadata.prof -sample-profile-use-profi=0 -S | FileCheck %s
 
 ; The test verifies the presence of prof metadata for BranchInst, SwitchInst,
 ; and IndirectBrInst
