@@ -12,6 +12,8 @@
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/FPMatcher.h"
 
+#include <thread>
+
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 
 namespace mpfr = __llvm_libc::testing::mpfr;
@@ -32,7 +34,7 @@ struct LlvmLibcExpfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
   }
 };
 
-static constexpr int NUM_THREADS = 16;
+static const int NUM_THREADS = std::thread::hardware_concurrency();
 
 // Range: [0, 89];
 static constexpr uint32_t POS_START = 0x0000'0000U;
