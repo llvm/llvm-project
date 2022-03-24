@@ -126,6 +126,26 @@ void removeConstraintsInvolvingIdRange(IntegerRelation &poly, unsigned begin,
     if (!rangeIsZero(poly.getInequality(i - 1).slice(begin, count)))
       poly.removeInequality(i - 1);
 }
+
+IntegerRelation::CountsSnapshot IntegerRelation::getCounts() const {
+  return {PresburgerLocalSpace(*this), getNumInequalities(),
+          getNumEqualities()};
+}
+
+void IntegerRelation::truncateIdKind(IdKind kind,
+                                     const CountsSnapshot &counts) {
+  truncateIdKind(kind, counts.getSpace().getNumIdKind(kind));
+}
+
+void IntegerRelation::truncate(const CountsSnapshot &counts) {
+  truncateIdKind(IdKind::Domain, counts);
+  truncateIdKind(IdKind::Range, counts);
+  truncateIdKind(IdKind::Symbol, counts);
+  truncateIdKind(IdKind::Local, counts);
+  removeInequalityRange(counts.getNumIneqs(), getNumInequalities());
+  removeInequalityRange(counts.getNumEqs(), getNumEqualities());
+}
+
 unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
   assert(pos <= getNumIdKind(kind));
 
@@ -764,6 +784,25 @@ bool IntegerRelation::containsPoint(ArrayRef<int64_t> point) const {
   return true;
 }
 
+/// Just substitute the values given and check if an integer sample exists for
+/// the local ids.
+///
+/// TODO: this could be made more efficient by handling divisions separately.
+/// Instead of finding an integer sample over all the locals, we can first
+/// compute the values of the locals that have division representations and
+/// only use the integer emptiness check for the locals that don't have this.
+/// Handling this correctly requires ordering the divs, though.
+Optional<SmallVector<int64_t, 8>>
+IntegerRelation::containsPointNoLocal(ArrayRef<int64_t> point) const {
+  assert(point.size() == getNumIds() - getNumLocalIds() &&
+         "Point should contain all ids except locals!");
+  assert(getIdKindOffset(IdKind::Local) == getNumIds() - getNumLocalIds() &&
+         "This function depends on locals being stored last!");
+  IntegerRelation copy = *this;
+  copy.setAndEliminate(0, point);
+  return copy.findIntegerSample();
+}
+
 void IntegerRelation::getLocalReprs(std::vector<MaybeLocalRepr> &repr) const {
   std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
   SmallVector<unsigned, 4> denominators(getNumLocalIds());
@@ -1117,23 +1156,31 @@ void IntegerRelation::removeRedundantLocalVars() {
   }
 }
 
-void IntegerRelation::convertDimToLocal(unsigned dimStart, unsigned dimLimit) {
-  assert(dimLimit <= getNumDimIds() && "Invalid dim pos range");
+void IntegerRelation::convertIdKind(IdKind srcKind, unsigned idStart,
+                                    unsigned idLimit, IdKind dstKind) {
+  assert(idLimit <= getNumIdKind(srcKind) && "Invalid id range");
 
-  if (dimStart >= dimLimit)
+  if (idStart >= idLimit)
     return;
 
   // Append new local variables corresponding to the dimensions to be converted.
-  unsigned convertCount = dimLimit - dimStart;
-  unsigned newLocalIdStart = getNumIds();
-  appendId(IdKind::Local, convertCount);
+  unsigned newIdsBegin = getIdKindEnd(dstKind);
+  unsigned convertCount = idLimit - idStart;
+  appendId(dstKind, convertCount);
 
   // Swap the new local variables with dimensions.
+  //
+  // Essentially, this moves the information corresponding to the specified ids
+  // of kind `srcKind` to the `convertCount` newly created ids of kind
+  // `dstKind`. In particular, this moves the columns in the constraint
+  // matrices, and zeros out the initially occupied columns (because the newly
+  // created ids we're swapping with were zero-initialized).
+  unsigned offset = getIdKindOffset(srcKind);
   for (unsigned i = 0; i < convertCount; ++i)
-    swapId(i + dimStart, i + newLocalIdStart);
+    swapId(offset + idStart + i, newIdsBegin + i);
 
-  // Remove dimensions converted to local variables.
-  removeIdRange(IdKind::SetDim, dimStart, dimLimit);
+  // Complete the move by deleting the initially occupied columns.
+  removeIdRange(srcKind, idStart, idLimit);
 }
 
 void IntegerRelation::addBound(BoundType type, unsigned pos, int64_t value) {

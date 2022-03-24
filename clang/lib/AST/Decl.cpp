@@ -391,11 +391,18 @@ void LinkageComputer::mergeTemplateLV(
   bool considerVisibility =
     shouldConsiderTemplateVisibility(fn, specInfo);
 
-  // Merge information from the template parameters.
   FunctionTemplateDecl *temp = specInfo->getTemplate();
-  LinkageInfo tempLV =
-    getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
-  LV.mergeMaybeWithVisibility(tempLV, considerVisibility);
+
+  // Merge information from the template declaration.
+  LinkageInfo tempLV = getLVForDecl(temp, computation);
+  // The linkage of the specialization should be consistent with the
+  // template declaration.
+  LV.setLinkage(tempLV.getLinkage());
+
+  // Merge information from the template parameters.
+  LinkageInfo paramsLV =
+      getLVForTemplateParameterList(temp->getTemplateParameters(), computation);
+  LV.mergeMaybeWithVisibility(paramsLV, considerVisibility);
 
   // Merge information from the template arguments.
   const TemplateArgumentList &templateArgs = *specInfo->TemplateArguments;
@@ -2020,7 +2027,7 @@ const char *VarDecl::getStorageClassSpecifierString(StorageClass SC) {
 
 VarDecl::VarDecl(Kind DK, ASTContext &C, DeclContext *DC,
                  SourceLocation StartLoc, SourceLocation IdLoc,
-                 IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
+                 const IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
                  StorageClass SC)
     : DeclaratorDecl(DK, DC, IdLoc, Id, T, TInfo, StartLoc),
       redeclarable_base(C) {
@@ -2035,10 +2042,9 @@ VarDecl::VarDecl(Kind DK, ASTContext &C, DeclContext *DC,
   // Everything else is implicitly initialized to false.
 }
 
-VarDecl *VarDecl::Create(ASTContext &C, DeclContext *DC,
-                         SourceLocation StartL, SourceLocation IdL,
-                         IdentifierInfo *Id, QualType T, TypeSourceInfo *TInfo,
-                         StorageClass S) {
+VarDecl *VarDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartL,
+                         SourceLocation IdL, const IdentifierInfo *Id,
+                         QualType T, TypeSourceInfo *TInfo, StorageClass S) {
   return new (C, DC) VarDecl(Var, C, DC, StartL, IdL, Id, T, TInfo, S);
 }
 

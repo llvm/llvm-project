@@ -29,7 +29,7 @@
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<1xindex>
 //   CHECK-DAG: %[[zeroI32:.*]] = arith.constant 0 : i32
 //   CHECK-DAG: %[[ElemTp:.*]] = arith.constant 4 : i32
-//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
+//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 6 : i32
 //   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %[[zeroI32]], %[[zeroI32]], %[[ElemTp]], %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<1xindex> to memref<?xindex>
@@ -68,7 +68,7 @@ func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13xi32> 
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<1xindex>
 //   CHECK-DAG: %[[zeroI32:.*]] = arith.constant 0 : i32
 //   CHECK-DAG: %[[ElemTp:.*]] = arith.constant 4 : i32
-//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
+//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 6 : i32
 //   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %[[zeroI32]], %[[zeroI32]], %[[ElemTp]], %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<1xindex> to memref<?xindex>
@@ -110,7 +110,7 @@ func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<?xi32
 //   CHECK-DAG: %[[PermD:.*]] = memref.cast %[[PermS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<2xindex>
 //   CHECK-DAG: memref.store %[[I1]], %[[PermS]][%[[I1]]] : memref<2xindex>
-//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
+//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 6 : i32
 //   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %{{.*}}, %{{.*}}, %{{.*}}, %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<2xindex> to memref<?xindex>
@@ -154,7 +154,7 @@ func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x4xf64
 //   CHECK-DAG: %[[PermD:.*]] = memref.cast %[[PermS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<2xindex>
 //   CHECK-DAG: memref.store %[[I1]], %[[PermS]][%[[I1]]] : memref<2xindex>
-//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
+//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 6 : i32
 //   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %{{.*}}, %{{.*}}, %{{.*}}, %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<2xindex> to memref<?xindex>
@@ -198,7 +198,7 @@ func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tensor<?x
 //   CHECK-DAG: %[[PermD:.*]] = memref.cast %[[PermS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<2xindex>
 //   CHECK-DAG: memref.store %[[I1]], %[[PermS]][%[[I1]]] : memref<2xindex>
-//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
+//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 6 : i32
 //   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %{{.*}}, %{{.*}}, %{{.*}}, %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<2xindex> to memref<?xindex>
@@ -242,7 +242,7 @@ func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tensor<2x
 //   CHECK-DAG: %[[PermD:.*]] = memref.cast %[[PermS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<2xindex>
 //   CHECK-DAG: memref.store %[[I1]], %[[PermS]][%[[I1]]] : memref<2xindex>
-//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
+//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 6 : i32
 //   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %{{.*}}, %{{.*}}, %{{.*}}, %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<2xindex> to memref<?xindex>
@@ -290,7 +290,7 @@ func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x
 //   CHECK-DAG: memref.store %[[I0]], %[[PermS]][%[[I0]]] : memref<3xindex>
 //   CHECK-DAG: memref.store %[[I1]], %[[PermS]][%[[I1]]] : memref<3xindex>
 //   CHECK-DAG: memref.store %[[I2]], %[[PermS]][%[[I2]]] : memref<3xindex>
-//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 5 : i32
+//   CHECK-DAG: %[[ActionToIter:.*]] = arith.constant 6 : i32
 //   CHECK-DAG: %[[Iter:.*]] = call @newSparseTensor(%[[AttrsD]], %[[SizesD]], %[[PermD]], %{{.*}}, %{{.*}}, %{{.*}}, %[[ActionToIter]], %[[Arg]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 //   CHECK-DAG: %[[IndS:.*]] = memref.alloca() : memref<3xindex>
 //   CHECK-DAG: %[[IndD:.*]] = memref.cast %[[IndS]] : memref<3xindex> to memref<?xindex>

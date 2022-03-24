@@ -1408,10 +1408,9 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
   // name that works both in scalar mode and vector mode.
   // TODO: Is it worth considering an Operation.clone operation which
   // changes the type so we can promote an Operation with less boilerplate?
-  OperationState vecOpState(op->getLoc(), op->getName(), vectorOperands,
-                            vectorTypes, op->getAttrs(), /*successors=*/{},
-                            /*regions=*/{});
-  Operation *vecOp = state.builder.createOperation(vecOpState);
+  Operation *vecOp =
+      state.builder.create(op->getLoc(), op->getName().getIdentifier(),
+                           vectorOperands, vectorTypes, op->getAttrs());
   state.registerOpVectorReplacement(op, vecOp);
   return vecOp;
 }

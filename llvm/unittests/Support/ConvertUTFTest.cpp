@@ -26,13 +26,14 @@ TEST(ConvertUTFTest, ConvertUTF16LittleEndianToUTF8String) {
 }
 
 TEST(ConvertUTFTest, ConvertUTF32LittleEndianToUTF8String) {
-  // Src is a crystal ball.
-  alignas(UTF32) static const char Src[] = "\x2E\xF5\x01\x00";
+  // Src is the look of disapproval.
+  alignas(UTF32) static const char Src[] =
+      "\xFF\xFE\x00\x00\xA0\x0C\x00\x00\x5F\x00\x00\x00\xA0\x0C\x00\x00";
   ArrayRef<char> Ref(Src, sizeof(Src) - 1);
   std::string Result;
   bool Success = convertUTF32ToUTF8String(Ref, Result);
   EXPECT_TRUE(Success);
-  std::string Expected("\xF0\x9F\x94\xAE");
+  std::string Expected("\xE0\xB2\xA0_\xE0\xB2\xA0");
   EXPECT_EQ(Expected, Result);
 }
 
@@ -48,13 +49,14 @@ TEST(ConvertUTFTest, ConvertUTF16BigEndianToUTF8String) {
 }
 
 TEST(ConvertUTFTest, ConvertUTF32BigEndianToUTF8String) {
-  // Src is a crystal ball.
-  alignas(UTF32) static const char Src[] = "\x00\x00\xfe\xff\x00\x01\xF5\x2E";
+  // Src is the look of disapproval.
+  alignas(UTF32) static const char Src[] =
+      "\x00\x00\xFE\xFF\x00\x00\x0C\xA0\x00\x00\x00\x5F\x00\x00\x0C\xA0";
   ArrayRef<char> Ref(Src, sizeof(Src) - 1);
   std::string Result;
   bool Success = convertUTF32ToUTF8String(Ref, Result);
   EXPECT_TRUE(Success);
-  std::string Expected("\xF0\x9F\x94\xAE");
+  std::string Expected("\xE0\xB2\xA0_\xE0\xB2\xA0");
   EXPECT_EQ(Expected, Result);
 }
 

@@ -17,7 +17,7 @@ inline namespace foo4::foo5::foo6 { // expected-error {{nested namespace definit
 // expected-warning@+2 {{inline nested namespace definition is incompatible with C++ standards before C++20}}
 #endif
 namespace valid1::valid2::inline valid3::inline valid4::valid5 {}
-// expected-note@-1 2 {{previous definition is here}}
+// expected-note@-1 4 {{previous definition is here}}
 
 #if __cplusplus <= 201402L
 // expected-warning@+3 {{nested namespace definition is a C++17 extension; define each namespace separately}}
@@ -34,7 +34,6 @@ namespace valid1::valid2::valid3::valid4::valid5 {}
 // expected-warning@+2 {{inline nested namespace definition is incompatible with C++ standards before C++20}}
 #endif
 namespace valid1::valid2::inline valid3::inline valid4::valid5 {}
-// expected-note@-1 2 {{previous definition is here}}
 
 namespace valid1 {
 namespace valid2 {

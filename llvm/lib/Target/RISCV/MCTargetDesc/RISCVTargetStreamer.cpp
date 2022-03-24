@@ -38,6 +38,10 @@ void RISCVTargetStreamer::emitTextAttribute(unsigned Attribute,
 void RISCVTargetStreamer::emitIntTextAttribute(unsigned Attribute,
                                                unsigned IntValue,
                                                StringRef StringValue) {}
+void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
+  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialized target ABI");
+  TargetABI = ABI;
+}
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
   if (STI.hasFeature(RISCV::FeatureRV32E))

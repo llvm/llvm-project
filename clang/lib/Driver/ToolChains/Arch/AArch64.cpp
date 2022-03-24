@@ -151,6 +151,8 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
+  if (Split.first == "native")
+    ArchKind = llvm::AArch64::getCPUArchKind(llvm::sys::getHostCPUName().str());
   if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
       !llvm::AArch64::getArchFeatures(ArchKind, Features))
     return false;
@@ -588,4 +590,7 @@ fp16_fml_fallthrough:
     // Enabled A53 errata (835769) workaround by default on android
     Features.push_back("+fix-cortex-a53-835769");
   }
+
+  if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
+    Features.push_back("+no-bti-at-return-twice");
 }

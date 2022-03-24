@@ -679,7 +679,7 @@ def Arith_MaxFOp : Arith_FloatBinaryOp<"maxf", [Commutative]> {
 // MaxSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxSIOp : Arith_IntBinaryOp<"maxsi"> {
+def Arith_MaxSIOp : Arith_IntBinaryOp<"maxsi", [Commutative]> {
   let summary = "signed integer maximum operation";
   let hasFolder = 1;
 }
@@ -688,7 +688,7 @@ def Arith_MaxSIOp : Arith_IntBinaryOp<"maxsi"> {
 // MaxUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MaxUIOp : Arith_IntBinaryOp<"maxui"> {
+def Arith_MaxUIOp : Arith_IntBinaryOp<"maxui", [Commutative]> {
   let summary = "unsigned integer maximum operation";
   let hasFolder = 1;
 }
@@ -723,7 +723,7 @@ def Arith_MinFOp : Arith_FloatBinaryOp<"minf", [Commutative]> {
 // MinSIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinSIOp : Arith_IntBinaryOp<"minsi"> {
+def Arith_MinSIOp : Arith_IntBinaryOp<"minsi", [Commutative]> {
   let summary = "signed integer minimum operation";
   let hasFolder = 1;
 }
@@ -732,7 +732,7 @@ def Arith_MinSIOp : Arith_IntBinaryOp<"minsi"> {
 // MinUIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_MinUIOp : Arith_IntBinaryOp<"minui"> {
+def Arith_MinUIOp : Arith_IntBinaryOp<"minui", [Commutative]> {
   let summary = "unsigned integer minimum operation";
   let hasFolder = 1;
 }

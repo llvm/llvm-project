@@ -937,8 +937,7 @@ static LValue loadToBegin(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
 }
 
 static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
-                          llvm::Type *BaseLVType, CharUnits BaseLVAlignment,
-                          llvm::Value *Addr) {
+                          Address OriginalBaseAddress, llvm::Value *Addr) {
   Address Tmp = Address::invalid();
   Address TopTmp = Address::invalid();
   Address MostTopTmp = Address::invalid();
@@ -953,15 +952,17 @@ static Address castToBase(CodeGenFunction &CGF, QualType BaseTy, QualType ElTy,
     TopTmp = Tmp;
     BaseTy = BaseTy->getPointeeType();
   }
-  llvm::Type *Ty = BaseLVType;
-  if (Tmp.isValid())
-    Ty = Tmp.getElementType();
-  Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Ty);
+
   if (Tmp.isValid()) {
+    Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+        Addr, Tmp.getElementType());
     CGF.Builder.CreateStore(Addr, Tmp);
     return MostTopTmp;
   }
-  return Address::deprecated(Addr, BaseLVAlignment);
+
+  Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+      Addr, OriginalBaseAddress.getType());
+  return OriginalBaseAddress.withPointer(Addr);
 }
 
 static const VarDecl *getBaseDecl(const Expr *Ref, const DeclRefExpr *&DE) {
@@ -1004,8 +1005,7 @@ Address ReductionCodeGen::adjustPrivateAddress(CodeGenFunction &CGF, unsigned N,
         SharedAddr.getElementType(), PrivatePointer, Adjustment);
     return castToBase(CGF, OrigVD->getType(),
                       SharedAddresses[N].first.getType(),
-                      OriginalBaseLValue.getAddress(CGF).getType(),
-                      OriginalBaseLValue.getAlignment(), Ptr);
+                      OriginalBaseLValue.getAddress(CGF), Ptr);
   }
   BaseDecls.emplace_back(
       cast<VarDecl>(cast<DeclRefExpr>(ClausesData[N].Ref)->getDecl()));
@@ -3325,6 +3325,13 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
         }
         break;
       }
+
+      // Hidden or internal symbols on the device are not externally visible. We
+      // should not attempt to register them by creating an offloading entry.
+      if (auto *GV = dyn_cast<llvm::GlobalValue>(CE->getAddress()))
+        if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
+          continue;
+
       createOffloadEntry(CE->getAddress(), CE->getAddress(),
                          CE->getVarSize().getQuantity(), Flags,
                          CE->getLinkage());
@@ -4046,12 +4053,12 @@ emitTaskDupFunction(CodeGenModule &CGM, SourceLocation Loc,
         KmpTaskTWithPrivatesPtrQTy->castAs<PointerType>());
     LValue Base = CGF.EmitLValueForField(
         TDBase, *KmpTaskTWithPrivatesQTyRD->field_begin());
-    KmpTaskSharedsPtr = Address::deprecated(
+    KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(CGF.EmitLValueForField(
                                  Base, *std::next(KmpTaskTQTyRD->field_begin(),
                                                   KmpTaskTShareds)),
                              Loc),
-        CGM.getNaturalTypeAlignment(SharedsTy));
+        CGF.Int8Ty, CGM.getNaturalTypeAlignment(SharedsTy));
   }
   emitPrivatesInit(CGF, D, KmpTaskSharedsPtr, TDBase, KmpTaskTWithPrivatesQTyRD,
                    SharedsTy, SharedsPtrTy, Data, Privates, /*ForDup=*/true);
@@ -4531,13 +4538,13 @@ CGOpenMPRuntime::emitTaskInit(CodeGenFunction &CGF, SourceLocation Loc,
   // Copy shareds if there are any.
   Address KmpTaskSharedsPtr = Address::invalid();
   if (!SharedsTy->getAsStructureType()->getDecl()->field_empty()) {
-    KmpTaskSharedsPtr = Address::deprecated(
+    KmpTaskSharedsPtr = Address(
         CGF.EmitLoadOfScalar(
             CGF.EmitLValueForField(
                 TDBase,
                 *std::next(KmpTaskTQTyRD->field_begin(), KmpTaskTShareds)),
             Loc),
-        CGM.getNaturalTypeAlignment(SharedsTy));
+        CGF.Int8Ty, CGM.getNaturalTypeAlignment(SharedsTy));
     LValue Dest = CGF.MakeAddrLValue(KmpTaskSharedsPtr, SharedsTy);
     LValue Src = CGF.MakeAddrLValue(Shareds, SharedsTy);
     CGF.EmitAggregateCopy(Dest, Src, SharedsTy, AggValueSlot::DoesNotOverlap);
@@ -4651,16 +4658,15 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
   RecordDecl *KmpDependInfoRD =
       cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
-  LValue Base = CGF.EmitLoadOfPointerLValue(
-      DepobjLVal.getAddress(CGF), C.VoidPtrTy.castAs<PointerType>());
   QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
-  Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy),
-      CGF.ConvertTypeForMem(KmpDependInfoTy));
-  Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
-                            Base.getTBAAInfo());
+  LValue Base = CGF.EmitLoadOfPointerLValue(
+      CGF.Builder.CreateElementBitCast(
+          DepobjLVal.getAddress(CGF),
+          CGF.ConvertTypeForMem(KmpDependInfoPtrTy)),
+      KmpDependInfoPtrTy->castAs<PointerType>());
   Address DepObjAddr = CGF.Builder.CreateGEP(
-      Addr, llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
+      Base.getAddress(CGF),
+      llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
   LValue NumDepsBase = CGF.MakeAddrLValue(
       DepObjAddr, KmpDependInfoTy, Base.getBaseInfo(), Base.getTBAAInfo());
   // NumDeps = deps[i].base_addr;
@@ -4727,43 +4733,25 @@ static void emitDependData(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
   }
 }
 
-static SmallVector<llvm::Value *, 4>
-emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
-                        const OMPTaskDataTy::DependData &Data) {
+SmallVector<llvm::Value *, 4> CGOpenMPRuntime::emitDepobjElementsSizes(
+    CodeGenFunction &CGF, QualType &KmpDependInfoTy,
+    const OMPTaskDataTy::DependData &Data) {
   assert(Data.DepKind == OMPC_DEPEND_depobj &&
          "Expected depobj dependecy kind.");
   SmallVector<llvm::Value *, 4> Sizes;
   SmallVector<LValue, 4> SizeLVals;
   ASTContext &C = CGF.getContext();
-  QualType FlagsTy;
-  getDependTypes(C, KmpDependInfoTy, FlagsTy);
-  RecordDecl *KmpDependInfoRD =
-      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
-  QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
-  llvm::Type *KmpDependInfoPtrT = CGF.ConvertTypeForMem(KmpDependInfoPtrTy);
   {
     OMPIteratorGeneratorScope IteratorScope(
         CGF, cast_or_null<OMPIteratorExpr>(
                  Data.IteratorExpr ? Data.IteratorExpr->IgnoreParenImpCasts()
                                    : nullptr));
     for (const Expr *E : Data.DepExprs) {
+      llvm::Value *NumDeps;
+      LValue Base;
       LValue DepobjLVal = CGF.EmitLValue(E->IgnoreParenImpCasts());
-      LValue Base = CGF.EmitLoadOfPointerLValue(
-          DepobjLVal.getAddress(CGF), C.VoidPtrTy.castAs<PointerType>());
-      Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          Base.getAddress(CGF), KmpDependInfoPtrT,
-          CGF.ConvertTypeForMem(KmpDependInfoTy));
-      Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
-                                Base.getTBAAInfo());
-      Address DepObjAddr = CGF.Builder.CreateGEP(
-          Addr, llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
-      LValue NumDepsBase = CGF.MakeAddrLValue(
-          DepObjAddr, KmpDependInfoTy, Base.getBaseInfo(), Base.getTBAAInfo());
-      // NumDeps = deps[i].base_addr;
-      LValue BaseAddrLVal = CGF.EmitLValueForField(
-          NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
-      llvm::Value *NumDeps =
-          CGF.EmitLoadOfScalar(BaseAddrLVal, E->getExprLoc());
+      std::tie(NumDeps, Base) =
+          getDepobjElements(CGF, DepobjLVal, E->getExprLoc());
       LValue NumLVal = CGF.MakeAddrLValue(
           CGF.CreateMemTemp(C.getUIntPtrType(), "depobj.size.addr"),
           C.getUIntPtrType());
@@ -4783,19 +4771,13 @@ emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
   return Sizes;
 }
 
-static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
-                               LValue PosLVal,
-                               const OMPTaskDataTy::DependData &Data,
-                               Address DependenciesArray) {
+void CGOpenMPRuntime::emitDepobjElements(CodeGenFunction &CGF,
+                                         QualType &KmpDependInfoTy,
+                                         LValue PosLVal,
+                                         const OMPTaskDataTy::DependData &Data,
+                                         Address DependenciesArray) {
   assert(Data.DepKind == OMPC_DEPEND_depobj &&
          "Expected depobj dependecy kind.");
-  ASTContext &C = CGF.getContext();
-  QualType FlagsTy;
-  getDependTypes(C, KmpDependInfoTy, FlagsTy);
-  RecordDecl *KmpDependInfoRD =
-      cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
-  QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
-  llvm::Type *KmpDependInfoPtrT = CGF.ConvertTypeForMem(KmpDependInfoPtrTy);
   llvm::Value *ElSize = CGF.getTypeSize(KmpDependInfoTy);
   {
     OMPIteratorGeneratorScope IteratorScope(
@@ -4804,25 +4786,11 @@ static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
                                    : nullptr));
     for (unsigned I = 0, End = Data.DepExprs.size(); I < End; ++I) {
       const Expr *E = Data.DepExprs[I];
+      llvm::Value *NumDeps;
+      LValue Base;
       LValue DepobjLVal = CGF.EmitLValue(E->IgnoreParenImpCasts());
-      LValue Base = CGF.EmitLoadOfPointerLValue(
-          DepobjLVal.getAddress(CGF), C.VoidPtrTy.castAs<PointerType>());
-      Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-          Base.getAddress(CGF), KmpDependInfoPtrT,
-          CGF.ConvertTypeForMem(KmpDependInfoTy));
-      Base = CGF.MakeAddrLValue(Addr, KmpDependInfoTy, Base.getBaseInfo(),
-                                Base.getTBAAInfo());
-
-      // Get number of elements in a single depobj.
-      Address DepObjAddr = CGF.Builder.CreateGEP(
-          Addr, llvm::ConstantInt::get(CGF.IntPtrTy, -1, /*isSigned=*/true));
-      LValue NumDepsBase = CGF.MakeAddrLValue(
-          DepObjAddr, KmpDependInfoTy, Base.getBaseInfo(), Base.getTBAAInfo());
-      // NumDeps = deps[i].base_addr;
-      LValue BaseAddrLVal = CGF.EmitLValueForField(
-          NumDepsBase, *std::next(KmpDependInfoRD->field_begin(), BaseAddr));
-      llvm::Value *NumDeps =
-          CGF.EmitLoadOfScalar(BaseAddrLVal, E->getExprLoc());
+      std::tie(NumDeps, Base) =
+          getDepobjElements(CGF, DepobjLVal, E->getExprLoc());
 
       // memcopy dependency data.
       llvm::Value *Size = CGF.Builder.CreateNUWMul(
@@ -7886,8 +7854,9 @@ private:
       BP = CGF.EmitOMPSharedLValue(AssocExpr).getAddress(CGF);
     } else if (OAShE &&
                isa<CXXThisExpr>(OAShE->getBase()->IgnoreParenCasts())) {
-      BP = Address::deprecated(
+      BP = Address(
           CGF.EmitScalarExpr(OAShE->getBase()),
+          CGF.ConvertTypeForMem(OAShE->getBase()->getType()->getPointeeType()),
           CGF.getContext().getTypeAlignInChars(OAShE->getBase()->getType()));
     } else {
       // The base is the reference to the variable.
@@ -8058,9 +8027,11 @@ private:
         };
         if (OAShE) {
           LowestElem = LB =
-              Address::deprecated(CGF.EmitScalarExpr(OAShE->getBase()),
-                                  CGF.getContext().getTypeAlignInChars(
-                                      OAShE->getBase()->getType()));
+              Address(CGF.EmitScalarExpr(OAShE->getBase()),
+                      CGF.ConvertTypeForMem(
+                          OAShE->getBase()->getType()->getPointeeType()),
+                      CGF.getContext().getTypeAlignInChars(
+                          OAShE->getBase()->getType()));
         } else if (IsMemberReference) {
           const auto *ME = cast<MemberExpr>(I->getAssociatedExpression());
           LValue BaseLVal = EmitMemberExprBase(CGF, ME);

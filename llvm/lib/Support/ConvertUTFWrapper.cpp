@@ -34,31 +34,31 @@ bool ConvertUTF8toWide(unsigned WideCharWidth, llvm::StringRef Source,
     const UTF8 *sourceStart = (const UTF8*)Source.data();
     // FIXME: Make the type of the result buffer correct instead of
     // using reinterpret_cast.
-    UTF16 *targetStart = reinterpret_cast<UTF16*>(ResultPtr);
+    UTF16 *targetStart = reinterpret_cast<UTF16 *>(ResultPtr);
     ConversionFlags flags = strictConversion;
-    result = ConvertUTF8toUTF16(
-        &sourceStart, sourceStart + Source.size(),
-        &targetStart, targetStart + Source.size(), flags);
+    result =
+        ConvertUTF8toUTF16(&sourceStart, sourceStart + Source.size(),
+                           &targetStart, targetStart + Source.size(), flags);
     if (result == conversionOK)
-      ResultPtr = reinterpret_cast<char*>(targetStart);
+      ResultPtr = reinterpret_cast<char *>(targetStart);
     else
       ErrorPtr = sourceStart;
   } else if (WideCharWidth == 4) {
-    const UTF8 *sourceStart = (const UTF8*)Source.data();
+    const UTF8 *sourceStart = (const UTF8 *)Source.data();
     // FIXME: Make the type of the result buffer correct instead of
     // using reinterpret_cast.
-    UTF32 *targetStart = reinterpret_cast<UTF32*>(ResultPtr);
+    UTF32 *targetStart = reinterpret_cast<UTF32 *>(ResultPtr);
     ConversionFlags flags = strictConversion;
-    result = ConvertUTF8toUTF32(
-        &sourceStart, sourceStart + Source.size(),
-        &targetStart, targetStart + Source.size(), flags);
+    result =
+        ConvertUTF8toUTF32(&sourceStart, sourceStart + Source.size(),
+                           &targetStart, targetStart + Source.size(), flags);
     if (result == conversionOK)
-      ResultPtr = reinterpret_cast<char*>(targetStart);
+      ResultPtr = reinterpret_cast<char *>(targetStart);
     else
       ErrorPtr = sourceStart;
   }
-  assert((result != targetExhausted)
-         && "ConvertUTF8toUTFXX exhausted target buffer");
+  assert((result != targetExhausted) &&
+         "ConvertUTF8toUTFXX exhausted target buffer");
   return result == conversionOK;
 }
 
@@ -67,20 +67,18 @@ bool ConvertCodePointToUTF8(unsigned Source, char *&ResultPtr) {
   const UTF32 *SourceEnd = SourceStart + 1;
   UTF8 *TargetStart = reinterpret_cast<UTF8 *>(ResultPtr);
   UTF8 *TargetEnd = TargetStart + 4;
-  ConversionResult CR = ConvertUTF32toUTF8(&SourceStart, SourceEnd,
-                                           &TargetStart, TargetEnd,
-                                           strictConversion);
+  ConversionResult CR = ConvertUTF32toUTF8(
+      &SourceStart, SourceEnd, &TargetStart, TargetEnd, strictConversion);
   if (CR != conversionOK)
     return false;
 
-  ResultPtr = reinterpret_cast<char*>(TargetStart);
+  ResultPtr = reinterpret_cast<char *>(TargetStart);
   return true;
 }
 
 bool hasUTF16ByteOrderMark(ArrayRef<char> S) {
-  return (S.size() >= 2 &&
-          ((S[0] == '\xff' && S[1] == '\xfe') ||
-           (S[0] == '\xfe' && S[1] == '\xff')));
+  return (S.size() >= 2 && ((S[0] == '\xff' && S[1] == '\xfe') ||
+                            (S[0] == '\xfe' && S[1] == '\xff')));
 }
 
 bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
@@ -134,20 +132,22 @@ bool convertUTF16ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
   return true;
 }
 
-bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out)
-{
+bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out) {
   return convertUTF16ToUTF8String(
       llvm::ArrayRef<char>(reinterpret_cast<const char *>(Src.data()),
-      Src.size() * sizeof(UTF16)), Out);
+                           Src.size() * sizeof(UTF16)),
+      Out);
 }
 
 bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
   assert(Out.empty());
 
+  // Error out on an uneven byte count.
+  if (SrcBytes.size() % 4)
+    return false;
+
   // Avoid OOB by returning early on empty input.
-  if (SrcBytes.empty() &&
-      (SrcBytes.size() % 4) != 0) // Assume multiple of 4 bytes; Unicode's max
-                                  // num of code units in UTF-8.
+  if (SrcBytes.empty())
     return true;
 
   const UTF32 *Src = reinterpret_cast<const UTF32 *>(SrcBytes.begin());
@@ -159,10 +159,10 @@ bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
   std::vector<UTF32> ByteSwapped;
   if (Src[0] == UNI_UTF32_BYTE_ORDER_MARK_SWAPPED) {
     ByteSwapped.insert(ByteSwapped.end(), Src, SrcEnd);
-    for (unsigned I = 0, E = ByteSwapped.size(); I != E; ++I)
-      ByteSwapped[I] = llvm::ByteSwap_32(ByteSwapped[I]);
+    for (UTF32 &I : ByteSwapped)
+      I = llvm::ByteSwap_32(I);
     Src = &ByteSwapped[0];
-    SrcEnd = Src + ByteSwapped.size();
+    SrcEnd = &ByteSwapped[ByteSwapped.size() - 1] + 1;
   }
 
   // Skip the BOM for conversion.
@@ -171,7 +171,7 @@ bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
 
   // Just allocate enough space up front.  We'll shrink it later.  Allocate
   // enough that we can fit a null terminator without reallocating.
-  Out.resize(SrcBytes.size() + 1); //
+  Out.resize(SrcBytes.size() * UNI_MAX_UTF8_BYTES_PER_CODE_POINT + 1);
   UTF8 *Dst = reinterpret_cast<UTF8 *>(&Out[0]);
   UTF8 *DstEnd = Dst + Out.size();
 

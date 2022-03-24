@@ -101,7 +101,7 @@ group("test") {
     "//llvm/tools/llvm-cvtres",
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
-    "//llvm/tools/llvm-lipo",
+    "//llvm/tools/llvm-lipo:symlinks",
     "//llvm/tools/llvm-mc",
     "//llvm/tools/llvm-nm:symlinks",
     "//llvm/tools/llvm-objcopy:symlinks",

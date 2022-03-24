@@ -27,6 +27,8 @@ def RetCC_AVR_BUILTIN : CallingConv<[
 
 // Calling convention for variadic functions.
 def ArgCC_AVR_Vararg : CallingConv<[
+  // i8 are always passed through the stack with a byte slot and byte alignment.
+  CCIfType<[i8], CCAssignToStack<1, 1>>,
   // i16 are always passed through the stack with an alignment of 1.
   CCAssignToStack<2, 1>
 ]>;
@@ -36,4 +38,6 @@ def ArgCC_AVR_Vararg : CallingConv<[
 //===----------------------------------------------------------------------===//
 
 def CSR_Normal : CalleeSavedRegs<(add R29, R28, (sequence "R%u", 17, 2))>;
+def CSR_NormalTiny : CalleeSavedRegs<(add R29, R28, R19, R18)>;
 def CSR_Interrupts : CalleeSavedRegs<(add(sequence "R%u", 31, 2))>;
+def CSR_InterruptsTiny : CalleeSavedRegs<(add(sequence "R%u", 31, 18))>;

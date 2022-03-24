@@ -285,3 +285,4 @@ def OMPMaskedDirective : StmtNode<OMPExecutableDirective>;
 def OMPGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
 def OMPTargetTeamsGenericLoopDirective : StmtNode<OMPLoopDirective>;
+def OMPParallelGenericLoopDirective : StmtNode<OMPLoopDirective>;

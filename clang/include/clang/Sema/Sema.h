@@ -10175,7 +10175,7 @@ public:
   void ActOnPragmaVisibility(const IdentifierInfo* VisType,
                              SourceLocation PragmaLoc);
 
-  NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
+  NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
                                  SourceLocation Loc);
   void DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, WeakInfo &W);
 
@@ -10912,6 +10912,11 @@ public:
   /// Called on well-formed '\#pragma omp target teams loop' after parsing of
   /// the associated statement.
   StmtResult ActOnOpenMPTargetTeamsGenericLoopDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp parallel loop' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPParallelGenericLoopDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp cancellation point'.
@@ -11953,7 +11958,7 @@ public:
 
   // type checking for sizeless vector binary operators.
   QualType CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
-                                       SourceLocation Loc,
+                                       SourceLocation Loc, bool IsCompAssign,
                                        ArithConvKind OperationKind);
 
   /// Type checking for matrix binary operators.

@@ -140,3 +140,89 @@ define <vscale x 2 x i64> @mul_nuw_nsw_shuffle_constant_expr(<vscale x 2 x i8> %
   %t3 = mul <vscale x 2 x i64> %shuf, %xx
   ret <vscale x 2 x i64> %t3
 }
+
+; This could propagate nsw.
+
+define i32 @neg_sub0_sub_nsw_nsw(i32 %a, i32 %b) {
+; CHECK-LABEL: @neg_sub0_sub_nsw_nsw(
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[C_NEG]]
+;
+  %c = sub nsw i32 %a, %b
+  %d = sub nsw i32 0, %c
+  ret i32 %d
+}
+
+; Must not propagate nsw.
+
+define i32 @neg_sub_sub_nsw0(i32 %a, i32 %b) {
+; CHECK-LABEL: @neg_sub_sub_nsw0(
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[C_NEG]]
+;
+  %c = sub nsw i32 %a, %b
+  %d = sub i32 0, %c
+  ret i32 %d
+}
+
+; Must not propagate nsw.
+
+define i32 @neg_sub_sub_nsw1(i32 %a, i32 %b) {
+; CHECK-LABEL: @neg_sub_sub_nsw1(
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[C_NEG]]
+;
+  %c = sub i32 %a, %b
+  %d = sub nsw i32 0, %c
+  ret i32 %d
+}
+
+; This could propagate nsw.
+
+define i32 @neg_mul_sub_nsw_nsw(i32 %a, i32 %b) {
+; CHECK-LABEL: @neg_mul_sub_nsw_nsw(
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[C_NEG]]
+;
+  %c = sub nsw i32 %a, %b
+  %d = mul nsw i32 -1, %c
+  ret i32 %d
+}
+
+; Must not propagate nsw.
+
+define i32 @neg_mul_sub_nsw0(i32 %a, i32 %b) {
+; CHECK-LABEL: @neg_mul_sub_nsw0(
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[C_NEG]]
+;
+  %c = sub nsw i32 %a, %b
+  %d = mul i32 -1, %c
+  ret i32 %d
+}
+
+; Must not propagate nsw.
+
+define i32 @neg_mul_sub_nsw1(i32 %a, i32 %b) {
+; CHECK-LABEL: @neg_mul_sub_nsw1(
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret i32 [[C_NEG]]
+;
+  %c = sub i32 %a, %b
+  %d = mul nsw i32 -1, %c
+  ret i32 %d
+}
+
+; Must not propagate nsw.
+
+define i8 @neg_sub_sub2(i16 %a, i16 %b) {
+; CHECK-LABEL: @neg_sub_sub2(
+; CHECK-NEXT:    [[C_NEG:%.*]] = sub i16 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[D_NEG:%.*]] = trunc i16 [[C_NEG]] to i8
+; CHECK-NEXT:    ret i8 [[D_NEG]]
+;
+  %c = sub nsw i16 %a, %b
+  %d = trunc i16 %c to i8
+  %e = sub nsw i8 0, %d
+  ret i8 %e
+}

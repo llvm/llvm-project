@@ -1557,9 +1557,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (ST->hasSSE3() && IsLoad)
       if (const auto *Entry =
               CostTableLookup(SSE3BroadcastLoadTbl, Kind, LT.second)) {
-        assert(isLegalBroadcastLoad(
-                   BaseTp->getElementType(),
-                   cast<FixedVectorType>(BaseTp)->getNumElements()) &&
+        assert(isLegalBroadcastLoad(BaseTp->getElementType(),
+                                    LT.second.getVectorNumElements()) &&
                "Table entry missing from isLegalBroadcastLoad()");
         return LT.first * Entry->Cost;
       }
@@ -5140,7 +5139,7 @@ bool X86TTIImpl::isLegalNTStore(Type *DataType, Align Alignment) {
 bool X86TTIImpl::isLegalBroadcastLoad(Type *ElementTy,
                                       unsigned NumElements) const {
   // movddup
-  return ST->hasSSSE3() && NumElements == 2 &&
+  return ST->hasSSE3() && NumElements == 2 &&
          ElementTy == Type::getDoubleTy(ElementTy->getContext());
 }
 
