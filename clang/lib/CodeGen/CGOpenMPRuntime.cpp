@@ -12018,7 +12018,6 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
       }
       // Mark linear parameters.
       auto *SI = Attr->steps_begin();
-      auto *MI = Attr->modifiers_begin();
       for (const Expr *E : Attr->linears()) {
         E = E->IgnoreParenImpCasts();
         unsigned Pos;
@@ -12062,7 +12061,6 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         if (Linear == ParamAttr.Kind)
           ParamAttr.StrideOrArg = ParamAttr.StrideOrArg * PtrRescalingFactor;
         ++SI;
-        ++MI;
       }
       llvm::APSInt VLENVal;
       SourceLocation ExprLoc;

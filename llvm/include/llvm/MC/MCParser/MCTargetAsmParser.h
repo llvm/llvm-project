@@ -101,10 +101,14 @@ struct AsmRewrite {
   int64_t Val;
   StringRef Label;
   IntelExpr IntelExp;
+  bool IntelExpRestricted;
 
 public:
-  AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, int64_t val = 0)
-    : Kind(kind), Loc(loc), Len(len), Done(false), Val(val) {}
+  AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len = 0, int64_t val = 0,
+             bool Restricted = false)
+      : Kind(kind), Loc(loc), Len(len), Done(false), Val(val) {
+    IntelExpRestricted = Restricted;
+  }
   AsmRewrite(AsmRewriteKind kind, SMLoc loc, unsigned len, StringRef label)
     : AsmRewrite(kind, loc, len) { Label = label; }
   AsmRewrite(SMLoc loc, unsigned len, IntelExpr exp)

@@ -84,6 +84,9 @@ void f4(void) {
   int x4 = 0; // expected-warning{{variable 'x4' set but not used}}
   --x4;
 
+  static int counter = 0; // expected-warning{{variable 'counter' set but not used}}
+  counter += 1;
+
   volatile int v1 = 0;
   ++v1;
   typedef volatile int volint;

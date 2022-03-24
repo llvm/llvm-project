@@ -1913,7 +1913,7 @@ Parser::TryParseParameterDeclarationClause(bool *InvalidAsDeclaration,
                                   /*OuterMightBeMessageSend*/true))
       return TPResult::True;
 
-    ParsedAttributesWithRange attrs(AttrFactory);
+    ParsedAttributes attrs(AttrFactory);
     MaybeParseMicrosoftAttributes(attrs);
 
     // decl-specifier-seq

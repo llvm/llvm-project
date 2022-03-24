@@ -86,6 +86,9 @@ class CSKYAsmParser : public MCTargetAsmParser {
 
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, OperandVector &Operands,
                           MCStreamer &Out);
+  bool processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+  bool processJSRI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
+  bool processJMPI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out);
 
   CSKYTargetStreamer &getTargetStreamer() {
     assert(getParser().getStreamer().getTargetStreamer() &&
@@ -128,7 +131,11 @@ public:
 
     MCAsmParserExtension::Initialize(Parser);
 
+    // Cache the MCRegisterInfo.
+    MRI = getContext().getRegisterInfo();
+
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
+    getTargetStreamer().emitTargetAttributes(STI);
   }
 };
 
@@ -813,6 +820,96 @@ bool CSKYAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Unknown match type detected!");
 }
 
+bool CSKYAsmParser::processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
+  Inst.setLoc(IDLoc);
+
+  unsigned Opcode;
+  MCOperand Op;
+  if (Inst.getOpcode() == CSKY::PseudoLRW16)
+    Opcode = CSKY::LRW16;
+  else
+    Opcode = CSKY::LRW32;
+
+  if (Inst.getOperand(1).isImm()) {
+    if (isUInt<8>(Inst.getOperand(1).getImm()) &&
+        Inst.getOperand(0).getReg() <= CSKY::R7) {
+      Opcode = CSKY::MOVI16;
+    } else if (getSTI().getFeatureBits()[CSKY::HasE2] &&
+               isUInt<16>(Inst.getOperand(1).getImm())) {
+      Opcode = CSKY::MOVI32;
+    } else {
+      auto *Expr = getTargetStreamer().addConstantPoolEntry(
+          MCConstantExpr::create(Inst.getOperand(1).getImm(), getContext()),
+          Inst.getLoc());
+      Inst.erase(std::prev(Inst.end()));
+      Inst.addOperand(MCOperand::createExpr(Expr));
+    }
+  } else {
+    const MCExpr *AdjustExpr = nullptr;
+    if (const CSKYMCExpr *CSKYExpr =
+            dyn_cast<CSKYMCExpr>(Inst.getOperand(1).getExpr())) {
+      if (CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSGD ||
+          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSIE ||
+          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSLDM) {
+        MCSymbol *Dot = getContext().createNamedTempSymbol();
+        Out.emitLabel(Dot);
+        AdjustExpr = MCSymbolRefExpr::create(Dot, getContext());
+      }
+    }
+    auto *Expr = getTargetStreamer().addConstantPoolEntry(
+        Inst.getOperand(1).getExpr(), Inst.getLoc(), AdjustExpr);
+    Inst.erase(std::prev(Inst.end()));
+    Inst.addOperand(MCOperand::createExpr(Expr));
+  }
+
+  Inst.setOpcode(Opcode);
+
+  Out.emitInstruction(Inst, getSTI());
+  return false;
+}
+
+bool CSKYAsmParser::processJSRI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
+  Inst.setLoc(IDLoc);
+
+  if (Inst.getOperand(0).isImm()) {
+    const MCExpr *Expr = getTargetStreamer().addConstantPoolEntry(
+        MCConstantExpr::create(Inst.getOperand(0).getImm(), getContext()),
+        Inst.getLoc());
+    Inst.setOpcode(CSKY::JSRI32);
+    Inst.erase(std::prev(Inst.end()));
+    Inst.addOperand(MCOperand::createExpr(Expr));
+  } else {
+    const MCExpr *Expr = getTargetStreamer().addConstantPoolEntry(
+        Inst.getOperand(0).getExpr(), Inst.getLoc());
+    Inst.setOpcode(CSKY::JBSR32);
+    Inst.addOperand(MCOperand::createExpr(Expr));
+  }
+
+  Out.emitInstruction(Inst, getSTI());
+  return false;
+}
+
+bool CSKYAsmParser::processJMPI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
+  Inst.setLoc(IDLoc);
+
+  if (Inst.getOperand(0).isImm()) {
+    const MCExpr *Expr = getTargetStreamer().addConstantPoolEntry(
+        MCConstantExpr::create(Inst.getOperand(0).getImm(), getContext()),
+        Inst.getLoc());
+    Inst.setOpcode(CSKY::JMPI32);
+    Inst.erase(std::prev(Inst.end()));
+    Inst.addOperand(MCOperand::createExpr(Expr));
+  } else {
+    const MCExpr *Expr = getTargetStreamer().addConstantPoolEntry(
+        Inst.getOperand(0).getExpr(), Inst.getLoc());
+    Inst.setOpcode(CSKY::JBR32);
+    Inst.addOperand(MCOperand::createExpr(Expr));
+  }
+
+  Out.emitInstruction(Inst, getSTI());
+  return false;
+}
+
 bool CSKYAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
                                        OperandVector &Operands,
                                        MCStreamer &Out) {
@@ -869,6 +966,28 @@ bool CSKYAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case CSKY::MVCV32:
     Inst.erase(std::next(Inst.begin()));
     Inst.insert(Inst.end(), MCOperand::createReg(CSKY::C));
+    break;
+  case CSKY::PseudoLRW16:
+  case CSKY::PseudoLRW32:
+    return processLRW(Inst, IDLoc, Out);
+  case CSKY::PseudoJSRI32:
+    return processJSRI(Inst, IDLoc, Out);
+  case CSKY::PseudoJMPI32:
+    return processJMPI(Inst, IDLoc, Out);
+  case CSKY::JBSR32:
+  case CSKY::JBR16:
+  case CSKY::JBT16:
+  case CSKY::JBF16:
+  case CSKY::JBR32:
+  case CSKY::JBT32:
+  case CSKY::JBF32:
+    unsigned Num = Inst.getNumOperands() - 1;
+    assert(Inst.getOperand(Num).isExpr());
+
+    const MCExpr *Expr = getTargetStreamer().addConstantPoolEntry(
+        Inst.getOperand(Num).getExpr(), Inst.getLoc());
+
+    Inst.addOperand(MCOperand::createExpr(Expr));
     break;
   }
 

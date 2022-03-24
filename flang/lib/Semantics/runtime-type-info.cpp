@@ -799,7 +799,7 @@ evaluate::StructureConstructor RuntimeTableBuilder::DescribeComponent(
                        evaluate::GetRawLowerBound(foldingContext, entity, j)),
               parameters));
       bounds.emplace_back(GetValue(
-          evaluate::GetUpperBound(foldingContext, entity, j), parameters));
+          evaluate::GetRawUpperBound(foldingContext, entity, j), parameters));
     }
     AddValue(values, componentSchema_, "bounds"s,
         SaveDerivedPointerTarget(scope,

@@ -171,3 +171,26 @@ TEST(Decl, IsInExportDeclContext) {
       selectFirst<FunctionDecl>("f", match(functionDecl().bind("f"), Ctx));
   EXPECT_TRUE(f->isInExportDeclContext());
 }
+
+TEST(Decl, InConsistLinkageForTemplates) {
+  llvm::Annotations Code(R"(
+    export module m;
+    export template <class T>
+    void f() {}
+
+    template <>
+    void f<int>() {})");
+
+  auto AST =
+      tooling::buildASTFromCodeWithArgs(Code.code(), /*Args=*/{"-std=c++20"});
+  ASTContext &Ctx = AST->getASTContext();
+
+  llvm::SmallVector<ast_matchers::BoundNodes, 2> Funcs =
+      match(functionDecl().bind("f"), Ctx);
+
+  EXPECT_EQ(Funcs.size(), 2U);
+  const FunctionDecl *TemplateF = Funcs[0].getNodeAs<FunctionDecl>("f");
+  const FunctionDecl *SpecializedF = Funcs[1].getNodeAs<FunctionDecl>("f");
+  EXPECT_EQ(TemplateF->getLinkageInternal(),
+            SpecializedF->getLinkageInternal());
+}
