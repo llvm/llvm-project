@@ -164,6 +164,12 @@ set(ppc_wrapper_files
   ppc_wrappers/pmmintrin.h
   ppc_wrappers/tmmintrin.h
   ppc_wrappers/smmintrin.h
+  ppc_wrappers/bmiintrin.h
+  ppc_wrappers/bmi2intrin.h
+  ppc_wrappers/immintrin.h
+  ppc_wrappers/tmmintrin.h
+  ppc_wrappers/x86intrin.h
+  ppc_wrappers/x86gprintrin.h
 )
 
 set(openmp_wrapper_files

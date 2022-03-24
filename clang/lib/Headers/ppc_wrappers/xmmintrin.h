@@ -31,8 +31,8 @@
 #error "Please read comment above. Use -DNO_WARN_X86_INTRINSICS to disable this error."
 #endif
 
-#ifndef _XMMINTRIN_H_INCLUDED
-#define _XMMINTRIN_H_INCLUDED
+#ifndef XMMINTRIN_H_
+#define XMMINTRIN_H_
 
 #if defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))
 
@@ -881,7 +881,7 @@ _mm_cvtss_f32 (__m128 __A)
 extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_cvtss_si32 (__m128 __A)
 {
-  __m64 res = 0;
+  int res;
 #ifdef _ARCH_PWR8
   double dtmp;
   __asm__(
@@ -914,8 +914,8 @@ _mm_cvt_ss2si (__m128 __A)
 extern __inline long long __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_cvtss_si64 (__m128 __A)
 {
-  __m64 res = 0;
-#ifdef _ARCH_PWR8
+  long long res;
+#if defined (_ARCH_PWR8) && defined (__powerpc64__)
   double dtmp;
   __asm__(
 #ifdef __LITTLE_ENDIAN__
@@ -1328,6 +1328,9 @@ _mm_storel_pi (__m64 *__P, __m128 __A)
 extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_movemask_ps (__m128  __A)
 {
+#ifdef _ARCH_PWR10
+  return vec_extractm ((__vector unsigned int) __A);
+#else
   __vector unsigned long long result;
   static const __vector unsigned int perm_mask =
     {
@@ -1347,6 +1350,7 @@ _mm_movemask_ps (__m128  __A)
 #else
   return result[0];
 #endif
+#endif /* !_ARCH_PWR10 */
 }
 #endif /* _ARCH_PWR8 */
 
@@ -1553,6 +1557,7 @@ _m_pminub (__m64 __A, __m64 __B)
 extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_movemask_pi8 (__m64 __A)
 {
+#ifdef __powerpc64__
   unsigned long long p =
 #ifdef __LITTLE_ENDIAN__
                          0x0008101820283038UL; // permute control for sign bits
@@ -1560,6 +1565,18 @@ _mm_movemask_pi8 (__m64 __A)
                          0x3830282018100800UL; // permute control for sign bits
 #endif
   return __builtin_bpermd (p, __A);
+#else
+#ifdef __LITTLE_ENDIAN__
+  unsigned int mask = 0x20283038UL;
+  unsigned int r1 = __builtin_bpermd (mask, __A) & 0xf;
+  unsigned int r2 = __builtin_bpermd (mask, __A >> 32) & 0xf;
+#else
+  unsigned int mask = 0x38302820UL;
+  unsigned int r1 = __builtin_bpermd (mask, __A >> 32) & 0xf;
+  unsigned int r2 = __builtin_bpermd (mask, __A) & 0xf;
+#endif
+  return (r2 << 4) | r1;
+#endif
 }
 
 extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
@@ -1841,4 +1858,4 @@ do {									\
 #endif /* defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))   \
         */
 
-#endif /* _XMMINTRIN_H_INCLUDED */
+#endif /* XMMINTRIN_H_ */

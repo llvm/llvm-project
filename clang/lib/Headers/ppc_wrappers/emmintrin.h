@@ -405,20 +405,10 @@ _mm_cmpnge_pd (__m128d __A, __m128d __B)
 extern __inline __m128d __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_cmpord_pd (__m128d __A, __m128d __B)
 {
-#if _ARCH_PWR8
   __v2du c, d;
   /* Compare against self will return false (0's) if NAN.  */
   c = (__v2du)vec_cmpeq (__A, __A);
   d = (__v2du)vec_cmpeq (__B, __B);
-#else
-  __v2du a, b;
-  __v2du c, d;
-  const __v2du double_exp_mask  = {0x7ff0000000000000, 0x7ff0000000000000};
-  a = (__v2du)vec_abs ((__v2df)__A);
-  b = (__v2du)vec_abs ((__v2df)__B);
-  c = (__v2du)vec_cmpgt (double_exp_mask, a);
-  d = (__v2du)vec_cmpgt (double_exp_mask, b);
-#endif
   /* A != NAN and B != NAN.  */
   return ((__m128d)vec_and(c, d));
 }
@@ -861,7 +851,11 @@ _mm_cvtpd_epi32 (__m128d __A)
       : );
 
 #ifdef _ARCH_PWR8
+#ifdef __LITTLE_ENDIAN__
   temp = vec_mergeo (temp, temp);
+#else
+  temp = vec_mergee (temp, temp);
+#endif
   result = (__v4si) vec_vpkudum ((__vector long long) temp,
 				 (__vector long long) vzero);
 #else
@@ -896,7 +890,11 @@ _mm_cvtpd_ps (__m128d __A)
       : );
 
 #ifdef _ARCH_PWR8
+#ifdef __LITTLE_ENDIAN__
   temp = vec_mergeo (temp, temp);
+#else
+  temp = vec_mergee (temp, temp);
+#endif
   result = (__v4sf) vec_vpkudum ((__vector long long) temp,
 				 (__vector long long) vzero);
 #else
@@ -925,7 +923,11 @@ _mm_cvttpd_epi32 (__m128d __A)
       : );
 
 #ifdef _ARCH_PWR8
+#ifdef __LITTLE_ENDIAN__
   temp = vec_mergeo (temp, temp);
+#else
+  temp = vec_mergee (temp, temp);
+#endif
   result = (__v4si) vec_vpkudum ((__vector long long) temp,
 				 (__vector long long) vzero);
 #else
@@ -1205,6 +1207,9 @@ _mm_loadl_pd (__m128d __A, double const *__B)
 extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_movemask_pd (__m128d  __A)
 {
+#ifdef _ARCH_PWR10
+  return vec_extractm ((__v2du) __A);
+#else
   __vector unsigned long long result;
   static const __vector unsigned int perm_mask =
     {
@@ -1224,6 +1229,7 @@ _mm_movemask_pd (__m128d  __A)
 #else
   return result[0];
 #endif
+#endif /* !_ARCH_PWR10 */
 }
 #endif /* _ARCH_PWR8 */
 
@@ -1434,6 +1440,7 @@ _mm_mul_su32 (__m64 __A, __m64 __B)
   return ((__m64)a * (__m64)b);
 }
 
+#ifdef _ARCH_PWR8
 extern __inline __m128i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_mul_epu32 (__m128i __A, __m128i __B)
 {
@@ -1460,6 +1467,7 @@ _mm_mul_epu32 (__m128i __A, __m128i __B)
   return (__m128i) vec_mule ((__v4su)__A, (__v4su)__B);
 #endif
 }
+#endif
 
 extern __inline __m128i __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_slli_epi16 (__m128i __A, int __B)
@@ -1749,7 +1757,7 @@ _mm_sll_epi64 (__m128i __A, __m128i __B)
   lshift = vec_splat ((__v2du) __B, 0);
   shmask = vec_cmplt (lshift, shmax);
   result = vec_sl ((__v2du) __A, lshift);
-  result = (__v2du)vec_sel ((__v2df) shmask, (__v2df)result, shmask);
+  result = vec_sel ((__v2du) shmask, result, shmask);
 
   return (__m128i) result;
 }
@@ -1843,7 +1851,7 @@ _mm_srl_epi64 (__m128i __A, __m128i __B)
   rshift = vec_splat ((__v2du) __B, 0);
   shmask = vec_cmplt (rshift, shmax);
   result = vec_sr ((__v2du) __A, rshift);
-  result = (__v2du)vec_sel ((__v2df) shmask, (__v2df)result, shmask);
+  result = vec_sel ((__v2du) shmask, result, shmask);
 
   return (__m128i) result;
 }
@@ -1995,10 +2003,14 @@ _mm_min_epu8 (__m128i __A, __m128i __B)
 #ifdef _ARCH_PWR8
 /* Intrinsic functions that require PowerISA 2.07 minimum.  */
 
-/* Creates a 4-bit mask from the most significant bits of the SPFP values.  */
+/* Return a mask created from the most significant bit of each 8-bit
+   element in A.  */
 extern __inline int __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_movemask_epi8 (__m128i __A)
 {
+#ifdef _ARCH_PWR10
+  return vec_extractm ((__v16qu) __A);
+#else
   __vector unsigned long long result;
   static const __vector unsigned char perm_mask =
     {
@@ -2015,6 +2027,7 @@ _mm_movemask_epi8 (__m128i __A)
 #else
   return result[0];
 #endif
+#endif /* !_ARCH_PWR10 */
 }
 #endif /* _ARCH_PWR8 */
 
@@ -2158,27 +2171,37 @@ extern __inline __m128i __attribute__((__gnu_inline__, __always_inline__, __arti
 _mm_sad_epu8 (__m128i __A, __m128i __B)
 {
   __v16qu a, b;
-  __v16qu vmin, vmax, vabsdiff;
+  __v16qu vabsdiff;
   __v4si vsum;
   const __v4su zero = { 0, 0, 0, 0 };
   __v4si result;
 
   a = (__v16qu) __A;
   b = (__v16qu) __B;
-  vmin = vec_min (a, b);
-  vmax = vec_max (a, b);
+#ifndef _ARCH_PWR9
+  __v16qu vmin = vec_min (a, b);
+  __v16qu vmax = vec_max (a, b);
   vabsdiff = vec_sub (vmax, vmin);
+#else
+  vabsdiff = vec_absd (a, b);
+#endif
   /* Sum four groups of bytes into integers.  */
   vsum = (__vector signed int) vec_sum4s (vabsdiff, zero);
+#ifdef __LITTLE_ENDIAN__
+  /* Sum across four integers with two integer results.  */
+  asm ("vsum2sws %0,%1,%2" : "=v" (result) : "v" (vsum), "v" (zero));
+  /* Note: vec_sum2s could be used here, but on little-endian, vector
+     shifts are added that are not needed for this use-case.
+     A vector shift to correctly position the 32-bit integer results
+     (currently at [0] and [2]) to [1] and [3] would then need to be
+     swapped back again since the desired results are two 64-bit
+     integers ([1]|[0] and [3]|[2]).  Thus, no shift is performed.  */
+#else
   /* Sum across four integers with two integer results.  */
   result = vec_sum2s (vsum, (__vector signed int) zero);
   /* Rotate the sums into the correct position.  */
-#ifdef __LITTLE_ENDIAN__
-  result = vec_sld (result, result, 4);
-#else
   result = vec_sld (result, result, 6);
 #endif
-  /* Rotate the sums into the correct position.  */
   return (__m128i) result;
 }
 
