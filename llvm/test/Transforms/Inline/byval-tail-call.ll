@@ -92,14 +92,11 @@ define void @foobar(i32* %x) {
 define void @barfoo() {
 ; CHECK-LABEL: @barfoo(
 ; CHECK-NEXT:    [[X1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[X:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[X1]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[X]], align 4
-; CHECK-NEXT:    store i32 [[TMP2]], i32* [[X1]], align 4
 ; CHECK-NEXT:    tail call void @ext2(i32* nonnull byval(i32) [[X1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[X1]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP3]])
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[X1]] to i8*
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i32

@@ -4,9 +4,6 @@
 ; Memcpy is copying known-undef, and is thus removable
 define void @test(i8* %dest) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[A:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(7) [[DEST:%.*]], i8* noundef nonnull align 1 dereferenceable(7) [[SRC]], i64 7, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [7 x i8]
@@ -47,9 +44,6 @@ define void @test3(i8* %dest) {
 
 define void @test4(i8* %dest) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[A1:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A1_SUB:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A1]], i64 0, i64 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(7) [[DEST:%.*]], i8* noundef nonnull align 1 dereferenceable(7) [[A1_SUB]], i64 7, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [7 x i8]
@@ -60,9 +54,6 @@ define void @test4(i8* %dest) {
 
 define void @test5(i8* %dest) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[A:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [7 x i8], [7 x i8]* [[A]], i64 0, i64 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(3) [[DEST:%.*]], i8* noundef nonnull align 1 dereferenceable(3) [[P2]], i64 3, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [7 x i8]
