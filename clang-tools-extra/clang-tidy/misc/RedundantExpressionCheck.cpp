@@ -569,6 +569,7 @@ matchRelationalIntegerConstantExpr(StringRef Id) {
   std::string SwapId = (Id + "-swap").str();
   std::string NegateId = (Id + "-negate").str();
   std::string OverloadId = (Id + "-overload").str();
+  std::string ConstId = (Id + "-const").str();
 
   const auto RelationalExpr = ignoringParenImpCasts(binaryOperator(
       isComparisonOperator(), expr().bind(Id),
@@ -600,7 +601,9 @@ matchRelationalIntegerConstantExpr(StringRef Id) {
       cxxOperatorCallExpr(
           hasAnyOverloadedOperatorName("==", "!=", "<", "<=", ">", ">="),
           // Filter noisy false positives.
-          unless(isMacro()), unless(isInTemplateInstantiation()))
+          unless(isMacro()), unless(isInTemplateInstantiation()),
+          anyOf(hasLHS(ignoringParenImpCasts(integerLiteral().bind(ConstId))),
+                hasRHS(ignoringParenImpCasts(integerLiteral().bind(ConstId)))))
           .bind(OverloadId);
 
   return anyOf(RelationalExpr, CastExpr, NegateRelationalExpr,
@@ -674,16 +677,38 @@ static bool retrieveRelationalIntegerConstantExpr(
     if (canOverloadedOperatorArgsBeModified(OverloadedOperatorExpr, false))
       return false;
 
+    bool IntegerConstantIsFirstArg = false;
+
     if (const auto *Arg = OverloadedOperatorExpr->getArg(1)) {
       if (!Arg->isValueDependent() &&
-          !Arg->isIntegerConstantExpr(*Result.Context))
-        return false;
-    }
-    Symbol = OverloadedOperatorExpr->getArg(0);
+          !Arg->isIntegerConstantExpr(*Result.Context)) {
+        IntegerConstantIsFirstArg = true;
+        if (const auto *Arg = OverloadedOperatorExpr->getArg(0)) {
+          if (!Arg->isValueDependent() &&
+              !Arg->isIntegerConstantExpr(*Result.Context))
+            return false;
+        } else
+          return false;
+      }
+    } else
+      return false;
+
+    Symbol = OverloadedOperatorExpr->getArg(IntegerConstantIsFirstArg ? 1 : 0);
     OperandExpr = OverloadedOperatorExpr;
     Opcode = BinaryOperator::getOverloadedOpcode(OverloadedOperatorExpr->getOperator());
 
-    return BinaryOperator::isComparisonOp(Opcode);
+    if (!retrieveIntegerConstantExpr(Result, Id, Value, ConstExpr))
+      return false;
+
+    if (!BinaryOperator::isComparisonOp(Opcode))
+      return false;
+
+    // The call site of this function expects the constant on the RHS,
+    // so change the opcode accordingly.
+    if (IntegerConstantIsFirstArg)
+      Opcode = BinaryOperator::reverseComparisonOp(Opcode);
+
+    return true;
   } else {
     return false;
   }
