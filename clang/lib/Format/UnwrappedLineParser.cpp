@@ -600,10 +600,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
   do {
     // Get next non-comment token.
     FormatToken *NextTok;
-    unsigned ReadTokens = 0;
     do {
       NextTok = Tokens->getNextToken();
-      ++ReadTokens;
     } while (NextTok->is(tok::comment));
 
     switch (Tok->Tok.getKind()) {
@@ -643,7 +641,6 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             ScopedMacroState MacroState(*Line, Tokens, NextTok);
             do {
               NextTok = Tokens->getNextToken();
-              ++ReadTokens;
             } while (NextTok->isNot(tok::eof));
           }
 
@@ -696,7 +693,6 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
             // We can have an array subscript after a braced init
             // list, but C++11 attributes are expected after blocks.
             NextTok = Tokens->getNextToken();
-            ++ReadTokens;
             ProbablyBracedList = NextTok->isNot(tok::l_square);
           }
         }
