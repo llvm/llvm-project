@@ -6,15 +6,13 @@
 
 local_get_no_local_type:
   .functype local_get_no_local_type () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: no local type specified for index 0
+# CHECK: :[[@LINE+1]]:13: error: no local type specified for index 0
   local.get 0
   end_function
 
 local_set_no_local_type:
   .functype local_set_no_local_type () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: no local type specified for index 0
+# CHECK: :[[@LINE+1]]:13: error: no local type specified for index 0
   local.set 0
   end_function
 
@@ -35,8 +33,7 @@ local_set_type_mismatch:
 
 local_tee_no_local_type:
   .functype local_tee_no_local_type () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: no local type specified for index 0
+# CHECK: :[[@LINE+1]]:13: error: no local type specified for index 0
   local.tee 0
   end_function
 
@@ -57,29 +54,27 @@ local_tee_type_mismatch:
 
 global_get_missing_globaltype:
   .functype global_get_missing_globaltype () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: symbol foo missing .globaltype
+# FIXME: Error location should be at beginning of operand.
+# CHECK: :[[@LINE+1]]:17: error: symbol foo missing .globaltype
   global.get foo
   end_function
 
 global_get_expected_expression_operand:
   .functype global_get_expected_expression_operand () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:14: error: expected expression operand
   global.get 1
   end_function
 
 global_set_missing_globaltype:
   .functype global_set_missing_globaltype () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: symbol foo missing .globaltype
+# FIXME: Error location should be at beginning of operand.
+# CHECK: :[[@LINE+1]]:17: error: symbol foo missing .globaltype
   global.set foo
   end_function
 
 global_set_expected_expression_operand:
   .functype global_set_expected_expression_operand () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:14: error: expected expression operand
   global.set 1
   end_function
 
@@ -100,15 +95,14 @@ global_set_type_mismatch:
 
 table_get_expected_expression_operand:
   .functype table_get_expected_expression_operand () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.get 1
   end_function
 
 table_get_missing_tabletype:
   .functype table_get_missing_tabletype () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: symbol foo missing .tabletype
+# FIXME: Error location should be at beginning of operand.
+# CHECK: :[[@LINE+1]]:16: error: symbol foo missing .tabletype
   table.get foo
   end_function
 
@@ -129,15 +123,14 @@ table_get_type_mismatch:
 
 table_set_expected_expression_operand:
   .functype table_set_expected_expression_operand () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.set 1
   end_function
 
 table_set_missing_tabletype:
   .functype table_set_missing_tabletype () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: symbol foo missing .tabletype
+# FIXME: Error location should be at beginning ofoperand.
+# CHECK: :[[@LINE+1]]:16: error: symbol foo missing .tabletype
   table.set foo
   end_function
 
@@ -171,15 +164,14 @@ table_set_type_mismatch_2:
 
 table_fill_expected_expression_operand:
   .functype table_fill_expected_expression_operand () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:14: error: expected expression operand
   table.fill 1
   end_function
 
 table_fill_missing_tabletype:
   .functype table_fill_missing_tabletype () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: symbol foo missing .tabletype
+# FIXME: Error location should be at beginning of operand.
+# CHECK: :[[@LINE+1]]:17: error: symbol foo missing .tabletype
   table.fill foo
   end_function
 
@@ -397,8 +389,7 @@ return_call_indirect_empty_stack_while_popping_2:
 
 call_expected_expression_operand:
   .functype call_expected_expression_operand () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:8: error: expected expression operand
   call 1
   end_function
 
@@ -427,14 +418,14 @@ call_superfluous_value_at_end:
 
 call_missing_functype:
   .functype call_missing_functype () -> ()
-# CHECK: :[[@LINE+1]]:3: error: symbol no_functype missing .functype
+# FIXME: Error location should be at beginning of operand.
+# CHECK: :[[@LINE+1]]:19: error: symbol no_functype missing .functype
   call no_functype
   end_function
 
 return_call_expected_expression_operand:
   .functype return_call_expected_expression_operand () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:15: error: expected expression operand
   return_call 1
   end_function
 
@@ -453,16 +444,15 @@ return_call_type_mismatch:
 
 return_call_missing_functype:
   .functype return_call_missing_functype () -> ()
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: symbol no_functype missing .functype
+# FIXME: Error location should be at beginning of operand.
+# CHECK: :[[@LINE+1]]:26: error: symbol no_functype missing .functype
   return_call no_functype
   end_function
 
 catch_expected_expression_operand:
   .functype catch_expected_expression_operand () -> ()
   try
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: expected expression operand
+# CHECK: :[[@LINE+1]]:9: error: expected expression operand
   catch 1
   end_try
   end_function
@@ -470,8 +460,8 @@ catch_expected_expression_operand:
 catch_missing_tagtype:
   .functype catch_missing_tagtype () -> ()
   try
-# FIXME: Error location should be at operand.
-# CHECK: :[[@LINE+1]]:3: error: symbol no_tagtype missing .tagtype
+# FIXME: Error location should be at beginning of operand.
+# CHECK: :[[@LINE+1]]:19: error: symbol no_tagtype missing .tagtype
   catch no_tagtype
   end_try
   end_function
