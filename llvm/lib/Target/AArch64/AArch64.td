@@ -466,11 +466,6 @@ def FeatureEL3 : SubtargetFeature<"el3", "HasEL3", "true",
 def FeatureFixCortexA53_835769 : SubtargetFeature<"fix-cortex-a53-835769",
   "FixCortexA53_835769", "true", "Mitigate Cortex-A53 Erratum 835769">;
 
-def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
-                                                 "NoBTIAtReturnTwice", "true",
-                                                 "Don't place a BTI instruction "
-                                                 "after a return-twice">;
-
 //===----------------------------------------------------------------------===//
 // Architectures.
 //
