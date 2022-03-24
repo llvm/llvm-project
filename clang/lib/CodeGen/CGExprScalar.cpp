@@ -1390,8 +1390,8 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
   if (isa<llvm::VectorType>(SrcTy) || isa<llvm::VectorType>(DstTy)) {
     // Allow bitcast from vector to integer/fp of the same size.
-    unsigned SrcSize = SrcTy->getPrimitiveSizeInBits();
-    unsigned DstSize = DstTy->getPrimitiveSizeInBits();
+    llvm::TypeSize SrcSize = SrcTy->getPrimitiveSizeInBits();
+    llvm::TypeSize DstSize = DstTy->getPrimitiveSizeInBits();
     if (SrcSize == DstSize)
       return Builder.CreateBitCast(Src, DstTy, "conv");
 
