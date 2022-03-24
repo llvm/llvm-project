@@ -77,7 +77,7 @@ class IRBuilderCallbackInserter : public IRBuilderDefaultInserter {
   std::function<void(Instruction *)> Callback;
 
 public:
-  virtual ~IRBuilderCallbackInserter();
+  ~IRBuilderCallbackInserter() override;
 
   IRBuilderCallbackInserter(std::function<void(Instruction *)> Callback)
       : Callback(std::move(Callback)) {}
