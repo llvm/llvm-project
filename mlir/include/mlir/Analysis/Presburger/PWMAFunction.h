@@ -52,6 +52,8 @@ public:
   using IntegerPolyhedron::getNumIds;
   using IntegerPolyhedron::getNumLocalIds;
   using IntegerPolyhedron::getNumSymbolIds;
+  using PresburgerSpace::isSpaceCompatible;
+  using PresburgerSpace::isSpaceEqual;
 
   MultiAffineFunction(const IntegerPolyhedron &domain, const Matrix &output)
       : IntegerPolyhedron(domain), output(output) {}
@@ -96,16 +98,6 @@ public:
   /// the intersection of the domains.
   bool isEqualWhereDomainsOverlap(MultiAffineFunction other) const;
 
-  /// Returns whether the underlying PresburgerSpace is equal to `other`.
-  bool isSpaceEqual(const PresburgerSpace &other) const {
-    return PresburgerSpace::isEqual(other);
-  };
-
-  /// Returns whether the underlying PresburgerLocalSpace is equal to `other`.
-  bool isSpaceEqual(const PresburgerLocalSpace &other) const {
-    return PresburgerLocalSpace::isEqual(other);
-  };
-
   /// Return whether the `this` and `other` are equal. This is the case if
   /// they lie in the same space, i.e. have the same dimensions, and their
   /// domains are identical and their outputs are equal on their domain.
@@ -146,7 +138,8 @@ private:
 class PWMAFunction : public PresburgerSpace {
 public:
   PWMAFunction(unsigned numDims, unsigned numSymbols, unsigned numOutputs)
-      : PresburgerSpace(/*numDomain=*/0, /*numRange=*/numDims, numSymbols),
+      : PresburgerSpace(/*numDomain=*/0, /*numRange=*/numDims, numSymbols,
+                        /*numLocals=*/0),
         numOutputs(numOutputs) {
     assert(numOutputs >= 1 && "The function must output something!");
   }

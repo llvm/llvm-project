@@ -37,7 +37,7 @@ const IntegerRelation &PresburgerRelation::getDisjunct(unsigned index) const {
 /// Mutate this set, turning it into the union of this set and the given
 /// IntegerRelation.
 void PresburgerRelation::unionInPlace(const IntegerRelation &disjunct) {
-  assert(PresburgerSpace::isEqual(disjunct) && "Spaces should match");
+  assert(isSpaceCompatible(disjunct) && "Spaces should match");
   integerRelations.push_back(disjunct);
 }
 
@@ -46,7 +46,7 @@ void PresburgerRelation::unionInPlace(const IntegerRelation &disjunct) {
 /// This is accomplished by simply adding all the disjuncts of the given set
 /// to this set.
 void PresburgerRelation::unionInPlace(const PresburgerRelation &set) {
-  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
+  assert(isSpaceCompatible(set) && "Spaces should match");
   for (const IntegerRelation &disjunct : set.integerRelations)
     unionInPlace(disjunct);
 }
@@ -54,7 +54,7 @@ void PresburgerRelation::unionInPlace(const PresburgerRelation &set) {
 /// Return the union of this set and the given set.
 PresburgerRelation
 PresburgerRelation::unionSet(const PresburgerRelation &set) const {
-  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
+  assert(isSpaceCompatible(set) && "Spaces should match");
   PresburgerRelation result = *this;
   result.unionInPlace(set);
   return result;
@@ -91,7 +91,7 @@ PresburgerRelation PresburgerRelation::getEmpty(unsigned numDomain,
 // variables of both.
 PresburgerRelation
 PresburgerRelation::intersect(const PresburgerRelation &set) const {
-  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
+  assert(isSpaceCompatible(set) && "Spaces should match");
 
   PresburgerRelation result(getNumDomainIds(), getNumRangeIds(),
                             getNumSymbolIds());
@@ -281,7 +281,7 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
 /// returning from that function.
 static PresburgerRelation getSetDifference(IntegerRelation disjunct,
                                            const PresburgerRelation &set) {
-  assert(disjunct.PresburgerSpace::isEqual(set) && "Spaces should match");
+  assert(disjunct.isSpaceCompatible(set) && "Spaces should match");
   if (disjunct.isEmptyByGCDTest())
     return PresburgerRelation::getEmpty(disjunct.getNumDomainIds(),
                                         disjunct.getNumRangeIds(),
@@ -307,7 +307,7 @@ PresburgerRelation PresburgerRelation::complement() const {
 /// return `this \ set`.
 PresburgerRelation
 PresburgerRelation::subtract(const PresburgerRelation &set) const {
-  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
+  assert(isSpaceCompatible(set) && "Spaces should match");
   PresburgerRelation result(getNumDomainIds(), getNumRangeIds(),
                             getNumSymbolIds());
   // We compute (U_i t_i) \ (U_i set_i) as U_i (t_i \ V_i set_i).
@@ -325,7 +325,7 @@ bool PresburgerRelation::isSubsetOf(const PresburgerRelation &set) const {
 
 /// Two sets are equal iff they are subsets of each other.
 bool PresburgerRelation::isEqual(const PresburgerRelation &set) const {
-  assert(PresburgerSpace::isEqual(set) && "Spaces should match");
+  assert(isSpaceCompatible(set) && "Spaces should match");
   return this->isSubsetOf(set) && set.isSubsetOf(*this);
 }
 
