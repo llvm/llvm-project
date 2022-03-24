@@ -127,7 +127,7 @@ class LLVM_LIBRARY_VISIBILITY OpenMPLinker : public Tool {
 void getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                             const llvm::opt::ArgList &Args,
                             std::vector<StringRef> &Features,
-                            Optional<clang::CudaVersion> CudaVersion = None);
+                            Optional<clang::CudaVersion> Version = None);
 
 } // end namespace NVPTX
 } // end namespace tools

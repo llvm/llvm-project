@@ -633,17 +633,17 @@ void NVPTX::OpenMPLinker::ConstructJob(Compilation &C, const JobAction &JA,
 void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args,
                                    std::vector<StringRef> &Features,
-                                   Optional<clang::CudaVersion> CudaVersion) {
-  if (!CudaVersion) {
+                                   Optional<clang::CudaVersion> Version) {
+  if (!Version) {
     CudaInstallationDetector CudaInstallation(D, Triple, Args);
-    CudaVersion = CudaInstallation.version();
+    Version = CudaInstallation.version();
   }
 
   // New CUDA versions often introduce new instructions that are only supported
   // by new PTX version, so we need to raise PTX level to enable them in NVPTX
   // back-end.
   const char *PtxFeature = nullptr;
-  switch (*CudaVersion) {
+  switch (*Version) {
 #define CASE_CUDA_VERSION(CUDA_VER, PTX_VER)                                   \
   case CudaVersion::CUDA_##CUDA_VER:                                           \
     PtxFeature = "+ptx" #PTX_VER;                                              \
