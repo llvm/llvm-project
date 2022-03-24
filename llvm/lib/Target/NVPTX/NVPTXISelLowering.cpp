@@ -1302,8 +1302,8 @@ std::string NVPTXTargetLowering::getPrototype(
 
   bool first = true;
 
-  unsigned OIdx = 0;
-  for (unsigned i = 0, e = Args.size(); i != e; ++i, ++OIdx) {
+  const Function *F = CB.getFunction();
+  for (unsigned i = 0, e = Args.size(), OIdx = 0; i != e; ++i, ++OIdx) {
     Type *Ty = Args[i].Ty;
     if (!first) {
       O << ", ";
@@ -1312,15 +1312,14 @@ std::string NVPTXTargetLowering::getPrototype(
 
     if (!Outs[OIdx].Flags.isByVal()) {
       if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
-        unsigned align = 0;
+        unsigned ParamAlign = 0;
         const CallInst *CallI = cast<CallInst>(&CB);
         // +1 because index 0 is reserved for return type alignment
-        if (!getAlign(*CallI, i + 1, align))
-          align = DL.getABITypeAlignment(Ty);
-        unsigned sz = DL.getTypeAllocSize(Ty);
-        O << ".param .align " << align << " .b8 ";
+        if (!getAlign(*CallI, i + 1, ParamAlign))
+          ParamAlign = getFunctionParamOptimizedAlign(F, Ty, DL).value();
+        O << ".param .align " << ParamAlign << " .b8 ";
         O << "_";
-        O << "[" << sz << "]";
+        O << "[" << DL.getTypeAllocSize(Ty) << "]";
         // update the index for Outs
         SmallVector<EVT, 16> vtparts;
         ComputeValueVTs(*this, DL, Ty, vtparts);
@@ -1352,11 +1351,17 @@ std::string NVPTXTargetLowering::getPrototype(
       continue;
     }
 
-    Align align = Outs[OIdx].Flags.getNonZeroByValAlign();
-    unsigned sz = Outs[OIdx].Flags.getByValSize();
-    O << ".param .align " << align.value() << " .b8 ";
+    Align ParamByValAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
+
+    // Try to increase alignment. This code matches logic in LowerCall when
+    // alignment increase is performed to increase vectorization options.
+    Type *ETy = Args[i].IndirectType;
+    Align AlignCandidate = getFunctionParamOptimizedAlign(F, ETy, DL);
+    ParamByValAlign = std::max(ParamByValAlign, AlignCandidate);
+
+    O << ".param .align " << ParamByValAlign.value() << " .b8 ";
     O << "_";
-    O << "[" << sz << "]";
+    O << "[" << Outs[OIdx].Flags.getByValSize() << "]";
   }
   O << ");";
   return O.str();
@@ -1403,12 +1408,15 @@ Align NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
 
   // Check for function alignment information if we found that the
   // ultimate target is a Function
-  if (DirectCallee)
+  if (DirectCallee) {
     if (getAlign(*DirectCallee, Idx, Alignment))
       return Align(Alignment);
+    // If alignment information is not available, fall back to the
+    // default function param optimized type alignment
+    return getFunctionParamOptimizedAlign(DirectCallee, Ty, DL);
+  }
 
-  // Call is indirect or alignment information is not available, fall back to
-  // the ABI type alignment
+  // Call is indirect, fall back to the ABI type alignment
   return DL.getABITypeAlign(Ty);
 }
 
@@ -1569,18 +1577,26 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
 
     // ByVal arguments
+    // TODO: remove code duplication when handling byval and non-byval cases.
     SmallVector<EVT, 16> VTs;
     SmallVector<uint64_t, 16> Offsets;
-    assert(Args[i].IndirectType && "byval arg must have indirect type");
-    ComputePTXValueVTs(*this, DL, Args[i].IndirectType, VTs, &Offsets, 0);
+    Type *ETy = Args[i].IndirectType;
+    assert(ETy && "byval arg must have indirect type");
+    ComputePTXValueVTs(*this, DL, ETy, VTs, &Offsets, 0);
 
     // declare .param .align <align> .b8 .param<n>[<size>];
     unsigned sz = Outs[OIdx].Flags.getByValSize();
     SDVTList DeclareParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-    Align ArgAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
+
     // The ByValAlign in the Outs[OIdx].Flags is alway set at this point,
     // so we don't need to worry about natural alignment or not.
     // See TargetLowering::LowerCallTo().
+    Align ArgAlign = Outs[OIdx].Flags.getNonZeroByValAlign();
+
+    // Try to increase alignment to enhance vectorization options.
+    const Function *F = CB->getCalledFunction();
+    Align AlignCandidate = getFunctionParamOptimizedAlign(F, ETy, DL);
+    ArgAlign = std::max(ArgAlign, AlignCandidate);
 
     // Enforce minumum alignment of 4 to work around ptxas miscompile
     // for sm_50+. See corresponding alignment adjustment in
@@ -1594,29 +1610,67 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(NVPTXISD::DeclareParam, dl, DeclareParamVTs,
                         DeclareParamOps);
     InFlag = Chain.getValue(1);
+
+    auto VectorInfo = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
+    SmallVector<SDValue, 6> StoreOperands;
     for (unsigned j = 0, je = VTs.size(); j != je; ++j) {
       EVT elemtype = VTs[j];
       int curOffset = Offsets[j];
-      unsigned PartAlign = GreatestCommonDivisor64(ArgAlign.value(), curOffset);
+      Align PartAlign = commonAlignment(ArgAlign, curOffset);
+
+      // New store.
+      if (VectorInfo[j] & PVF_FIRST) {
+        assert(StoreOperands.empty() && "Unfinished preceding store.");
+        StoreOperands.push_back(Chain);
+        StoreOperands.push_back(DAG.getConstant(paramCount, dl, MVT::i32));
+        StoreOperands.push_back(DAG.getConstant(curOffset, dl, MVT::i32));
+      }
+
       auto PtrVT = getPointerTy(DL);
       SDValue srcAddr = DAG.getNode(ISD::ADD, dl, PtrVT, OutVals[OIdx],
                                     DAG.getConstant(curOffset, dl, PtrVT));
       SDValue theVal = DAG.getLoad(elemtype, dl, tempChain, srcAddr,
                                    MachinePointerInfo(), PartAlign);
+
       if (elemtype.getSizeInBits() < 16) {
+        // Use 16-bit registers for small stores as it's the
+        // smallest general purpose register size supported by NVPTX.
         theVal = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::i16, theVal);
       }
-      SDVTList CopyParamVTs = DAG.getVTList(MVT::Other, MVT::Glue);
-      SDValue CopyParamOps[] = { Chain,
-                                 DAG.getConstant(paramCount, dl, MVT::i32),
-                                 DAG.getConstant(curOffset, dl, MVT::i32),
-                                 theVal, InFlag };
-      Chain = DAG.getMemIntrinsicNode(
-          NVPTXISD::StoreParam, dl, CopyParamVTs, CopyParamOps, elemtype,
-          MachinePointerInfo(), /* Align */ None, MachineMemOperand::MOStore);
 
-      InFlag = Chain.getValue(1);
+      // Record the value to store.
+      StoreOperands.push_back(theVal);
+
+      if (VectorInfo[j] & PVF_LAST) {
+        unsigned NumElts = StoreOperands.size() - 3;
+        NVPTXISD::NodeType Op;
+        switch (NumElts) {
+        case 1:
+          Op = NVPTXISD::StoreParam;
+          break;
+        case 2:
+          Op = NVPTXISD::StoreParamV2;
+          break;
+        case 4:
+          Op = NVPTXISD::StoreParamV4;
+          break;
+        default:
+          llvm_unreachable("Invalid vector info.");
+        }
+
+        StoreOperands.push_back(InFlag);
+
+        Chain = DAG.getMemIntrinsicNode(
+            Op, dl, DAG.getVTList(MVT::Other, MVT::Glue), StoreOperands,
+            elemtype, MachinePointerInfo(), PartAlign,
+            MachineMemOperand::MOStore);
+        InFlag = Chain.getValue(1);
+
+        // Cleanup.
+        StoreOperands.clear();
+      }
     }
+    assert(StoreOperands.empty() && "Unfinished parameter store.");
     ++paramCount;
   }
 
@@ -2617,7 +2671,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                  const SmallVectorImpl<ISD::OutputArg> &Outs,
                                  const SmallVectorImpl<SDValue> &OutVals,
                                  const SDLoc &dl, SelectionDAG &DAG) const {
-  MachineFunction &MF = DAG.getMachineFunction();
+  const MachineFunction &MF = DAG.getMachineFunction();
+  const Function &F = MF.getFunction();
   Type *RetTy = MF.getFunction().getReturnType();
 
   bool isABI = (STI.getSmVersion() >= 20);
@@ -2632,7 +2687,9 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   assert(VTs.size() == OutVals.size() && "Bad return value decomposition");
 
   auto VectorInfo = VectorizePTXValueVTs(
-      VTs, Offsets, RetTy->isSized() ? DL.getABITypeAlign(RetTy) : Align(1));
+      VTs, Offsets,
+      RetTy->isSized() ? getFunctionParamOptimizedAlign(&F, RetTy, DL)
+                       : Align(1));
 
   // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
   // 32-bits are sign extended or zero extended, depending on whether
@@ -4250,6 +4307,55 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     return true;
   }
   return false;
+}
+
+/// getFunctionParamOptimizedAlign - since function arguments are passed via
+/// .param space, we may want to increase their alignment in a way that
+/// ensures that we can effectively vectorize their loads & stores. We can
+/// increase alignment only if the function has internal or has private
+/// linkage as for other linkage types callers may already rely on default
+/// alignment. To allow using 128-bit vectorized loads/stores, this function
+/// ensures that alignment is 16 or greater.
+Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
+    const Function *F, Type *ArgTy, const DataLayout &DL) const {
+  const uint64_t ABITypeAlign = DL.getABITypeAlign(ArgTy).value();
+
+  // If a function has linkage different from internal or private, we
+  // must use default ABI alignment as external users rely on it.
+  switch (F->getLinkage()) {
+  case GlobalValue::InternalLinkage:
+  case GlobalValue::PrivateLinkage: {
+    // Check that if a function has internal or private linkage
+    // it is not a kernel.
+#ifndef NDEBUG
+    const NamedMDNode *NMDN =
+        F->getParent()->getNamedMetadata("nvvm.annotations");
+    if (NMDN) {
+      for (const MDNode *MDN : NMDN->operands()) {
+        assert(MDN->getNumOperands() == 3);
+
+        const Metadata *MD0 = MDN->getOperand(0).get();
+        const auto *MDV0 = cast<ConstantAsMetadata>(MD0)->getValue();
+        const auto *MDFn = cast<Function>(MDV0);
+        if (MDFn != F)
+          continue;
+
+        const Metadata *MD1 = MDN->getOperand(1).get();
+        const MDString *MDStr = cast<MDString>(MD1);
+        if (MDStr->getString() != "kernel")
+          continue;
+
+        const Metadata *MD2 = MDN->getOperand(2).get();
+        const auto *MDV2 = cast<ConstantAsMetadata>(MD2)->getValue();
+        assert(!cast<ConstantInt>(MDV2)->isZero());
+      }
+    }
+#endif
+    return Align(std::max(uint64_t(16), ABITypeAlign));
+  }
+  default:
+    return Align(ABITypeAlign);
+  }
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented
