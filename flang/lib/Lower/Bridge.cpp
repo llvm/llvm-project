@@ -1089,8 +1089,12 @@ private:
     TODO(toLocation(), "CompilerDirective lowering");
   }
 
-  void genFIR(const Fortran::parser::OpenACCConstruct &) {
-    TODO(toLocation(), "OpenACCConstruct lowering");
+  void genFIR(const Fortran::parser::OpenACCConstruct &acc) {
+    mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
+    genOpenACCConstruct(*this, getEval(), acc);
+    for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
+      genFIR(e);
+    builder->restoreInsertionPoint(insertPt);
   }
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &) {

@@ -58,8 +58,8 @@ TEST(Perf, TscConversion) {
   const int SLEEP_SECS = 1;
   std::chrono::nanoseconds SLEEP_NANOS{std::chrono::seconds(SLEEP_SECS)};
 
-  Expected<PerfTscConversionParameters> params =
-      FetchPerfTscConversionParameters();
+  Expected<LinuxPerfZeroTscConversion> params =
+      LoadPerfTscConversionParameters();
 
   // Skip the test if the conversion parameters aren't available.
   if (!params)
@@ -76,8 +76,7 @@ TEST(Perf, TscConversion) {
     GTEST_SKIP() << toString(tsc_after_sleep.takeError());
 
   std::chrono::nanoseconds converted_tsc_diff =
-      params->ToWallTime(*tsc_after_sleep) -
-      params->ToWallTime(*tsc_before_sleep);
+      params->Convert(*tsc_after_sleep) - params->Convert(*tsc_before_sleep);
 
   std::chrono::microseconds acceptable_overhead(500);
 
