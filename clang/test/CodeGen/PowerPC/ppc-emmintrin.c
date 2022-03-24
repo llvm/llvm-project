@@ -8,15 +8,15 @@
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10-LE
 
-// CHECK-BE-DAG: @_mm_movemask_pd.perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
-// CHECK-BE-DAG: @_mm_shuffle_epi32.permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
-// CHECK-BE-DAG: @_mm_shufflehi_epi16.permute_selectors = internal constant [4 x i16] [i16 2057, i16 2571, i16 3085, i16 3599], align 2
-// CHECK-BE-DAG: @_mm_shufflelo_epi16.permute_selectors = internal constant [4 x i16] [i16 1, i16 515, i16 1029, i16 1543], align 2
+// CHECK-BE-DAG: @_mm_movemask_pd.__perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
+// CHECK-BE-DAG: @_mm_shuffle_epi32.__permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
+// CHECK-BE-DAG: @_mm_shufflehi_epi16.__permute_selectors = internal constant [4 x i16] [i16 2057, i16 2571, i16 3085, i16 3599], align 2
+// CHECK-BE-DAG: @_mm_shufflelo_epi16.__permute_selectors = internal constant [4 x i16] [i16 1, i16 515, i16 1029, i16 1543], align 2
 
-// CHECK-LE-DAG: @_mm_movemask_pd.perm_mask = internal constant <4 x i32> <i32 -2139094976, i32 -2139062144, i32 -2139062144, i32 -2139062144>, align 16
-// CHECK-LE-DAG: @_mm_shuffle_epi32.permute_selectors = internal constant [4 x i32] [i32 50462976, i32 117835012, i32 185207048, i32 252579084], align 4
-// CHECK-LE-DAG: @_mm_shufflehi_epi16.permute_selectors = internal constant [4 x i16] [i16 2312, i16 2826, i16 3340, i16 3854], align 2
-// CHECK-LE-DAG: @_mm_shufflelo_epi16.permute_selectors = internal constant [4 x i16] [i16 256, i16 770, i16 1284, i16 1798], align 2
+// CHECK-LE-DAG: @_mm_movemask_pd.__perm_mask = internal constant <4 x i32> <i32 -2139094976, i32 -2139062144, i32 -2139062144, i32 -2139062144>, align 16
+// CHECK-LE-DAG: @_mm_shuffle_epi32.__permute_selectors = internal constant [4 x i32] [i32 50462976, i32 117835012, i32 185207048, i32 252579084], align 4
+// CHECK-LE-DAG: @_mm_shufflehi_epi16.__permute_selectors = internal constant [4 x i16] [i16 2312, i16 2826, i16 3340, i16 3854], align 2
+// CHECK-LE-DAG: @_mm_shufflelo_epi16.__permute_selectors = internal constant [4 x i16] [i16 256, i16 770, i16 1284, i16 1798], align 2
 
 #include <emmintrin.h>
 
@@ -1008,14 +1008,14 @@ test_shuffle() {
 // CHECK: %[[SHR:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])
 
@@ -1046,7 +1046,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 1663540288323457296, i64 0>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 1157726452361532951, i64 0>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflehi_epi16.permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_shufflelo_epi16
@@ -1063,7 +1063,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 0, i64 2242261671028070680>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 0, i64 1736447835066146335>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflelo_epi16.permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 void __attribute__((noinline))
