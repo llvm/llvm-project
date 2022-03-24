@@ -667,8 +667,17 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     // output was a register, just extend the shorter one to the size of the
     // larger one.
     if (!SmallerValueMentioned && InputDomain != AD_Other &&
-        OutputConstraintInfos[TiedTo].allowsRegister())
+        OutputConstraintInfos[TiedTo].allowsRegister()) {
+      // FIXME: GCC supports the OutSize to be 128 at maximum. Currently codegen
+      // crash when the size larger than the register size. So we limit it here.
+      if (OutTy->isStructureType() &&
+          Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull()) {
+        targetDiag(OutputExpr->getExprLoc(), diag::err_store_value_to_reg);
+        return NS;
+      }
+
       continue;
+    }
 
     // Either both of the operands were mentioned or the smaller one was
     // mentioned.  One more special case that we'll allow: if the tied input is
