@@ -379,6 +379,13 @@ static std::string GetXcodeSDK(XcodeSDK sdk) {
     args.AppendArgument("--sdk");
     args.AppendArgument(sdk);
 
+    Log *log = GetLog(LLDBLog::Host);
+    if (log) {
+      std::string cmdstr;
+      args.GetCommandString(cmdstr);
+      log->Printf("GetXcodeSDK() running shell cmd '%s'", cmdstr.c_str());
+    }
+
     int status = 0;
     int signo = 0;
     std::string output_str;

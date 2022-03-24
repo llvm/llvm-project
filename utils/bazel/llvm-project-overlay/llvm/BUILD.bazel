@@ -185,7 +185,12 @@ cc_library(
             "lib/Support/Unix/*.h",
             "lib/Support/Unix/*.inc",
         ]),
-    }),
+    }) + [
+        "lib/Support/BLAKE3/blake3_impl.h",
+        "lib/Support/BLAKE3/blake3.c",
+        "lib/Support/BLAKE3/blake3_dispatch.c",
+        "lib/Support/BLAKE3/blake3_portable.c",
+    ],
     hdrs = glob([
         "include/llvm/Support/**/*.h",
         "include/llvm/ADT/*.h",
@@ -199,11 +204,19 @@ cc_library(
         "include/llvm-c/ExternC.h",
         "include/llvm-c/Support.h",
         "include/llvm-c/Types.h",
+        "include/llvm-c/blake3.h",
         "include/llvm/ExecutionEngine/JITSymbol.h",
         "include/llvm/Support/Extension.def",
         "include/llvm/Support/VCSRevision.h",
     ],
     copts = llvm_copts,
+    defines = [
+        "BLAKE3_NO_AVX2",
+        "BLAKE3_NO_AVX512",
+        "BLAKE3_NO_SSE2",
+        "BLAKE3_NO_SSE41",
+        "BLAKE3_USE_NEON=0",
+    ],
     includes = ["include"],
     linkopts = select({
         "@bazel_tools//src/conditions:windows": [],

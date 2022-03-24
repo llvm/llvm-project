@@ -131,3 +131,7 @@ StringRef APISet::copyString(StringRef String) {
 APIRecord::~APIRecord() {}
 
 void GlobalRecord::anchor() {}
+void EnumConstantRecord::anchor() {}
+void EnumRecord::anchor() {}
+void StructFieldRecord::anchor() {}
+void StructRecord::anchor() {}
