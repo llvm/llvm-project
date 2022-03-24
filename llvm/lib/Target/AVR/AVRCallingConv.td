@@ -27,6 +27,8 @@ def RetCC_AVR_BUILTIN : CallingConv<[
 
 // Calling convention for variadic functions.
 def ArgCC_AVR_Vararg : CallingConv<[
+  // i8 are always passed through the stack with a byte slot and byte alignment.
+  CCIfType<[i8], CCAssignToStack<1, 1>>,
   // i16 are always passed through the stack with an alignment of 1.
   CCAssignToStack<2, 1>
 ]>;

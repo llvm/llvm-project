@@ -88,8 +88,9 @@ func @proc_bind_once() {
 // -----
 
 func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
-  // expected-error @below {{inclusive is not a valid clause}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) nowait inclusive {
+  // expected-error @below {{expected 'for'}}
+  omp.wsloop nowait inclusive
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     omp.yield
   }
 }
@@ -98,7 +99,8 @@ func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
 
 func @order_value(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{invalid clause value: 'default'}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) order(default) {
+  omp.wsloop order(default)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     omp.yield
   }
 }
@@ -106,8 +108,9 @@ func @order_value(%lb : index, %ub : index, %step : index) {
 // -----
 
 func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
-  // expected-error @below {{if is not a valid clause}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) if(%bool_var: i1) {
+  // expected-error @below {{expected 'for'}}
+  omp.wsloop if(%bool_var: i1)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     omp.yield
   }
 }
@@ -115,8 +118,9 @@ func @if_not_allowed(%lb : index, %ub : index, %step : index, %bool_var : i1) {
 // -----
 
 func @num_threads_not_allowed(%lb : index, %ub : index, %step : index, %int_var : i32) {
-  // expected-error @below {{num_threads is not a valid clause}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) num_threads(%int_var: i32) {
+  // expected-error @below {{expected 'for'}}
+  omp.wsloop num_threads(%int_var: i32)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     omp.yield
   }
 }
@@ -124,8 +128,9 @@ func @num_threads_not_allowed(%lb : index, %ub : index, %step : index, %int_var 
 // -----
 
 func @proc_bind_not_allowed(%lb : index, %ub : index, %step : index) {
-  // expected-error @below {{proc_bind is not a valid clause}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step) proc_bind(close) {
+  // expected-error @below {{expected 'for'}}
+  omp.wsloop proc_bind(close)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     omp.yield
   }
 }
@@ -134,7 +139,8 @@ func @proc_bind_not_allowed(%lb : index, %ub : index, %step : index) {
 
 llvm.func @test_omp_wsloop_dynamic_bad_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
   // expected-error @+1 {{unknown modifier type: ginandtonic}}
-  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, ginandtonic) {
+  omp.wsloop schedule(dynamic, ginandtonic)
+  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
     omp.yield
   }
   llvm.return
@@ -144,7 +150,8 @@ llvm.func @test_omp_wsloop_dynamic_bad_modifier(%lb : i64, %ub : i64, %step : i6
 
 llvm.func @test_omp_wsloop_dynamic_many_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
   // expected-error @+1 {{unexpected modifier(s)}}
-  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic, monotonic, monotonic) {
+  omp.wsloop schedule(dynamic, monotonic, monotonic, monotonic)
+  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
     omp.yield
   }
   llvm.return
@@ -154,7 +161,8 @@ llvm.func @test_omp_wsloop_dynamic_many_modifier(%lb : i64, %ub : i64, %step : i
 
 llvm.func @test_omp_wsloop_dynamic_wrong_modifier(%lb : i64, %ub : i64, %step : i64) -> () {
   // expected-error @+1 {{incorrect modifier order}}
-  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, simd, monotonic) {
+  omp.wsloop schedule(dynamic, simd, monotonic)
+  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
     omp.yield
   }
   llvm.return
@@ -164,7 +172,8 @@ llvm.func @test_omp_wsloop_dynamic_wrong_modifier(%lb : i64, %ub : i64, %step : 
 
 llvm.func @test_omp_wsloop_dynamic_wrong_modifier2(%lb : i64, %ub : i64, %step : i64) -> () {
   // expected-error @+1 {{incorrect modifier order}}
-  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, monotonic, monotonic) {
+  omp.wsloop schedule(dynamic, monotonic, monotonic)
+  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
     omp.yield
   }
   llvm.return
@@ -174,7 +183,8 @@ llvm.func @test_omp_wsloop_dynamic_wrong_modifier2(%lb : i64, %ub : i64, %step :
 
 llvm.func @test_omp_wsloop_dynamic_wrong_modifier3(%lb : i64, %ub : i64, %step : i64) -> () {
   // expected-error @+1 {{incorrect modifier order}}
-  omp.wsloop (%iv) : i64 = (%lb) to (%ub) step (%step) schedule(dynamic, simd, simd) {
+  omp.wsloop schedule(dynamic, simd, simd)
+  for (%iv) : i64 = (%lb) to (%ub) step (%step) {
     omp.yield
   }
   llvm.return
@@ -311,8 +321,8 @@ func @foo(%lb : index, %ub : index, %step : index) {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
   %1 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
 
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
-  reduction(@add_f32 -> %0 : !llvm.ptr<f32>) {
+  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
     // expected-error @below {{accumulator is not used by the parent}}
     omp.reduction %2, %1 : !llvm.ptr<f32>
@@ -329,8 +339,8 @@ func @foo(%lb : index, %ub : index, %step : index) {
   %1 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
 
   // expected-error @below {{expected symbol reference @foo to point to a reduction declaration}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
-  reduction(@foo -> %0 : !llvm.ptr<f32>) {
+  omp.wsloop reduction(@foo -> %0 : !llvm.ptr<f32>)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
     omp.reduction %2, %1 : !llvm.ptr<f32>
     omp.yield
@@ -357,8 +367,8 @@ func @foo(%lb : index, %ub : index, %step : index) {
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
 
   // expected-error @below {{accumulator variable used more than once}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
-  reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @add_f32 -> %0 : !llvm.ptr<f32>) {
+  omp.wsloop reduction(@add_f32 -> %0 : !llvm.ptr<f32>, @add_f32 -> %0 : !llvm.ptr<f32>)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
     omp.reduction %2, %0 : !llvm.ptr<f32>
     omp.yield
@@ -390,8 +400,8 @@ func @foo(%lb : index, %ub : index, %step : index, %mem : memref<1xf32>) {
   %c1 = arith.constant 1 : i32
 
   // expected-error @below {{expected accumulator ('memref<1xf32>') to be the same type as reduction declaration ('!llvm.ptr<f32>')}}
-  omp.wsloop (%iv) : index = (%lb) to (%ub) step (%step)
-  reduction(@add_f32 -> %mem : memref<1xf32>) {
+  omp.wsloop reduction(@add_f32 -> %mem : memref<1xf32>)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
     %2 = arith.constant 2.0 : f32
     omp.reduction %2, %mem : memref<1xf32>
     omp.yield
@@ -427,7 +437,8 @@ omp.critical.declare @mutex hint(invalid_hint)
 // -----
 
 func @omp_ordered1(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
-  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(1) {
+  omp.wsloop ordered(1)
+  for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{ordered region must be closely nested inside a worksharing-loop region with an ordered clause without parameter present}}
     omp.ordered_region {
       omp.terminator
@@ -440,7 +451,7 @@ func @omp_ordered1(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
 // -----
 
 func @omp_ordered2(%arg1 : i32, %arg2 : i32, %arg3 : i32) -> () {
-  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
+  omp.wsloop for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{ordered region must be closely nested inside a worksharing-loop region with an ordered clause without parameter present}}
     omp.ordered_region {
       omp.terminator
@@ -461,7 +472,8 @@ func @omp_ordered3(%vec0 : i64) -> () {
 // -----
 
 func @omp_ordered4(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64) -> () {
-  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(0) {
+  omp.wsloop ordered(0)
+  for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{ordered depend directive must be closely nested inside a worksharing-loop with ordered clause with parameter present}}
     omp.ordered depend_type(dependsink) depend_vec(%vec0 : i64) {num_loops_val = 1 : i64}
 
@@ -472,7 +484,8 @@ func @omp_ordered4(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64) -> () {
 // -----
 
 func @omp_ordered5(%arg1 : i32, %arg2 : i32, %arg3 : i32, %vec0 : i64, %vec1 : i64) -> () {
-  omp.wsloop (%0) : i32 = (%arg1) to (%arg2) step (%arg3) ordered(1) {
+  omp.wsloop ordered(1)
+  for (%0) : i32 = (%arg1) to (%arg2) step (%arg3) {
     // expected-error @below {{number of variables in depend clause does not match number of iteration variables in the doacross loop}}
     omp.ordered depend_type(dependsource) depend_vec(%vec0, %vec1 : i64, i64) {num_loops_val = 2 : i64}
 
