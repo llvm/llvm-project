@@ -898,16 +898,16 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   const auto &accClauseList =
       std::get<Fortran::parser::AccClauseList>(waitConstruct.t);
 
-  mlir::Value ifCond, waitDevnum, async;
-  SmallVector<mlir::Value, 2> waitOperands;
+  mlir::Value ifCond, asyncOperand, waitDevnum, async;
+  SmallVector<mlir::Value> waitOperands;
 
   // Async clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
   // represent the clause.
   bool addAsyncAttr = false;
 
-  auto &firOpBuilder = converter.getFirOpBuilder();
-  auto currentLocation = converter.getCurrentLocation();
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
 
   if (waitArgument) { // wait has a value.
@@ -930,35 +930,26 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separatly as clauses can appear
   // more than once.
-  for (const auto &clause : accClauseList.v) {
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *ifClause =
             std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
-      mlir::Value cond = fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(ifClause->v), stmtCtx));
-      ifCond = firOpBuilder.createConvert(currentLocation,
-                                          firOpBuilder.getI1Type(), cond);
+      genIfClause(converter, ifClause, ifCond, stmtCtx);
     } else if (const auto *asyncClause =
                    std::get_if<Fortran::parser::AccClause::Async>(&clause.u)) {
-      const auto &asyncClauseValue = asyncClause->v;
-      if (asyncClauseValue) { // async has a value.
-        async = fir::getBase(converter.genExprValue(
-            *Fortran::semantics::GetExpr(*asyncClauseValue), stmtCtx));
-      } else {
-        addAsyncAttr = true;
-      }
+      genAsyncClause(converter, asyncClause, async, addAsyncAttr, stmtCtx);
     }
   }
 
   // Prepare the operand segement size attribute and the operands value range.
-  SmallVector<mlir::Value, 8> operands;
-  SmallVector<int32_t, 4> operandSegments;
+  SmallVector<mlir::Value> operands;
+  SmallVector<int32_t> operandSegments;
   addOperands(operands, operandSegments, waitOperands);
   addOperand(operands, operandSegments, async);
   addOperand(operands, operandSegments, waitDevnum);
   addOperand(operands, operandSegments, ifCond);
 
-  auto waitOp = createSimpleOp<mlir::acc::WaitOp>(firOpBuilder, currentLocation,
-                                                  operands, operandSegments);
+  mlir::acc::WaitOp waitOp = createSimpleOp<mlir::acc::WaitOp>(
+      firOpBuilder, currentLocation, operands, operandSegments);
 
   if (addAsyncAttr)
     waitOp.asyncAttr(firOpBuilder.getUnitAttr());
