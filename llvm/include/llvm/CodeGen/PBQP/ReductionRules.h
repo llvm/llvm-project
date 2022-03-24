@@ -190,7 +190,7 @@ namespace PBQP {
 
       RawVector v = G.getNodeCosts(NId);
 
-#ifndef NDEBUG
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
       // Although a conservatively allocatable node can be allocated to a register,
       // spilling it may provide a lower cost solution. Assert here that spilling
       // is done by choice, not because there were no register available.
