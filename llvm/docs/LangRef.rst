@@ -5078,8 +5078,10 @@ X86:
   the operand. (The behavior for relocatable symbol expressions is a
   target-specific behavior for this typically target-independent modifier)
 - ``H``: Print a memory reference with additional offset +8.
-- ``P``: Print a memory reference or operand for use as the argument of a call
-  instruction. (E.g. omit ``(rip)``, even though it's PC-relative.)
+- ``P``: Print a memory reference used as the argument of a call instruction or
+  used with explicit base reg and index reg as its offset. So it can not use
+  additional regs to present the memory reference. (E.g. omit ``(rip)``, even
+  though it's PC-relative.)
 
 XCore:
 

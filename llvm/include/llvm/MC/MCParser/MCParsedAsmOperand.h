@@ -10,7 +10,6 @@
 #define LLVM_MC_MCPARSER_MCPARSEDASMOPERAND_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/SMLoc.h"
 #include <string>
 
@@ -63,6 +62,13 @@ public:
   /// isMem - Is this a memory operand?
   virtual bool isMem() const = 0;
 
+  /// isMemUseUpRegs - Is memory operand use up regs, for example, intel MS
+  /// inline asm may use ARR[baseReg + IndexReg + ...] which may use up regs
+  /// in [...] expr, so ARR[baseReg + IndexReg + ...] can not use extra reg
+  /// for ARR. For example, calculating ARR address to a reg or use another
+  /// base reg in PIC model.
+  virtual bool isMemUseUpRegs() const { return false; }
+
   /// getStartLoc - Get the location of the first token of this operand.
   virtual SMLoc getStartLoc() const = 0;
   /// getEndLoc - Get the location of the last token of this operand.
@@ -76,10 +82,6 @@ public:
   /// variable, rather than its value?   Only valid when parsing MS-style inline
   /// assembly.
   virtual bool isOffsetOfLocal() const { return false; }
-
-  /// isMemPlaceholder - Do we need to ignore the constraint, rather than emit
-  /// code? Only valid when parsing MS-style inline assembly.
-  virtual bool isMemPlaceholder(const MCInstrDesc &Desc) const { return false; }
 
   /// getOffsetOfLoc - Get the location of the offset operator.
   virtual SMLoc getOffsetOfLoc() const { return SMLoc(); }
