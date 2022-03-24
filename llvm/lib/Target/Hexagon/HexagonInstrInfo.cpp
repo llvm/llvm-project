@@ -1072,6 +1072,43 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   };
 
   switch (Opc) {
+    case Hexagon::PS_call_instrprof_custom: {
+      auto Op0 = MI.getOperand(0);
+      assert(Op0.isGlobal() &&
+             "First operand must be a global containing handler name.");
+      const GlobalValue *NameVar = Op0.getGlobal();
+      const GlobalVariable *GV = dyn_cast<GlobalVariable>(NameVar);
+      auto *Arr = cast<ConstantDataArray>(GV->getInitializer());
+      StringRef NameStr = Arr->isCString() ? Arr->getAsCString() : Arr->getAsString();
+
+      MachineOperand &Op1 = MI.getOperand(1);
+      // Set R0 with the imm value to be passed to the custom profiling handler.
+      BuildMI(MBB, MI, DL, get(Hexagon::A2_tfrsi), Hexagon::R0)
+        .addImm(Op1.getImm());
+      // The call to the custom handler is being treated as a special one as the
+      // callee is responsible for saving and restoring all the registers
+      // (including caller saved registers) it needs to modify. This is
+      // done to reduce the impact of instrumentation on the code being
+      // instrumented/profiled.
+      // NOTE: R14, R15 and R28 are reserved for PLT handling. These registers
+      // are in the Def list of the Hexagon::PS_call_instrprof_custom and
+      // therefore will be handled appropriately duing register allocation.
+
+      // TODO: It may be a good idea to add a separate pseudo instruction for
+      // static relocation which doesn't need to reserve r14, r15 and r28.
+
+      auto MIB = BuildMI(MBB, MI, DL, get(Hexagon::J2_call))
+                 .addUse(Hexagon::R0, RegState::Implicit|RegState::InternalRead)
+                 .addDef(Hexagon::R29, RegState::ImplicitDefine)
+                 .addDef(Hexagon::R30, RegState::ImplicitDefine)
+                 .addDef(Hexagon::R14, RegState::ImplicitDefine)
+                 .addDef(Hexagon::R15, RegState::ImplicitDefine)
+                 .addDef(Hexagon::R28, RegState::ImplicitDefine);
+      const char *cstr = MF.createExternalSymbolName(NameStr);
+      MIB.addExternalSymbol(cstr);
+      MBB.erase(MI);
+      return true;
+    }
     case TargetOpcode::COPY: {
       MachineOperand &MD = MI.getOperand(0);
       MachineOperand &MS = MI.getOperand(1);
