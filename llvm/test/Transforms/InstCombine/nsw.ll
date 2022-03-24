@@ -226,3 +226,29 @@ define i8 @neg_sub_sub2(i16 %a, i16 %b) {
   %e = sub nsw i8 0, %d
   ret i8 %e
 }
+
+; Must not propagate nsw.
+
+define i32 @sub_sub0_nsw_nsw(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @sub_sub0_nsw_nsw(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[B:%.*]], [[C:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = sub i32 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i32 [[S2]]
+;
+  %s1 = sub nsw i32 %a, %b
+  %s2 = sub nsw i32 %s1, %c
+  ret i32 %s2
+}
+
+; Must not propagate nsw.
+
+define i32 @sub_sub1_nsw_nsw(i32 %a, i32 %b, i32 %c) {
+; CHECK-LABEL: @sub_sub1_nsw_nsw(
+; CHECK-NEXT:    [[S1_NEG:%.*]] = sub i32 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[S2:%.*]] = add i32 [[S1_NEG]], [[C:%.*]]
+; CHECK-NEXT:    ret i32 [[S2]]
+;
+  %s1 = sub nsw i32 %a, %b
+  %s2 = sub nsw i32 %c, %s1
+  ret i32 %s2
+}
