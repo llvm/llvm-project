@@ -111,7 +111,7 @@ format_string(const char* msg, ...) {
 }
 
 error_code capture_errno() {
-  _LIBCPP_ASSERT(errno, "Expected errno to be non-zero");
+  _LIBCPP_ASSERT(errno != 0, "Expected errno to be non-zero");
   return error_code(errno, generic_category());
 }
 

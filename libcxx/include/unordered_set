@@ -639,36 +639,27 @@ public:
         pair<iterator, bool> emplace(_Args&&... __args)
             {return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...);}
     template <class... _Args>
-        _LIBCPP_INLINE_VISIBILITY
-#if _LIBCPP_DEBUG_LEVEL == 2
-        iterator emplace_hint(const_iterator __p, _Args&&... __args)
-        {
-            _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
-                "unordered_set::emplace_hint(const_iterator, args...) called with an iterator not"
-                " referring to this unordered_set");
-            return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...).first;
-        }
-#else
-        iterator emplace_hint(const_iterator, _Args&&... __args)
-            {return __table_.__emplace_unique(_VSTD::forward<_Args>(__args)...).first;}
-#endif
+    _LIBCPP_INLINE_VISIBILITY
+    iterator emplace_hint(const_iterator __p, _Args&&... __args) {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(std::addressof(__p)) == this,
+            "unordered_set::emplace_hint(const_iterator, args...) called with an iterator not"
+            " referring to this unordered_set");
+        (void)__p;
+        return __table_.__emplace_unique(std::forward<_Args>(__args)...).first;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, bool> insert(value_type&& __x)
         {return __table_.__insert_unique(_VSTD::move(__x));}
     _LIBCPP_INLINE_VISIBILITY
-#if _LIBCPP_DEBUG_LEVEL == 2
-    iterator insert(const_iterator __p, value_type&& __x)
-        {
-            _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
-                "unordered_set::insert(const_iterator, value_type&&) called with an iterator not"
-                " referring to this unordered_set");
-            return insert(_VSTD::move(__x)).first;
-        }
-#else
-    iterator insert(const_iterator, value_type&& __x)
-        {return insert(_VSTD::move(__x)).first;}
-#endif
+    iterator insert(const_iterator __p, value_type&& __x) {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(std::addressof(__p)) == this,
+            "unordered_set::insert(const_iterator, value_type&&) called with an iterator not"
+            " referring to this unordered_set");
+        (void)__p;
+        return insert(std::move(__x)).first;
+    }
+
     _LIBCPP_INLINE_VISIBILITY
     void insert(initializer_list<value_type> __il)
         {insert(__il.begin(), __il.end());}
@@ -678,18 +669,13 @@ public:
         {return __table_.__insert_unique(__x);}
 
     _LIBCPP_INLINE_VISIBILITY
-#if _LIBCPP_DEBUG_LEVEL == 2
-    iterator insert(const_iterator __p, const value_type& __x)
-        {
-            _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__p)) == this,
-                "unordered_set::insert(const_iterator, const value_type&) called with an iterator not"
-                " referring to this unordered_set");
-            return insert(__x).first;
-        }
-#else
-    iterator insert(const_iterator, const value_type& __x)
-        {return insert(__x).first;}
-#endif
+    iterator insert(const_iterator __p, const value_type& __x) {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(std::addressof(__p)) == this,
+            "unordered_set::insert(const_iterator, const value_type&) called with an iterator not"
+            " referring to this unordered_set");
+        (void)__p;
+        return insert(__x).first;
+    }
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
         void insert(_InputIterator __first, _InputIterator __last);
