@@ -1973,7 +1973,7 @@ private:
   /// Check if the operands on the edges \p Edges of the \p UserTE allows
   /// reordering (i.e. the operands can be reordered because they have only one
   /// user and reordarable).
-  /// \param NonVectorized List of all gather nodes that require reordering
+  /// \param ReorderableGathers List of all gather nodes that require reordering
   /// (e.g., gather of extractlements or partially vectorizable loads).
   /// \param GatherOps List of gather operand nodes for \p UserTE that require
   /// reordering, subset of \p NonVectorized.
