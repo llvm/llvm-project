@@ -13,6 +13,21 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 15.0
+------------
+
+* b0fd9497af6d - [libc++] Add a lightweight overridable assertion handler
+
+  This patch adds a lightweight assertion handler mechanism that can be
+  overriden at link-time in a fashion similar to `operator new`. A default
+  assertion handler is provided in the shared library, hence the added
+  symbol.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__126__libcpp_assertion_handlerEPKciS1_S1_
+
+------------
 Version 14.0
 ------------
 
