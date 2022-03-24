@@ -51,7 +51,6 @@ static_library("Utils") {
     "LoopUnrollRuntime.cpp",
     "LoopUtils.cpp",
     "LoopVersioning.cpp",
-    "LowerGlobalDtors.cpp",
     "LowerInvoke.cpp",
     "LowerMemIntrinsics.cpp",
     "LowerSwitch.cpp",

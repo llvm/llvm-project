@@ -34,7 +34,6 @@ void llvm::initializeTransformUtils(PassRegistry &Registry) {
   initializeLCSSAWrapperPassPass(Registry);
   initializeLibCallsShrinkWrapLegacyPassPass(Registry);
   initializeLoopSimplifyPass(Registry);
-  initializeLowerGlobalDtorsLegacyPassPass(Registry);
   initializeLowerInvokeLegacyPassPass(Registry);
   initializeLowerSwitchLegacyPassPass(Registry);
   initializeNameAnonGlobalLegacyPassPass(Registry);

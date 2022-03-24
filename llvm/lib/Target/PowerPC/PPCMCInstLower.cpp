@@ -107,7 +107,7 @@ static MCOperand GetSymbolRef(const MachineOperand &MO, const MCSymbol *Symbol,
   if (Subtarget->isUsingPCRelativeCalls()) {
     if (MIOpcode == PPC::TAILB || MIOpcode == PPC::TAILB8 ||
         MIOpcode == PPC::TCRETURNdi || MIOpcode == PPC::TCRETURNdi8 ||
-        MIOpcode == PPC::BL8_NOTOC) {
+        MIOpcode == PPC::BL8_NOTOC || MIOpcode == PPC::BL8_NOTOC_RM) {
       RefKind = MCSymbolRefExpr::VK_PPC_NOTOC;
     }
     if (MO.getTargetFlags() == PPCII::MO_PCREL_OPT_FLAG)
