@@ -738,6 +738,55 @@ multiclass VPatWidenReductionVL_Ext_VL<SDNode vop, PatFrags extop, string instru
   }
 }
 
+multiclass VPatWidenBinaryFPVL_VV_VF<SDNode op, PatFrags extop, string instruction_name> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    def : Pat<(fwti.Vector (op (fwti.Vector (extop (fvti.Vector fvti.RegClass:$rs2),
+                                                   (fvti.Mask true_mask), VLOpFrag)),
+                               (fwti.Vector (extop (fvti.Vector fvti.RegClass:$rs1),
+                                                   (fvti.Mask true_mask), VLOpFrag)),
+                               (fwti.Mask true_mask), VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_VV_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2, fvti.RegClass:$rs1,
+                 GPR:$vl, fvti.Log2SEW)>;
+    def : Pat<(fwti.Vector (op (fwti.Vector (extop (fvti.Vector fvti.RegClass:$rs2),
+                                                   (fvti.Mask true_mask), VLOpFrag)),
+                               (fwti.Vector (extop (fvti.Vector (SplatFPOp fvti.ScalarRegClass:$rs1)),
+                                                   (fvti.Mask true_mask), VLOpFrag)),
+                               (fwti.Mask true_mask), VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                 fvti.RegClass:$rs2, fvti.ScalarRegClass:$rs1,
+                 GPR:$vl, fvti.Log2SEW)>;
+  }
+}
+
+multiclass VPatWidenBinaryFPVL_WV_WF<SDNode op, PatFrags extop, string instruction_name> {
+  foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    def : Pat<(fwti.Vector (op (fwti.Vector fwti.RegClass:$rs2),
+                               (fwti.Vector (extop (fvti.Vector fvti.RegClass:$rs1),
+                                                   (fvti.Mask true_mask), VLOpFrag)),
+                               (fwti.Mask true_mask), VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_WV_"#fvti.LMul.MX)
+                 fwti.RegClass:$rs2, fvti.RegClass:$rs1,
+                 GPR:$vl, fvti.Log2SEW)>;
+    def : Pat<(fwti.Vector (op (fwti.Vector fwti.RegClass:$rs2),
+                               (fwti.Vector (extop (fvti.Vector (SplatFPOp fvti.ScalarRegClass:$rs1)),
+                                                   (fvti.Mask true_mask), VLOpFrag)),
+                               (fwti.Mask true_mask), VLOpFrag)),
+              (!cast<Instruction>(instruction_name#"_W"#fvti.ScalarSuffix#"_"#fvti.LMul.MX)
+                 fwti.RegClass:$rs2, fvti.ScalarRegClass:$rs1,
+                 GPR:$vl, fvti.Log2SEW)>;
+  }
+}
+
+multiclass VPatWidenBinaryFPVL_VV_VF_WV_WF<SDNode op, string instruction_name> {
+  defm : VPatWidenBinaryFPVL_VV_VF<op, riscv_fpextend_vl_oneuse, instruction_name>;
+  defm : VPatWidenBinaryFPVL_WV_WF<op, riscv_fpextend_vl_oneuse, instruction_name>;
+}
+
 //===----------------------------------------------------------------------===//
 // Patterns.
 //===----------------------------------------------------------------------===//
@@ -1146,10 +1195,17 @@ defm : VPatBinaryFPVL_VV_VF<riscv_fadd_vl, "PseudoVFADD">;
 defm : VPatBinaryFPVL_VV_VF<riscv_fsub_vl, "PseudoVFSUB">;
 defm : VPatBinaryFPVL_R_VF<riscv_fsub_vl, "PseudoVFRSUB">;
 
+// 14.3. Vector Widening Floating-Point Add/Subtract Instructions
+defm : VPatWidenBinaryFPVL_VV_VF_WV_WF<riscv_fadd_vl, "PseudoVFWADD">;
+defm : VPatWidenBinaryFPVL_VV_VF_WV_WF<riscv_fsub_vl, "PseudoVFWSUB">;
+
 // 14.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 defm : VPatBinaryFPVL_VV_VF<riscv_fmul_vl, "PseudoVFMUL">;
 defm : VPatBinaryFPVL_VV_VF<riscv_fdiv_vl, "PseudoVFDIV">;
 defm : VPatBinaryFPVL_R_VF<riscv_fdiv_vl, "PseudoVFRDIV">;
+
+// 14.5. Vector Widening Floating-Point Multiply Instructions
+defm : VPatWidenBinaryFPVL_VV_VF<riscv_fmul_vl, riscv_fpextend_vl_oneuse, "PseudoVFWMUL">;
 
 // 14.6 Vector Single-Width Floating-Point Fused Multiply-Add Instructions.
 foreach vti = AllFloatVectors in {
