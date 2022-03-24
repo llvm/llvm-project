@@ -716,3 +716,5 @@ defm check_dynamic_relocations: BB<"check-dynamic-relocations",
     "Perform additional validation of the written dynamic relocations",
     "Do not perform additional validation of the written dynamic relocations">,
   Flags<[HelpHidden]>;
+
+defm load_pass_plugins: EEq<"load-pass-plugin", "Load passes from plugin library">;

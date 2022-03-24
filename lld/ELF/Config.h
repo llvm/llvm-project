@@ -140,6 +140,7 @@ struct Configuration {
   std::vector<VersionDefinition> versionDefinitions;
   std::vector<llvm::StringRef> auxiliaryList;
   std::vector<llvm::StringRef> filterList;
+  std::vector<llvm::StringRef> passPlugins;
   std::vector<llvm::StringRef> searchPaths;
   std::vector<llvm::StringRef> symbolOrderingFile;
   std::vector<llvm::StringRef> thinLTOModulesToCompile;
