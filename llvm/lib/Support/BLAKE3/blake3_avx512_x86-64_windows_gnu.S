@@ -1,5 +1,11 @@
 .intel_syntax noprefix
 
+.hidden _blake3_hash_many_avx512
+.hidden blake3_hash_many_avx512
+.hidden blake3_compress_in_place_avx512
+.hidden _blake3_compress_in_place_avx512
+.hidden blake3_compress_xof_avx512
+.hidden _blake3_compress_xof_avx512
 .global _blake3_hash_many_avx512
 .global blake3_hash_many_avx512
 .global blake3_compress_in_place_avx512

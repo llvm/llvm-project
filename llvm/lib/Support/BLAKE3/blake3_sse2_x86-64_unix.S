@@ -12,7 +12,19 @@
 #define _CET_ENDBR
 #endif
 
+#ifdef __APPLE__
+#define HIDDEN .private_extern
+#else
+#define HIDDEN .hidden
+#endif
+
 .intel_syntax noprefix
+HIDDEN blake3_hash_many_sse2
+HIDDEN _blake3_hash_many_sse2
+HIDDEN blake3_compress_in_place_sse2
+HIDDEN _blake3_compress_in_place_sse2
+HIDDEN blake3_compress_xof_sse2
+HIDDEN _blake3_compress_xof_sse2
 .global blake3_hash_many_sse2
 .global _blake3_hash_many_sse2
 .global blake3_compress_in_place_sse2

@@ -1,4 +1,10 @@
 .intel_syntax noprefix
+.hidden blake3_hash_many_sse2
+.hidden _blake3_hash_many_sse2
+.hidden blake3_compress_in_place_sse2
+.hidden _blake3_compress_in_place_sse2
+.hidden blake3_compress_xof_sse2
+.hidden _blake3_compress_xof_sse2
 .global blake3_hash_many_sse2
 .global _blake3_hash_many_sse2
 .global blake3_compress_in_place_sse2
