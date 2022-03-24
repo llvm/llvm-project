@@ -867,12 +867,14 @@ public:
   /// \param Loc The source location description.
   /// \param BodyGenCB Callback that will generate the region code.
   /// \param FiniCB Callback to finalize variable copies.
+  /// \param IsNowait If false, a barrier is emitted.
   /// \param DidIt Local variable used as a flag to indicate 'single' thread
   ///
   /// \returns The insertion position *after* the single call.
   InsertPointTy createSingle(const LocationDescription &Loc,
                              BodyGenCallbackTy BodyGenCB,
-                             FinalizeCallbackTy FiniCB, llvm::Value *DidIt);
+                             FinalizeCallbackTy FiniCB, bool IsNowait,
+                             llvm::Value *DidIt);
 
   /// Generator for '#omp master'
   ///

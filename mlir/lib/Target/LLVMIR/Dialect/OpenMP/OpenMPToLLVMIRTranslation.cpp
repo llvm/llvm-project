@@ -652,7 +652,7 @@ convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
   };
   auto finiCB = [&](InsertPointTy codeGenIP) {};
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSingle(
-      ompLoc, bodyCB, finiCB, /*DidIt=*/nullptr));
+      ompLoc, bodyCB, finiCB, singleOp.nowait(), /*DidIt=*/nullptr));
   return bodyGenStatus;
 }
 
