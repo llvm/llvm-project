@@ -258,7 +258,6 @@ public:
       return;
 
     Register Reg = It->second;
-    assert(Reg != 0);
     if (Reg == 0)
       return;
 
