@@ -983,7 +983,8 @@ enum IIT_Info {
   IIT_PPCF128 = 52,
   IIT_V3 = 53,
   IIT_EXTERNREF = 54,
-  IIT_FUNCREF = 55
+  IIT_FUNCREF = 55,
+  IIT_ANYPTR_TO_ELT = 56,
 };
 
 static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
@@ -1155,6 +1156,13 @@ static void DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_PTR_TO_ELT: {
     unsigned ArgInfo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::PtrToElt, ArgInfo));
+    return;
+  }
+  case IIT_ANYPTR_TO_ELT: {
+    unsigned short ArgNo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    unsigned short RefNo = (NextElt == Infos.size() ? 0 : Infos[NextElt++]);
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::AnyPtrToElt, ArgNo, RefNo));
     return;
   }
   case IIT_VEC_OF_ANYPTRS_TO_ELT: {
@@ -1346,6 +1354,9 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return VectorType::getInteger(VTy);
   }
   case IITDescriptor::VecOfAnyPtrsToElt:
+    // Return the overloaded type (which determines the pointers address space)
+    return Tys[D.getOverloadArgNumber()];
+  case IITDescriptor::AnyPtrToElt:
     // Return the overloaded type (which determines the pointers address space)
     return Tys[D.getOverloadArgNumber()];
   }
@@ -1587,6 +1598,30 @@ static bool matchIntrinsicType(
         dyn_cast<VectorType> (ArgTys[D.getArgumentNumber()]);
       PointerType *ThisArgType = dyn_cast<PointerType>(Ty);
 
+      if (!ThisArgType || !ReferenceType)
+        return true;
+      return !ThisArgType->isOpaqueOrPointeeTypeMatches(
+          ReferenceType->getElementType());
+    }
+    case IITDescriptor::AnyPtrToElt: {
+      unsigned RefArgNumber = D.getRefArgNumber();
+      if (RefArgNumber >= ArgTys.size()) {
+        if (IsDeferredCheck)
+          return true;
+        // If forward referencing, already add the pointer type and
+        // defer the checks for later.
+        ArgTys.push_back(Ty);
+        return DeferCheck(Ty);
+      }
+
+      if (!IsDeferredCheck) {
+        assert(D.getOverloadArgNumber() == ArgTys.size() &&
+               "Table consistency error");
+        ArgTys.push_back(Ty);
+      }
+
+      auto *ReferenceType = dyn_cast<VectorType>(ArgTys[RefArgNumber]);
+      auto *ThisArgType = dyn_cast<PointerType>(Ty);
       if (!ThisArgType || !ReferenceType)
         return true;
       return !ThisArgType->isOpaqueOrPointeeTypeMatches(
