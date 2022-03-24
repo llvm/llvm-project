@@ -7,10 +7,10 @@ set(link_libs
   clangBasic
   clangCodeGen
   clangDriver
+  clangExtractAPI
   clangFrontend
   clangIndex
   clangRewriteFrontend
-  clangSymbolGraph
   )
 
 if(CLANG_ENABLE_ARCMT)
