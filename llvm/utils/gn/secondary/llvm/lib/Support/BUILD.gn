@@ -45,6 +45,9 @@ static_library("Support") {
     "ARMWinEH.cpp",
     "Allocator.cpp",
     "AutoConvert.cpp",
+    "BLAKE3/blake3.c",
+    "BLAKE3/blake3_dispatch.c",
+    "BLAKE3/blake3_portable.c",
     "BinaryStreamError.cpp",
     "BinaryStreamReader.cpp",
     "BinaryStreamRef.cpp",
@@ -180,6 +183,8 @@ static_library("Support") {
     "VirtualFileSystem.cpp",
     "Watchdog.cpp",
   ]
+
+  defines = ["BLAKE3_NO_AVX512", "BLAKE3_NO_AVX2", "BLAKE3_NO_SSE41", "BLAKE3_NO_SSE2", "BLAKE3_USE_NEON=0"]
 
   libs = []
 
