@@ -82,6 +82,17 @@ struct Element {
   Element(const std::vector<uint64_t> &ind, V val) : indices(ind), value(val){};
   std::vector<uint64_t> indices;
   V value;
+  /// Returns true if indices of e1 < indices of e2.
+  static bool lexOrder(const Element<V> &e1, const Element<V> &e2) {
+    uint64_t rank = e1.indices.size();
+    assert(rank == e2.indices.size());
+    for (uint64_t r = 0; r < rank; r++) {
+      if (e1.indices[r] == e2.indices[r])
+        continue;
+      return e1.indices[r] < e2.indices[r];
+    }
+    return false;
+  }
 };
 
 /// A memory-resident sparse tensor in coordinate scheme (collection of
@@ -111,7 +122,7 @@ public:
     assert(!iteratorLocked && "Attempt to sort() after startIterator()");
     // TODO: we may want to cache an `isSorted` bit, to avoid
     // unnecessary/redundant sorting.
-    std::sort(elements.begin(), elements.end(), lexOrder);
+    std::sort(elements.begin(), elements.end(), Element<V>::lexOrder);
   }
   /// Returns rank.
   uint64_t getRank() const { return sizes.size(); }
@@ -149,17 +160,6 @@ public:
   }
 
 private:
-  /// Returns true if indices of e1 < indices of e2.
-  static bool lexOrder(const Element<V> &e1, const Element<V> &e2) {
-    uint64_t rank = e1.indices.size();
-    assert(rank == e2.indices.size());
-    for (uint64_t r = 0; r < rank; r++) {
-      if (e1.indices[r] == e2.indices[r])
-        continue;
-      return e1.indices[r] < e2.indices[r];
-    }
-    return false;
-  }
   const std::vector<uint64_t> sizes; // per-dimension sizes
   std::vector<Element<V>> elements;
   bool iteratorLocked;
