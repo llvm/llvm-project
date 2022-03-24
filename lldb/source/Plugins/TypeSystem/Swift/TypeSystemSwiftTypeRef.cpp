@@ -1379,9 +1379,10 @@ TypeSystemSwiftTypeRefForExpressions::GetSwiftASTContext() const {
       *const_cast<TypeSystemSwiftTypeRefForExpressions *>(this), nullptr);
   m_swift_ast_context =
       llvm::dyn_cast_or_null<SwiftASTContext>(m_swift_ast_context_sp.get());
-  assert(!m_swift_ast_context ||
-         llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context));
+  if (!m_swift_ast_context)
+    return nullptr;
 
+  assert(llvm::isa<SwiftASTContextForExpressions>(m_swift_ast_context));
   if (m_initial_symbol_context) {
     Status error;
     lldb::ProcessSP process_sp;
