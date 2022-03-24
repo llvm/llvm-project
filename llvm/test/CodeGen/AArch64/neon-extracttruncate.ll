@@ -268,36 +268,13 @@ entry:
 define <16 x i8> @extract_4_v4i32_badindex(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; CHECK-LABEL: extract_4_v4i32_badindex:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, v0.s[1]
-; CHECK-NEXT:    mov w9, v0.s[2]
-; CHECK-NEXT:    mov w10, v0.s[3]
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov v0.b[2], w9
-; CHECK-NEXT:    mov w9, v1.s[2]
-; CHECK-NEXT:    mov v0.b[3], w10
-; CHECK-NEXT:    mov v0.b[4], w8
-; CHECK-NEXT:    mov w8, v1.s[1]
-; CHECK-NEXT:    mov v0.b[5], w9
-; CHECK-NEXT:    mov w9, v1.s[3]
-; CHECK-NEXT:    mov v0.b[6], w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov v0.b[7], w9
-; CHECK-NEXT:    mov w9, v2.s[1]
-; CHECK-NEXT:    mov v0.b[8], w8
-; CHECK-NEXT:    mov w8, v2.s[2]
-; CHECK-NEXT:    mov v0.b[9], w9
-; CHECK-NEXT:    mov w9, v2.s[3]
-; CHECK-NEXT:    mov v0.b[10], w8
-; CHECK-NEXT:    fmov w8, s3
-; CHECK-NEXT:    mov v0.b[11], w9
-; CHECK-NEXT:    mov w9, v3.s[1]
-; CHECK-NEXT:    mov v0.b[12], w8
-; CHECK-NEXT:    mov w8, v3.s[2]
-; CHECK-NEXT:    mov v0.b[13], w9
-; CHECK-NEXT:    mov w9, v3.s[3]
-; CHECK-NEXT:    mov v0.b[14], w8
-; CHECK-NEXT:    mov v0.b[15], w9
+; CHECK-NEXT:    adrp x8, .LCPI5_0
+; CHECK-NEXT:    // kill: def $q3 killed $q3 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    // kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI5_0]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    tbl v0.16b, { v0.16b, v1.16b, v2.16b, v3.16b }, v4.16b
 ; CHECK-NEXT:    ret
 entry:
   %a0 = extractelement <4 x i32> %a, i32 0

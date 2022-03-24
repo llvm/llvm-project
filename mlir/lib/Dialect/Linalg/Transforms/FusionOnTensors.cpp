@@ -349,6 +349,12 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
       consumerOp->getBlock() != rootOp->getBlock())
     return failure();
 
+  // Check `consumerOpOperand` is not shape-only to avoid fusion if the data is
+  // not used by the `consumerOp` computation.
+  BlockArgument bbArg = consumerOp.getTiedBlockArgument(consumerOpOperand);
+  if (bbArg.getUses().empty())
+    return failure();
+
   // Check if the producer is a LinalgOp possibly passed by iteration argument.
   OpOperand *iterArg = nullptr;
   auto producerResult = sliceOp.source().dyn_cast<OpResult>();

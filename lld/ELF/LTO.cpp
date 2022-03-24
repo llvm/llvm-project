@@ -147,8 +147,6 @@ static lto::Config createConfig() {
 
   c.SampleProfile = std::string(config->ltoSampleProfile);
   c.UseNewPM = config->ltoNewPassManager;
-  for (StringRef pluginFn : config->passPlugins)
-    c.PassPlugins.push_back(std::string(pluginFn));
   c.DebugPassManager = config->ltoDebugPassManager;
   c.DwoDir = std::string(config->dwoDir);
 
