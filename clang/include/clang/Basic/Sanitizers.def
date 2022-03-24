@@ -64,6 +64,9 @@ SANITIZER("memory", Memory)
 // Kernel MemorySanitizer (KMSAN)
 SANITIZER("kernel-memory", KernelMemory)
 
+// LKMM Dependency Checker
+SANITIZER("lkmm-dep-checker", LKMMDepChecker)
+
 // libFuzzer
 SANITIZER("fuzzer", Fuzzer)
 

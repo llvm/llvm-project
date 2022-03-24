@@ -35,6 +35,7 @@ add_llvm_component_library(LLVMTransformUtils
   IntegerDivision.cpp
   LCSSA.cpp
   LibCallsShrinkWrap.cpp
+  LKMMDependenceAnalysis.cpp
   Local.cpp
   LoopPeel.cpp
   LoopRotationUtils.cpp
