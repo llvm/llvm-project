@@ -2044,7 +2044,7 @@ EmitCheckedMixedSignMultiply(CodeGenFunction &CGF, const clang::Expr *Op1,
 }
 
 static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
-                               Value *&RecordPtr, CharUnits Align,
+                               LValue RecordLV, CharUnits Align,
                                llvm::FunctionCallee Func, int Lvl) {
   ASTContext &Context = CGF.getContext();
   RecordDecl *RD = RType->castAs<RecordType>()->getDecl()->getDefinition();
@@ -2077,47 +2077,60 @@ static llvm::Value *dumpRecord(CodeGenFunction &CGF, QualType RType,
   }
 
   for (const auto *FD : RD->fields()) {
-    Value *FieldPtr = RecordPtr;
-    if (RD->isUnion())
-      FieldPtr = CGF.Builder.CreatePointerCast(
-          FieldPtr, CGF.ConvertType(Context.getPointerType(FD->getType())));
-    else
-      FieldPtr = CGF.Builder.CreateStructGEP(CGF.ConvertType(RType), FieldPtr,
-                                             FD->getFieldIndex());
+    Value *TmpRes = nullptr;
 
-    GString = CGF.Builder.CreateGlobalStringPtr(
-        llvm::Twine(Pad)
-            .concat(FD->getType().getAsString())
-            .concat(llvm::Twine(' '))
-            .concat(FD->getNameAsString())
-            .concat(" : ")
-            .str());
-    Value *TmpRes = CGF.Builder.CreateCall(Func, {GString});
-    Res = CGF.Builder.CreateAdd(Res, TmpRes);
+    std::string Format = llvm::Twine(Pad)
+                             .concat(FD->getType().getAsString())
+                             .concat(llvm::Twine(' '))
+                             .concat(FD->getNameAsString())
+                             .str();
 
+    if (FD->isBitField()) {
+      unsigned BitfieldWidth = FD->getBitWidthValue(CGF.getContext());
+
+      // If current field is a unnamed bitfield, we should dump only one ' '
+      // between type-name and ':'
+      if (!FD->getDeclName().isEmpty())
+        Format += ' ';
+      Format += llvm::Twine(": ").concat(llvm::Twine(BitfieldWidth)).str();
+
+      // If current field is a zero-width bitfield, we just dump a string like
+      // 'type-name : 0'
+      if (FD->isZeroSize(CGF.getContext())) {
+        Format += "\n";
+        GString = CGF.Builder.CreateGlobalStringPtr(Format);
+        TmpRes = CGF.Builder.CreateCall(Func, {GString});
+        Res = CGF.Builder.CreateAdd(Res, TmpRes);
+        continue;
+      }
+    }
+
+    LValue FieldLV = CGF.EmitLValueForField(RecordLV, FD);
     QualType CanonicalType =
         FD->getType().getUnqualifiedType().getCanonicalType();
 
     // We check whether we are in a recursive type
     if (CanonicalType->isRecordType()) {
-      TmpRes = dumpRecord(CGF, CanonicalType, FieldPtr, Align, Func, Lvl + 1);
+      TmpRes = dumpRecord(CGF, CanonicalType, FieldLV, Align, Func, Lvl + 1);
       Res = CGF.Builder.CreateAdd(TmpRes, Res);
       continue;
     }
 
     // We try to determine the best format to print the current field
-    llvm::Twine Format = Types.find(CanonicalType) == Types.end()
-                             ? Types[Context.VoidPtrTy]
-                             : Types[CanonicalType];
+    const char *TypeFormat = Types.find(CanonicalType) == Types.end()
+                                 ? Types[Context.VoidPtrTy]
+                                 : Types[CanonicalType];
 
-    Address FieldAddress =
-        Address(FieldPtr, CGF.ConvertTypeForMem(FD->getType()), Align);
-    FieldPtr = CGF.Builder.CreateLoad(FieldAddress);
+    GString = CGF.Builder.CreateGlobalStringPtr(llvm::Twine(Format)
+                                                    .concat(" = ")
+                                                    .concat(TypeFormat)
+                                                    .concat(llvm::Twine('\n'))
+                                                    .str());
 
-    // FIXME Need to handle bitfield here
-    GString = CGF.Builder.CreateGlobalStringPtr(
-        Format.concat(llvm::Twine('\n')).str());
-    TmpRes = CGF.Builder.CreateCall(Func, {GString, FieldPtr});
+    RValue RV = FD->isBitField()
+                    ? CGF.EmitLoadOfBitfieldLValue(FieldLV, FD->getLocation())
+                    : CGF.EmitLoadOfLValue(FieldLV, FD->getLocation());
+    TmpRes = CGF.Builder.CreateCall(Func, {GString, RV.getScalarVal()});
     Res = CGF.Builder.CreateAdd(Res, TmpRes);
   }
 
@@ -2664,7 +2677,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     QualType Arg0Type = Arg0->getType()->getPointeeType();
 
     Value *RecordPtr = EmitScalarExpr(Arg0);
-    Value *Res = dumpRecord(*this, Arg0Type, RecordPtr, Arg0Align,
+    LValue RecordLV = MakeAddrLValue(RecordPtr, Arg0Type, Arg0Align);
+    Value *Res = dumpRecord(*this, Arg0Type, RecordLV, Arg0Align,
                             {LLVMFuncType, Func}, 0);
     return RValue::get(Res);
   }

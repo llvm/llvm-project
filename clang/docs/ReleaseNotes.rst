@@ -79,7 +79,6 @@ Bug Fixes
   function with the ``naked`` attribute. This fixes
   `Issue 50541 <https://github.com/llvm/llvm-project/issues/50541>`_.
 
-
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - ``-Wliteral-range`` will warn on floating-point equality comparisons with
@@ -92,6 +91,10 @@ Improvements to Clang's diagnostics
   <https://github.com/llvm/llvm-project/issues/50794>`_.
 
 Non-comprehensive list of changes in this release
+- The builtin function __builtin_dump_struct would crash clang when the target 
+  struct have bitfield. Now it fixed, and __builtin_dump_struct support dump
+  the bitwidth of bitfields.
+  This fixes `Issue 54462 <https://github.com/llvm/llvm-project/issues/54462>`_.
 -------------------------------------------------
 
 New Compiler Flags
@@ -133,6 +136,12 @@ Attribute Changes in Clang
 
 - The ``__declspec(naked)`` attribute can no longer be written on a member
   function in Microsoft compatibility mode, matching the behavior of cl.exe.
+
+- Improve __builtin_dump_struct:
+
+  - Support bitfields in struct and union.
+  
+  - Improve the dump format, dump both bitwidth(if its a bitfield) and field value.
 
 Windows Support
 ---------------
