@@ -52986,10 +52986,19 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineToHorizontalAddSub(N, DAG, Subtarget))
     return V;
 
+  // Fold SUB(X,ADC(Y,0,W)) -> SBB(X,Y,W)
+  if (Op1.getOpcode() == X86ISD::ADC && Op1->hasOneUse() &&
+      X86::isZeroNode(Op1.getOperand(1))) {
+    assert(!Op1->hasAnyUseOfValue(1) && "Overflow bit in use");
+    return DAG.getNode(X86ISD::SBB, SDLoc(Op1), Op1->getVTList(), Op0,
+                       Op1.getOperand(0), Op1.getOperand(2));
+  }
+
   // Fold SUB(X,SBB(Y,Z,W)) -> SUB(ADC(X,Z,W),Y)
   // Don't fold to ADC(0,0,W)/SETCC_CARRY pattern which will prevent more folds.
   if (Op1.getOpcode() == X86ISD::SBB && Op1->hasOneUse() &&
       !(X86::isZeroNode(Op0) && X86::isZeroNode(Op1.getOperand(1)))) {
+    assert(!Op1->hasAnyUseOfValue(1) && "Overflow bit in use");
     SDValue ADC = DAG.getNode(X86ISD::ADC, SDLoc(Op1), Op1->getVTList(), Op0,
                               Op1.getOperand(1), Op1.getOperand(2));
     return DAG.getNode(ISD::SUB, SDLoc(N), Op0.getValueType(), ADC.getValue(0),
