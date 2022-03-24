@@ -446,19 +446,19 @@ struct IntrinsicLibrary {
                                   llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genAnint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genAny(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue
+      genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genAssociated(mlir::Type,
                                    llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genBtest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genCeiling(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genChar(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue
-      genCommandArgumentCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   template <mlir::arith::CmpIPredicate pred>
   fir::ExtendedValue genCharacterCompare(mlir::Type,
                                          llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genCmplx(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genConjg(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genDateAndTime(llvm::ArrayRef<fir::ExtendedValue>);
@@ -521,8 +521,8 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genSize(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genSpacing(mlir::Type resultType,
                          llvm::ArrayRef<mlir::Value> args);
-  fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genSpread(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genSum(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
@@ -540,8 +540,8 @@ struct IntrinsicLibrary {
   /// Define the different FIR generators that can be mapped to intrinsic to
   /// generate the related code.
   using ElementalGenerator = decltype(&IntrinsicLibrary::genAbs);
-  using ExtendedGenerator = decltype(&IntrinsicLibrary::genSum);
-  using SubroutineGenerator = decltype(&IntrinsicLibrary::genRandomInit);
+  using ExtendedGenerator = decltype(&IntrinsicLibrary::genLenTrim);
+  using SubroutineGenerator = decltype(&IntrinsicLibrary::genDateAndTime);
   using Generator =
       std::variant<ElementalGenerator, ExtendedGenerator, SubroutineGenerator>;
 
@@ -2232,6 +2232,14 @@ mlir::Value IntrinsicLibrary::genDim(mlir::Type resultType,
   return builder.create<mlir::arith::SelectOp>(loc, cmp, diff, zero);
 }
 
+// DOT_PRODUCT
+fir::ExtendedValue
+IntrinsicLibrary::genDotProduct(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genDotProd(fir::runtime::genDotProduct, resultType, builder, loc,
+                    stmtCtx, args);
+}
+
 // DPROD
 mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
@@ -2241,14 +2249,6 @@ mlir::Value IntrinsicLibrary::genDprod(mlir::Type resultType,
   mlir::Value a = builder.createConvert(loc, resultType, args[0]);
   mlir::Value b = builder.createConvert(loc, resultType, args[1]);
   return builder.create<mlir::arith::MulFOp>(loc, a, b);
-}
-
-// DOT_PRODUCT
-fir::ExtendedValue
-IntrinsicLibrary::genDotProduct(mlir::Type resultType,
-                                llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genDotProd(fir::runtime::genDotProduct, resultType, builder, loc,
-                    stmtCtx, args);
 }
 
 // EOSHIFT
@@ -2773,85 +2773,6 @@ IntrinsicLibrary::genMatmul(mlir::Type resultType,
                            "unexpected result for MATMUL");
 }
 
-// Compare two FIR values and return boolean result as i1.
-template <Extremum extremum, ExtremumBehavior behavior>
-static mlir::Value createExtremumCompare(mlir::Location loc,
-                                         fir::FirOpBuilder &builder,
-                                         mlir::Value left, mlir::Value right) {
-  static constexpr mlir::arith::CmpIPredicate integerPredicate =
-      extremum == Extremum::Max ? mlir::arith::CmpIPredicate::sgt
-                                : mlir::arith::CmpIPredicate::slt;
-  static constexpr mlir::arith::CmpFPredicate orderedCmp =
-      extremum == Extremum::Max ? mlir::arith::CmpFPredicate::OGT
-                                : mlir::arith::CmpFPredicate::OLT;
-  mlir::Type type = left.getType();
-  mlir::Value result;
-  if (fir::isa_real(type)) {
-    // Note: the signaling/quit aspect of the result required by IEEE
-    // cannot currently be obtained with LLVM without ad-hoc runtime.
-    if constexpr (behavior == ExtremumBehavior::IeeeMinMaximumNumber) {
-      // Return the number if one of the inputs is NaN and the other is
-      // a number.
-      auto leftIsResult =
-          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
-      auto rightIsNan = builder.create<mlir::arith::CmpFOp>(
-          loc, mlir::arith::CmpFPredicate::UNE, right, right);
-      result =
-          builder.create<mlir::arith::OrIOp>(loc, leftIsResult, rightIsNan);
-    } else if constexpr (behavior == ExtremumBehavior::IeeeMinMaximum) {
-      // Always return NaNs if one the input is NaNs
-      auto leftIsResult =
-          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
-      auto leftIsNan = builder.create<mlir::arith::CmpFOp>(
-          loc, mlir::arith::CmpFPredicate::UNE, left, left);
-      result = builder.create<mlir::arith::OrIOp>(loc, leftIsResult, leftIsNan);
-    } else if constexpr (behavior == ExtremumBehavior::MinMaxss) {
-      // If the left is a NaN, return the right whatever it is.
-      result =
-          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
-    } else if constexpr (behavior == ExtremumBehavior::PgfortranLlvm) {
-      // If one of the operand is a NaN, return left whatever it is.
-      static constexpr auto unorderedCmp =
-          extremum == Extremum::Max ? mlir::arith::CmpFPredicate::UGT
-                                    : mlir::arith::CmpFPredicate::ULT;
-      result =
-          builder.create<mlir::arith::CmpFOp>(loc, unorderedCmp, left, right);
-    } else {
-      // TODO: ieeeMinNum/ieeeMaxNum
-      static_assert(behavior == ExtremumBehavior::IeeeMinMaxNum,
-                    "ieeeMinNum/ieeeMaxNum behavior not implemented");
-    }
-  } else if (fir::isa_integer(type)) {
-    result =
-        builder.create<mlir::arith::CmpIOp>(loc, integerPredicate, left, right);
-  } else if (fir::isa_char(type)) {
-    // TODO: ! character min and max is tricky because the result
-    // length is the length of the longest argument!
-    // So we may need a temp.
-    TODO(loc, "CHARACTER min and max");
-  }
-  assert(result && "result must be defined");
-  return result;
-}
-
-// MAXLOC
-fir::ExtendedValue
-IntrinsicLibrary::genMaxloc(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genExtremumloc(fir::runtime::genMaxloc, fir::runtime::genMaxlocDim,
-                        resultType, builder, loc, stmtCtx,
-                        "unexpected result for Maxloc", args);
-}
-
-// MAXVAL
-fir::ExtendedValue
-IntrinsicLibrary::genMaxval(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genExtremumVal(fir::runtime::genMaxval, fir::runtime::genMaxvalDim,
-                        fir::runtime::genMaxvalChar, resultType, builder, loc,
-                        stmtCtx, "unexpected result for Maxval", args);
-}
-
 // MERGE
 fir::ExtendedValue
 IntrinsicLibrary::genMerge(mlir::Type,
@@ -2871,38 +2792,6 @@ IntrinsicLibrary::genMerge(mlir::Type,
     return charRslt;
   }
   return rslt;
-}
-
-// MINLOC
-fir::ExtendedValue
-IntrinsicLibrary::genMinloc(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genExtremumloc(fir::runtime::genMinloc, fir::runtime::genMinlocDim,
-                        resultType, builder, loc, stmtCtx,
-                        "unexpected result for Minloc", args);
-}
-
-// MINVAL
-fir::ExtendedValue
-IntrinsicLibrary::genMinval(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
-  return genExtremumVal(fir::runtime::genMinval, fir::runtime::genMinvalDim,
-                        fir::runtime::genMinvalChar, resultType, builder, loc,
-                        stmtCtx, "unexpected result for Minval", args);
-}
-
-// MIN and MAX
-template <Extremum extremum, ExtremumBehavior behavior>
-mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
-                                          llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() >= 1);
-  mlir::Value result = args[0];
-  for (auto arg : args.drop_front()) {
-    mlir::Value mask =
-        createExtremumCompare<extremum, behavior>(loc, builder, result, arg);
-    result = builder.create<mlir::arith::SelectOp>(loc, mask, result, arg);
-  }
-  return result;
 }
 
 // MOD
@@ -3276,16 +3165,6 @@ mlir::Value IntrinsicLibrary::genSign(mlir::Type resultType,
   return genRuntimeCall("sign", resultType, args);
 }
 
-// SPACING
-mlir::Value IntrinsicLibrary::genSpacing(mlir::Type resultType,
-                                         llvm::ArrayRef<mlir::Value> args) {
-  assert(args.size() == 1);
-
-  return builder.createConvert(
-      loc, resultType,
-      fir::runtime::genSpacing(builder, loc, fir::getBase(args[0])));
-}
-
 // SIZE
 fir::ExtendedValue
 IntrinsicLibrary::genSize(mlir::Type resultType,
@@ -3330,6 +3209,92 @@ IntrinsicLibrary::genSize(mlir::Type resultType,
         builder.create<fir::ResultOp>(loc, size);
       })
       .getResults()[0];
+}
+
+// LBOUND
+fir::ExtendedValue
+IntrinsicLibrary::genLbound(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  // Calls to LBOUND that don't have the DIM argument, or for which
+  // the DIM is a compile time constant, are folded to descriptor inquiries by
+  // semantics.  This function covers the situations where a call to the
+  // runtime is required.
+  assert(args.size() == 3);
+  assert(!isAbsent(args[1]));
+  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
+    if (boxValue->hasAssumedRank())
+      TODO(loc, "LBOUND intrinsic with assumed rank argument");
+
+  const fir::ExtendedValue &array = args[0];
+  mlir::Value box = array.match(
+      [&](const fir::BoxValue &boxValue) -> mlir::Value {
+        // This entity is mapped to a fir.box that may not contain the local
+        // lower bound information if it is a dummy. Rebox it with the local
+        // shape information.
+        mlir::Value localShape = builder.createShape(loc, array);
+        mlir::Value oldBox = boxValue.getAddr();
+        return builder.create<fir::ReboxOp>(
+            loc, oldBox.getType(), oldBox, localShape, /*slice=*/mlir::Value{});
+      },
+      [&](const auto &) -> mlir::Value {
+        // This a pointer/allocatable, or an entity not yet tracked with a
+        // fir.box. For pointer/allocatable, createBox will forward the
+        // descriptor that contains the correct lower bound information. For
+        // other entities, a new fir.box will be made with the local lower
+        // bounds.
+        return builder.createBox(loc, array);
+      });
+
+  mlir::Value dim = fir::getBase(args[1]);
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genLboundDim(builder, loc, fir::getBase(box), dim));
+}
+
+// UBOUND
+fir::ExtendedValue
+IntrinsicLibrary::genUbound(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3 || args.size() == 2);
+  if (args.size() == 3) {
+    // Handle calls to UBOUND with the DIM argument, which return a scalar
+    mlir::Value extent = fir::getBase(genSize(resultType, args));
+    mlir::Value lbound = fir::getBase(genLbound(resultType, args));
+
+    mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
+    mlir::Value ubound = builder.create<mlir::arith::SubIOp>(loc, lbound, one);
+    return builder.create<mlir::arith::AddIOp>(loc, ubound, extent);
+  } else {
+    // Handle calls to UBOUND without the DIM argument, which return an array
+    mlir::Value kind = isAbsent(args[1])
+                           ? builder.createIntegerConstant(
+                                 loc, builder.getIndexType(),
+                                 builder.getKindMap().defaultIntegerKind())
+                           : fir::getBase(args[1]);
+
+    // Create mutable fir.box to be passed to the runtime for the result.
+    mlir::Type type = builder.getVarLenSeqTy(resultType, /*rank=*/1);
+    fir::MutableBoxValue resultMutableBox =
+        fir::factory::createTempMutableBox(builder, loc, type);
+    mlir::Value resultIrBox =
+        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
+
+    fir::runtime::genUbound(builder, loc, resultIrBox, fir::getBase(args[0]),
+                            kind);
+
+    return readAndAddCleanUp(resultMutableBox, resultType, "UBOUND");
+  }
+  return mlir::Value();
+}
+
+// SPACING
+mlir::Value IntrinsicLibrary::genSpacing(mlir::Type resultType,
+                                         llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() == 1);
+
+  return builder.createConvert(
+      loc, resultType,
+      fir::runtime::genSpacing(builder, loc, fir::getBase(args[0])));
 }
 
 // SPREAD
@@ -3426,82 +3391,6 @@ IntrinsicLibrary::genTransfer(mlir::Type resultType,
                            "unexpected result for TRANSFER");
 }
 
-// LBOUND
-fir::ExtendedValue
-IntrinsicLibrary::genLbound(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
-  // Calls to LBOUND that don't have the DIM argument, or for which
-  // the DIM is a compile time constant, are folded to descriptor inquiries by
-  // semantics.  This function covers the situations where a call to the
-  // runtime is required.
-  assert(args.size() == 3);
-  assert(!isAbsent(args[1]));
-  if (const auto *boxValue = args[0].getBoxOf<fir::BoxValue>())
-    if (boxValue->hasAssumedRank())
-      TODO(loc, "LBOUND intrinsic with assumed rank argument");
-
-  const fir::ExtendedValue &array = args[0];
-  mlir::Value box = array.match(
-      [&](const fir::BoxValue &boxValue) -> mlir::Value {
-        // This entity is mapped to a fir.box that may not contain the local
-        // lower bound information if it is a dummy. Rebox it with the local
-        // shape information.
-        mlir::Value localShape = builder.createShape(loc, array);
-        mlir::Value oldBox = boxValue.getAddr();
-        return builder.create<fir::ReboxOp>(
-            loc, oldBox.getType(), oldBox, localShape, /*slice=*/mlir::Value{});
-      },
-      [&](const auto &) -> mlir::Value {
-        // This a pointer/allocatable, or an entity not yet tracked with a
-        // fir.box. For pointer/allocatable, createBox will forward the
-        // descriptor that contains the correct lower bound information. For
-        // other entities, a new fir.box will be made with the local lower
-        // bounds.
-        return builder.createBox(loc, array);
-      });
-
-  mlir::Value dim = fir::getBase(args[1]);
-  return builder.createConvert(
-      loc, resultType,
-      fir::runtime::genLboundDim(builder, loc, fir::getBase(box), dim));
-}
-
-// UBOUND
-fir::ExtendedValue
-IntrinsicLibrary::genUbound(mlir::Type resultType,
-                            llvm::ArrayRef<fir::ExtendedValue> args) {
-  assert(args.size() == 3 || args.size() == 2);
-  if (args.size() == 3) {
-    // Handle calls to UBOUND with the DIM argument, which return a scalar
-    mlir::Value extent = fir::getBase(genSize(resultType, args));
-    mlir::Value lbound = fir::getBase(genLbound(resultType, args));
-
-    mlir::Value one = builder.createIntegerConstant(loc, resultType, 1);
-    mlir::Value ubound = builder.create<mlir::arith::SubIOp>(loc, lbound, one);
-    return builder.create<mlir::arith::AddIOp>(loc, ubound, extent);
-  } else {
-    // Handle calls to UBOUND without the DIM argument, which return an array
-    mlir::Value kind = isAbsent(args[1])
-                           ? builder.createIntegerConstant(
-                                 loc, builder.getIndexType(),
-                                 builder.getKindMap().defaultIntegerKind())
-                           : fir::getBase(args[1]);
-
-    // Create mutable fir.box to be passed to the runtime for the result.
-    mlir::Type type = builder.getVarLenSeqTy(resultType, /*rank=*/1);
-    fir::MutableBoxValue resultMutableBox =
-        fir::factory::createTempMutableBox(builder, loc, type);
-    mlir::Value resultIrBox =
-        fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
-
-    fir::runtime::genUbound(builder, loc, resultIrBox, fir::getBase(args[0]),
-                            kind);
-
-    return readAndAddCleanUp(resultMutableBox, resultType, "UBOUND");
-  }
-  return mlir::Value();
-}
-
 // TRANSPOSE
 fir::ExtendedValue
 IntrinsicLibrary::genTranspose(mlir::Type resultType,
@@ -3542,6 +3431,67 @@ IntrinsicLibrary::genTrim(mlir::Type resultType,
   // Read result from mutable fir.box and add it to the list of temps to be
   // finalized by the StatementContext.
   return readAndAddCleanUp(resultMutableBox, resultType, "TRIM");
+}
+
+// Compare two FIR values and return boolean result as i1.
+template <Extremum extremum, ExtremumBehavior behavior>
+static mlir::Value createExtremumCompare(mlir::Location loc,
+                                         fir::FirOpBuilder &builder,
+                                         mlir::Value left, mlir::Value right) {
+  static constexpr mlir::arith::CmpIPredicate integerPredicate =
+      extremum == Extremum::Max ? mlir::arith::CmpIPredicate::sgt
+                                : mlir::arith::CmpIPredicate::slt;
+  static constexpr mlir::arith::CmpFPredicate orderedCmp =
+      extremum == Extremum::Max ? mlir::arith::CmpFPredicate::OGT
+                                : mlir::arith::CmpFPredicate::OLT;
+  mlir::Type type = left.getType();
+  mlir::Value result;
+  if (fir::isa_real(type)) {
+    // Note: the signaling/quit aspect of the result required by IEEE
+    // cannot currently be obtained with LLVM without ad-hoc runtime.
+    if constexpr (behavior == ExtremumBehavior::IeeeMinMaximumNumber) {
+      // Return the number if one of the inputs is NaN and the other is
+      // a number.
+      auto leftIsResult =
+          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
+      auto rightIsNan = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::UNE, right, right);
+      result =
+          builder.create<mlir::arith::OrIOp>(loc, leftIsResult, rightIsNan);
+    } else if constexpr (behavior == ExtremumBehavior::IeeeMinMaximum) {
+      // Always return NaNs if one the input is NaNs
+      auto leftIsResult =
+          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
+      auto leftIsNan = builder.create<mlir::arith::CmpFOp>(
+          loc, mlir::arith::CmpFPredicate::UNE, left, left);
+      result = builder.create<mlir::arith::OrIOp>(loc, leftIsResult, leftIsNan);
+    } else if constexpr (behavior == ExtremumBehavior::MinMaxss) {
+      // If the left is a NaN, return the right whatever it is.
+      result =
+          builder.create<mlir::arith::CmpFOp>(loc, orderedCmp, left, right);
+    } else if constexpr (behavior == ExtremumBehavior::PgfortranLlvm) {
+      // If one of the operand is a NaN, return left whatever it is.
+      static constexpr auto unorderedCmp =
+          extremum == Extremum::Max ? mlir::arith::CmpFPredicate::UGT
+                                    : mlir::arith::CmpFPredicate::ULT;
+      result =
+          builder.create<mlir::arith::CmpFOp>(loc, unorderedCmp, left, right);
+    } else {
+      // TODO: ieeeMinNum/ieeeMaxNum
+      static_assert(behavior == ExtremumBehavior::IeeeMinMaxNum,
+                    "ieeeMinNum/ieeeMaxNum behavior not implemented");
+    }
+  } else if (fir::isa_integer(type)) {
+    result =
+        builder.create<mlir::arith::CmpIOp>(loc, integerPredicate, left, right);
+  } else if (fir::isa_char(type)) {
+    // TODO: ! character min and max is tricky because the result
+    // length is the length of the longest argument!
+    // So we may need a temp.
+    TODO(loc, "CHARACTER min and max");
+  }
+  assert(result && "result must be defined");
+  return result;
 }
 
 // UNPACK
@@ -3649,6 +3599,56 @@ IntrinsicLibrary::genVerify(mlir::Type resultType,
 
   // Handle cleanup of allocatable result descriptor and return
   return readAndAddCleanUp(resultMutableBox, resultType, "VERIFY");
+}
+
+// MAXLOC
+fir::ExtendedValue
+IntrinsicLibrary::genMaxloc(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genExtremumloc(fir::runtime::genMaxloc, fir::runtime::genMaxlocDim,
+                        resultType, builder, loc, stmtCtx,
+                        "unexpected result for Maxloc", args);
+}
+
+// MAXVAL
+fir::ExtendedValue
+IntrinsicLibrary::genMaxval(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genExtremumVal(fir::runtime::genMaxval, fir::runtime::genMaxvalDim,
+                        fir::runtime::genMaxvalChar, resultType, builder, loc,
+                        stmtCtx, "unexpected result for Maxval", args);
+}
+
+// MINLOC
+fir::ExtendedValue
+IntrinsicLibrary::genMinloc(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genExtremumloc(fir::runtime::genMinloc, fir::runtime::genMinlocDim,
+                        resultType, builder, loc, stmtCtx,
+                        "unexpected result for Minloc", args);
+}
+
+// MINVAL
+fir::ExtendedValue
+IntrinsicLibrary::genMinval(mlir::Type resultType,
+                            llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genExtremumVal(fir::runtime::genMinval, fir::runtime::genMinvalDim,
+                        fir::runtime::genMinvalChar, resultType, builder, loc,
+                        stmtCtx, "unexpected result for Minval", args);
+}
+
+// MIN and MAX
+template <Extremum extremum, ExtremumBehavior behavior>
+mlir::Value IntrinsicLibrary::genExtremum(mlir::Type,
+                                          llvm::ArrayRef<mlir::Value> args) {
+  assert(args.size() >= 1);
+  mlir::Value result = args[0];
+  for (auto arg : args.drop_front()) {
+    mlir::Value mask =
+        createExtremumCompare<extremum, behavior>(loc, builder, result, arg);
+    result = builder.create<mlir::arith::SelectOp>(loc, mask, result, arg);
+  }
+  return result;
 }
 
 //===----------------------------------------------------------------------===//
