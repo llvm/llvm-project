@@ -970,3 +970,13 @@ func @omp_sections() {
   }
   return
 }
+
+// -----
+
+func @omp_single(%data_var : memref<i32>) -> () {
+  // expected-error @below {{expected equal sizes for allocate and allocator variables}}
+  "omp.single" (%data_var) ({
+    omp.barrier
+  }) {operand_segment_sizes = dense<[1,0]> : vector<2xi32>} : (memref<i32>) -> ()
+  return
+}
