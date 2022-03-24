@@ -509,12 +509,12 @@ Value Importer::processValue(llvm::Value *value) {
   // We don't expect to see instructions in dominator order. If we haven't seen
   // this instruction yet, create an unknown op and remap it later.
   if (isa<llvm::Instruction>(value)) {
-    OperationState state(UnknownLoc::get(context), "llvm.unknown");
     Type type = processType(value->getType());
     if (!type)
       return nullptr;
-    state.addTypes(type);
-    unknownInstMap[value] = b.createOperation(state);
+    unknownInstMap[value] =
+        b.create(UnknownLoc::get(context), b.getStringAttr("llvm.unknown"),
+                 /*operands=*/{}, type);
     return unknownInstMap[value]->getResult(0);
   }
 
@@ -705,7 +705,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
         return failure();
       state.addTypes(type);
     }
-    Operation *op = b.createOperation(state);
+    Operation *op = b.create(state);
     if (!inst->getType()->isVoidTy())
       v = op->getResult(0);
     return success();
@@ -747,7 +747,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
                          b.getI32VectorAttr(operandSegmentSizes));
     }
 
-    b.createOperation(state);
+    b.create(state);
     return success();
   }
   case llvm::Instruction::PHI: {

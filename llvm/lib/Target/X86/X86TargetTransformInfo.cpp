@@ -1557,9 +1557,8 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     if (ST->hasSSE3() && IsLoad)
       if (const auto *Entry =
               CostTableLookup(SSE3BroadcastLoadTbl, Kind, LT.second)) {
-        assert(isLegalBroadcastLoad(
-                   BaseTp->getElementType(),
-                   cast<FixedVectorType>(BaseTp)->getNumElements()) &&
+        assert(isLegalBroadcastLoad(BaseTp->getElementType(),
+                                    LT.second.getVectorNumElements()) &&
                "Table entry missing from isLegalBroadcastLoad()");
         return LT.first * Entry->Cost;
       }

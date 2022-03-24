@@ -680,7 +680,7 @@ func @calls(%arg0: i32) {
   %z = "casdasda"(%x) : (ppop32) -> i32
 }
 // -----
-// expected-error@+2 {{expected SSA operand}}
+// expected-error@+1 {{expected SSA operand}}
 func@n(){^b(
 // -----
 
@@ -882,7 +882,7 @@ func @type_alias_unknown(!unknown_alias) -> () { // expected-error {{undefined s
 
 // -----
 
-!missing_type_alias = type // expected-error@+2 {{expected non-function type}}
+!missing_type_alias = type // expected-error@+1 {{expected non-function type}}
 
 // -----
 

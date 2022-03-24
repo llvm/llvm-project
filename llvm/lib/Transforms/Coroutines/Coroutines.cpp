@@ -119,43 +119,54 @@ Value *coro::LowererBase::makeSubFnCall(Value *Arg, int Index,
   return Bitcast;
 }
 
+// NOTE: Must be sorted!
+static const char *const CoroIntrinsics[] = {
+    "llvm.coro.align",
+    "llvm.coro.alloc",
+    "llvm.coro.async.context.alloc",
+    "llvm.coro.async.context.dealloc",
+    "llvm.coro.async.resume",
+    "llvm.coro.async.size.replace",
+    "llvm.coro.async.store_resume",
+    "llvm.coro.begin",
+    "llvm.coro.destroy",
+    "llvm.coro.done",
+    "llvm.coro.end",
+    "llvm.coro.end.async",
+    "llvm.coro.frame",
+    "llvm.coro.free",
+    "llvm.coro.id",
+    "llvm.coro.id.async",
+    "llvm.coro.id.retcon",
+    "llvm.coro.id.retcon.once",
+    "llvm.coro.noop",
+    "llvm.coro.prepare.async",
+    "llvm.coro.prepare.retcon",
+    "llvm.coro.promise",
+    "llvm.coro.resume",
+    "llvm.coro.save",
+    "llvm.coro.size",
+    "llvm.coro.subfn.addr",
+    "llvm.coro.suspend",
+    "llvm.coro.suspend.async",
+    "llvm.coro.suspend.retcon",
+};
+
 #ifndef NDEBUG
 static bool isCoroutineIntrinsicName(StringRef Name) {
-  // NOTE: Must be sorted!
-  static const char *const CoroIntrinsics[] = {
-      "llvm.coro.align",
-      "llvm.coro.alloc",
-      "llvm.coro.async.context.alloc",
-      "llvm.coro.async.context.dealloc",
-      "llvm.coro.async.resume",
-      "llvm.coro.async.size.replace",
-      "llvm.coro.async.store_resume",
-      "llvm.coro.begin",
-      "llvm.coro.destroy",
-      "llvm.coro.done",
-      "llvm.coro.end",
-      "llvm.coro.end.async",
-      "llvm.coro.frame",
-      "llvm.coro.free",
-      "llvm.coro.id",
-      "llvm.coro.id.async",
-      "llvm.coro.id.retcon",
-      "llvm.coro.id.retcon.once",
-      "llvm.coro.noop",
-      "llvm.coro.prepare.async",
-      "llvm.coro.prepare.retcon",
-      "llvm.coro.promise",
-      "llvm.coro.resume",
-      "llvm.coro.save",
-      "llvm.coro.size",
-      "llvm.coro.subfn.addr",
-      "llvm.coro.suspend",
-      "llvm.coro.suspend.async",
-      "llvm.coro.suspend.retcon",
-  };
   return Intrinsic::lookupLLVMIntrinsicByName(CoroIntrinsics, Name) != -1;
 }
 #endif
+
+bool coro::declaresAnyIntrinsic(const Module &M) {
+  for (StringRef Name : CoroIntrinsics) {
+    assert(isCoroutineIntrinsicName(Name) && "not a coroutine intrinsic");
+    if (M.getNamedValue(Name))
+      return true;
+  }
+
+  return false;
+}
 
 // Verifies if a module has named values listed. Also, in debug mode verifies
 // that names are intrinsic names.

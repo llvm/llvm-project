@@ -43,6 +43,10 @@ class AVRAsmParser : public MCTargetAsmParser {
   const MCRegisterInfo *MRI;
   const std::string GENERATE_STUBS = "gs";
 
+  enum AVRMatchResultTy {
+    Match_InvalidRegisterOnTiny = FIRST_TARGET_MATCH_RESULT_TY + 1,
+  };
+
 #define GET_ASSEMBLER_HEADER
 #include "AVRGenAsmMatcher.inc"
 
@@ -332,6 +336,8 @@ bool AVRAsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
     return invalidOperand(Loc, Operands, ErrorInfo);
   case Match_MnemonicFail:
     return Error(Loc, "invalid instruction");
+  case Match_InvalidRegisterOnTiny:
+    return Error(Loc, "invalid register on avrtiny");
   default:
     return true;
   }
@@ -398,6 +404,11 @@ bool AVRAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
 
   if (RegNo == AVR::NoRegister)
     return true;
+
+  // Reject R0~R15 on avrtiny.
+  if (AVR::R0 <= RegNo && RegNo <= AVR::R15 &&
+      STI.hasFeature(AVR::FeatureTinyEncoding))
+    return Error(Parser.getTok().getLoc(), "invalid register on avrtiny");
 
   AsmToken const &T = Parser.getTok();
   Operands.push_back(AVROperand::CreateReg(RegNo, T.getLoc(), T.getEndLoc()));
@@ -726,6 +737,12 @@ unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   if (Op.isImm()) {
     if (MCConstantExpr const *Const = dyn_cast<MCConstantExpr>(Op.getImm())) {
       int64_t RegNum = Const->getValue();
+
+      // Reject R0~R15 on avrtiny.
+      if (0 <= RegNum && RegNum <= 15 &&
+          STI.hasFeature(AVR::FeatureTinyEncoding))
+        return Match_InvalidRegisterOnTiny;
+
       std::ostringstream RegName;
       RegName << "r" << RegNum;
       RegNum = MatchRegisterName(RegName.str());

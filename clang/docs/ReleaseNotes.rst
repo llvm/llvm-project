@@ -73,11 +73,21 @@ Bug Fixes
   Now fixed by setting identifiers for them.
   This fixes `Issue 28475 (PR28101) <https://github.com/llvm/llvm-project/issues/28475>`_.
 
+- Now allow the `restrict` and `_Atomic` qualifiers to be used in conjunction
+  with `__auto_type` to match the behavior in GCC. This fixes
+  `Issue 53652 <https://github.com/llvm/llvm-project/issues/53652>`_.
+
+
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - ``-Wliteral-range`` will warn on floating-point equality comparisons with
   constants that are not representable in a casted value. For example,
   ``(float) f == 0.1`` is always false.
+- ``-Winline-namespace-reopened-noninline`` now takes into account that the
+  ``inline`` keyword must appear on the original but not necessarily all
+  extension definitions of an inline namespace and therefore points its note
+  at the original definition. This fixes `Issue 50794 (PR51452)
+  <https://github.com/llvm/llvm-project/issues/50794>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

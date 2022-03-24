@@ -27,6 +27,9 @@
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendOptions.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -337,6 +340,35 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   return std::make_unique<ExtractAPIConsumer>(
       CI.getASTContext(), CI.getInvocation().getFrontendOpts().ProductName,
       std::move(OS));
+}
+
+bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
+  auto &Inputs = CI.getFrontendOpts().Inputs;
+  if (Inputs.empty())
+    return true;
+
+  auto Kind = Inputs[0].getKind();
+
+  // Convert the header file inputs into a single input buffer.
+  SmallString<256> HeaderContents;
+  for (const FrontendInputFile &FIF : Inputs) {
+    if (Kind.isObjectiveC())
+      HeaderContents += "#import";
+    else
+      HeaderContents += "#include";
+    HeaderContents += " \"";
+    HeaderContents += FIF.getFile();
+    HeaderContents += "\"\n";
+  }
+
+  Buffer = llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
+                                                getInputBufferName());
+
+  // Set that buffer up as our "real" input in the CompilerInstance.
+  Inputs.clear();
+  Inputs.emplace_back(Buffer->getMemBufferRef(), Kind, /*IsSystem*/ false);
+
+  return true;
 }
 
 std::unique_ptr<raw_pwrite_stream>

@@ -13,11 +13,35 @@
 #include "GCNHazardRecognizer.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/Support/TargetParser.h"
 
 using namespace llvm;
+
+namespace {
+
+struct MFMAPaddingRatioParser : public cl::parser<unsigned> {
+  MFMAPaddingRatioParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value) {
+    if (Arg.getAsInteger(0, Value))
+      return O.error("'" + Arg + "' value invalid for uint argument!");
+
+    if (Value > 100)
+      return O.error("'" + Arg + "' value must be in the range [0, 100]!");
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static cl::opt<unsigned, false, MFMAPaddingRatioParser>
+    MFMAPaddingRatio("amdgpu-mfma-padding-ratio", cl::init(0), cl::Hidden,
+                     cl::desc("Fill a percentage of the latency between "
+                              "neighboring MFMA with s_nops."));
 
 //===----------------------------------------------------------------------===//
 // Hazard Recognizer Implementation
@@ -235,6 +259,14 @@ static void insertNoopsInBundle(MachineInstr *MI, const SIInstrInfo &TII,
     BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::S_NOP))
         .addImm(Arg - 1);
   }
+}
+
+unsigned
+GCNHazardRecognizer::getMFMAPipelineWaitStates(const MachineInstr &MI) const {
+  const MCSchedClassDesc *SC = TSchedModel.resolveSchedClass(&MI);
+  assert(TSchedModel.getWriteProcResBegin(SC) !=
+         TSchedModel.getWriteProcResEnd(SC));
+  return TSchedModel.getWriteProcResBegin(SC)->Cycles;
 }
 
 void GCNHazardRecognizer::processBundle() {
@@ -1223,6 +1255,42 @@ int GCNHazardRecognizer::checkMAIHazards(MachineInstr *MI) {
   return ST.hasGFX90AInsts() ? checkMAIHazards90A(MI) : checkMAIHazards908(MI);
 }
 
+int GCNHazardRecognizer::checkMFMAPadding(MachineInstr *MI) {
+  // Early exit if no padding is requested.
+  if (MFMAPaddingRatio == 0)
+    return 0;
+
+  auto IsMFMAFn = [](const MachineInstr &MI) {
+    return SIInstrInfo::isMAI(MI) &&
+           MI.getOpcode() != AMDGPU::V_ACCVGPR_WRITE_B32_e64 &&
+           MI.getOpcode() != AMDGPU::V_ACCVGPR_READ_B32_e64;
+  };
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  if (!IsMFMAFn(*MI) || MFI->getOccupancy() < 2)
+    return 0;
+
+  int NeighborMFMALatency = 0;
+  auto IsNeighboringMFMA = [&IsMFMAFn, &NeighborMFMALatency,
+                            this](const MachineInstr &MI) {
+    if (!IsMFMAFn(MI))
+      return false;
+
+    NeighborMFMALatency = this->getMFMAPipelineWaitStates(MI);
+    return true;
+  };
+
+  const int MaxMFMAPipelineWaitStates = 16;
+  int WaitStatesSinceNeighborMFMA =
+      getWaitStatesSince(IsNeighboringMFMA, MaxMFMAPipelineWaitStates);
+
+  int NeighborMFMAPaddingNeeded =
+      (NeighborMFMALatency * MFMAPaddingRatio / 100) -
+      WaitStatesSinceNeighborMFMA;
+
+  return std::max(0, NeighborMFMAPaddingNeeded);
+}
+
 int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
   int WaitStatesNeeded = 0;
   unsigned Opc = MI->getOpcode();
@@ -1386,6 +1454,9 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
     int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSince;
     WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
   }
+
+  // Pad neighboring MFMA with noops for better inter-wave performance.
+  WaitStatesNeeded = std::max(WaitStatesNeeded, checkMFMAPadding(MI));
 
   return WaitStatesNeeded;
 }

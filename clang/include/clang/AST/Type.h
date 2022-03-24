@@ -5083,6 +5083,10 @@ public:
     return getKeyword() == AutoTypeKeyword::DecltypeAuto;
   }
 
+  bool isGNUAutoType() const {
+    return getKeyword() == AutoTypeKeyword::GNUAutoType;
+  }
+
   AutoTypeKeyword getKeyword() const {
     return (AutoTypeKeyword)AutoTypeBits.Keyword;
   }

@@ -1,1 +1,3 @@
 set(LIBCXX_ENABLE_ASSERTIONS ON CACHE BOOL "")
+set(LIBCXX_TEST_PARAMS "enable_assertions=True" CACHE STRING "")
+set(LIBCXXABI_TEST_PARAMS "enable_assertions=True" CACHE STRING "")
