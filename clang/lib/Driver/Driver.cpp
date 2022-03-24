@@ -1208,6 +1208,11 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       CompilerPath = Split.second;
     }
   }
+  if (const Arg *A =
+          Args.getLastArg(options::OPT__overlay_platform_toolchain_EQ)) {
+    OverlayToolChainPath = A->getValue();
+    DyldPrefix = A->getValue();
+  }
   if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ))
     SysRoot = A->getValue();
   if (const Arg *A = Args.getLastArg(options::OPT__dyld_prefix_EQ))
