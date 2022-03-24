@@ -73,20 +73,3 @@ void f3(void) {
   __attribute__((__cleanup__(for_cleanup))) int x;
   x = 5;
 }
-
-void f4(void) {
-  int x1 = 0; // expected-warning{{variable 'x1' set but not used}}
-  x1++;
-  int x2 = 0; // expected-warning{{variable 'x2' set but not used}}
-  x2--;
-  int x3 = 0; // expected-warning{{variable 'x3' set but not used}}
-  ++x3;
-  int x4 = 0; // expected-warning{{variable 'x4' set but not used}}
-  --x4;
-
-  volatile int v1 = 0;
-  ++v1;
-  typedef volatile int volint;
-  volint v2 = 0;
-  v2++;
-}
