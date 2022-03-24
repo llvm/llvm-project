@@ -140,6 +140,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::OmpBeginBlockDirective>(blockConstruct.t);
   const auto &blockDirective =
       std::get<Fortran::parser::OmpBlockDirective>(beginBlockDirective.t);
+  const auto &endBlockDirective =
+      std::get<Fortran::parser::OmpEndBlockDirective>(blockConstruct.t);
 
   auto &firOpBuilder = converter.getFirOpBuilder();
   auto currentLocation = converter.getCurrentLocation();
@@ -200,6 +202,20 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     auto masterOp =
         firOpBuilder.create<mlir::omp::MasterOp>(currentLocation, argTy);
     createBodyOfOp<omp::MasterOp>(masterOp, firOpBuilder, currentLocation);
+
+    // Single Construct
+  } else if (blockDirective.v == llvm::omp::OMPD_single) {
+    mlir::UnitAttr nowaitAttr;
+    for (const auto &clause :
+         std::get<Fortran::parser::OmpClauseList>(endBlockDirective.t).v) {
+      if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
+        nowaitAttr = firOpBuilder.getUnitAttr();
+      // TODO: Handle allocate clause (D122302)
+    }
+    auto singleOp = firOpBuilder.create<mlir::omp::SingleOp>(
+        currentLocation, /*allocate_vars=*/ValueRange(),
+        /*allocators_vars=*/ValueRange(), nowaitAttr);
+    createBodyOfOp(singleOp, firOpBuilder, currentLocation);
   }
 }
 
