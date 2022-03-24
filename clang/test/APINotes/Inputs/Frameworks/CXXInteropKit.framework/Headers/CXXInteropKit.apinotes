@@ -3,6 +3,10 @@ Name: CxxInterop
 Classes:
 - Name: NSSomeClass
   SwiftName: SomeClass
+  Methods:
+  - Selector: 'didMoveToParentViewController:'
+    SwiftName: didMove(toParent:)
+    MethodKind: Instance
 Enumerators:
 - Name: SomeClassRed
   SwiftName: red
