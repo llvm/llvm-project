@@ -11,11 +11,13 @@
 #include "format.h"
 #include "tools.h"
 #include "unit.h"
+#include "utf.h"
 #include "flang/Runtime/memory.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <limits>
+#include <type_traits>
 
 namespace Fortran::runtime::io {
 
@@ -357,7 +359,6 @@ bool ExternalIoStatementState<DIR>::Emit(
     Crash(
         "ExternalIoStatementState::Emit(char16_t) called for input statement");
   }
-  // TODO: UTF-8 encoding
   return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
       sizeof *data, *this);
 }
@@ -369,7 +370,6 @@ bool ExternalIoStatementState<DIR>::Emit(
     Crash(
         "ExternalIoStatementState::Emit(char32_t) called for input statement");
   }
-  // TODO: UTF-8 encoding
   return unit().Emit(reinterpret_cast<const char *>(data), chars * sizeof *data,
       sizeof *data, *this);
 }
@@ -472,6 +472,30 @@ bool IoStatementState::Emit(const char32_t *data, std::size_t chars) {
   return std::visit([=](auto &x) { return x.get().Emit(data, chars); }, u_);
 }
 
+template <typename CHAR>
+bool IoStatementState::EmitEncoded(const CHAR *data0, std::size_t chars) {
+  // Don't allow sign extension
+  using UnsignedChar = std::make_unsigned_t<CHAR>;
+  const UnsignedChar *data{reinterpret_cast<const UnsignedChar *>(data0)};
+  if (GetConnectionState().isUTF8) {
+    char buffer[256];
+    std::size_t at{0};
+    while (chars-- > 0) {
+      auto len{EncodeUTF8(buffer + at, *data++)};
+      at += len;
+      if (at + maxUTF8Bytes > sizeof buffer) {
+        if (!Emit(buffer, at)) {
+          return false;
+        }
+        at = 0;
+      }
+    }
+    return at == 0 || Emit(buffer, at);
+  } else {
+    return Emit(data0, chars);
+  }
+}
+
 bool IoStatementState::Receive(
     char *data, std::size_t n, std::size_t elementBytes) {
   return std::visit(
@@ -533,6 +557,30 @@ ExternalFileUnit *IoStatementState::GetExternalFileUnit() const {
   return std::visit([](auto &x) { return x.get().GetExternalFileUnit(); }, u_);
 }
 
+std::optional<char32_t> IoStatementState::GetCurrentChar(
+    std::size_t &byteCount) {
+  const char *p{nullptr};
+  std::size_t bytes{GetNextInputBytes(p)};
+  if (bytes == 0) {
+    byteCount = 0;
+    return std::nullopt;
+  } else {
+    if (GetConnectionState().isUTF8) {
+      std::size_t length{MeasureUTF8Bytes(*p)};
+      if (length <= bytes) {
+        if (auto result{DecodeUTF8(p)}) {
+          byteCount = length;
+          return result;
+        }
+      }
+      GetIoErrorHandler().SignalError(IostatUTF8Decoding);
+      // Error recovery: return the next byte
+    }
+    byteCount = 1;
+    return *p;
+  }
+}
+
 bool IoStatementState::EmitRepeated(char ch, std::size_t n) {
   return std::visit(
       [=](auto &x) {
@@ -561,8 +609,9 @@ bool IoStatementState::EmitField(
 
 std::optional<char32_t> IoStatementState::NextInField(
     std::optional<int> &remaining, const DataEdit &edit) {
+  std::size_t byteCount{0};
   if (!remaining) { // Stream, list-directed, or NAMELIST
-    if (auto next{GetCurrentChar()}) {
+    if (auto next{GetCurrentChar(byteCount)}) {
       if (edit.IsListDirected()) {
         // list-directed or NAMELIST: check for separators
         switch (*next) {
@@ -587,15 +636,18 @@ std::optional<char32_t> IoStatementState::NextInField(
           break;
         }
       }
-      HandleRelativePosition(1);
-      GotChar();
+      HandleRelativePosition(byteCount);
+      GotChar(byteCount);
       return next;
     }
   } else if (*remaining > 0) {
-    if (auto next{GetCurrentChar()}) {
-      --*remaining;
-      HandleRelativePosition(1);
-      GotChar();
+    if (auto next{GetCurrentChar(byteCount)}) {
+      if (byteCount > static_cast<std::size_t>(*remaining)) {
+        return std::nullopt;
+      }
+      *remaining -= byteCount;
+      HandleRelativePosition(byteCount);
+      GotChar(byteCount);
       return next;
     }
     if (CheckForEndOfRecord()) { // do padding
@@ -708,12 +760,13 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   if (edit.modes.editingFlags & decimalComma) {
     comma = ';';
   }
+  std::size_t byteCount{0};
   if (remaining_ > 0 && !realPart_) { // "r*c" repetition in progress
     RUNTIME_CHECK(io.GetIoErrorHandler(), repeatPosition_.has_value());
     repeatPosition_.reset(); // restores the saved position
     if (!imaginaryPart_) {
       edit.repeat = std::min<int>(remaining_, maxRepeat);
-      auto ch{io.GetCurrentChar()};
+      auto ch{io.GetCurrentChar(byteCount)};
       if (!ch || *ch == ' ' || *ch == '\t' || *ch == comma) {
         // "r*" repeated null
         edit.descriptor = DataEdit::ListDirectedNullValue;
@@ -733,14 +786,14 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
     imaginaryPart_ = true;
     edit.descriptor = DataEdit::ListDirectedImaginaryPart;
   }
-  auto ch{io.GetNextNonBlank()};
+  auto ch{io.GetNextNonBlank(byteCount)};
   if (ch && *ch == comma && eatComma_) {
     // Consume comma & whitespace after previous item.
     // This includes the comma between real and imaginary components
     // in list-directed/NAMELIST complex input.
     // (When DECIMAL='COMMA', the comma is actually a semicolon.)
-    io.HandleRelativePosition(1);
-    ch = io.GetNextNonBlank();
+    io.HandleRelativePosition(byteCount);
+    ch = io.GetNextNonBlank(byteCount);
   }
   eatComma_ = true;
   if (!ch) {
@@ -768,12 +821,12 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
         break;
       }
       r = 10 * r + (*ch - '0');
-      io.HandleRelativePosition(1);
-      ch = io.GetCurrentChar();
+      io.HandleRelativePosition(byteCount);
+      ch = io.GetCurrentChar(byteCount);
     } while (ch && *ch >= '0' && *ch <= '9');
     if (r > 0 && ch && *ch == '*') { // subtle: r must be nonzero
-      io.HandleRelativePosition(1);
-      ch = io.GetCurrentChar();
+      io.HandleRelativePosition(byteCount);
+      ch = io.GetCurrentChar(byteCount);
       if (ch && *ch == '/') { // r*/
         hitSlash_ = true;
         edit.descriptor = DataEdit::ListDirectedNullValue;
@@ -793,7 +846,7 @@ ListDirectedStatementState<Direction::Input>::GetNextDataEdit(
   }
   if (!imaginaryPart_ && ch && *ch == '(') {
     realPart_ = true;
-    io.HandleRelativePosition(1);
+    io.HandleRelativePosition(byteCount);
     edit.descriptor = DataEdit::ListDirectedRealPart;
   }
   return edit;
@@ -1444,5 +1497,11 @@ int ErroneousIoStatementState::EndIoStatement() {
   SignalPendingError();
   return IoStatementBase::EndIoStatement();
 }
+
+template bool IoStatementState::EmitEncoded<char>(const char *, std::size_t);
+template bool IoStatementState::EmitEncoded<char16_t>(
+    const char16_t *, std::size_t);
+template bool IoStatementState::EmitEncoded<char32_t>(
+    const char32_t *, std::size_t);
 
 } // namespace Fortran::runtime::io
