@@ -294,6 +294,11 @@ endfunction(add_libc_fuzzer)
 # The DEPENDS list can be empty. If not empty, it should be a list of
 # targets added with add_entrypoint_object or add_object_library.
 function(add_integration_test test_name)
+  get_fq_target_name(${test_name} fq_target_name)
+  if(NOT (${LIBC_TARGET_OS} STREQUAL "linux"))
+    message(STATUS "Skipping ${fq_target_name} as it is not available on ${LIBC_TARGET_OS}.")
+    return()
+  endif()
   cmake_parse_arguments(
     "INTEGRATION_TEST"
     "" # No optional arguments
@@ -301,7 +306,6 @@ function(add_integration_test test_name)
     "SRCS;HDRS;DEPENDS;ARGS;ENV" # Multi-value arguments
     ${ARGN}
   )
-  get_fq_target_name(${test_name} fq_target_name)
 
   if(NOT INTEGRATION_TEST_SUITE)
     message(FATAL_ERROR "SUITE not specified for ${fq_target_name}")
@@ -339,21 +343,23 @@ function(add_integration_test test_name)
   file(MAKE_DIRECTORY ${sysroot}/include)
   set(sysroot_lib ${sysroot}/lib)
   file(MAKE_DIRECTORY ${sysroot_lib})
-  # Add dummy crti.o, crtn.o, libm.a and libc++.a
-  file(TOUCH ${sysroot_lib}/crti.o)
-  file(TOUCH ${sysroot_lib}/crtn.o)
-  file(TOUCH ${sysroot_lib}/libm.a)
-  file(TOUCH ${sysroot_lib}/libc++.a)
-  # Copy the loader object
   get_target_property(loader_object_file ${INTEGRATION_TEST_LOADER} LOADER_OBJECT)
+  get_target_property(crti_object_file libc.loader.linux.crti LOADER_OBJECT)
+  get_target_property(crtn_object_file libc.loader.linux.crtn LOADER_OBJECT)
+  set(dummy_archive $<TARGET_PROPERTY:libc_integration_test_dummy,ARCHIVE_OUTPUT_DIRECTORY>/lib$<TARGET_PROPERTY:libc_integration_test_dummy,ARCHIVE_OUTPUT_NAME>.a)
   if(NOT loader_object_file)
     message(FATAL_ERROR "Missing LOADER_OBJECT property of ${INTEGRATION_TEST_LOADER}.")
   endif()
   set(loader_dst ${sysroot_lib}/${LIBC_TARGET_ARCHITECTURE}-linux-gnu/crt1.o)
   add_custom_command(
-    OUTPUT ${loader_dst}
+    OUTPUT ${loader_dst} ${sysroot}/lib/crti.o ${sysroot}/lib/crtn.o ${sysroot}/lib/libm.a ${sysroot}/lib/libc++.a
     COMMAND cmake -E copy ${loader_object_file} ${loader_dst}
-    DEPENDS ${INTEGRATION_TEST_LOADER}
+    COMMAND cmake -E copy ${crti_object_file} ${sysroot}/lib
+    COMMAND cmake -E copy ${crtn_object_file} ${sysroot}/lib
+    # We copy the dummy archive as libm.a and libc++.a as the compiler drivers expect them.
+    COMMAND cmake -E copy ${dummy_archive} ${sysroot}/lib/libm.a
+    COMMAND cmake -E copy ${dummy_archive} ${sysroot}/lib/libc++.a
+    DEPENDS ${INTEGRATION_TEST_LOADER} libc.loader.linux.crti libc.loader.linux.crtn libc_integration_test_dummy
   )
   add_custom_target(
     ${fq_target_name}.__copy_loader__
@@ -374,6 +380,8 @@ function(add_integration_test test_name)
     ${INTEGRATION_TEST_SRCS}
     ${INTEGRATION_TEST_HDRS}
   )
+  set_target_properties(${fq_target_name}
+      PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   target_include_directories(
     ${fq_target_name}
     PRIVATE
