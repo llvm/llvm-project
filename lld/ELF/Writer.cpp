@@ -25,10 +25,9 @@
 #include "lld/Common/Filesystem.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/MD5.h"
+#include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/RandomNumberGenerator.h"
-#include "llvm/Support/SHA1.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <climits>
@@ -2925,6 +2924,12 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   MutableArrayRef<uint8_t> output(buildId.get(), hashSize);
   llvm::ArrayRef<uint8_t> input{Out::bufferStart, size_t(fileSize)};
 
+  // Fedora introduced build ID as "approximation of true uniqueness across all
+  // binaries that might be used by overlapping sets of people". It does not
+  // need some security goals that some hash algorithms strive to provide, e.g.
+  // (second-)preimage and collision resistance. In practice people use 'md5'
+  // and 'sha1' just for different lengths. Implement them with the more
+  // efficient BLAKE3.
   switch (config->buildId) {
   case BuildIdKind::Fast:
     computeHash(output, input, [](uint8_t *dest, ArrayRef<uint8_t> arr) {
@@ -2933,12 +2938,12 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     break;
   case BuildIdKind::Md5:
     computeHash(output, input, [&](uint8_t *dest, ArrayRef<uint8_t> arr) {
-      memcpy(dest, MD5::hash(arr).data(), hashSize);
+      memcpy(dest, BLAKE3::hash<16>(arr).data(), hashSize);
     });
     break;
   case BuildIdKind::Sha1:
     computeHash(output, input, [&](uint8_t *dest, ArrayRef<uint8_t> arr) {
-      memcpy(dest, SHA1::hash(arr).data(), hashSize);
+      memcpy(dest, BLAKE3::hash<20>(arr).data(), hashSize);
     });
     break;
   case BuildIdKind::Uuid:

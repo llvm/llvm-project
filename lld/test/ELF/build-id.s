@@ -69,11 +69,11 @@ _start:
 
 # MD5:      Contents of section .note.gnu.build-id:
 # MD5-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.
-# MD5-NEXT: 7b00fd9e 054ceb4b 06f64d0e 482cb476
+# MD5-NEXT: dbf0bc13 b3ff11e9 fde6e17c 0304983c
 
 # SHA1:      Contents of section .note.gnu.build-id:
 # SHA1-NEXT: 04000000 14000000 03000000 474e5500  ............GNU.
-# SHA1-NEXT: 221a99da dd1d2bf3 05e48a91 dde8a0cb
+# SHA1-NEXT: 1215775f d3b60050 70afd970 e8a10972
 
 # UUID:      Contents of section .note.gnu.build-id:
 # UUID-NEXT: 04000000 10000000 03000000 474e5500  ............GNU.
@@ -89,11 +89,11 @@ _start:
 
 # SEPARATE:      Hex dump of section '.note.gnu.build-id':
 # SEPARATE-NEXT: 0x00200198 04000000 14000000 03000000 474e5500
-# SEPARATE-NEXT: 0x002001a8 96820adf d90d5470 0a0c32ff a88c4017
+# SEPARATE-NEXT: 0x002001a8 5cd067a4 2631c0fd 42029037 4b8e0938
 
 # RUN: ld.lld --build-id=sha1 --no-rosegment %t -o %t2
 # RUN: llvm-readelf -x .note.gnu.build-id %t2 | FileCheck --check-prefix=NORO %s
 
 # NORO:      Hex dump of section '.note.gnu.build-id':
 # NORO-NEXT: 0x00200160 04000000 14000000 03000000 474e5500
-# NORO-NEXT: 0x00200170 cf6d7b3a 0b3297c3 5b47c079 ce048349
+# NORO-NEXT: 0x00200170 a328cc99 45bfc3fc a9fc8615 37102f9d
