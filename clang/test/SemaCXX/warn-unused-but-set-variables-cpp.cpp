@@ -7,7 +7,6 @@ struct S {
 struct __attribute__((warn_unused)) SWarnUnused {
   int j;
   void operator +=(int);
-  void operator ++();
 };
 
 int f0() {
@@ -62,10 +61,4 @@ template<typename T> void f4(T n) {
   // template code.
   SWarnUnused swu;
   swu += n;
-}
-
-template <typename T> void f5() {
-  // Don't warn for overloaded pre/post operators in template code.
-  SWarnUnused swu;
-  ++swu;
 }

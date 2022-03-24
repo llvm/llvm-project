@@ -384,7 +384,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     return isAbsMem() && Mem.ModeSize == 16;
   }
 
-  bool isMemUseUpRegs() const {
+  bool isMemUseUpRegs() const override {
     return Mem.UseUpRegs;
   }
 

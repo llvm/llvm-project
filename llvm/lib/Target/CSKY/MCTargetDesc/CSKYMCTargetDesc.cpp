@@ -19,6 +19,7 @@
 #include "CSKYTargetStreamer.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -107,6 +108,49 @@ static MCTargetStreamer *createCSKYNullTargetStreamer(MCStreamer &S) {
   return new CSKYTargetStreamer(S);
 }
 
+namespace {
+
+class CSKYMCInstrAnalysis : public MCInstrAnalysis {
+public:
+  explicit CSKYMCInstrAnalysis(const MCInstrInfo *Info)
+      : MCInstrAnalysis(Info) {}
+
+  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
+                      uint64_t &Target) const override {
+    if (isConditionalBranch(Inst) || isUnconditionalBranch(Inst)) {
+      int64_t Imm;
+      Imm = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
+      Target = Addr + Imm;
+      return true;
+    }
+
+    if (Inst.getOpcode() == CSKY::BSR32) {
+      Target = Addr + Inst.getOperand(0).getImm();
+      return true;
+    }
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case CSKY::LRW16:
+    case CSKY::LRW32:
+    case CSKY::JSRI32:
+    case CSKY::JMPI32:
+      int64_t Imm = Inst.getOperand(Inst.getNumOperands() - 1).getImm();
+      Target = ((Addr + Imm) & 0xFFFFFFFC);
+      return true;
+    }
+
+    return false;
+  }
+};
+
+} // end anonymous namespace
+
+static MCInstrAnalysis *createCSKYInstrAnalysis(const MCInstrInfo *Info) {
+  return new CSKYMCInstrAnalysis(Info);
+}
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTargetMC() {
   auto &CSKYTarget = getTheCSKYTarget();
   TargetRegistry::RegisterMCAsmBackend(CSKYTarget, createCSKYAsmBackend);
@@ -125,4 +169,5 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeCSKYTargetMC() {
   // Register the null target streamer.
   TargetRegistry::RegisterNullTargetStreamer(CSKYTarget,
                                              createCSKYNullTargetStreamer);
+  TargetRegistry::RegisterMCInstrAnalysis(CSKYTarget, createCSKYInstrAnalysis);
 }
