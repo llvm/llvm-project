@@ -4652,7 +4652,8 @@ CGOpenMPRuntime::getDepobjElements(CodeGenFunction &CGF, LValue DepobjLVal,
   RecordDecl *KmpDependInfoRD =
       cast<RecordDecl>(KmpDependInfoTy->getAsTagDecl());
   LValue Base = CGF.EmitLoadOfPointerLValue(
-      DepobjLVal.getAddress(CGF), C.VoidPtrTy.castAs<PointerType>());
+      DepobjLVal.getAddress(CGF),
+      C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
   QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
   Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy),
@@ -4749,7 +4750,8 @@ emitDepobjElementsSizes(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
     for (const Expr *E : Data.DepExprs) {
       LValue DepobjLVal = CGF.EmitLValue(E->IgnoreParenImpCasts());
       LValue Base = CGF.EmitLoadOfPointerLValue(
-          DepobjLVal.getAddress(CGF), C.VoidPtrTy.castAs<PointerType>());
+          DepobjLVal.getAddress(CGF),
+          C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
       Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           Base.getAddress(CGF), KmpDependInfoPtrT,
           CGF.ConvertTypeForMem(KmpDependInfoTy));
@@ -4806,7 +4808,8 @@ static void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
       const Expr *E = Data.DepExprs[I];
       LValue DepobjLVal = CGF.EmitLValue(E->IgnoreParenImpCasts());
       LValue Base = CGF.EmitLoadOfPointerLValue(
-          DepobjLVal.getAddress(CGF), C.VoidPtrTy.castAs<PointerType>());
+          DepobjLVal.getAddress(CGF),
+          C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
       Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
           Base.getAddress(CGF), KmpDependInfoPtrT,
           CGF.ConvertTypeForMem(KmpDependInfoTy));
@@ -5055,7 +5058,8 @@ void CGOpenMPRuntime::emitDestroyClause(CodeGenFunction &CGF, LValue DepobjLVal,
   QualType FlagsTy;
   getDependTypes(C, KmpDependInfoTy, FlagsTy);
   LValue Base = CGF.EmitLoadOfPointerLValue(
-      DepobjLVal.getAddress(CGF), C.VoidPtrTy.castAs<PointerType>());
+      DepobjLVal.getAddress(CGF),
+      C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
   QualType KmpDependInfoPtrTy = C.getPointerType(KmpDependInfoTy);
   Address Addr = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       Base.getAddress(CGF), CGF.ConvertTypeForMem(KmpDependInfoPtrTy),
@@ -6037,7 +6041,8 @@ static llvm::Value *emitReduceFiniFunction(CodeGenModule &CGM,
   CodeGenFunction CGF(CGM);
   CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, FnInfo, Args, Loc, Loc);
   Address PrivateAddr = CGF.EmitLoadOfPointer(
-      CGF.GetAddrOfLocalVar(&Param), C.VoidPtrTy.castAs<PointerType>());
+      CGF.GetAddrOfLocalVar(&Param),
+      C.getPointerType(C.VoidPtrTy).castAs<PointerType>());
   llvm::Value *Size = nullptr;
   // If the size of the reduction item is non-constant, load it from global
   // threadprivate variable.
