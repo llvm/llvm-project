@@ -5078,6 +5078,7 @@ struct ReconstitutableType : public RecursiveASTVisitor<ReconstitutableType> {
   bool VisitFunctionProtoType(FunctionProtoType *FT) {
     // noexcept is not encoded in DWARF, so the reversi
     Reconstitutable &= !isNoexceptExceptionSpec(FT->getExceptionSpecType());
+    Reconstitutable &= !FT->getNoReturnAttr();
     return Reconstitutable;
   }
   bool VisitRecordType(RecordType *RT) {

@@ -116,4 +116,10 @@ void f() {
 
   f1<const unsigned _BitInt(5)>();
   // CHECK: !DISubprogram(name: "f1<const unsigned _BitInt(5)>",
+
+  // Add a parameter just so this differs from other attributed function types
+  // that don't mangle differently.
+  int fnrt() __attribute__((noreturn));
+  f1<decltype(fnrt)>();
+  // CHECK: !DISubprogram(name: "f1<int () __attribute__((noreturn))>",
 }

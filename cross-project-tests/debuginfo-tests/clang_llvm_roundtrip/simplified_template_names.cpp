@@ -325,6 +325,8 @@ int main() {
   f1<int t1<>::*>();
   void fcc() __attribute__((swiftcall));
   f1<decltype(fcc)>();
+  int fnrt() __attribute__((noreturn));
+  f1<decltype(fnrt)>();
 }
 void t8::mem() {
   struct t7 { };
