@@ -124,7 +124,7 @@ public:
   struct CallInfo {
     uint32_t Kind;
     uint32_t AccessIndex;
-    Align RecordAlignment;
+    MaybeAlign RecordAlignment;
     MDNode *Metadata;
     Value *Base;
   };
@@ -170,7 +170,7 @@ private:
                           uint32_t &StartBitOffset, uint32_t &EndBitOffset);
   uint32_t GetFieldInfo(uint32_t InfoKind, DICompositeType *CTy,
                         uint32_t AccessIndex, uint32_t PatchImm,
-                        Align RecordAlignment);
+                        MaybeAlign RecordAlignment);
 
   Value *computeBaseAndAccessKey(CallInst *Call, CallInfo &CInfo,
                                  std::string &AccessKey, MDNode *&BaseMeta);
@@ -300,8 +300,6 @@ bool BPFAbstractMemberAccess::IsPreserveDIAccessIndexCall(const CallInst *Call,
       report_fatal_error("Missing metadata for llvm.preserve.union.access.index intrinsic");
     CInfo.AccessIndex = getConstant(Call->getArgOperand(1));
     CInfo.Base = Call->getArgOperand(0);
-    CInfo.RecordAlignment =
-        DL->getABITypeAlign(CInfo.Base->getType()->getPointerElementType());
     return true;
   }
   if (GV->getName().startswith("llvm.preserve.struct.access.index")) {
@@ -619,7 +617,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
                                                DICompositeType *CTy,
                                                uint32_t AccessIndex,
                                                uint32_t PatchImm,
-                                               Align RecordAlignment) {
+                                               MaybeAlign RecordAlignment) {
   if (InfoKind == BPFCoreSharedInfo::FIELD_EXISTENCE)
       return 1;
 
@@ -635,7 +633,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
         PatchImm += MemberTy->getOffsetInBits() >> 3;
       } else {
         unsigned SBitOffset, NextSBitOffset;
-        GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset,
+        GetStorageBitRange(MemberTy, *RecordAlignment, SBitOffset,
                            NextSBitOffset);
         PatchImm += SBitOffset >> 3;
       }
@@ -654,7 +652,8 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
         return SizeInBits >> 3;
 
       unsigned SBitOffset, NextSBitOffset;
-      GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset, NextSBitOffset);
+      GetStorageBitRange(MemberTy, *RecordAlignment, SBitOffset,
+                         NextSBitOffset);
       SizeInBits = NextSBitOffset - SBitOffset;
       if (SizeInBits & (SizeInBits - 1))
         report_fatal_error("Unsupported field expression for llvm.bpf.preserve.field.info");
@@ -714,7 +713,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
     }
 
     unsigned SBitOffset, NextSBitOffset;
-    GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset, NextSBitOffset);
+    GetStorageBitRange(MemberTy, *RecordAlignment, SBitOffset, NextSBitOffset);
     if (NextSBitOffset - SBitOffset > 64)
       report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
 
@@ -745,7 +744,7 @@ uint32_t BPFAbstractMemberAccess::GetFieldInfo(uint32_t InfoKind,
     }
 
     unsigned SBitOffset, NextSBitOffset;
-    GetStorageBitRange(MemberTy, RecordAlignment, SBitOffset, NextSBitOffset);
+    GetStorageBitRange(MemberTy, *RecordAlignment, SBitOffset, NextSBitOffset);
     if (NextSBitOffset - SBitOffset > 64)
       report_fatal_error("too big field size for llvm.bpf.preserve.field.info");
 
