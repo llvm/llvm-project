@@ -971,6 +971,16 @@ LoopVectorizationLegality::getIntOrFpInductionDescriptor(PHINode *Phi) const {
   return nullptr;
 }
 
+const InductionDescriptor *
+LoopVectorizationLegality::getPointerInductionDescriptor(PHINode *Phi) const {
+  if (!isInductionPhi(Phi))
+    return nullptr;
+  auto &ID = getInductionVars().find(Phi)->second;
+  if (ID.getKind() == InductionDescriptor::IK_PtrInduction)
+    return &ID;
+  return nullptr;
+}
+
 bool LoopVectorizationLegality::isCastedInductionVariable(
     const Value *V) const {
   auto *Inst = dyn_cast<Instruction>(V);

@@ -1185,6 +1185,9 @@ public:
   VPValue *getStartValue() {
     return getNumOperands() == 0 ? nullptr : getOperand(0);
   }
+  VPValue *getStartValue() const {
+    return getNumOperands() == 0 ? nullptr : getOperand(0);
+  }
 
   /// Returns the incoming value from the loop backedge.
   VPValue *getBackedgeValue() {
@@ -1196,6 +1199,49 @@ public:
   VPRecipeBase *getBackedgeRecipe() {
     return cast<VPRecipeBase>(getBackedgeValue()->getDef());
   }
+};
+
+class VPWidenPointerInductionRecipe : public VPHeaderPHIRecipe {
+  const InductionDescriptor &IndDesc;
+
+  /// SCEV used to expand step.
+  /// FIXME: move expansion of step to the pre-header, once it is modeled
+  /// explicitly.
+  ScalarEvolution &SE;
+
+public:
+  /// Create a new VPWidenPointerInductionRecipe for \p Phi with start value \p
+  /// Start.
+  VPWidenPointerInductionRecipe(PHINode *Phi, VPValue *Start,
+                                const InductionDescriptor &IndDesc,
+                                ScalarEvolution &SE)
+      : VPHeaderPHIRecipe(VPVWidenPointerInductionSC, VPWidenPointerInductionSC,
+                          Phi),
+        IndDesc(IndDesc), SE(SE) {
+    addOperand(Start);
+  }
+
+  ~VPWidenPointerInductionRecipe() override = default;
+
+  /// Method to support type inquiry through isa, cast, and dyn_cast.
+  static inline bool classof(const VPRecipeBase *B) {
+    return B->getVPDefID() == VPRecipeBase::VPWidenPointerInductionSC;
+  }
+  static inline bool classof(const VPHeaderPHIRecipe *R) {
+    return R->getVPDefID() == VPRecipeBase::VPWidenPointerInductionSC;
+  }
+  static inline bool classof(const VPValue *V) {
+    return V->getVPValueID() == VPValue::VPVWidenPointerInductionSC;
+  }
+
+  /// Generate vector values for the pointer induction.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe for handling header phis that are widened in the vector loop.

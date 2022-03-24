@@ -315,6 +315,10 @@ public:
   /// floating point induction.
   const InductionDescriptor *getIntOrFpInductionDescriptor(PHINode *Phi) const;
 
+  /// Returns a pointer to the induction descriptor, if \p Phi is pointer
+  /// induction.
+  const InductionDescriptor *getPointerInductionDescriptor(PHINode *Phi) const;
+
   /// Returns True if V is a cast that is part of an induction def-use chain,
   /// and had been proven to be redundant under a runtime guard (in other
   /// words, the cast has the same SCEV expression as the induction phi).
