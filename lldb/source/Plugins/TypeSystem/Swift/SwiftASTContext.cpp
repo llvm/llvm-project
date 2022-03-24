@@ -458,6 +458,8 @@ public:
                GetTypeName().AsCString());
 
     SwiftASTContext *swift_ast_ctx = SwiftASTContext::GetSwiftASTContext(ast);
+    if (!swift_ast_ctx)
+      return;
     swift::irgen::IRGenModule &irgen_module = swift_ast_ctx->GetIRGenModule();
     const swift::irgen::EnumImplStrategy &enum_impl_strategy =
         swift::irgen::getEnumImplStrategy(irgen_module, swift_can_type);
@@ -7462,11 +7464,13 @@ CompilerType SwiftASTContext::GetUnboundGenericType(opaque_compiler_type_t type,
 
 CompilerType SwiftASTContext::GetGenericArgumentType(CompilerType ct,
                                                      size_t idx) {
-  if (swift::Type swift_type = ::GetSwiftType(ct)) {
-    auto *ast = GetSwiftASTContext(&swift_type->getASTContext());
-    return ast->GetGenericArgumentType(swift_type.getPointer(), idx);
-  }
-  return {};
+  swift::Type swift_type = ::GetSwiftType(ct);
+  if (!swift_type)
+    return {};
+  auto *ast = GetSwiftASTContext(&swift_type->getASTContext());
+  if (!ast)
+    return {};
+  return ast->GetGenericArgumentType(swift_type.getPointer(), idx);
 }
 
 CompilerType
