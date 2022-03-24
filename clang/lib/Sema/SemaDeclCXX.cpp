@@ -2103,11 +2103,12 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
       break;
     if (!Cxx1yLoc.isValid())
       Cxx1yLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children())
+    for (Stmt *SubStmt : S->children()) {
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
                                       Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
         return false;
+    }
     return true;
 
   case Stmt::SwitchStmtClass:
@@ -2118,22 +2119,24 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     // mutation, we can reasonably allow them in C++11 as an extension.
     if (!Cxx1yLoc.isValid())
       Cxx1yLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children())
+    for (Stmt *SubStmt : S->children()) {
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
                                       Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
         return false;
+    }
     return true;
 
   case Stmt::LabelStmtClass:
   case Stmt::GotoStmtClass:
     if (Cxx2bLoc.isInvalid())
       Cxx2bLoc = S->getBeginLoc();
-    for (Stmt *SubStmt : S->children())
+    for (Stmt *SubStmt : S->children()) {
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
                                       Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
         return false;
+    }
     return true;
 
   case Stmt::GCCAsmStmtClass:
