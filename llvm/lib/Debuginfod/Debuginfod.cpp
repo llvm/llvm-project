@@ -131,8 +131,6 @@ public:
       : CreateStream(CreateStream), Client(Client) {}
   virtual ~StreamedHTTPResponseHandler() = default;
 
-  virtual ~StreamedHTTPResponseHandler() = default;
-
   Error handleBodyChunk(StringRef BodyChunk) override;
 };
 
