@@ -9545,9 +9545,8 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   assert(IndDesc.getKind() == InductionDescriptor::IK_PtrInduction &&
          "Not a pointer induction according to InductionDescriptor!");
-
-  PHINode *Phi = cast<PHINode>(getUnderlyingInstr());
-  assert(Phi->getType()->isPointerTy() && "Unexpected type.");
+  assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
+         "Unexpected type.");
 
   auto *IVR = getParent()->getPlan()->getCanonicalIV();
   PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, 0));
