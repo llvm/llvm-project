@@ -13,6 +13,26 @@ take a look at the
 
 Taken from https://llvm.org/docs/GettingStarted.html.
 
+## Build for Hornet
+
+```
+mkdir build; cd build
+cmake -G Ninja \
+    -DLLVM_ENABLE_PROJECTS="clang;lld" \
+    -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
+    -DCMAKE_INSTALL_PREFIX="/home/daichi/llvm-riscv" \
+    -DLLVM_DEFAULT_TARGET_TRIPLE="riscv32-unknown-elf" \
+    -DLLVM_TARGET_ARCH="riscv32" \
+    -DLLVM_USE_SPLIT_DWARF=True \
+    -DLLVM_OPTIMIZED_TABLEGEN=True \
+    -DLLVM_TARGETS_TO_BUILD="RISCV" \
+    -DCOMPILER_RT_BAREMETAL_BUILD=ON \
+    ../llvm
+ninja
+ninja install
+
+```
+
 ### Overview
 
 Welcome to the LLVM project!
