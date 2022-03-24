@@ -188,7 +188,7 @@ TEST(Decl, InConsistLinkageForTemplates) {
   llvm::SmallVector<ast_matchers::BoundNodes, 2> Funcs =
       match(functionDecl().bind("f"), Ctx);
 
-  EXPECT_EQ(Funcs.size(), 2);
+  EXPECT_EQ(Funcs.size(), 2U);
   const FunctionDecl *TemplateF = Funcs[0].getNodeAs<FunctionDecl>("f");
   const FunctionDecl *SpecializedF = Funcs[1].getNodeAs<FunctionDecl>("f");
   EXPECT_EQ(TemplateF->getLinkageInternal(),
