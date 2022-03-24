@@ -28,7 +28,7 @@ using namespace llvm::opt;
 
 namespace {
 
-// NOTE: This list has been synchronized with gcc-avr 5.4.0 and avr-libc 2.0.0.
+// NOTE: This list has been synchronized with gcc-avr 7.3.0 and avr-libc 2.0.0.
 constexpr struct {
   StringRef Name;
   StringRef SubPath;
@@ -63,6 +63,7 @@ constexpr struct {
     {"attiny261a", "avr25/tiny-stack", "avr25", 0x800060},
     {"at86rf401", "avr25", "avr25", 0x800060},
     {"ata5272", "avr25", "avr25", 0x800100},
+    {"ata6616c", "avr25", "avr25", 0x800100},
     {"attiny4313", "avr25", "avr25", 0x800060},
     {"attiny44", "avr25", "avr25", 0x800060},
     {"attiny44a", "avr25", "avr25", 0x800060},
@@ -158,6 +159,7 @@ constexpr struct {
     {"atmega324a", "avr5", "avr5", 0x800100},
     {"atmega324p", "avr5", "avr5", 0x800100},
     {"atmega324pa", "avr5", "avr5", 0x800100},
+    {"atmega324pb", "avr5", "avr5", 0x800100},
     {"atmega325", "avr5", "avr5", 0x800100},
     {"atmega325a", "avr5", "avr5", 0x800100},
     {"atmega325p", "avr5", "avr5", 0x800100},
@@ -168,6 +170,7 @@ constexpr struct {
     {"atmega3250pa", "avr5", "avr5", 0x800100},
     {"atmega328", "avr5", "avr5", 0x800100},
     {"atmega328p", "avr5", "avr5", 0x800100},
+    {"atmega328pb", "avr5", "avr5", 0x800100},
     {"atmega329", "avr5", "avr5", 0x800100},
     {"atmega329a", "avr5", "avr5", 0x800100},
     {"atmega329p", "avr5", "avr5", 0x800100},
@@ -246,6 +249,8 @@ constexpr struct {
     {"attiny10", "avrtiny", "avrtiny", 0x800040},
     {"attiny20", "avrtiny", "avrtiny", 0x800040},
     {"attiny40", "avrtiny", "avrtiny", 0x800040},
+    {"attiny102", "avrtiny", "avrtiny", 0x800040},
+    {"attiny104", "avrtiny", "avrtiny", 0x800040},
     {"atxmega16a4", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega16a4u", "avrxmega2", "avrxmega2", 0x802000},
     {"atxmega16c4", "avrxmega2", "avrxmega2", 0x802000},
@@ -291,6 +296,42 @@ constexpr struct {
     {"atxmega128a1", "avrxmega7", "avrxmega7", 0x802000},
     {"atxmega128a1u", "avrxmega7", "avrxmega7", 0x802000},
     {"atxmega128a4u", "avrxmega7", "avrxmega7", 0x802000},
+    {"attiny202", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny204", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny212", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny214", "avrxmega3/short-calls", "avrxmega3", 0x803F80},
+    {"attiny402", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny404", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny406", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny412", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny414", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny416", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny417", "avrxmega3/short-calls", "avrxmega3", 0x803F00},
+    {"attiny804", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny806", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny807", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny814", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny816", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"attiny817", "avrxmega3/short-calls", "avrxmega3", 0x803E00},
+    {"atmega808", "avrxmega3/short-calls", "avrxmega3", 0x803C00},
+    {"atmega809", "avrxmega3/short-calls", "avrxmega3", 0x803C00},
+    {"atmega1608", "avrxmega3", "avrxmega3", 0x803800},
+    {"atmega1609", "avrxmega3", "avrxmega3", 0x803800},
+    {"atmega3208", "avrxmega3", "avrxmega3", 0x803000},
+    {"atmega3209", "avrxmega3", "avrxmega3", 0x803000},
+    {"atmega4808", "avrxmega3", "avrxmega3", 0x802800},
+    {"atmega4809", "avrxmega3", "avrxmega3", 0x802800},
+    {"attiny1604", "avrxmega3", "avrxmega3", 0x803C00},
+    {"attiny1606", "avrxmega3", "avrxmega3", 0x803C00},
+    {"attiny1607", "avrxmega3", "avrxmega3", 0x803C00},
+    {"attiny1614", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1616", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1617", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1624", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1626", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny1627", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny3216", "avrxmega3", "avrxmega3", 0x803800},
+    {"attiny3217", "avrxmega3", "avrxmega3", 0x803800},
 };
 
 std::string GetMCUSubPath(StringRef MCUName) {

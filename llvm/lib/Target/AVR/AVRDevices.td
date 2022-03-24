@@ -191,6 +191,12 @@ def FamilyTiny
              [FamilyAVR0, FeatureBREAK, FeatureSRAM, FeatureTinyEncoding,
               FeatureSmallStack]>;
 
+def FamilyXMEGA3 : Family<"xmega3",
+                          [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
+                           FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
+                           FeatureMultiplication, FeatureMOVW, FeatureLPMX,
+                           FeatureBREAK]>;
+
 def FamilyXMEGA : Family<"xmega",
                          [FamilyAVR0, FeatureLPM, FeatureIJMPCALL,
                           FeatureADDSUBIW, FeatureSRAM, FeatureJMPCALL,
@@ -236,7 +242,7 @@ def : Device<"avr51", FamilyAVR51, ELFArchAVR51>;
 def : Device<"avr6", FamilyAVR6, ELFArchAVR6>;
 def : Device<"avrxmega1", FamilyXMEGA, ELFArchXMEGA1>;
 def : Device<"avrxmega2", FamilyXMEGA, ELFArchXMEGA2>;
-def : Device<"avrxmega3", FamilyXMEGA, ELFArchXMEGA3>;
+def : Device<"avrxmega3", FamilyXMEGA3, ELFArchXMEGA3>;
 def : Device<"avrxmega4", FamilyXMEGA, ELFArchXMEGA4>;
 def : Device<"avrxmega5", FamilyXMEGA, ELFArchXMEGA5>;
 def : Device<"avrxmega6", FamilyXMEGA, ELFArchXMEGA6>;
@@ -265,6 +271,7 @@ def : Device<"at90s8515", FamilyAVR2, ELFArchAVR2>;
 def : Device<"at90c8534", FamilyAVR2, ELFArchAVR2>;
 def : Device<"at90s8535", FamilyAVR2, ELFArchAVR2>;
 def : Device<"ata5272", FamilyAVR25, ELFArchAVR25>;
+def : Device<"ata6616c", FamilyAVR25, ELFArchAVR25>;
 def : Device<"attiny13", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny13a", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
 def : Device<"attiny2313", FamilyAVR25, ELFArchAVR25, [FeatureSmallStack]>;
@@ -473,7 +480,6 @@ def : Device<"atxmega32d4", FamilyXMEGA, ELFArchXMEGA2>;
 def : Device<"atxmega32e5", FamilyXMEGAU, ELFArchXMEGA2>;
 def : Device<"atxmega16e5", FamilyXMEGAU, ELFArchXMEGA2>;
 def : Device<"atxmega8e5", FamilyXMEGAU, ELFArchXMEGA2>;
-def : Device<"atxmega32x1", FamilyXMEGA, ELFArchXMEGA2>;
 def : Device<"atxmega64a3", FamilyXMEGA, ELFArchXMEGA4>;
 def : Device<"atxmega64a3u", FamilyXMEGAU, ELFArchXMEGA4>;
 def : Device<"atxmega64a4u", FamilyXMEGAU, ELFArchXMEGA4>;
@@ -514,28 +520,39 @@ def : Device<"attiny20", FamilyTiny, ELFArchTiny>;
 def : Device<"attiny40", FamilyTiny, ELFArchTiny>;
 def : Device<"attiny102", FamilyTiny, ELFArchTiny>;
 def : Device<"attiny104", FamilyTiny, ELFArchTiny>;
-def : Device<"attiny202", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny402", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny204", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny404", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny804", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny1604", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny406", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny806", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny1606", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny807", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny1607", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny212", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny412", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny214", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny414", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny814", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny1614", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny416", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny816", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny1616", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny3216", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny417", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny817", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny1617", FamilyXMEGA, ELFArchXMEGA3>;
-def : Device<"attiny3217", FamilyXMEGA, ELFArchXMEGA3>;
+def : Device<"attiny202", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny402", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny204", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny404", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny804", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1604", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny406", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny806", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1606", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny807", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1607", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny212", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny412", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny214", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny414", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny814", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1614", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny416", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny816", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1616", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny3216", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny417", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny817", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1617", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny3217", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1624", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1626", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"attiny1627", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega808", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega809", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega1608", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega1609", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega3208", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega3209", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega4808", FamilyXMEGA3, ELFArchXMEGA3>;
+def : Device<"atmega4809", FamilyXMEGA3, ELFArchXMEGA3>;
