@@ -141,62 +141,6 @@ bool convertUTF16ToUTF8String(ArrayRef<UTF16> Src, std::string &Out)
       Src.size() * sizeof(UTF16)), Out);
 }
 
-bool convertUTF32ToUTF8String(ArrayRef<char> SrcBytes, std::string &Out) {
-  assert(Out.empty());
-
-  // Avoid OOB by returning early on empty input.
-  if (SrcBytes.empty() &&
-      (SrcBytes.size() % 4) != 0) // Assume multiple of 4 bytes; Unicode's max
-                                  // num of code units in UTF-8.
-    return true;
-
-  const UTF32 *Src = reinterpret_cast<const UTF32 *>(SrcBytes.begin());
-  const UTF32 *SrcEnd = reinterpret_cast<const UTF32 *>(SrcBytes.end());
-
-  assert((uintptr_t)Src % sizeof(UTF32) == 0);
-
-  // Byteswap if necessary.
-  std::vector<UTF32> ByteSwapped;
-  if (Src[0] == UNI_UTF32_BYTE_ORDER_MARK_SWAPPED) {
-    ByteSwapped.insert(ByteSwapped.end(), Src, SrcEnd);
-    for (unsigned I = 0, E = ByteSwapped.size(); I != E; ++I)
-      ByteSwapped[I] = llvm::ByteSwap_32(ByteSwapped[I]);
-    Src = &ByteSwapped[0];
-    SrcEnd = Src + ByteSwapped.size();
-  }
-
-  // Skip the BOM for conversion.
-  if (Src[0] == UNI_UTF32_BYTE_ORDER_MARK_NATIVE)
-    Src++;
-
-  // Just allocate enough space up front.  We'll shrink it later.  Allocate
-  // enough that we can fit a null terminator without reallocating.
-  Out.resize(SrcBytes.size() + 1); //
-  UTF8 *Dst = reinterpret_cast<UTF8 *>(&Out[0]);
-  UTF8 *DstEnd = Dst + Out.size();
-
-  ConversionResult CR =
-      ConvertUTF32toUTF8(&Src, SrcEnd, &Dst, DstEnd, strictConversion);
-  assert(CR != targetExhausted);
-
-  if (CR != conversionOK) {
-    Out.clear();
-    return false;
-  }
-
-  Out.resize(reinterpret_cast<char *>(Dst) - &Out[0]);
-  Out.push_back(0);
-  Out.pop_back();
-  return true;
-}
-
-bool convertUTF32ToUTF8String(ArrayRef<UTF32> Src, std::string &Out) {
-  return convertUTF32ToUTF8String(
-      llvm::ArrayRef<char>(reinterpret_cast<const char *>(Src.data()),
-                           Src.size() * sizeof(UTF32)),
-      Out);
-}
-
 bool convertUTF8ToUTF16String(StringRef SrcUTF8,
                               SmallVectorImpl<UTF16> &DstUTF16) {
   assert(DstUTF16.empty());
