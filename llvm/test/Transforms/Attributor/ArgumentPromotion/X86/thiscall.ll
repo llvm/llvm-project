@@ -64,6 +64,6 @@ declare void @ext(<{ %struct.a }>* inalloca(<{ %struct.a }>))
 declare i8* @llvm.stacksave()
 declare void @llvm.stackrestore(i8*)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { willreturn }
 ;.

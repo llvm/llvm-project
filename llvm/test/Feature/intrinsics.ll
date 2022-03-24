@@ -69,5 +69,5 @@ define void @trap() {
   ret void
 }
 
-; CHECK: attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }
+; CHECK: attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 ; CHECK: attributes #1 = { cold noreturn nounwind }

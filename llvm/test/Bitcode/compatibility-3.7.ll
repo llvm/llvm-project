@@ -1242,12 +1242,12 @@ define void @misc.metadata() {
 ; CHECK: attributes #29 = { "thunk" }
 ; CHECK: attributes #30 = { uwtable }
 ; CHECK: attributes #31 = { "cpu"="cortex-a8" }
-; CHECK: attributes #32 = { nofree nosync nounwind readnone willreturn }
-; CHECK: attributes #33 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #32 = { nocallback nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #33 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #34 = { argmemonly nounwind readonly }
 ; CHECK: attributes #35 = { argmemonly nounwind }
 ; CHECK: attributes #36 = { nounwind readonly }
-; CHECK: attributes #37 = { inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn }
+; CHECK: attributes #37 = { inaccessiblemem_or_argmemonly nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #38 = { builtin }
 
 ;; Metadata

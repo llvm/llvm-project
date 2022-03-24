@@ -914,7 +914,7 @@ l2:
 ; NOT_CGSCC_NPM: attributes #[[ATTR3]] = { nounwind ssp uwtable }
 ; NOT_CGSCC_NPM: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; NOT_CGSCC_NPM: attributes #[[ATTR5]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR6:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR6:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; NOT_CGSCC_NPM: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; NOT_CGSCC_NPM: attributes #[[ATTR8]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; NOT_CGSCC_NPM: attributes #[[ATTR9]] = { nofree nosync nounwind readnone willreturn }
@@ -928,7 +928,7 @@ l2:
 ; IS__CGSCC____: attributes #[[ATTR3]] = { nounwind ssp uwtable }
 ; IS__CGSCC____: attributes #[[ATTR4]] = { nofree norecurse nosync nounwind readonly willreturn }
 ; IS__CGSCC____: attributes #[[ATTR5]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; IS__CGSCC____: attributes #[[ATTR6:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR6:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR7]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR8]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; IS__CGSCC____: attributes #[[ATTR9]] = { nofree nosync nounwind readnone willreturn }

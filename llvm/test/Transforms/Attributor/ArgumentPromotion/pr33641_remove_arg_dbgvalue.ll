@@ -31,10 +31,10 @@ define internal void @bar(%p_t %p)  {
 ; IS__CGSCC_OPM-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()), !dbg [[DBG5:![0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    ret void
 ;
-; IS__CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@bar
-; IS__CGSCC_NPM-SAME: (i16* nocapture nofree readnone [[P:%.*]]) #[[ATTR1:[0-9]+]] {
-; IS__CGSCC_NPM-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR3:[0-9]+]], !dbg [[DBG5:![0-9]+]]
+; IS__CGSCC_NPM-SAME: (i16* nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
+; IS__CGSCC_NPM-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
 ; IS__CGSCC_NPM-NEXT:    ret void
 ;
   call void @llvm.dbg.value(metadata %p_t %p, metadata !4, metadata !5), !dbg !6
@@ -55,12 +55,11 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !6 = !DILocation(line: 1, column: 1, scope: !3)
 ;.
 ; NOT_CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 ;.
 ; IS__CGSCC_NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC_NPM: attributes #[[ATTR3]] = { readnone willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_NPM: attributes #[[ATTR2]] = { readnone willreturn }
 ;.
 ; IS__TUNIT____: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; IS__TUNIT____: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")

@@ -1179,12 +1179,12 @@ define void @intrinsics.codegen() {
 ; CHECK: attributes #26 = { sspstrong }
 ; CHECK: attributes #27 = { uwtable }
 ; CHECK: attributes #28 = { "cpu"="cortex-a8" }
-; CHECK: attributes #29 = { nofree nosync nounwind readnone willreturn }
-; CHECK: attributes #30 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #29 = { nocallback nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #30 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #31 = { argmemonly nounwind readonly }
 ; CHECK: attributes #32 = { argmemonly nounwind }
 ; CHECK: attributes #33 = { nounwind readonly }
-; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn }
+; CHECK: attributes #34 = { inaccessiblemem_or_argmemonly nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #35 = { builtin }
 
 ;; Metadata
