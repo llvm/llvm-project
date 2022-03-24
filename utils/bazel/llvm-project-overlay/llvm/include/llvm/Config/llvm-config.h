@@ -122,6 +122,6 @@
 
 /* Define if llvm_unreachable should be optimized with undefined behavior
  * in non assert builds */
-/* #undef LLVM_UNREACHABLE_OPTIMIZE */
+#define LLVM_UNREACHABLE_OPTIMIZE 1
 
 #endif
