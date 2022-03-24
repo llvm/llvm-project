@@ -159,7 +159,7 @@ StringRef getLanguageName(const LangOptions &LangOpts) {
   case Language::C:
     return "c";
   case Language::ObjC:
-    return "objc";
+    return "objective-c";
 
   // Unsupported language currently
   case Language::CXX:
