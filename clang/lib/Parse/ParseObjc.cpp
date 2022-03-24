@@ -45,8 +45,7 @@ void Parser::MaybeSkipAttributes(tok::ObjCKeywordKind Kind) {
 /// [OBJC]  objc-protocol-definition
 /// [OBJC]  objc-method-definition
 /// [OBJC]  '@' 'end'
-Parser::DeclGroupPtrTy
-Parser::ParseObjCAtDirectives(ParsedAttributesWithRange &Attrs) {
+Parser::DeclGroupPtrTy Parser::ParseObjCAtDirectives(ParsedAttributes &Attrs) {
   SourceLocation AtLoc = ConsumeToken(); // the "@"
 
   if (Tok.is(tok::code_completion)) {
@@ -651,7 +650,7 @@ void Parser::ParseObjCInterfaceDeclList(tok::ObjCKeywordKind contextKey,
       if (Tok.is(tok::r_brace))
         break;
 
-      ParsedAttributesWithRange attrs(AttrFactory);
+      ParsedAttributes attrs(AttrFactory);
 
       // Since we call ParseDeclarationOrFunctionDefinition() instead of
       // ParseExternalDeclaration() below (so that this doesn't parse nested
@@ -2217,7 +2216,7 @@ Parser::ParseObjCAtImplementationDeclaration(SourceLocation AtLoc,
   {
     ObjCImplParsingDataRAII ObjCImplParsing(*this, ObjCImpDecl);
     while (!ObjCImplParsing.isFinished() && !isEofOrEom()) {
-      ParsedAttributesWithRange attrs(AttrFactory);
+      ParsedAttributes attrs(AttrFactory);
       MaybeParseCXX11Attributes(attrs);
       if (DeclGroupPtrTy DGP = ParseExternalDeclaration(attrs)) {
         DeclGroupRef DG = DGP.get();

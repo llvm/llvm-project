@@ -1822,3 +1822,21 @@ llvm.func @repeated_successor(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
   }
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @single
+// CHECK-SAME: (i32 %[[x:.*]], i32 %[[y:.*]], i32* %[[zaddr:.*]])
+llvm.func @single(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
+  // CHECK: call i32 @__kmpc_single
+  omp.single {
+    // CHECK: %[[z:.*]] = add i32 %[[x]], %[[y]]
+    %z = llvm.add %x, %y : i32
+    // CHECK: store i32 %[[z]], i32* %[[zaddr]]
+    llvm.store %z, %zaddr : !llvm.ptr<i32>
+    // CHECK: call void @__kmpc_end_single
+    omp.terminator
+  }
+  // CHECK: ret void
+  llvm.return
+}

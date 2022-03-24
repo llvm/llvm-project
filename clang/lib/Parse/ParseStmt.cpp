@@ -105,7 +105,7 @@ Parser::ParseStatementOrDeclaration(StmtVector &Stmts,
   // statement are different from [[]] attributes that follow an __attribute__
   // at the start of the statement. Thus, we're not using MaybeParseAttributes
   // here because we don't want to allow arbitrary orderings.
-  ParsedAttributesWithRange Attrs(AttrFactory);
+  ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs, /*MightBeObjCMessageSend*/ true);
   if (getLangOpts().OpenCL)
     MaybeParseGNUAttributes(Attrs);
@@ -158,7 +158,7 @@ private:
 
 StmtResult Parser::ParseStatementOrDeclarationAfterAttributes(
     StmtVector &Stmts, ParsedStmtContext StmtCtx,
-    SourceLocation *TrailingElseLoc, ParsedAttributesWithRange &Attrs) {
+    SourceLocation *TrailingElseLoc, ParsedAttributes &Attrs) {
   const char *SemiError = nullptr;
   StmtResult Res;
   SourceLocation GNUAttributeLoc;
@@ -624,7 +624,7 @@ StmtResult Parser::ParseSEHLeaveStatement() {
 ///         identifier ':' statement
 /// [GNU]   identifier ':' attributes[opt] statement
 ///
-StmtResult Parser::ParseLabeledStatement(ParsedAttributesWithRange &attrs,
+StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
                                          ParsedStmtContext StmtCtx) {
   assert(Tok.is(tok::identifier) && Tok.getIdentifierInfo() &&
          "Not an identifier!");
@@ -644,7 +644,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributesWithRange &attrs,
   // Read label attributes, if present.
   StmtResult SubStmt;
   if (Tok.is(tok::kw___attribute)) {
-    ParsedAttributesWithRange TempAttrs(AttrFactory);
+    ParsedAttributes TempAttrs(AttrFactory);
     ParseGNUAttributes(TempAttrs);
 
     // In C++, GNU attributes only apply to the label if they are followed by a
@@ -655,7 +655,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributesWithRange &attrs,
     // and followed by a semicolon, GCC will reject (it appears to parse the
     // attributes as part of a statement in that case). That looks like a bug.
     if (!getLangOpts().CPlusPlus || Tok.is(tok::semi))
-      attrs.takeAllFrom(TempAttrs);
+      Attrs.takeAllFrom(TempAttrs);
     else {
       StmtVector Stmts;
       SubStmt = ParseStatementOrDeclarationAfterAttributes(Stmts, StmtCtx,
@@ -675,8 +675,8 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributesWithRange &attrs,
 
   LabelDecl *LD = Actions.LookupOrCreateLabel(IdentTok.getIdentifierInfo(),
                                               IdentTok.getLocation());
-  Actions.ProcessDeclAttributeList(Actions.CurScope, LD, attrs);
-  attrs.clear();
+  Actions.ProcessDeclAttributeList(Actions.CurScope, LD, Attrs);
+  Attrs.clear();
 
   return Actions.ActOnLabelStmt(IdentTok.getLocation(), LD, ColonLoc,
                                 SubStmt.get());
@@ -1118,7 +1118,7 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       while (Tok.is(tok::kw___extension__))
         ConsumeToken();
 
-      ParsedAttributesWithRange attrs(AttrFactory);
+      ParsedAttributes attrs(AttrFactory);
       MaybeParseCXX11Attributes(attrs, /*MightBeObjCMessageSend*/ true);
 
       // If this is the start of a declaration, parse it as such.
@@ -1924,7 +1924,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     return StmtError();
   }
 
-  ParsedAttributesWithRange attrs(AttrFactory);
+  ParsedAttributes attrs(AttrFactory);
   MaybeParseCXX11Attributes(attrs);
 
   SourceLocation EmptyInitStmtSemiLoc;
@@ -1955,8 +1955,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
               ? FixItHint::CreateInsertion(Loc, "auto &&")
               : FixItHint());
 
-    ForRangeInfo.LoopVar = Actions.ActOnCXXForRangeIdentifier(
-        getCurScope(), Loc, Name, attrs, attrs.Range.getEnd());
+    ForRangeInfo.LoopVar =
+        Actions.ActOnCXXForRangeIdentifier(getCurScope(), Loc, Name, attrs);
   } else if (isForInitDeclaration()) {  // for (int X = 4;
     ParenBraceBracketBalancer BalancerRAIIObj(*this);
 
@@ -2325,9 +2325,9 @@ StmtResult Parser::ParseReturnStatement() {
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,
                                        ParsedStmtContext StmtCtx,
                                        SourceLocation *TrailingElseLoc,
-                                       ParsedAttributesWithRange &Attrs) {
+                                       ParsedAttributes &Attrs) {
   // Create temporary attribute list.
-  ParsedAttributesWithRange TempAttrs(AttrFactory);
+  ParsedAttributes TempAttrs(AttrFactory);
 
   SourceLocation StartLoc = Tok.getLocation();
 
@@ -2580,7 +2580,7 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   // without default arguments.
   Decl *ExceptionDecl = nullptr;
   if (Tok.isNot(tok::ellipsis)) {
-    ParsedAttributesWithRange Attributes(AttrFactory);
+    ParsedAttributes Attributes(AttrFactory);
     MaybeParseCXX11Attributes(Attributes);
 
     DeclSpec DS(AttrFactory);
