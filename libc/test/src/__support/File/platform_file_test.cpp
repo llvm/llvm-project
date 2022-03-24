@@ -144,6 +144,32 @@ TEST(LlvmLibcPlatformFileTest, LargeFile) {
   ASSERT_EQ(file->close(), 0);
 }
 
+TEST(LlvmLibcPlatformFileTest, ReadSeekCurAndRead) {
+  constexpr char FILENAME[] = "testdata/read_seek_cur_and_read.test";
+  File *file = __llvm_libc::openfile(FILENAME, "w");
+  ASSERT_FALSE(file == nullptr);
+  constexpr char CONTENT[] = "1234567890987654321";
+  ASSERT_EQ(sizeof(CONTENT) - 1, file->write(CONTENT, sizeof(CONTENT) - 1));
+  ASSERT_EQ(0, file->close());
+
+  file = __llvm_libc::openfile(FILENAME, "r");
+  ASSERT_FALSE(file == nullptr);
+
+  constexpr size_t READ_SIZE = 5;
+  char data[READ_SIZE];
+  data[READ_SIZE - 1] = '\0';
+  ASSERT_EQ(file->read(data, READ_SIZE - 1), READ_SIZE - 1);
+  ASSERT_STREQ(data, "1234");
+  ASSERT_EQ(file->seek(5, SEEK_CUR), 0);
+  ASSERT_EQ(file->read(data, READ_SIZE - 1), READ_SIZE - 1);
+  ASSERT_STREQ(data, "0987");
+  ASSERT_EQ(file->seek(-5, SEEK_CUR), 0);
+  ASSERT_EQ(file->read(data, READ_SIZE - 1), READ_SIZE - 1);
+  ASSERT_STREQ(data, "9098");
+
+  ASSERT_EQ(file->close(), 0);
+}
+
 TEST(LlvmLibcPlatformFileTest, IncorrectOperation) {
   constexpr char FILENAME[] = "testdata/incorrect_operation.test";
   char data[1] = {123};

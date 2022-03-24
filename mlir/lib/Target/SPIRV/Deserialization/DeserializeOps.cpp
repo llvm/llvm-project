@@ -283,7 +283,7 @@ LogicalResult spirv::Deserializer::processOpWithoutGrammarAttr(
   if (hasResult)
     opState.addTypes(resultTypes);
   opState.addAttributes(attributes);
-  Operation *op = opBuilder.createOperation(opState);
+  Operation *op = opBuilder.create(opState);
   if (hasResult)
     valueMap[valueID] = op->getResult(0);
 

@@ -58,15 +58,24 @@ Type mlir::sparse_tensor::getOverheadType(Builder &builder, OverheadType ot) {
   llvm_unreachable("Unknown OverheadType");
 }
 
+OverheadType mlir::sparse_tensor::pointerOverheadTypeEncoding(
+    const SparseTensorEncodingAttr &enc) {
+  return overheadTypeEncoding(enc.getPointerBitWidth());
+}
+
+OverheadType mlir::sparse_tensor::indexOverheadTypeEncoding(
+    const SparseTensorEncodingAttr &enc) {
+  return overheadTypeEncoding(enc.getIndexBitWidth());
+}
+
 Type mlir::sparse_tensor::getPointerOverheadType(
     Builder &builder, const SparseTensorEncodingAttr &enc) {
-  return getOverheadType(builder,
-                         overheadTypeEncoding(enc.getPointerBitWidth()));
+  return getOverheadType(builder, pointerOverheadTypeEncoding(enc));
 }
 
 Type mlir::sparse_tensor::getIndexOverheadType(
     Builder &builder, const SparseTensorEncodingAttr &enc) {
-  return getOverheadType(builder, overheadTypeEncoding(enc.getIndexBitWidth()));
+  return getOverheadType(builder, indexOverheadTypeEncoding(enc));
 }
 
 StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(OverheadType ot) {

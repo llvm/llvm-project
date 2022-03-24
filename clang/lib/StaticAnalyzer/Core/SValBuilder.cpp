@@ -742,9 +742,6 @@ SVal SValBuilder::evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
       // This change is needed for architectures with varying
       // pointer widths. See the amdgcn opencl reproducer with
       // this change as an example: solver-sym-simplification-ptr-bool.cl
-      // FIXME: Cleanup remainder of `getZeroWithPtrWidth ()`
-      //        and `getIntWithPtrWidth()` functions to prevent future
-      //        confusion
       if (!Ty->isReferenceType())
         return makeNonLoc(Sym, BO_NE, BasicVals.getZeroWithTypeSize(Ty),
                           CastTy);

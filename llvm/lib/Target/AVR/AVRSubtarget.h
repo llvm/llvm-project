@@ -91,9 +91,16 @@ public:
     return ELFArch;
   }
 
-  /// Get I/O register address.
-  int getIORegRAMPZ(void) const { return 0x3b; }
+  /// Get I/O register addresses.
+  int getIORegRAMPZ(void) const { return hasELPM() ? 0x3b : -1; }
+  int getIORegEIND(void) const { return hasEIJMPCALL() ? 0x3c : -1; }
+  int getIORegSPL(void) const { return 0x3d; }
+  int getIORegSPH(void) const { return hasSmallStack() ? -1 : 0x3e; }
   int getIORegSREG(void) const { return 0x3f; }
+
+  /// Get GPR aliases.
+  int getRegTmpIndex(void) const { return hasTinyEncoding() ? 16 : 0; }
+  int getRegZeroIndex(void) const { return hasTinyEncoding() ? 17 : 1; }
 
 private:
   /// The ELF e_flags architecture.

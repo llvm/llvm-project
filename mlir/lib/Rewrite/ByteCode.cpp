@@ -1552,7 +1552,7 @@ void ByteCodeExecutor::executeCreateOperation(PatternRewriter &rewriter,
     break;
   }
 
-  Operation *resultOp = rewriter.createOperation(state);
+  Operation *resultOp = rewriter.create(state);
   memory[memIndex] = resultOp;
 
   LLVM_DEBUG({

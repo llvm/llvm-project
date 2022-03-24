@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_CONFIG_SITE
-#define _LIBCPP_CONFIG_SITE
+#ifndef _LIBCPP___CONFIG_SITE
+#define _LIBCPP___CONFIG_SITE
 
 #cmakedefine _LIBCPP_ABI_VERSION @_LIBCPP_ABI_VERSION@
 #cmakedefine _LIBCPP_ABI_NAMESPACE @_LIBCPP_ABI_NAMESPACE@
@@ -32,6 +32,7 @@
 #cmakedefine _LIBCPP_HAS_NO_WIDE_CHARACTERS
 #cmakedefine _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
 #cmakedefine _LIBCPP_HAS_NO_INCOMPLETE_RANGES
+#cmakedefine01 _LIBCPP_ENABLE_ASSERTIONS_DEFAULT
 
 // __USE_MINGW_ANSI_STDIO gets redefined on MinGW
 #ifdef __clang__
@@ -46,4 +47,4 @@
 #  pragma clang diagnostic pop
 #endif
 
-#endif // _LIBCPP_CONFIG_SITE
+#endif // _LIBCPP___CONFIG_SITE

@@ -3,9 +3,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-; CHECK: define internal { i8*, i32 } @f(i8* %buffer, i32* %array)
-; CHECK-NEXT: entry:
-; CHECK-NEXT:  unreachable
+; CHECK-NOT: define
 
 define internal {i8*, i32} @f(i8* %buffer, i32* %array) {
 entry:

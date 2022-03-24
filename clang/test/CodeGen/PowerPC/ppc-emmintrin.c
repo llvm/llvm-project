@@ -5,15 +5,18 @@
 // RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 
-// CHECK-BE-DAG: @_mm_movemask_pd.perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
-// CHECK-BE-DAG: @_mm_shuffle_epi32.permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
-// CHECK-BE-DAG: @_mm_shufflehi_epi16.permute_selectors = internal constant [4 x i16] [i16 2057, i16 2571, i16 3085, i16 3599], align 2
-// CHECK-BE-DAG: @_mm_shufflelo_epi16.permute_selectors = internal constant [4 x i16] [i16 1, i16 515, i16 1029, i16 1543], align 2
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr10 -ffreestanding -DNO_WARN_X86_INTRINSICS %s \
+// RUN:   -ffp-contract=off -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P10-LE
 
-// CHECK-LE-DAG: @_mm_movemask_pd.perm_mask = internal constant <4 x i32> <i32 -2139094976, i32 -2139062144, i32 -2139062144, i32 -2139062144>, align 16
-// CHECK-LE-DAG: @_mm_shuffle_epi32.permute_selectors = internal constant [4 x i32] [i32 50462976, i32 117835012, i32 185207048, i32 252579084], align 4
-// CHECK-LE-DAG: @_mm_shufflehi_epi16.permute_selectors = internal constant [4 x i16] [i16 2312, i16 2826, i16 3340, i16 3854], align 2
-// CHECK-LE-DAG: @_mm_shufflelo_epi16.permute_selectors = internal constant [4 x i16] [i16 256, i16 770, i16 1284, i16 1798], align 2
+// CHECK-BE-DAG: @_mm_movemask_pd.__perm_mask = internal constant <4 x i32> <i32 -2139062144, i32 -2139062144, i32 -2139062144, i32 -2139078656>, align 16
+// CHECK-BE-DAG: @_mm_shuffle_epi32.__permute_selectors = internal constant [4 x i32] [i32 66051, i32 67438087, i32 134810123, i32 202182159], align 4
+// CHECK-BE-DAG: @_mm_shufflehi_epi16.__permute_selectors = internal constant [4 x i16] [i16 2057, i16 2571, i16 3085, i16 3599], align 2
+// CHECK-BE-DAG: @_mm_shufflelo_epi16.__permute_selectors = internal constant [4 x i16] [i16 1, i16 515, i16 1029, i16 1543], align 2
+
+// CHECK-LE-DAG: @_mm_movemask_pd.__perm_mask = internal constant <4 x i32> <i32 -2139094976, i32 -2139062144, i32 -2139062144, i32 -2139062144>, align 16
+// CHECK-LE-DAG: @_mm_shuffle_epi32.__permute_selectors = internal constant [4 x i32] [i32 50462976, i32 117835012, i32 185207048, i32 252579084], align 4
+// CHECK-LE-DAG: @_mm_shufflehi_epi16.__permute_selectors = internal constant [4 x i16] [i16 2312, i16 2826, i16 3340, i16 3854], align 2
+// CHECK-LE-DAG: @_mm_shufflelo_epi16.__permute_selectors = internal constant [4 x i16] [i16 256, i16 770, i16 1284, i16 1798], align 2
 
 #include <emmintrin.h>
 
@@ -440,7 +443,8 @@ test_converts() {
 // CHECK: call <2 x double> @vec_rint(double vector[2])
 // CHECK: store <4 x i32> zeroinitializer, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <4 x i32> asm "xvcvdpsxws ${0:x},${1:x}", "=^wa,^wa"(<2 x double> %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
+// CHECK-LE: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
+// CHECK-BE: call <4 x i32> @vec_mergee(int vector[4], int vector[4])
 // CHECK: call <4 x i32> @vec_vpkudum(long long vector[2], long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef zeroinitializer)
 
 // CHECK-LABEL: define available_externally i64 @_mm_cvtpd_pi32
@@ -450,7 +454,8 @@ test_converts() {
 // CHECK-LABEL: define available_externally <4 x float> @_mm_cvtpd_ps
 // CHECK: store <4 x i32> zeroinitializer, <4 x i32>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK: call <4 x i32> asm "xvcvdpsp ${0:x},${1:x}", "=^wa,^wa"(<2 x double> %{{[0-9a-zA-Z_.]+}})
-// CHECK: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
+// CHECK-LE: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
+// CHECK-BE: call <4 x i32> @vec_mergee(int vector[4], int vector[4])
 // CHECK: call <4 x i32> @vec_vpkudum(long long vector[2], long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef zeroinitializer)
 
 // CHECK-LABEL: define available_externally <2 x double> @_mm_cvtpi32_pd
@@ -530,7 +535,8 @@ test_converts() {
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_cvttpd_epi32
 // CHECK: call <4 x i32> asm "xvcvdpsxws ${0:x},${1:x}", "=^wa,^wa"
-// CHECK: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
+// CHECK-LE: call <4 x i32> @vec_mergeo(int vector[4], int vector[4])
+// CHECK-BE: call <4 x i32> @vec_mergee(int vector[4], int vector[4])
 // CHECK: call <4 x i32> @vec_vpkudum(long long vector[2], long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef zeroinitializer)
 
 // CHECK-LABEL: define available_externally i64 @_mm_cvttpd_pi32
@@ -756,11 +762,17 @@ test_move() {
 // CHECK: %[[EXT:[0-9a-zA-Z_.]+]] = extractelement <2 x double> %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: insertelement <2 x double> %{{[0-9a-zA-Z_.]+}}, double %[[EXT]], i32 0
 
+// CHECK-P10-LE-LABEL: define available_externally signext i32 @_mm_movemask_epi8
+// CHECK-P10-LE: call zeroext i32 @vec_extractm(unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}})
+
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_epi8
 // CHECK: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef <i8 120, i8 112, i8 104, i8 96, i8 88, i8 80, i8 72, i8 64, i8 56, i8 48, i8 40, i8 32, i8 24, i8 16, i8 8, i8 0>)
 // CHECK-LE: %[[VAL:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 1
 // CHECK-BE: %[[VAL:[0-9a-zA-Z_.]+]] = extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
 // CHECK: trunc i64 %[[VAL]] to i32
+
+// CHECK-P10-LE-LABEL: define available_externally signext i32 @_mm_movemask_pd
+// CHECK-P10-LE: call zeroext i32 @vec_extractm(unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_movemask_pd
 // CHECK-LE: call <2 x i64> @vec_vbpermq(unsigned char vector[16], unsigned char vector[16])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <16 x i8> noundef bitcast (<4 x i32> <i32 -2139094976, i32 -2139062144, i32 -2139062144, i32 -2139062144> to <16 x i8>))
@@ -857,9 +869,9 @@ test_sad() {
 // CHECK: call <16 x i8> @vec_max(unsigned char vector[16], unsigned char vector[16])
 // CHECK: call <16 x i8> @vec_sub(unsigned char vector[16], unsigned char vector[16])
 // CHECK: call <4 x i32> @vec_sum4s(unsigned char vector[16], unsigned int vector[4])(<16 x i8> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef zeroinitializer)
-// CHECK: call <4 x i32> @vec_sum2s(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef zeroinitializer)
-// CHECK-LE: call <4 x i32> @vec_sld(int vector[4], int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 4)
-// CHECK-BE: call <4 x i32> @vec_sld(int vector[4], int vector[4], unsigned int)(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 6)
+// CHECK-LE: call <4 x i32> asm "vsum2sws $0,$1,$2", "=v,v,v"(<4 x i32> %11, <4 x i32> zeroinitializer)
+// CHECK-BE: call <4 x i32> @vec_sum2s(<4 x i32> noundef %{{[0-9a-zA-Z_.]+}}, <4 x i32> noundef zeroinitializer)
+// CHECK-BE: call <4 x i32> @vec_sld(int vector[4], int vector[4], unsigned int)
 
 void __attribute__((noinline))
 test_set() {
@@ -996,14 +1008,14 @@ test_shuffle() {
 // CHECK: %[[SHR:[0-9a-zA-Z_.]+]] = ashr i32 %{{[0-9a-zA-Z_.]+}}, 6
 // CHECK: %[[AND4:[0-9a-zA-Z_.]+]] = and i32 %[[SHR]], 3
 // CHECK: sext i32 %[[AND4]] to i64
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %{{[0-9a-zA-Z_.]+}}, i32 1
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: %[[ADD:[0-9a-zA-Z_.]+]] = add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: insertelement <4 x i32> %{{[0-9a-zA-Z_.]+}}, i32 %[[ADD]], i32 2
-// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
+// CHECK: getelementptr inbounds [4 x i32], [4 x i32]* @_mm_shuffle_epi32.__permute_selectors, i64 0, i64 %{{[0-9a-zA-Z_.]+}}
 // CHECK: add i32 %{{[0-9a-zA-Z_.]+}}, 269488144
 // CHECK: call <4 x i32> @vec_perm(int vector[4], int vector[4], unsigned char vector[16])
 
@@ -1034,7 +1046,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 1663540288323457296, i64 0>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 1157726452361532951, i64 0>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflehi_epi16.permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflehi_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_shufflelo_epi16
@@ -1051,7 +1063,7 @@ test_shuffle() {
 // CHECK: sext i32 %[[AND4]] to i64
 // CHECK-LE: store <2 x i64> <i64 0, i64 2242261671028070680>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
 // CHECK-BE: store <2 x i64> <i64 0, i64 1736447835066146335>, <2 x i64>* %{{[0-9a-zA-Z_.]+}}, align 16
-// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflelo_epi16.permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
+// CHECK-COUNT-4: getelementptr inbounds [4 x i16], [4 x i16]* @_mm_shufflelo_epi16.__permute_selectors, i64 0, i64 {{[0-9a-zA-Z_%.]+}}
 // CHECK: call <2 x i64> @vec_perm(unsigned long long vector[2], unsigned long long vector[2], unsigned char vector[16])
 
 void __attribute__((noinline))
@@ -1086,7 +1098,7 @@ test_sll() {
 // CHECK: call <2 x i64> @vec_splat(unsigned long long vector[2], unsigned int)(<2 x i64> noundef {{[0-9a-zA-Z_%.]+}}, i32 noundef zeroext 0)
 // CHECK: call <2 x i64> @vec_cmplt(unsigned long long vector[2], unsigned long long vector[2])(<2 x i64> noundef {{[0-9a-zA-Z_%.]+}}, <2 x i64> noundef <i64 64, i64 64>)
 // CHECK: call <2 x i64> @vec_sl(unsigned long long vector[2], unsigned long long vector[2])
-// CHECK: call <2 x double> @vec_sel(double vector[2], double vector[2], bool vector[2])
+// CHECK: call <2 x i64> @vec_sel(unsigned long long vector[2], unsigned long long vector[2], bool vector[2])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_slli_epi16
 // CHECK: store <8 x i16> zeroinitializer, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16
@@ -1232,7 +1244,7 @@ test_srl() {
 // CHECK: call <2 x i64> @vec_splat(unsigned long long vector[2], unsigned int)(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, i32 noundef zeroext 0)
 // CHECK: call <2 x i64> @vec_cmplt(unsigned long long vector[2], unsigned long long vector[2])(<2 x i64> noundef %{{[0-9a-zA-Z_.]+}}, <2 x i64> noundef <i64 64, i64 64>)
 // CHECK: call <2 x i64> @vec_sr(unsigned long long vector[2], unsigned long long vector[2])
-// CHECK: call <2 x double> @vec_sel(double vector[2], double vector[2], bool vector[2])
+// CHECK: call <2 x i64> @vec_sel(unsigned long long vector[2], unsigned long long vector[2], bool vector[2])
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_srli_epi16
 // CHECK: store <8 x i16> zeroinitializer, <8 x i16>* %{{[0-9a-zA-Z_.]+}}, align 16

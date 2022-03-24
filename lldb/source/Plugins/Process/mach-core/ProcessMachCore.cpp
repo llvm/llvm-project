@@ -219,6 +219,16 @@ static bool load_standalone_binary(UUID uuid, addr_t value,
       target.SetArchitecture(module_sp->GetObjectFile()->GetArchitecture());
       target.GetImages().AppendIfNeeded(module_sp, false);
 
+      // TODO: Instead of using the load address as a value, if we create a
+      // memory module from that address, we could get the correct segment
+      // offset values from the in-memory load commands and set them correctly.
+      // In case the load address we were given is not correct for all segments,
+      // e.g. something in the shared cache.  DynamicLoaderDarwinKernel does
+      // something similar for kexts.  In the context of a corefile, this would
+      // be an inexpensive operation.  Not all binaries in a corefile will have
+      // a Mach-O header/load commands in memory, so this will not work in all
+      // cases.
+
       bool changed = false;
       if (module_sp->GetObjectFile()) {
         if (value != LLDB_INVALID_ADDRESS) {
@@ -350,6 +360,8 @@ Status ProcessMachCore::DoLoadCore() {
     if (objfile_binary_value != LLDB_INVALID_ADDRESS &&
         !objfile_binary_value_is_offset) {
       if (type == ObjectFile::eBinaryTypeUser) {
+        load_standalone_binary(objfile_binary_uuid, objfile_binary_value,
+                               objfile_binary_value_is_offset, GetTarget());
         m_dyld_addr = objfile_binary_value;
         m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
         found_main_binary_definitively = true;

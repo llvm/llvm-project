@@ -1390,6 +1390,54 @@ define <4 x i32> @shl_mul_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
   ret <4 x i32> %t3
 }
 
+; Negate can be converted to mul to enable the fold.
+
+define <4 x i32> @mul_neg(<4 x i32> %x) {
+; CHECK-LABEL: @mul_neg(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[X:%.*]], <i32 257, i32 -3, i32 -1, i32 -9>
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+;
+  %m = mul <4 x i32> %x, <i32 257, i32 -3, i32 poison, i32 -9>
+  %n = sub <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, %x
+  %r = shufflevector <4 x i32> %m, <4 x i32> %n, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+  ret <4 x i32> %r
+}
+
+define <3 x i79> @neg_mul(<3 x i79> %x) {
+; CHECK-LABEL: @neg_mul(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <3 x i79> [[X:%.*]], <i79 -1, i79 -3, i79 -1>
+; CHECK-NEXT:    ret <3 x i79> [[TMP1]]
+;
+  %n = sub nsw <3 x i79> <i79 0, i79 poison, i79 0>, %x
+  %m = mul nsw <3 x i79> %x, <i79 poison, i79 -3, i79 poison>
+  %r = shufflevector <3 x i79> %n, <3 x i79> %m, <3 x i32> <i32 0, i32 4, i32 2>
+  ret <3 x i79> %r
+}
+
+define <4 x i32> @mul_neg_2_vars(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @mul_neg_2_vars(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 42, i32 -1, i32 -1, i32 6>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %m = mul nuw <4 x i32> %x, <i32 42, i32 poison, i32 poison, i32 6>
+  %n = sub nsw <4 x i32> <i32 poison, i32 0, i32 0, i32 poison>, %y
+  %r = shufflevector <4 x i32> %m, <4 x i32> %n, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @neg_mul_2_vars(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @neg_mul_2_vars(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i32> [[TMP1]], <i32 -1, i32 42, i32 -1, i32 6>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+;
+  %n = sub nsw <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>, %y
+  %m = mul nuw nsw <4 x i32> %x, <i32 poison, i32 42, i32 poison, i32 6>
+  %r = shufflevector <4 x i32> %n, <4 x i32> %m, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i32> %r
+}
+
 ; Or with constant can be converted to add to enable the fold.
 ; The 'shl' is here to allow analysis to determine that the 'or' can be transformed to 'add'.
 ; TODO: The 'or' constant is limited to a splat.

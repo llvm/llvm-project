@@ -171,6 +171,16 @@ public:
     Fixups.push_back(MCFixup::create(0, MO.getExpr(), Kind, MI.getLoc()));
     return 0;
   }
+
+  void expandJBTF(const MCInst &MI, raw_ostream &OS,
+                  SmallVectorImpl<MCFixup> &Fixups,
+                  const MCSubtargetInfo &STI) const;
+  void expandNEG(const MCInst &MI, raw_ostream &OS,
+                 SmallVectorImpl<MCFixup> &Fixups,
+                 const MCSubtargetInfo &STI) const;
+  void expandRSUBI(const MCInst &MI, raw_ostream &OS,
+                   SmallVectorImpl<MCFixup> &Fixups,
+                   const MCSubtargetInfo &STI) const;
 };
 
 } // namespace llvm

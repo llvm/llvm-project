@@ -4765,9 +4765,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   llvm::Value *UnusedReturnSizePtr = nullptr;
   if (RetAI.isIndirect() || RetAI.isInAlloca() || RetAI.isCoerceAndExpand()) {
     if (IsVirtualFunctionPointerThunk && RetAI.isIndirect()) {
+#if 0
       SRetPtr = Address::deprecated(CurFn->arg_begin() +
                                         IRFunctionArgs.getSRetArgNo(),
                                     CharUnits::fromQuantity(1));
+#endif
     } else if (!ReturnValue.isNull()) {
       SRetPtr = ReturnValue.getValue();
     } else {

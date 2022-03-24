@@ -62,6 +62,10 @@ private:
 
   void addClauseInst(const MachineInstr &MI);
 
+  /// \returns the number of wait states before another MFMA instruction can be
+  /// issued after \p MI.
+  unsigned getMFMAPipelineWaitStates(const MachineInstr &MI) const;
+
   // Advance over a MachineInstr bundle. Look for hazards in the bundled
   // instructions.
   void processBundle();
@@ -96,6 +100,22 @@ private:
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);
   int checkMAIHazards90A(MachineInstr *MI);
+  /// Pad the latency between neighboring MFMA instructions with s_nops. The
+  /// percentage of wait states to fill with s_nops is specified by the command
+  /// line option '-amdgpu-mfma-padding-ratio'.
+  ///
+  /// For example, with '-amdgpu-mfma-padding-ratio=100':
+  ///
+  /// 2 pass MFMA instructions have a latency of 2 wait states. Therefore, a
+  /// 'S_NOP 1' will be added between sequential MFMA instructions.
+  ///
+  /// V_MFMA_F32_4X4X1F32
+  /// V_MFMA_F32_4X4X1F32
+  ///-->
+  /// V_MFMA_F32_4X4X1F32
+  /// S_NOP 1
+  /// V_MFMA_F32_4X4X1F32
+  int checkMFMAPadding(MachineInstr *MI);
   int checkMAIVALUHazards(MachineInstr *MI);
   int checkMAILdStHazards(MachineInstr *MI);
 

@@ -24,15 +24,11 @@ declare void @after_the_null()
 @associatedc2 = global i8 42
 @associatedc3 = global i8 84
 
-@llvm.global_ctors = appending global
-[1 x { i32, void ()*, i8* }]
-[
+@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [
   { i32, void ()*, i8* } { i32 200, void ()* @orig_ctor, i8* null }
 ]
 
-@llvm.global_dtors = appending global
-[14 x { i32, void ()*, i8* }]
-[
+@llvm.global_dtors = appending global [14 x { i32, void ()*, i8* }] [
   { i32, void ()*, i8* } { i32 0, void ()* @orig_dtor0, i8* null },
   { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1a, i8* null },
   { i32, void ()*, i8* } { i32 1, void ()* @orig_dtor1b, i8* null },

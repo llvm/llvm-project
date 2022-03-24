@@ -25,6 +25,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS}_file.cpp)
       .file
       libc.include.errno
       libc.include.fcntl
+      libc.include.stdio
       libc.include.sys_syscall
       libc.src.__support.OSUtil.osutil
       libc.src.errno.errno

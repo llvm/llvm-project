@@ -5,14 +5,16 @@ define void @foo() {
 ; CHECK-LABEL: foo:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    stp x28, x27, [sp, #-32]! ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-NEXT:    sub sp, sp, #1, lsl #12 ; =4096
-; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    .cfi_def_cfa_offset 4208
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    .cfi_offset w27, -24
 ; CHECK-NEXT:    .cfi_offset w28, -32
+; CHECK-NEXT:    sub sp, sp, #1, lsl #12 ; =4096
+; CHECK-NEXT:    .cfi_def_cfa_offset 4128
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    .cfi_def_cfa_offset 4208
 ; CHECK-NEXT:    adds x8, sp, #1, lsl #12 ; =4096
 ; CHECK-NEXT:    cmn x8, #32
 ; CHECK-NEXT:    b.eq LBB0_2

@@ -86,6 +86,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.malloc
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
     libc.src.stdlib.free
 
     # sys/mman.h entrypoints
@@ -226,6 +227,14 @@ if(LLVM_LIBC_FULL_BUILD)
     # libc.src.stdlib.abort
     libc.src.stdlib.atexit
     libc.src.stdlib.exit
+    libc.src.stdlib.getenv
+
+    # stdio.h entrypoints
+    libc.src.stdio.fclose
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
 
     # signal.h entrypoints
     # TODO: Enable signal.h entrypoints after fixing signal.h
