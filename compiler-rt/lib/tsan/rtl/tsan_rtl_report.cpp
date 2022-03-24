@@ -823,6 +823,18 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
 
   rep.AddLocation(addr_min, addr_max - addr_min);
 
+  if (flags()->print_full_thread_history) {
+    const ReportDesc *rep_desc = rep.GetReport();
+    for (uptr i = 0; i < rep_desc->threads.Size(); i++) {
+      Tid parent_tid = rep_desc->threads[i]->parent_tid;
+      if (parent_tid == kMainTid || parent_tid == kInvalidTid)
+        continue;
+      ThreadContext *parent_tctx = static_cast<ThreadContext *>(
+          ctx->thread_registry.GetThreadLocked(parent_tid));
+      rep.AddThread(parent_tctx);
+    }
+  }
+
 #if !SANITIZER_GO
   if (!((typ0 | typ1) & kAccessFree) &&
       s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))

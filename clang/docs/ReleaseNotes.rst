@@ -131,6 +131,9 @@ Attribute Changes in Clang
 
 - ``#pragma clang attribute push`` now supports multiple attributes within a single directive.
 
+- The ``__declspec(naked)`` attribute can no longer be written on a member
+  function in Microsoft compatibility mode, matching the behavior of cl.exe.
+
 Windows Support
 ---------------
 
