@@ -57,6 +57,32 @@ public:
   }
 };
 
+/// Converts func.call to spv.FunctionCall.
+class CallOpPattern final : public OpConversionPattern<func::CallOp> {
+public:
+  using OpConversionPattern<func::CallOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // multiple results func was not converted to spv.func
+    if (callOp.getNumResults() > 1)
+      return failure();
+    if (callOp.getNumResults() == 1) {
+      auto resultType =
+          getTypeConverter()->convertType(callOp.getResult(0).getType());
+      if (!resultType)
+        return failure();
+      rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
+          callOp, resultType, adaptor.getOperands(), callOp->getAttrs());
+    } else {
+      rewriter.replaceOpWithNewOp<spirv::FunctionCallOp>(
+          callOp, TypeRange(), adaptor.getOperands(), callOp->getAttrs());
+    }
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -67,5 +93,5 @@ void mlir::populateFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                        RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
-  patterns.add<ReturnOpPattern>(typeConverter, context);
+  patterns.add<ReturnOpPattern, CallOpPattern>(typeConverter, context);
 }
