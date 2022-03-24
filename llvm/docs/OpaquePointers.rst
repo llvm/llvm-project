@@ -204,8 +204,6 @@ open problems:
 
 * Some pointer element type uses remain in LLVM.
 
-* Some pointer element type uses remain in LLDB.
-
 * Some pointer element type uses remain in MLIR.
 
 * Some pointer element type uses remain in Polly.

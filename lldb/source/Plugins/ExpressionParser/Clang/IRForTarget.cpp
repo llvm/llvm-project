@@ -1757,20 +1757,19 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
             llvm::Instruction *entry_instruction = llvm::cast<Instruction>(
                 m_entry_instruction_finder.GetValue(function));
 
+            Type *int8Ty = Type::getInt8Ty(function->getContext());
             ConstantInt *offset_int(
                 ConstantInt::get(offset_type, offset, true));
             GetElementPtrInst *get_element_ptr = GetElementPtrInst::Create(
-                argument->getType()->getPointerElementType(), argument,
-                offset_int, "", entry_instruction);
+                int8Ty, argument, offset_int, "", entry_instruction);
 
             if (name == m_result_name && !m_result_is_pointer) {
               BitCastInst *bit_cast = new BitCastInst(
                   get_element_ptr, value->getType()->getPointerTo(), "",
                   entry_instruction);
 
-              LoadInst *load =
-                  new LoadInst(bit_cast->getType()->getPointerElementType(),
-                               bit_cast, "", entry_instruction);
+              LoadInst *load = new LoadInst(value->getType(), bit_cast, "",
+                                            entry_instruction);
 
               return load;
             } else {
