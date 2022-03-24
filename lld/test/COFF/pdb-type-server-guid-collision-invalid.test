@@ -1,0 +1,20 @@
+Check that the linker behaves when you have multiple
+PDB files with the same Guid. This was first a problem
+with Visual Studio 2022 that shipped PDB's with Guid's
+that was set to FFFFFF...
+
+RUN: rm -rf %t && mkdir -p %t && cd %t
+RUN: yaml2obj %p/Inputs/pdb-type-server-guid-collision-a.yaml -o a.obj
+RUN: yaml2obj %p/Inputs/pdb-type-server-guid-collision-b.yaml -o b.obj
+RUN: llvm-pdbutil yaml2pdb %S/Inputs/pdb-type-server-guid-collision-a-pdb.yaml -pdb a.pdb
+RUN: llvm-pdbutil yaml2pdb %S/Inputs/pdb-type-server-guid-collision-b-pdb.yaml -pdb b.pdb
+RUN: lld-link a.obj b.obj -out:collision.dll /debug:ghash -pdb:collision.pdb -nodefaultlib /noentry /dll
+RUN: lld-link a.obj b.obj -out:collision.dll /debug:noghash -pdb:collision_noghash.pdb -nodefaultlib /noentry /dll
+RUN: llvm-pdbutil dump -globals collision.pdb | FileCheck %s
+RUN: llvm-pdbutil dump -globals collision_noghash.pdb | FileCheck %s
+
+CHECK-LABEL:                       Global Symbols
+CHECK:       ============================================================
+
+CHECK:     100 | S_GDATA32 [size = 24] `bar_gv`
+CHECK-NEXT:           type = 0x104E (Bar), addr = 0002:0004
