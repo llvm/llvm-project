@@ -210,50 +210,51 @@ bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc) {
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
+bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
+                                        OperandVector &Operands) {
   auto Opc = Inst.getOpcode();
   auto Name = GetMnemonic(Opc);
   dumpTypeStack("typechecking " + Name + ": ");
   wasm::ValType Type;
   if (Name == "local.get") {
-    if (getLocal(ErrorLoc, Inst, Type))
+    if (getLocal(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     Stack.push_back(Type);
   } else if (Name == "local.set") {
-    if (getLocal(ErrorLoc, Inst, Type))
+    if (getLocal(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     if (popType(ErrorLoc, Type))
       return true;
   } else if (Name == "local.tee") {
-    if (getLocal(ErrorLoc, Inst, Type))
+    if (getLocal(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     if (popType(ErrorLoc, Type))
       return true;
     Stack.push_back(Type);
   } else if (Name == "global.get") {
-    if (getGlobal(ErrorLoc, Inst, Type))
+    if (getGlobal(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     Stack.push_back(Type);
   } else if (Name == "global.set") {
-    if (getGlobal(ErrorLoc, Inst, Type))
+    if (getGlobal(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     if (popType(ErrorLoc, Type))
       return true;
   } else if (Name == "table.get") {
-    if (getTable(ErrorLoc, Inst, Type))
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
     Stack.push_back(Type);
   } else if (Name == "table.set") {
-    if (getTable(ErrorLoc, Inst, Type))
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     if (popType(ErrorLoc, Type))
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
   } else if (Name == "table.fill") {
-    if (getTable(ErrorLoc, Inst, Type))
+    if (getTable(Operands[1]->getStartLoc(), Inst, Type))
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
@@ -281,25 +282,27 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst) {
       return true;
   } else if (Name == "call" || Name == "return_call") {
     const MCSymbolRefExpr *SymRef;
-    if (getSymRef(ErrorLoc, Inst, SymRef))
+    if (getSymRef(Operands[1]->getStartLoc(), Inst, SymRef))
       return true;
     auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
     auto Sig = WasmSym->getSignature();
     if (!Sig || WasmSym->getType() != wasm::WASM_SYMBOL_TYPE_FUNCTION)
-      return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                      " missing .functype");
+      return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
+                                                       WasmSym->getName() +
+                                                       " missing .functype");
     if (checkSig(ErrorLoc, *Sig)) return true;
     if (Name == "return_call" && endOfFunction(ErrorLoc))
       return true;
   } else if (Name == "catch") {
     const MCSymbolRefExpr *SymRef;
-    if (getSymRef(ErrorLoc, Inst, SymRef))
+    if (getSymRef(Operands[1]->getStartLoc(), Inst, SymRef))
       return true;
     const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
     const auto *Sig = WasmSym->getSignature();
     if (!Sig || WasmSym->getType() != wasm::WASM_SYMBOL_TYPE_TAG)
-      return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                     " missing .tagtype");
+      return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
+                                                       WasmSym->getName() +
+                                                       " missing .tagtype");
     // catch instruction pushes values whose types are specified in the tag's
     // "params" part
     Stack.insert(Stack.end(), Sig->Params.begin(), Sig->Params.end());

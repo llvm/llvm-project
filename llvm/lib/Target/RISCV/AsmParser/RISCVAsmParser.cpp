@@ -256,6 +256,11 @@ public:
                 "target-abi)\n";
     }
 
+    // Use computeTargetABI to check if ABIName is valid. If invalid, output
+    // error message.
+    RISCVABI::computeTargetABI(STI.getTargetTriple(), STI.getFeatureBits(),
+                               ABIName);
+
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
   }

@@ -1017,10 +1017,10 @@ public:
       if (VarTy->isReferenceType()) {
         Address Temp = CGF.CreateMemTemp(VarTy);
         if (Temp.getElementType() != TempAddr.getPointer()->getType())
-          Temp = Address::deprecated(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+          Temp = Address(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
                              Temp.getPointer(),
                              TempAddr.getPointer()->getType()->getPointerTo()),
-                         TempAddr.getAlignment());
+                         CGF.Int8Ty, TempAddr.getAlignment());
         CGF.Builder.CreateStore(TempAddr.getPointer(), Temp);
         TempAddr = Temp;
       }

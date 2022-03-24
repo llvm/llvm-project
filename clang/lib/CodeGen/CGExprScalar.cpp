@@ -32,6 +32,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FixedPointBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
@@ -40,6 +41,7 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/MatrixBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/TypeSize.h"
 #include <cstdarg>
 
 using namespace clang;
@@ -2330,9 +2332,10 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
   case CK_VectorSplat: {
     llvm::Type *DstTy = ConvertType(DestTy);
-    Value *Elt = Visit(const_cast<Expr*>(E));
+    Value *Elt = Visit(const_cast<Expr *>(E));
     // Splat the element across to all elements
-    unsigned NumElements = cast<llvm::FixedVectorType>(DstTy)->getNumElements();
+    llvm::ElementCount NumElements =
+        cast<llvm::VectorType>(DstTy)->getElementCount();
     return Builder.CreateVectorSplat(NumElements, Elt, "splat");
   }
 

@@ -127,6 +127,8 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
 def OMP_ScheduleModNone         : I32EnumAttrCase<"none", 0>;
 def OMP_ScheduleModMonotonic    : I32EnumAttrCase<"monotonic", 1>;
 def OMP_ScheduleModNonmonotonic : I32EnumAttrCase<"nonmonotonic", 2>;
+// FIXME: remove this value for the modifier because this is handled using a
+// separate attribute
 def OMP_ScheduleModSIMD         : I32EnumAttrCase<"simd", 3>;
 
 def ScheduleModifier
@@ -208,6 +210,38 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.8.2 Single Construct
+//===----------------------------------------------------------------------===//
+
+def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
+  let summary = "single directive";
+  let description = [{
+    The single construct specifies that the associated structured block is 
+    executed by only one of the threads in the team (not necessarily the
+    master thread), in the context of its implicit task. The other threads
+    in the team, which do not execute the block, wait at an implicit barrier
+    at the end of the single construct unless a nowait clause is specified.
+  }];
+
+  let arguments = (ins Variadic<AnyType>:$allocate_vars,
+                       Variadic<AnyType>:$allocators_vars,
+                       UnitAttr:$nowait);
+
+  let regions = (region SizedRegion<1>:$region);
+
+  let assemblyFormat = [{
+    oilist(`allocate` `(`
+              custom<AllocateAndAllocator>(
+                $allocate_vars, type($allocate_vars),
+                $allocators_vars, type($allocators_vars)
+              ) `)`
+          |`nowait` $nowait
+    ) $region attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.9.2 Workshare Loop Construct
 //===----------------------------------------------------------------------===//
 
@@ -227,7 +261,8 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     by "omp.yield" instruction without operands.
 
     ```
-    omp.wsloop (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
+    omp.wsloop <clauses>
+    for (%i1, %i2) : index = (%c0, %c0) to (%c10, %c10) step (%c1, %c1) {
       %a = load %arrA[%i1, %i2] : memref<?x?xf32>
       %b = load %arrB[%i1, %i2] : memref<?x?xf32>
       %sum = arith.addf %a, %b : f32
@@ -276,7 +311,7 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
              Variadic<IntLikeType>:$upperBound,
              Variadic<IntLikeType>:$step,
              Variadic<AnyType>:$linear_vars,
-             Variadic<AnyType>:$linear_step_vars,
+             Variadic<I32>:$linear_step_vars,
              Variadic<OpenMP_PointerLikeType>:$reduction_vars,
              OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ScheduleKindAttr>:$schedule_val,
@@ -305,6 +340,25 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
     unsigned getNumReductionVars() { return reduction_vars().size(); }
   }];
   let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist(`linear` `(`
+              custom<LinearClause>($linear_vars, type($linear_vars),
+                                   $linear_step_vars) `)`
+          |`schedule` `(`
+              custom<ScheduleClause>(
+                $schedule_val, $schedule_modifier, $simd_modifier,
+                $schedule_chunk_var, type($schedule_chunk_var)) `)`
+          |`collapse` `(` $collapse_val `)`
+          |`nowait` $nowait
+          |`ordered` `(` $ordered_val `)`
+          |`order` `(` custom<ClauseAttr>($order_val) `)`
+          |`reduction` `(`
+              custom<ReductionVarList>(
+                $reduction_vars, type($reduction_vars), $reductions
+              ) `)`
+    ) `for` custom<WsLoopControl>($region, $lowerBound, $upperBound, $step,
+                                  type($step), $inclusive) attr-dict
+  }];
   let hasVerifier = 1;
 }
 

@@ -32,87 +32,87 @@ int main(void) {
   // CHECK: [[ALLOC:%.+]] = call i8* @__kmpc_omp_task_alloc(%struct.ident_t* @{{.+}}, i32 [[GTID]], i32 65, i64 48, i64 0, i32 (i32, i8*)* bitcast (i32 (i32, [[PRIVATES_TY:%.+]]*)* [[TASK_ENTRY:@.+]] to i32 (i32, i8*)*))
   // CHECK: [[EVT_VAL:%.+]] = call i8* @__kmpc_task_allow_completion_event(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[ALLOC]])
   // CHECK: [[CAST_EVT_VAL:%.+]] = ptrtoint i8* [[EVT_VAL]] to i64
-  // CHECK: store i64 [[CAST_EVT_VAL]], i64* [[EVT_ADDR]],
+  // CHECK: store i64 [[CAST_EVT_VAL]], i64* [[EVT_ADDR]], align 8
   // CHECK: [[DATA:%.+]] = bitcast i8* [[ALLOC]] to [[PRIVATES_TY]]*
-  // CHECK: [[D:%.+]] = load i8*, i8** [[D_ADDR]],
-  // CHECK: [[D_DEP:%.+]] = bitcast i8* [[D]] to %struct.kmp_depend_info*
+  // CHECK: [[D_ADDR_CAST:%.+]] = bitcast i8** [[D_ADDR]] to %struct.kmp_depend_info**
+  // CHECK: [[D_DEP:%.+]] = load %struct.kmp_depend_info*, %struct.kmp_depend_info** [[D_ADDR_CAST]], align 8
   // CHECK: [[D_DEP_BASE:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[D_DEP]], i{{.+}} -1
   // CHECK: [[D_DEP_BASE_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[D_DEP_BASE]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[SIZE1:%.+]] = load i64, i64* [[D_DEP_BASE_SIZE]],
-  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR]],
-  // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR]],
+  // CHECK: [[SIZE1:%.+]] = load i64, i64* [[D_DEP_BASE_SIZE]], align 8
+  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR]], align 8
+  // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR]], align 8
   // CHECK: [[SIZE:%.+]] = add nuw i64 [[SZ]], [[SIZE1]]
-  // CHECK: store i64 [[SIZE]], i64* [[DEPOBJ_SIZE_ADDR]],
-  // CHECK: [[X:%.+]] = load i8*, i8** [[X_ADDR]],
-  // CHECK: [[X_DEP:%.+]] = bitcast i8* [[X]] to %struct.kmp_depend_info*
+  // CHECK: store i64 [[SIZE]], i64* [[DEPOBJ_SIZE_ADDR]], align 8
+  // CHECK: [[X_ADDR_CAST:%.+]] = bitcast i8** [[X_ADDR]] to %struct.kmp_depend_info**
+  // CHECK: [[X_DEP:%.+]] = load %struct.kmp_depend_info*, %struct.kmp_depend_info** [[X_ADDR_CAST]], align 8
   // CHECK: [[X_DEP_BASE:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[X_DEP]], i{{.+}} -1
   // CHECK: [[X_DEP_BASE_SIZE:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[X_DEP_BASE]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[SIZE2:%.+]] = load i64, i64* [[X_DEP_BASE_SIZE]],
-  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR1]],
-  // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR1]],
+  // CHECK: [[SIZE2:%.+]] = load i64, i64* [[X_DEP_BASE_SIZE]], align 8
+  // CHECK-DAG: store i64 0, i64* [[DEPOBJ_SIZE_ADDR1]], align 8
+  // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR1]], align 8
   // CHECK: [[SIZE3:%.+]] = add nuw i64 [[SZ]], [[SIZE2]]
-  // CHECK: store i64 [[SIZE3]], i64* [[DEPOBJ_SIZE_ADDR1]],
-  // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR]],
-  // CHECK: [[SZ1:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR1]],
+  // CHECK: store i64 [[SIZE3]], i64* [[DEPOBJ_SIZE_ADDR1]], align 8
+  // CHECK: [[SZ:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR]], align 8
+  // CHECK: [[SZ1:%.+]] = load i64, i64* [[DEPOBJ_SIZE_ADDR1]], align 8
   // CHECK: [[SIZE1:%.+]] = add nuw i64 0, [[SZ]]
   // CHECK: [[SIZE2:%.+]] = add nuw i64 [[SIZE1]], [[SZ1]]
   // CHECK: [[SIZE:%.+]] = add nuw i64 [[SIZE2]], 2
   // CHECK: [[SV:%.+]] = call i8* @llvm.stacksave()
-  // CHECK: store i8* [[SV]], i8** [[SV_ADDR:%.+]],
+  // CHECK: store i8* [[SV]], i8** [[SV_ADDR:%.+]], align 8
   // CHECK: [[VLA:%.+]] = alloca %struct.kmp_depend_info, i64 [[SIZE]],
   // CHECK: [[SIZE32:%.+]] = trunc i64 [[SIZE]] to i32
   // CHECK: [[VLA0:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA]], i64 0
   // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA0]], i{{.+}} 0, i{{.+}} 0
   // CHECK: [[A_ADDR_CAST:%.+]] = ptrtoint i32* [[A_ADDR]] to i64
-  // CHECK: store i64 [[A_ADDR_CAST]], i64* [[BASE_ADDR]],
+  // CHECK: store i64 [[A_ADDR_CAST]], i64* [[BASE_ADDR]], align 16
   // CHECK: [[SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA0]], i{{.+}} 0, i{{.+}} 1
-  // CHECK: store i64 4, i64* [[SIZE_ADDR]],
+  // CHECK: store i64 4, i64* [[SIZE_ADDR]], align 8
   // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA0]], i{{.+}} 0, i{{.+}} 2
-  // CHECK: store i8 1, i8* [[FLAGS_ADDR]],
-  // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]],
+  // CHECK: store i8 1, i8* [[FLAGS_ADDR]], align 1
+  // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]], align 4
   // CHECK: [[A_CAST:%.+]] = sext i32 [[A]] to i64
   // CHECK: [[SZ1:%.+]] = mul nuw i64 24, [[A_CAST]]
-  // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]],
+  // CHECK: [[A:%.+]] = load i32, i32* [[A_ADDR]], align 4
   // CHECK: [[A_CAST:%.+]] = sext i32 [[A]] to i64
   // CHECK: [[SZ:%.+]] = mul nuw i64 [[SZ1]], [[A_CAST]]
   // CHECK: [[VLA1:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA]], i64 1
   // CHECK: [[BASE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA1]], i{{.+}} 0, i{{.+}} 0
   // CHECK: [[B_ADDR_CAST:%.+]] = ptrtoint i32** %{{.+}} to i64
-  // CHECK: store i64 [[B_ADDR_CAST]], i64* [[BASE_ADDR]],
+  // CHECK: store i64 [[B_ADDR_CAST]], i64* [[BASE_ADDR]], align 8
   // CHECK: [[SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA1]], i{{.+}} 0, i{{.+}} 1
-  // CHECK: store i64 [[SZ]], i64* [[SIZE_ADDR]],
+  // CHECK: store i64 [[SZ]], i64* [[SIZE_ADDR]], align 8
   // CHECK: [[FLAGS_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA1]], i{{.+}} 0, i{{.+}} 2
-  // CHECK: store i8 1, i8* [[FLAGS_ADDR]],
-  // CHECK: store i64 2, i64* [[DEP_COUNTER_ADDR]],
-  // CHECK: [[D:%.+]] = load i8*, i8** [[D_ADDR]],
-  // CHECK: [[BC:%.+]] = bitcast i8* [[D]] to %struct.kmp_depend_info*
+  // CHECK: store i8 1, i8* [[FLAGS_ADDR]], align 8
+  // CHECK: store i64 2, i64* [[DEP_COUNTER_ADDR]], align 8
+  // CHECK: [[D_ADDR_CAST:%.+]] = bitcast i8** [[D_ADDR]] to %struct.kmp_depend_info**
+  // CHECK: [[BC:%.+]] = load %struct.kmp_depend_info*, %struct.kmp_depend_info** [[D_ADDR_CAST]], align 8
   // CHECK: [[PREV:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[BC]], i64 -1
   // CHECK: [[SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[PREV]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[SIZE:%.+]] = load i64, i64* [[SIZE_ADDR]],
+  // CHECK: [[SIZE:%.+]] = load i64, i64* [[SIZE_ADDR]], align 8
   // CHECK: [[BYTES:%.+]] = mul nuw i64 24, [[SIZE]]
-  // CHECK: [[POS:%.+]] = load i64, i64* [[DEP_COUNTER_ADDR]],
+  // CHECK: [[POS:%.+]] = load i64, i64* [[DEP_COUNTER_ADDR]], align 8
   // CHECK: [[VLA_D:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA]], i64 [[POS]]
   // CHECK: [[DEST:%.+]] = bitcast %struct.kmp_depend_info* [[VLA_D]] to i8*
   // CHECK: [[SRC:%.+]] = bitcast %struct.kmp_depend_info* [[BC]] to i8*
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align {{.+}} [[DEST]], i8* align {{.+}} [[SRC]], i64 [[BYTES]], i1 false)
   // CHECK: [[ADD:%.+]] = add nuw i64 [[POS]], [[SIZE]]
-  // CHECK: store i64 [[ADD]], i64* [[DEP_COUNTER_ADDR]],
-  // CHECK: [[X:%.+]] = load i8*, i8** [[X_ADDR]],
-  // CHECK: [[BC:%.+]] = bitcast i8* [[X]] to %struct.kmp_depend_info*
+  // CHECK: store i64 [[ADD]], i64* [[DEP_COUNTER_ADDR]], align 8
+  // CHECK: [[X_ADDR_CAST:%.+]] = bitcast i8** [[X_ADDR]] to %struct.kmp_depend_info**
+  // CHECK: [[BC:%.+]] = load %struct.kmp_depend_info*, %struct.kmp_depend_info** [[X_ADDR_CAST]], align 8
   // CHECK: [[PREV:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[BC]], i64 -1
   // CHECK: [[SIZE_ADDR:%.+]] = getelementptr inbounds %struct.kmp_depend_info, %struct.kmp_depend_info* [[PREV]], i{{.+}} 0, i{{.+}} 0
-  // CHECK: [[SIZE:%.+]] = load i64, i64* [[SIZE_ADDR]],
+  // CHECK: [[SIZE:%.+]] = load i64, i64* [[SIZE_ADDR]], align 8
   // CHECK: [[BYTES:%.+]] = mul nuw i64 24, [[SIZE]]
-  // CHECK: [[POS:%.+]] = load i64, i64* [[DEP_COUNTER_ADDR]],
+  // CHECK: [[POS:%.+]] = load i64, i64* [[DEP_COUNTER_ADDR]], align 8
   // CHECK: [[VLA_X:%.+]] = getelementptr %struct.kmp_depend_info, %struct.kmp_depend_info* [[VLA]], i64 [[POS]]
   // CHECK: [[DEST:%.+]] = bitcast %struct.kmp_depend_info* [[VLA_X]] to i8*
   // CHECK: [[SRC:%.+]] = bitcast %struct.kmp_depend_info* [[BC]] to i8*
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align {{.+}} [[DEST]], i8* align {{.+}} [[SRC]], i64 [[BYTES]], i1 false)
   // CHECK: [[ADD:%.+]] = add nuw i64 [[POS]], [[SIZE]]
-  // CHECK: store i64 [[ADD]], i64* [[DEP_COUNTER_ADDR]],
+  // CHECK: store i64 [[ADD]], i64* [[DEP_COUNTER_ADDR]], align 8
   // CHECK: [[BC:%.+]] = bitcast %struct.kmp_depend_info* [[VLA]] to i8*
   // CHECK: call i32 @__kmpc_omp_task_with_deps(%struct.ident_t* @{{.+}}, i32 [[GTID]], i8* [[ALLOC]], i32 [[SIZE32]], i8* [[BC]], i32 0, i8* null)
-  // CHECK: [[SV:%.+]] = load i8*, i8** [[SV_ADDR]],
+  // CHECK: [[SV:%.+]] = load i8*, i8** [[SV_ADDR]], align 8
   // CHECK: call void @llvm.stackrestore(i8* [[SV]])
 #pragma omp task depend(in: a, ([3][a][a])&b) depend(depobj: d, x) detach(evt)
   {

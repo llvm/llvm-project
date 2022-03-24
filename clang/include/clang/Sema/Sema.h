@@ -10175,7 +10175,7 @@ public:
   void ActOnPragmaVisibility(const IdentifierInfo* VisType,
                              SourceLocation PragmaLoc);
 
-  NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
+  NamedDecl *DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
                                  SourceLocation Loc);
   void DeclApplyPragmaWeak(Scope *S, NamedDecl *ND, WeakInfo &W);
 
@@ -11958,7 +11958,7 @@ public:
 
   // type checking for sizeless vector binary operators.
   QualType CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
-                                       SourceLocation Loc,
+                                       SourceLocation Loc, bool IsCompAssign,
                                        ArithConvKind OperationKind);
 
   /// Type checking for matrix binary operators.

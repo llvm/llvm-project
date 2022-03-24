@@ -1618,15 +1618,15 @@ AffineMap mlir::alignAffineMapWithValues(AffineMap map, ValueRange operands,
 FlatAffineValueConstraints FlatAffineRelation::getDomainSet() const {
   FlatAffineValueConstraints domain = *this;
   // Convert all range variables to local variables.
-  domain.convertDimToLocal(getNumDomainDims(),
-                           getNumDomainDims() + getNumRangeDims());
+  domain.convertToLocal(IdKind::SetDim, getNumDomainDims(),
+                        getNumDomainDims() + getNumRangeDims());
   return domain;
 }
 
 FlatAffineValueConstraints FlatAffineRelation::getRangeSet() const {
   FlatAffineValueConstraints range = *this;
   // Convert all domain variables to local variables.
-  range.convertDimToLocal(0, getNumDomainDims());
+  range.convertToLocal(IdKind::SetDim, 0, getNumDomainDims());
   return range;
 }
 
@@ -1658,12 +1658,13 @@ void FlatAffineRelation::compose(const FlatAffineRelation &other) {
   // Convert `rel` from [otherDomain] -> [otherRange thisRange] to
   // [otherDomain] -> [thisRange] by converting first otherRange range ids
   // to local ids.
-  rel.convertDimToLocal(rel.getNumDomainDims(),
-                        rel.getNumDomainDims() + removeDims);
+  rel.convertToLocal(IdKind::SetDim, rel.getNumDomainDims(),
+                     rel.getNumDomainDims() + removeDims);
   // Convert `this` from [otherDomain thisDomain] -> [thisRange] to
   // [otherDomain] -> [thisRange] by converting last thisDomain domain ids
   // to local ids.
-  convertDimToLocal(getNumDomainDims() - removeDims, getNumDomainDims());
+  convertToLocal(IdKind::SetDim, getNumDomainDims() - removeDims,
+                 getNumDomainDims());
 
   auto thisMaybeValues = getMaybeDimValues();
   auto relMaybeValues = rel.getMaybeDimValues();

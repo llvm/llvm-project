@@ -24,13 +24,15 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLAN_VPLANHCFGBUILDER_H
 
-#include "VPlan.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanVerifier.h"
 
 namespace llvm {
 
 class Loop;
+class LoopInfo;
+class VPRegionBlock;
+class VPlan;
 class VPlanTestBase;
 
 /// Main class to build the VPlan H-CFG for an incoming IR.

@@ -257,7 +257,7 @@ bool LLVMContextImpl::hasOpaquePointersValue() {
 
 bool LLVMContextImpl::getOpaquePointers() {
   if (LLVM_UNLIKELY(!(OpaquePointers.hasValue())))
-    OpaquePointers = false;
+    OpaquePointers = OpaquePointersCL;
   return *OpaquePointers;
 }
 

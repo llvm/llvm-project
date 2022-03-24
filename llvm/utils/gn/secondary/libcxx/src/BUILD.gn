@@ -115,6 +115,7 @@ config("cxx_config") {
 cxx_sources = [
   "algorithm.cpp",
   "any.cpp",
+  "assert.cpp",
   "atomic.cpp",
   "barrier.cpp",
   "bind.cpp",
@@ -201,8 +202,8 @@ if (target_os == "zos") {
 }
 if (libcxx_enable_debug_mode) {
   cxx_sources += [
-    "assert.cpp",
     "debug.cpp",
+    "legacy_debug_handler.cpp",
   ]
 }
 if (libcxx_enable_filesystem) {

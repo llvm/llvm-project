@@ -1035,7 +1035,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
           $_op->getAttrs());
         for (Region &r : $_op->getRegions())
           r.cloneInto(state.addRegion(), bvm);
-        return b.createOperation(state);
+        return b.create(state);
       }]
     >,
     InterfaceMethod<
@@ -1056,7 +1056,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
           $_op->getAttrs());
         for (Region &r : $_op->getRegions())
           r.cloneInto(state.addRegion(), bvm);
-        return b.createOperation(state);
+        return b.create(state);
       }]
     >,
     InterfaceMethod<
@@ -1077,7 +1077,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
           $_op->getAttrs());
         for (size_t cnt = 0, e = $_op->getNumRegions(); cnt < e; ++cnt)
           state.addRegion();
-        return b.createOperation(state);
+        return b.create(state);
       }]
     >,
     StaticInterfaceMethod<

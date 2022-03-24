@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 r"""Emulates the bits of CMake's configure_file() function needed in LLVM.
 
 The CMake build uses configure_file() for several things.  This emulates that
@@ -31,8 +31,6 @@ empty string, which is falsy, but FOO=0 sets it to '0' which is truthy):
 Fails if any of the KEY=VALUE arguments aren't needed for processing the
 input file, or if the input file references keys that weren't passed in.
 """
-
-from __future__ import print_function
 
 import argparse
 import os
