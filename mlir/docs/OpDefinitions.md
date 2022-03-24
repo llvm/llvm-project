@@ -1526,6 +1526,19 @@ mlir-tblgen --gen-op-interface-doc -I /path/to/mlir/include /path/to/input/td/fi
 
 ## Appendix
 
+### Reporting deprecation
+
+Classes/defs can be marked as deprecated by using the `Deprecate` helper class,
+e.g.,
+
+```td
+def OpTraitA : NativeOpTrait<"OpTraitA">, Deprecated<"use `bar` instead">;
+```
+
+would result in marking `OpTraitA` as deprecated and mlir-tblgen can emit a
+warning (default) or error (depending on `-on-deprecated` flag) to make
+deprecated state known.
+
 ### Requirements and existing mechanisms analysis
 
 The op description should be as declarative as possible to allow a wide range of
