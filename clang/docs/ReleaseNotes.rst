@@ -63,6 +63,8 @@ Bug Fixes
   This fixes `Issue 53742 <https://github.com/llvm/llvm-project/issues/53742>`_.
 - We now ignore full expressions when traversing cast subexpressions. This
   fixes `Issue 53044 <https://github.com/llvm/llvm-project/issues/53044>`_.
+- Allow `-Wno-gnu` to silence GNU extension diagnostics for pointer arithmetic
+  diagnostics. Fixes `Issue 54444 <https://github.com/llvm/llvm-project/issues/54444>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
