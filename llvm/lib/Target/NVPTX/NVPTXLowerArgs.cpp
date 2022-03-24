@@ -88,16 +88,17 @@
 // cancel the addrspacecast pair this pass emits.
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include <queue>
 
 #define DEBUG_TYPE "nvptx-lower-args"
 
@@ -226,6 +227,90 @@ static void convertToParamAS(Value *OldUser, Value *Param) {
                  [](Instruction *I) { I->eraseFromParent(); });
 }
 
+// Adjust alignment of arguments passed byval in .param address space. We can
+// increase alignment of such arguments in a way that ensures that we can
+// effectively vectorize their loads. We should also traverse all loads from
+// byval pointer and adjust their alignment, if those were using known offset.
+// Such alignment changes must be conformed with parameter store and load in
+// NVPTXTargetLowering::LowerCall.
+static void adjustByValArgAlignment(Argument *Arg, Value *ArgInParamAS,
+                                    const NVPTXTargetLowering *TLI) {
+  Function *Func = Arg->getParent();
+  Type *StructType = Arg->getParamByValType();
+  const DataLayout DL(Func->getParent());
+
+  uint64_t NewArgAlign =
+      TLI->getFunctionParamOptimizedAlign(Func, StructType, DL).value();
+  uint64_t CurArgAlign =
+      Arg->getAttribute(Attribute::Alignment).getValueAsInt();
+
+  if (CurArgAlign >= NewArgAlign)
+    return;
+
+  LLVM_DEBUG(dbgs() << "Try to use alignment " << NewArgAlign << " instead of "
+                    << CurArgAlign << " for " << *Arg << '\n');
+
+  auto NewAlignAttr =
+      Attribute::get(Func->getContext(), Attribute::Alignment, NewArgAlign);
+  Arg->removeAttr(Attribute::Alignment);
+  Arg->addAttr(NewAlignAttr);
+
+  struct Load {
+    LoadInst *Inst;
+    uint64_t Offset;
+  };
+
+  struct LoadContext {
+    Value *InitialVal;
+    uint64_t Offset;
+  };
+
+  SmallVector<Load> Loads;
+  std::queue<LoadContext> Worklist;
+  Worklist.push({ArgInParamAS, 0});
+
+  while (!Worklist.empty()) {
+    LoadContext Ctx = Worklist.front();
+    Worklist.pop();
+
+    for (User *CurUser : Ctx.InitialVal->users()) {
+      if (auto *I = dyn_cast<LoadInst>(CurUser)) {
+        Loads.push_back({I, Ctx.Offset});
+        continue;
+      }
+
+      if (auto *I = dyn_cast<BitCastInst>(CurUser)) {
+        Worklist.push({I, Ctx.Offset});
+        continue;
+      }
+
+      if (auto *I = dyn_cast<GetElementPtrInst>(CurUser)) {
+        APInt OffsetAccumulated =
+            APInt::getZero(DL.getIndexSizeInBits(ADDRESS_SPACE_PARAM));
+
+        if (!I->accumulateConstantOffset(DL, OffsetAccumulated))
+          continue;
+
+        uint64_t OffsetLimit = -1;
+        uint64_t Offset = OffsetAccumulated.getLimitedValue(OffsetLimit);
+        assert(Offset != OffsetLimit && "Expect Offset less than UINT64_MAX");
+
+        Worklist.push({I, Ctx.Offset + Offset});
+        continue;
+      }
+
+      llvm_unreachable("All users must be one of: load, "
+                       "bitcast, getelementptr.");
+    }
+  }
+
+  for (Load &CurLoad : Loads) {
+    Align NewLoadAlign(greatestCommonDivisor(NewArgAlign, CurLoad.Offset));
+    Align CurLoadAlign(CurLoad.Inst->getAlign());
+    CurLoad.Inst->setAlignment(std::max(NewLoadAlign, CurLoadAlign));
+  }
+}
+
 void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Function *Func = Arg->getParent();
   Instruction *FirstInst = &(Func->getEntryBlock().front());
@@ -270,6 +355,16 @@ void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
       convertToParamAS(V, ArgInParamAS);
     });
     LLVM_DEBUG(dbgs() << "No need to copy " << *Arg << "\n");
+
+    // Further optimizations require target lowering info.
+    if (!TM)
+      return;
+
+    const auto *TLI =
+        cast<NVPTXTargetLowering>(TM->getSubtargetImpl()->getTargetLowering());
+
+    adjustByValArgAlignment(Arg, ArgInParamAS, TLI);
+
     return;
   }
 
