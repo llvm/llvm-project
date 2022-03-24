@@ -1394,10 +1394,8 @@ define <4 x i32> @shl_mul_2_vars(<4 x i32> %v0, <4 x i32> %v1) {
 
 define <4 x i32> @mul_neg(<4 x i32> %x) {
 ; CHECK-LABEL: @mul_neg(
-; CHECK-NEXT:    [[M:%.*]] = mul <4 x i32> [[X:%.*]], <i32 257, i32 -3, i32 poison, i32 -9>
-; CHECK-NEXT:    [[N:%.*]] = sub <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, [[X]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[M]], <4 x i32> [[N]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <4 x i32> [[X:%.*]], <i32 257, i32 -3, i32 -1, i32 -9>
+; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %m = mul <4 x i32> %x, <i32 257, i32 -3, i32 poison, i32 -9>
   %n = sub <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>, %x
@@ -1407,10 +1405,8 @@ define <4 x i32> @mul_neg(<4 x i32> %x) {
 
 define <3 x i79> @neg_mul(<3 x i79> %x) {
 ; CHECK-LABEL: @neg_mul(
-; CHECK-NEXT:    [[N:%.*]] = sub nsw <3 x i79> <i79 0, i79 poison, i79 0>, [[X:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul nsw <3 x i79> [[X]], <i79 poison, i79 -3, i79 poison>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <3 x i79> [[N]], <3 x i79> [[M]], <3 x i32> <i32 0, i32 4, i32 2>
-; CHECK-NEXT:    ret <3 x i79> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw <3 x i79> [[X:%.*]], <i79 -1, i79 -3, i79 -1>
+; CHECK-NEXT:    ret <3 x i79> [[TMP1]]
 ;
   %n = sub nsw <3 x i79> <i79 0, i79 poison, i79 0>, %x
   %m = mul nsw <3 x i79> %x, <i79 poison, i79 -3, i79 poison>
@@ -1420,10 +1416,9 @@ define <3 x i79> @neg_mul(<3 x i79> %x) {
 
 define <4 x i32> @mul_neg_2_vars(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @mul_neg_2_vars(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <4 x i32> [[X:%.*]], <i32 42, i32 poison, i32 poison, i32 6>
-; CHECK-NEXT:    [[N:%.*]] = sub nsw <4 x i32> <i32 poison, i32 0, i32 0, i32 poison>, [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[M]], <4 x i32> [[N]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]], <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], <i32 42, i32 -1, i32 -1, i32 6>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %m = mul nuw <4 x i32> %x, <i32 42, i32 poison, i32 poison, i32 6>
   %n = sub nsw <4 x i32> <i32 poison, i32 0, i32 0, i32 poison>, %y
@@ -1433,10 +1428,9 @@ define <4 x i32> @mul_neg_2_vars(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @neg_mul_2_vars(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @neg_mul_2_vars(
-; CHECK-NEXT:    [[N:%.*]] = sub nsw <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>, [[Y:%.*]]
-; CHECK-NEXT:    [[M:%.*]] = mul nuw nsw <4 x i32> [[X:%.*]], <i32 poison, i32 42, i32 poison, i32 6>
-; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x i32> [[N]], <4 x i32> [[M]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    ret <4 x i32> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[Y:%.*]], <4 x i32> [[X:%.*]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nsw <4 x i32> [[TMP1]], <i32 -1, i32 42, i32 -1, i32 6>
+; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %n = sub nsw <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>, %y
   %m = mul nuw nsw <4 x i32> %x, <i32 poison, i32 42, i32 poison, i32 6>
