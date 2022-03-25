@@ -840,8 +840,8 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 
     uint8_t currentOpcode;
 
-    for (currentOpcode = opcodeToSet; currentOpcode < opcodeToSet + Count;
-         ++currentOpcode)
+    for (currentOpcode = opcodeToSet;
+         currentOpcode < (uint8_t)(opcodeToSet + Count); ++currentOpcode)
       tables.setTableFields(*opcodeType, insnContext(), currentOpcode, *filter,
                             UID, Is32Bit, OpPrefix == 0,
                             IgnoresVEX_L || EncodeRC,
