@@ -353,3 +353,20 @@ exit.2:
   %c.3 = icmp ugt i16 %a, 0
   ret i1 %c.3
 }
+
+declare void @llvm.assume(i1)
+
+define i1 @wrapping_offset_sum(i64 %x) {
+; CHECK-LABEL: @wrapping_offset_sum(
+; CHECK-NEXT:    [[NON_ZERO:%.*]] = icmp ugt i64 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
+; CHECK-NEXT:    [[ADD:%.*]] = sub nuw i64 [[X]], 9223372036854775802
+; CHECK-NEXT:    [[ULT:%.*]] = icmp ugt i64 200, [[ADD]]
+; CHECK-NEXT:    ret i1 [[ULT]]
+;
+  %non.zero = icmp ugt i64 %x, 0
+  call void @llvm.assume(i1 %non.zero)
+  %add = sub nuw i64 %x, 9223372036854775802
+  %ult = icmp ugt i64 200, %add
+  ret i1 %ult
+}

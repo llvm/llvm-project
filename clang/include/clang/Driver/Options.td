@@ -3448,6 +3448,7 @@ def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
   Flags<[CC1Option]>, Group<m_Group>, Values<"none,all,non-leaf">,
   HelpText<"Select return address signing scope">;
 def mbranch_protection_EQ : Joined<["-"], "mbranch-protection=">,
+  Group<m_Group>,
   HelpText<"Enforce targets of indirect branches and function returns">;
 
 def mharden_sls_EQ : Joined<["-"], "mharden-sls=">,
@@ -4206,7 +4207,7 @@ def _serialize_diags : Separate<["-", "--"], "serialize-diagnostics">, Flags<[No
   HelpText<"Serialize compiler diagnostics to a file">;
 // We give --version different semantics from -version.
 def _version : Flag<["--"], "version">,
-  Flags<[CoreOption, CC1Option, FC1Option, FlangOption]>,
+  Flags<[CoreOption, FC1Option, FlangOption]>,
   HelpText<"Print version information">;
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;
@@ -5643,6 +5644,8 @@ def emit_module_interface : Flag<["-"], "emit-module-interface">,
   HelpText<"Generate pre-compiled module file from a C++ module interface">;
 def emit_header_module : Flag<["-"], "emit-header-module">,
   HelpText<"Generate pre-compiled module file from a set of header files">;
+def emit_header_unit : Flag<["-"], "emit-header-unit">,
+  HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,
   HelpText<"Generate pre-compiled header file">;
 def emit_llvm_bc : Flag<["-"], "emit-llvm-bc">,

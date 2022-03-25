@@ -1063,4 +1063,58 @@ exit:
   ret i32 %r
 }
 
+; https://github.com/llvm/llvm-project/issues/53861
+define i32 @firewall(i8* %data) {
+; CHECK-LABEL: @firewall(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I:%.*]] = load i8, i8* [[DATA:%.*]], align 1
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[DATA]], i64 64
+; CHECK-NEXT:    [[I1:%.*]] = bitcast i8* [[ADD_PTR]] to i16*
+; CHECK-NEXT:    [[I2:%.*]] = load i16, i16* [[I1]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 17
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i16 [[I2]], 1
+; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP3]], i1 false
+; CHECK-NEXT:    [[CMP10:%.*]] = icmp eq i16 [[I2]], 2
+; CHECK-NEXT:    [[OR_COND33:%.*]] = select i1 [[CMP]], i1 [[CMP10]], i1 false
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[OR_COND]], i1 true, i1 [[OR_COND33]]
+; CHECK-NEXT:    [[CMP19:%.*]] = icmp eq i16 [[I2]], 3
+; CHECK-NEXT:    [[OR_COND34:%.*]] = select i1 [[CMP]], i1 [[CMP19]], i1 false
+; CHECK-NEXT:    [[OR_COND2:%.*]] = select i1 [[OR_COND1]], i1 true, i1 [[OR_COND34]]
+; CHECK-NEXT:    [[CMP28:%.*]] = icmp eq i16 [[I2]], 4
+; CHECK-NEXT:    [[OR_COND35:%.*]] = select i1 [[CMP]], i1 [[CMP28]], i1 false
+; CHECK-NEXT:    [[DOT:%.*]] = zext i1 [[OR_COND35]] to i32
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND2]], i32 1, i32 [[DOT]]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+entry:
+  %i = load i8, i8* %data, align 1
+  %add.ptr = getelementptr inbounds i8, i8* %data, i64 64
+  %i1 = bitcast i8* %add.ptr to i16*
+  %i2 = load i16, i16* %i1, align 2
+  %cmp = icmp eq i8 %i, 17
+  %cmp3 = icmp eq i16 %i2, 1
+  %or.cond = select i1 %cmp, i1 %cmp3, i1 false
+  br i1 %or.cond, label %cleanup, label %if.end
+
+if.end:
+  %cmp10 = icmp eq i16 %i2, 2
+  %or.cond33 = select i1 %cmp, i1 %cmp10, i1 false
+  br i1 %or.cond33, label %cleanup, label %if.end13
+
+if.end13:
+  %cmp19 = icmp eq i16 %i2, 3
+  %or.cond34 = select i1 %cmp, i1 %cmp19, i1 false
+  br i1 %or.cond34, label %cleanup, label %if.end22
+
+if.end22:
+  %cmp28 = icmp eq i16 %i2, 4
+  %or.cond35 = select i1 %cmp, i1 %cmp28, i1 false
+  %. = zext i1 %or.cond35 to i32
+  br label %cleanup
+
+cleanup:
+  %retval.0 = phi i32 [ 1, %entry ], [ 1, %if.end ], [ 1, %if.end13 ], [ %., %if.end22 ]
+  ret i32 %retval.0
+}
+
 attributes #0 = { nounwind argmemonly speculatable }

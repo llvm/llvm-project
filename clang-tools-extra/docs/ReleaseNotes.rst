@@ -96,6 +96,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Added trace code to help narrow down any checks and the relevant source code
+  that result in crashes.
+
 New checks
 ^^^^^^^^^^
 
@@ -103,8 +106,17 @@ New checks
 
   Finds initializations of C++ shared pointers to non-array type that are initialized with an array.
 
+- New :doc:`modernize-macro-to-enum
+  <clang-tidy/checks/modernize-macro-to-enum>` check.
+
+  Replaces groups of adjacent macros with an unscoped anonymous enum.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
+
+- New alias :doc:`cppcoreguidelines-macro-to-enum
+  <clang-tidy/checks/cppcoreguidelines-macro-to-enum>` to :doc:`modernize-macro-to-enum
+  <clang-tidy/checks/modernize-macro-to-enum>` was added.
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

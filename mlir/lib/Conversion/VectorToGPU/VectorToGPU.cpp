@@ -65,7 +65,8 @@ getMemrefConstantHorizontalStride(ShapedType type) {
     return 0;
   int64_t offset = 0;
   SmallVector<int64_t, 2> strides;
-  if (failed(getStridesAndOffset(memrefType, strides, offset)))
+  if (failed(getStridesAndOffset(memrefType, strides, offset)) ||
+      strides.back() != 1)
     return llvm::None;
   int64_t stride = strides[strides.size() - 2];
   if (stride == ShapedType::kDynamicStrideOrOffset)

@@ -2468,8 +2468,9 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
     break;
   case Sema::ModuleImportState::GlobalFragment:
     // We can only have pre-processor directives in the global module
-    // fragment.  We can, however have a header unit import here.
-    if (!HeaderUnit)
+    // fragment.  We cannot import a named modules here, however we have a
+    // header unit import.
+    if (!HeaderUnit || HeaderUnit->Kind != Module::ModuleKind::ModuleHeaderUnit)
       Diag(ImportLoc, diag::err_import_in_wrong_fragment) << IsPartition << 0;
     else
       SeenError = false;

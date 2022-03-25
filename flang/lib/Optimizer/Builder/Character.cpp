@@ -94,15 +94,6 @@ LLVM_ATTRIBUTE_UNUSED static bool needToMaterialize(mlir::Value str) {
   return str.getType().isa<fir::SequenceType>() || fir::isa_char(str.getType());
 }
 
-/// Unwrap integer constant from mlir::Value.
-static llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value) {
-  if (auto *definingOp = value.getDefiningOp())
-    if (auto cst = mlir::dyn_cast<mlir::arith::ConstantOp>(definingOp))
-      if (auto intAttr = cst.getValue().dyn_cast<mlir::IntegerAttr>())
-        return intAttr.getInt();
-  return {};
-}
-
 /// This is called only if `str` does not reside in memory. Such a bare string
 /// value will be converted into a memory-based temporary and an extended
 /// boxchar value returned.

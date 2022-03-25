@@ -1447,6 +1447,64 @@ public:
   }
 };
 
+/// Function signature to control reduction splitting. This returns a pair
+/// containing a ratio and a dimension index. The ratio is used to split the
+/// reduction dimension. The dimension index is used to control where the extra
+/// dimension is added to the intermediate tensor shape. If the ratio value is
+/// less or equal to 1 then nothing will be done.
+using ControlSplitReductionFn =
+    std::function<std::pair<int64_t, unsigned>(LinalgOp op)>;
+
+/// Patterns to apply `splitReduction` below.
+void populateSplitReductionPattern(
+    RewritePatternSet &patterns,
+    ControlSplitReductionFn controlSplitReductionFn,
+    LinalgTransformationFilter f = LinalgTransformationFilter());
+
+/// Apply transformation to split the single linalg op reduction into a parallel
+/// and reduction dimension. Then create a new linalg.generic op doing the rest
+/// of the reduction. Return the new linalg op with an extra parallel dimension
+/// or failure if the transformation didn't happen.
+/// Example:
+/// ```
+///  %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
+///                                        affine_map<(d0) -> ()>],
+///       iterator_types = ["reduction"]}
+///  ins(%in : tensor<32xf32>)
+///  outs(%out : tensor<f32>) {
+///  ^bb0(%arg1: f32, %arg2: f32):
+///    %y = arith.addf %arg1, %arg2 : f32
+///    linalg.yield %y : f32
+///  } -> tensor<f32>
+/// ```
+/// To:
+/// ```
+///  %cst = arith.constant 0.000000e+00 : f32
+///  %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into tensor<4x8xf32>
+///  %1 = linalg.init_tensor [4] : tensor<4xf32>
+///  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
+///  %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+///                                        affine_map<(d0, d1) -> (d0)>],
+///    iterator_types = ["parallel", "reduction"]}
+///    ins(%0 : tensor<4x8xf32>) outs(%2 : tensor<4xf32>) {
+///    ^bb0(%arg3: f32, %arg5: f32):
+///    %5 = arith.addf %arg3, %arg4 : f32
+///    linalg.yield %5 : f32
+///  } -> tensor<4xf32>
+/// %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
+///                                       affine_map<(d0) -> ()>],
+///   iterator_types = ["reduction"]}
+///   ins(%3 : tensor<4xf32>) outs(%out : tensor<f32>) {
+///   ^bb0(%arg3: f32, %arg4: f32):
+///   %5 = arith.addf %arg3, %arg4 : f32
+///   linalg.yield %5 : f32
+/// } -> tensor<f32>
+/// ```
+FailureOr<LinalgOp>
+splitReduction(PatternRewriter &b, LinalgOp op,
+               ControlSplitReductionFn controlSplitReductionFn,
+               LinalgTransformationFilter f);
+
 } // namespace linalg
 } // namespace mlir
 

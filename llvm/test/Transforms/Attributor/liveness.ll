@@ -2551,9 +2551,9 @@ define i32 @h(i32 %i) {
 @p = global i8 0
 
 define void @bad_gep() {
-; NOT_CGSCC_NPM: Function Attrs: nofree nosync nounwind readnone willreturn
+; NOT_CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; NOT_CGSCC_NPM-LABEL: define {{[^@]+}}@bad_gep
-; NOT_CGSCC_NPM-SAME: () #[[ATTR9]] {
+; NOT_CGSCC_NPM-SAME: () #[[ATTR11]] {
 ; NOT_CGSCC_NPM-NEXT:  entry:
 ; NOT_CGSCC_NPM-NEXT:    [[N:%.*]] = alloca i8, align 1
 ; NOT_CGSCC_NPM-NEXT:    [[M:%.*]] = alloca i8, align 1
@@ -2569,9 +2569,9 @@ define void @bad_gep() {
 ; NOT_CGSCC_NPM-NEXT:    call void @llvm.lifetime.end.p0i8(i64 noundef 1, i8* noalias nocapture nofree noundef nonnull dereferenceable(1) [[N]]) #[[ATTR14]]
 ; NOT_CGSCC_NPM-NEXT:    ret void
 ;
-; IS__CGSCC____: Function Attrs: nofree nosync nounwind readnone willreturn
+; IS__CGSCC____: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS__CGSCC____-LABEL: define {{[^@]+}}@bad_gep
-; IS__CGSCC____-SAME: () #[[ATTR11]] {
+; IS__CGSCC____-SAME: () #[[ATTR6]] {
 ; IS__CGSCC____-NEXT:  entry:
 ; IS__CGSCC____-NEXT:    [[N:%.*]] = alloca i8, align 1
 ; IS__CGSCC____-NEXT:    [[M:%.*]] = alloca i8, align 1
@@ -2662,7 +2662,7 @@ declare void @llvm.lifetime.end.p0i8(i64 %0, i8* %1)
 ; NOT_CGSCC_NPM: attributes #[[ATTR9]] = { nofree nosync nounwind readnone willreturn }
 ; NOT_CGSCC_NPM: attributes #[[ATTR10]] = { nofree nosync nounwind willreturn }
 ; NOT_CGSCC_NPM: attributes #[[ATTR11]] = { nofree norecurse nosync nounwind readnone willreturn }
-; NOT_CGSCC_NPM: attributes #[[ATTR12:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; NOT_CGSCC_NPM: attributes #[[ATTR12:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; NOT_CGSCC_NPM: attributes #[[ATTR13]] = { nounwind willreturn }
 ; NOT_CGSCC_NPM: attributes #[[ATTR14]] = { willreturn }
 ;.
@@ -2680,7 +2680,7 @@ declare void @llvm.lifetime.end.p0i8(i64 %0, i8* %1)
 ; IS__CGSCC____: attributes #[[ATTR11]] = { nofree nosync nounwind readnone willreturn }
 ; IS__CGSCC____: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR13]] = { nounwind readonly }
-; IS__CGSCC____: attributes #[[ATTR14:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
+; IS__CGSCC____: attributes #[[ATTR14:[0-9]+]] = { argmemonly nocallback nofree nosync nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR15]] = { nounwind willreturn }
 ; IS__CGSCC____: attributes #[[ATTR16]] = { willreturn }
 ;.

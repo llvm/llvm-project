@@ -153,9 +153,9 @@ Optional<Object> serializeAvailability(const AvailabilityInfo &Avail) {
 
 /// Get the short language name string for interface language references.
 StringRef getLanguageName(const LangOptions &LangOpts) {
-  auto Language =
+  auto LanguageKind =
       LangStandard::getLangStandardForKind(LangOpts.LangStd).getLanguage();
-  switch (Language) {
+  switch (LanguageKind) {
   case Language::C:
     return "c";
   case Language::ObjC:

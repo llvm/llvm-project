@@ -305,5 +305,16 @@ TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_16x16x16bf16_1k, "V4fV4sV4sV4fIiIiIi", 
 TARGET_BUILTIN(__builtin_amdgcn_mfma_f64_16x16x4f64, "V4dddV4dIiIiIi", "nc", "mai-insts")
 TARGET_BUILTIN(__builtin_amdgcn_mfma_f64_4x4x4f64, "ddddIiIiIi", "nc", "mai-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_mfma_i32_16x16x32_i8, "V4iWiWiV4iIiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_mfma_i32_32x32x16_i8, "V16iWiWiV16iIiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_16x16x8_xf32, "V4fV2fV2fV4fIiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_mfma_f32_32x32x4_xf32, "V16fV2fV2fV16fIiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_16x16x32_f16, "V4fV4hV8hV4fiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_32x32x16_f16, "V16fV4hV8hV16fiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_16x16x32_bf16, "V4fV4sV8sV4fiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_f32_32x32x16_bf16, "V16fV4sV8sV16fiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_i32_16x16x64_i8, "V4iV2iV4iV4iiIiIi", "nc", "mai-insts")
+TARGET_BUILTIN(__builtin_amdgcn_smfmac_i32_32x32x32_i8, "V16iV2iV4iV16iiIiIi", "nc", "mai-insts")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

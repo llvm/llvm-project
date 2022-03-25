@@ -56,17 +56,15 @@ protected:
       InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
     else
       InverseStyle.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
-    EXPECT_EQ(ExpectedCode.str(), separateDefinitionBlocks(ExpectedCode, Style))
+    EXPECT_EQ(ExpectedCode, separateDefinitionBlocks(ExpectedCode, Style))
         << "Expected code is not stable";
-    std::string InverseResult =
-        separateDefinitionBlocks(ExpectedCode, InverseStyle);
-    EXPECT_NE(ExpectedCode.str(), InverseResult)
+    EXPECT_NE(ExpectedCode,
+              separateDefinitionBlocks(ExpectedCode, InverseStyle))
         << "Inverse formatting makes no difference";
     std::string CodeToFormat =
         HasOriginalCode ? Code.str() : removeEmptyLines(Code);
     std::string Result = separateDefinitionBlocks(CodeToFormat, Style);
-    EXPECT_EQ(ExpectedCode.str(), Result) << "Test failed. Formatted:\n"
-                                          << Result;
+    EXPECT_EQ(ExpectedCode, Result) << "Test failed. Formatted:\n" << Result;
   }
 
   static std::string removeEmptyLines(llvm::StringRef Code) {

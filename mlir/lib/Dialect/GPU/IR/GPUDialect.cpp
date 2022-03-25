@@ -1068,6 +1068,17 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
 // GPU_SubgroupMmaLoadMatrixOp
 //===----------------------------------------------------------------------===//
 
+/// Return true if the last dimension of the MemRefType has unit stride. Also
+/// return true for memrefs with no strides.
+static bool isLastMemrefDimUnitStride(MemRefType type) {
+  int64_t offset;
+  SmallVector<int64_t> strides;
+  if (failed(getStridesAndOffset(type, strides, offset))) {
+    return false;
+  }
+  return strides.back() == 1;
+}
+
 LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto srcType = srcMemref().getType();
   auto resType = res().getType();
@@ -1076,8 +1087,9 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto srcMemrefType = srcType.cast<MemRefType>();
   auto srcMemSpace = srcMemrefType.getMemorySpaceAsInt();
 
-  if (!srcMemrefType.getLayout().isIdentity())
-    return emitError("expected identity layout map for source memref");
+  if (!isLastMemrefDimUnitStride(srcMemrefType))
+    return emitError(
+        "expected source memref most minor dim must have unit stride");
 
   if (srcMemSpace != kGenericMemorySpace && srcMemSpace != kSharedMemorySpace &&
       srcMemSpace != kGlobalMemorySpace)
@@ -1102,8 +1114,10 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
   auto srcMatrixType = srcType.cast<gpu::MMAMatrixType>();
   auto dstMemrefType = dstType.cast<MemRefType>();
   auto dstMemSpace = dstMemrefType.getMemorySpaceAsInt();
-  if (!dstMemrefType.getLayout().isIdentity())
-    return emitError("expected identity layout map for destination memref");
+
+  if (!isLastMemrefDimUnitStride(dstMemrefType))
+    return emitError(
+        "expected destination memref most minor dim must have unit stride");
 
   if (dstMemSpace != kGenericMemorySpace && dstMemSpace != kSharedMemorySpace &&
       dstMemSpace != kGlobalMemorySpace)
@@ -1231,15 +1245,6 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 // GPU_DeviceAsyncCopyOp
 //===----------------------------------------------------------------------===//
-
-/// Return true if the last dimension of the MemRefType has unit stride. Also
-/// return true for memrefs with no strides.
-static bool isLastMemrefDimUnitStride(MemRefType type) {
-  int64_t offset;
-  SmallVector<int64_t> strides;
-  auto successStrides = getStridesAndOffset(type, strides, offset);
-  return succeeded(successStrides) && (strides.empty() || strides.back() == 1);
-}
 
 LogicalResult DeviceAsyncCopyOp::verify() {
   auto srcMemref = src().getType().cast<MemRefType>();

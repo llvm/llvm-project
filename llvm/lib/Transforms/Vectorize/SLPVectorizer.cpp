@@ -2764,6 +2764,7 @@ private:
       ScheduleEnd = nullptr;
       FirstLoadStoreInRegion = nullptr;
       LastLoadStoreInRegion = nullptr;
+      RegionHasStackSave = false;
 
       // Reduce the maximum schedule region size by the size of the
       // previous scheduling run.
@@ -2876,7 +2877,8 @@ private:
         }
         // Handle the memory dependencies.
         for (ScheduleData *MemoryDepSD : BundleMember->MemoryDependencies) {
-          if (MemoryDepSD->incrementUnscheduledDeps(-1) == 0) {
+          if (MemoryDepSD->hasValidDependencies() &&
+              MemoryDepSD->incrementUnscheduledDeps(-1) == 0) {
             // There are no more unscheduled dependencies after decrementing,
             // so we can put the dependent instruction into the ready list.
             ScheduleData *DepBundle = MemoryDepSD->FirstInBundle;
@@ -2948,7 +2950,8 @@ private:
     void initialFillReadyList(ReadyListType &ReadyList) {
       for (auto *I = ScheduleStart; I != ScheduleEnd; I = I->getNextNode()) {
         doForAllOpcodes(I, [&](ScheduleData *SD) {
-          if (SD->isSchedulingEntity() && SD->isReady()) {
+          if (SD->isSchedulingEntity() && SD->hasValidDependencies() &&
+              SD->isReady()) {
             ReadyList.insert(SD);
             LLVM_DEBUG(dbgs()
                        << "SLP:    initially in ready list: " << *SD << "\n");
@@ -3031,6 +3034,11 @@ private:
     /// The last memory accessing instruction in the scheduling region
     /// (can be null).
     ScheduleData *LastLoadStoreInRegion = nullptr;
+
+    /// Is there an llvm.stacksave or llvm.stackrestore in the scheduling
+    /// region?  Used to optimize the dependence calculation for the
+    /// common case where there isn't.
+    bool RegionHasStackSave = false;
 
     /// The current size of the scheduling region.
     int ScheduleRegionSize = 0;
@@ -8016,6 +8024,10 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
       }
       CurrentLoadStore = SD;
     }
+
+    if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
+        match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+      RegionHasStackSave = true;
   }
   if (NextLoadStore) {
     if (CurrentLoadStore)
@@ -8069,6 +8081,18 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       }
 
+      auto makeControlDependent = [&](Instruction *I) {
+        auto *DepDest = getScheduleData(I);
+        assert(DepDest && "must be in schedule window");
+        DepDest->ControlDependencies.push_back(BundleMember);
+        BundleMember->Dependencies++;
+        ScheduleData *DestBundle = DepDest->FirstInBundle;
+        if (!DestBundle->IsScheduled)
+          BundleMember->incrementUnscheduledDeps(1);
+        if (!DestBundle->hasValidDependencies())
+          WorkList.push_back(DestBundle);
+      };
+
       // Any instruction which isn't safe to speculate at the begining of the
       // block is control dependend on any early exit or non-willreturn call
       // which proceeds it.
@@ -8079,15 +8103,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
             continue;
 
           // Add the dependency
-          auto *DepDest = getScheduleData(I);
-          assert(DepDest && "must be in schedule window");
-          DepDest->ControlDependencies.push_back(BundleMember);
-          BundleMember->Dependencies++;
-          ScheduleData *DestBundle = DepDest->FirstInBundle;
-          if (!DestBundle->IsScheduled)
-            BundleMember->incrementUnscheduledDeps(1);
-          if (!DestBundle->hasValidDependencies())
-            WorkList.push_back(DestBundle);
+          makeControlDependent(I);
 
           if (!isGuaranteedToTransferExecutionToSuccessor(I))
             // Everything past here must be control dependent on I.
@@ -8095,32 +8111,44 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       }
 
-      // If we have an inalloc alloca instruction, it needs to be scheduled
-      // after any preceeding stacksave.
-      if (match(BundleMember->Inst, m_Intrinsic<Intrinsic::stacksave>())) {
-        for (Instruction *I = BundleMember->Inst->getNextNode();
-             I != ScheduleEnd; I = I->getNextNode()) {
-          if (match(I, m_Intrinsic<Intrinsic::stacksave>()))
-            // Any allocas past here must be control dependent on I, and I
-            // must be memory dependend on BundleMember->Inst.
+      if (RegionHasStackSave) {
+        // If we have an inalloc alloca instruction, it needs to be scheduled
+        // after any preceeding stacksave.  We also need to prevent any alloca
+        // from reordering above a preceeding stackrestore.
+        if (match(BundleMember->Inst, m_Intrinsic<Intrinsic::stacksave>()) ||
+            match(BundleMember->Inst, m_Intrinsic<Intrinsic::stackrestore>())) {
+          for (Instruction *I = BundleMember->Inst->getNextNode();
+               I != ScheduleEnd; I = I->getNextNode()) {
+            if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
+                match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+              // Any allocas past here must be control dependent on I, and I
+              // must be memory dependend on BundleMember->Inst.
+              break;
+
+            if (!isa<AllocaInst>(I))
+              continue;
+
+            // Add the dependency
+            makeControlDependent(I);
+          }
+        }
+
+        // In addition to the cases handle just above, we need to prevent
+        // allocas from moving below a stacksave.  The stackrestore case
+        // is currently thought to be conservatism.
+        if (isa<AllocaInst>(BundleMember->Inst)) {
+          for (Instruction *I = BundleMember->Inst->getNextNode();
+               I != ScheduleEnd; I = I->getNextNode()) {
+            if (!match(I, m_Intrinsic<Intrinsic::stacksave>()) &&
+                !match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+              continue;
+
+            // Add the dependency
+            makeControlDependent(I);
             break;
-
-          if (!isa<AllocaInst>(I))
-            continue;
-
-          // Add the dependency
-          auto *DepDest = getScheduleData(I);
-          assert(DepDest && "must be in schedule window");
-          DepDest->ControlDependencies.push_back(BundleMember);
-          BundleMember->Dependencies++;
-          ScheduleData *DestBundle = DepDest->FirstInBundle;
-          if (!DestBundle->IsScheduled)
-            BundleMember->incrementUnscheduledDeps(1);
-          if (!DestBundle->hasValidDependencies())
-            WorkList.push_back(DestBundle);
+          }
         }
       }
-
 
       // Handle the memory dependencies (if any).
       ScheduleData *DepDest = BundleMember->NextLoadStore;
@@ -8211,6 +8239,11 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
 
   LLVM_DEBUG(dbgs() << "SLP: schedule block " << BS->BB->getName() << "\n");
 
+  // A key point - if we got here, pre-scheduling was able to find a valid
+  // scheduling of the sub-graph of the scheduling window which consists
+  // of all vector bundles and their transitive users.  As such, we do not
+  // need to reschedule anything *outside of* that subgraph.
+
   BS->resetSchedule();
 
   // For the real scheduling we use a more sophisticated ready-list: it is
@@ -8225,13 +8258,12 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
   };
   std::set<ScheduleData *, ScheduleDataCompare> ReadyInsts;
 
-  // Ensure that all dependency data is updated and fill the ready-list with
-  // initial instructions.
+  // Ensure that all dependency data is updated (for nodes in the sub-graph)
+  // and fill the ready-list with initial instructions.
   int Idx = 0;
-  int NumToSchedule = 0;
   for (auto *I = BS->ScheduleStart; I != BS->ScheduleEnd;
        I = I->getNextNode()) {
-    BS->doForAllOpcodes(I, [this, &Idx, &NumToSchedule, BS](ScheduleData *SD) {
+    BS->doForAllOpcodes(I, [this, &Idx, BS](ScheduleData *SD) {
       TreeEntry *SDTE = getTreeEntry(SD->Inst);
       (void)SDTE;
       assert((isVectorLikeInstWithConstOps(SD->Inst) ||
@@ -8239,10 +8271,9 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
                   (SDTE && !doesNotNeedToSchedule(SDTE->Scalars))) &&
              "scheduler and vectorizer bundle mismatch");
       SD->FirstInBundle->SchedulingPriority = Idx++;
-      if (SD->isSchedulingEntity()) {
+
+      if (SD->isSchedulingEntity() && SD->isPartOfBundle())
         BS->calculateDependencies(SD, false, this);
-        NumToSchedule++;
-      }
     });
   }
   BS->initialFillReadyList(ReadyInsts);
@@ -8265,9 +8296,7 @@ void BoUpSLP::scheduleBlock(BlockScheduling *BS) {
     }
 
     BS->schedule(picked, ReadyInsts);
-    NumToSchedule--;
   }
-  assert(NumToSchedule == 0 && "could not schedule all instructions");
 
   // Check that we didn't break any of our invariants.
 #ifdef EXPENSIVE_CHECKS

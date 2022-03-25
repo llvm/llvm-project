@@ -172,7 +172,10 @@ subroutine foo_char_array_box(x, n)
   ! CHECK: %[[VAL_3:.*]] = fir.convert %[[VAL_2]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
   ! CHECK: %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
   ! CHECK: %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
-  ! CHECK: %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
+  ! CHECK: %[[VAL_6A:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
+  ! CHECK: %[[C0:.*]] = arith.constant 0 : index 
+  ! CHECK: %[[CMP:.*]] = arith.cmpi sgt, %[[VAL_6A]], %[[C0]] : index 
+  ! CHECK: %[[VAL_6:.*]] = arith.select %[[CMP]], %[[VAL_6A]], %[[C0]] : index 
   ! CHECK: %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
   ! CHECK: %[[VAL_8:.*]] = fir.embox %[[VAL_3]](%[[VAL_7]]) : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
   ! CHECK: %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> !fir.box<!fir.array<?x!fir.char<1,?>>>

@@ -2001,7 +2001,17 @@ bool SampleProfileLoader::doInitialization(Module &M,
         /*EmitRemarks=*/false);
   }
 
-  // Apply tweaks if context-sensitive profile is available.
+  // Apply tweaks if context-sensitive or probe-based profile is available.
+  if (Reader->profileIsCSFlat() || Reader->profileIsCSNested() ||
+      Reader->profileIsProbeBased()) {
+    if (!UseIterativeBFIInference.getNumOccurrences())
+      UseIterativeBFIInference = true;
+    if (!SampleProfileUseProfi.getNumOccurrences())
+      SampleProfileUseProfi = true;
+    if (!EnableExtTspBlockPlacement.getNumOccurrences())
+      EnableExtTspBlockPlacement = true;
+  }
+
   if (Reader->profileIsCSFlat() || Reader->profileIsCSNested()) {
     ProfileIsCSFlat = Reader->profileIsCSFlat();
     // Enable priority-base inliner and size inline by default for CSSPGO.
@@ -2017,17 +2027,6 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // For CSSPGO, we also allow recursive inline to best use context profile.
     if (!AllowRecursiveInline.getNumOccurrences())
       AllowRecursiveInline = true;
-
-    // Enable iterative-BFI by default for CSSPGO.
-    if (!UseIterativeBFIInference.getNumOccurrences())
-      UseIterativeBFIInference = true;
-    // Enable Profi by default for CSSPGO.
-    if (!SampleProfileUseProfi.getNumOccurrences())
-      SampleProfileUseProfi = true;
-
-    // Enable EXT-TSP block layout for CSSPGO.
-    if (!EnableExtTspBlockPlacement.getNumOccurrences())
-      EnableExtTspBlockPlacement = true;
 
     if (FunctionSamples::ProfileIsCSFlat) {
       // Tracker for profiles under different context

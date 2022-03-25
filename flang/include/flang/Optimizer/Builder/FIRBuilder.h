@@ -539,6 +539,9 @@ mlir::Value genLenOfCharacter(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
                             mlir::Type type);
 
+/// Unwrap integer constant from an mlir::Value.
+llvm::Optional<std::int64_t> getIntIfConstant(mlir::Value value);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

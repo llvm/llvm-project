@@ -166,7 +166,7 @@ BENIGN_LANGOPT(HeinousExtensions , 1, 0, "extensions that we really don't like a
 LANGOPT(Modules           , 1, 0, "modules semantics")
 COMPATIBLE_LANGOPT(ModulesTS  , 1, 0, "C++ Modules TS syntax")
 COMPATIBLE_LANGOPT(CPlusPlusModules, 1, 0, "C++ modules syntax")
-BENIGN_ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 2, CMK_None,
+BENIGN_ENUM_LANGOPT(CompilingModule, CompilingModuleKind, 3, CMK_None,
                     "compiling a module interface")
 BENIGN_LANGOPT(CompilingPCH, 1, 0, "building a pch")
 BENIGN_LANGOPT(BuildingPCHWithObjectFile, 1, 0, "building a pch which has a corresponding object file")

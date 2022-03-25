@@ -68,7 +68,7 @@ unsigned PresburgerSpace::insertId(IdKind kind, unsigned pos, unsigned num) {
   else if (kind == IdKind::Symbol)
     numSymbols += num;
   else
-    llvm_unreachable("PresburgerSpace does not support local identifiers!");
+    numLocals += num;
 
   return absolutePos;
 }
@@ -88,7 +88,7 @@ void PresburgerSpace::removeIdRange(IdKind kind, unsigned idStart,
   else if (kind == IdKind::Symbol)
     numSymbols -= numIdsEliminated;
   else
-    llvm_unreachable("PresburgerSpace does not support local identifiers!");
+    numLocals -= numIdsEliminated;
 }
 
 void PresburgerSpace::truncateIdKind(IdKind kind, unsigned num) {
@@ -97,37 +97,14 @@ void PresburgerSpace::truncateIdKind(IdKind kind, unsigned num) {
   removeIdRange(kind, num, curNum);
 }
 
-unsigned PresburgerLocalSpace::insertId(IdKind kind, unsigned pos,
-                                        unsigned num) {
-  if (kind == IdKind::Local) {
-    numLocals += num;
-    return getIdKindOffset(IdKind::Local) + pos;
-  }
-  return PresburgerSpace::insertId(kind, pos, num);
-}
-
-void PresburgerLocalSpace::removeIdRange(IdKind kind, unsigned idStart,
-                                         unsigned idLimit) {
-  assert(idLimit <= getNumIdKind(kind) && "invalid id limit");
-
-  if (idStart >= idLimit)
-    return;
-
-  if (kind == IdKind::Local)
-    numLocals -= idLimit - idStart;
-  else
-    PresburgerSpace::removeIdRange(kind, idStart, idLimit);
-}
-
-bool PresburgerSpace::isEqual(const PresburgerSpace &other) const {
+bool PresburgerSpace::isSpaceCompatible(const PresburgerSpace &other) const {
   return getNumDomainIds() == other.getNumDomainIds() &&
          getNumRangeIds() == other.getNumRangeIds() &&
          getNumSymbolIds() == other.getNumSymbolIds();
 }
 
-bool PresburgerLocalSpace::isEqual(const PresburgerLocalSpace &other) const {
-  return PresburgerSpace::isEqual(other) &&
-         getNumLocalIds() == other.getNumLocalIds();
+bool PresburgerSpace::isSpaceEqual(const PresburgerSpace &other) const {
+  return isSpaceCompatible(other) && getNumLocalIds() == other.getNumLocalIds();
 }
 
 void PresburgerSpace::setDimSymbolSeparation(unsigned newSymbolCount) {
@@ -140,14 +117,8 @@ void PresburgerSpace::setDimSymbolSeparation(unsigned newSymbolCount) {
 void PresburgerSpace::print(llvm::raw_ostream &os) const {
   os << "Domain: " << getNumDomainIds() << ", "
      << "Range: " << getNumRangeIds() << ", "
-     << "Symbols: " << getNumSymbolIds() << "\n";
+     << "Symbols: " << getNumSymbolIds() << ", "
+     << "Locals: " << getNumLocalIds() << "\n";
 }
 
 void PresburgerSpace::dump() const { print(llvm::errs()); }
-
-void PresburgerLocalSpace::print(llvm::raw_ostream &os) const {
-  PresburgerSpace::print(os);
-  os << "Locals: " << getNumLocalIds() << "\n";
-}
-
-void PresburgerLocalSpace::dump() const { print(llvm::errs()); }

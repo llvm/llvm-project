@@ -1835,7 +1835,7 @@ static std::optional<parser::CharBlock> GetPassName(
 static int GetPassIndex(const Symbol &proc) {
   CHECK(!proc.attrs().test(semantics::Attr::NOPASS));
   std::optional<parser::CharBlock> passName{GetPassName(proc)};
-  const auto *interface{semantics::FindInterface(proc)};
+  const auto *interface { semantics::FindInterface(proc) };
   if (!passName || !interface) {
     return 0; // first argument is passed-object
   }
@@ -3215,26 +3215,28 @@ void ArgumentAnalyzer::Analyze(
   // be detected and represented (they're not expressions).
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
-  std::visit(common::visitors{
-                 [&](const common::Indirection<parser::Expr> &x) {
-                   actual = AnalyzeExpr(x.value());
-                   SetArgSourceLocation(actual, x.value().source);
-                 },
-                 [&](const parser::AltReturnSpec &label) {
-                   if (!isSubroutine) {
-                     context_.Say(
-                         "alternate return specification may not appear on"
-                         " function reference"_err_en_US);
-                   }
-                   actual = ActualArgument(label.v);
-                 },
-                 [&](const parser::ActualArg::PercentRef &) {
-                   context_.Say("TODO: %REF() argument"_err_en_US);
-                 },
-                 [&](const parser::ActualArg::PercentVal &) {
-                   context_.Say("TODO: %VAL() argument"_err_en_US);
-                 },
-             },
+  std::visit(
+      common::visitors{
+          [&](const common::Indirection<parser::Expr> &x) {
+            actual = AnalyzeExpr(x.value());
+            SetArgSourceLocation(actual, x.value().source);
+          },
+          [&](const parser::AltReturnSpec &label) {
+            if (!isSubroutine) {
+              context_.Say("alternate return specification may not appear on"
+                           " function reference"_err_en_US);
+            }
+            actual = ActualArgument(label.v);
+          },
+          [&](const parser::ActualArg::PercentRef &) {
+            context_.Say(
+                "not yet implemented: %REF() intrinsic for arguments"_err_en_US);
+          },
+          [&](const parser::ActualArg::PercentVal &) {
+            context_.Say(
+                "not yet implemetned: %VAL() intrinsic for arguments"_err_en_US);
+          },
+      },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
     if (const auto &argKW{std::get<std::optional<parser::Keyword>>(arg.t)}) {
@@ -3593,7 +3595,8 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
 void ArgumentAnalyzer::AddAssignmentConversion(
     const DynamicType &lhsType, const DynamicType &rhsType) {
   if (lhsType.category() == rhsType.category() &&
-      lhsType.kind() == rhsType.kind()) {
+      (lhsType.category() == TypeCategory::Derived ||
+          lhsType.kind() == rhsType.kind())) {
     // no conversion necessary
   } else if (auto rhsExpr{evaluate::ConvertToType(lhsType, MoveExpr(1))}) {
     std::optional<parser::CharBlock> source;
@@ -3682,7 +3685,10 @@ std::string ArgumentAnalyzer::TypeAsFortran(std::size_t i) {
   if (i >= actuals_.size() || !actuals_[i]) {
     return "missing argument";
   } else if (std::optional<DynamicType> type{GetType(i)}) {
-    return type->category() == TypeCategory::Derived
+    return type->IsAssumedType()         ? "TYPE(*)"s
+        : type->IsUnlimitedPolymorphic() ? "CLASS(*)"s
+        : type->IsPolymorphic()          ? "CLASS("s + type->AsFortran() + ')'
+        : type->category() == TypeCategory::Derived
         ? "TYPE("s + type->AsFortran() + ')'
         : type->category() == TypeCategory::Character
         ? "CHARACTER(KIND="s + std::to_string(type->kind()) + ')'
