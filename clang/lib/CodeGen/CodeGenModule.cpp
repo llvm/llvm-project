@@ -3454,6 +3454,10 @@ void CodeGenModule::EmitTargetClonesResolver(GlobalDecl GD) {
     Options.emplace_back(cast<llvm::Function>(Func), Architecture, Feature);
   }
 
+  if (supportsCOMDAT())
+    ResolverFunc->setComdat(
+        getModule().getOrInsertComdat(ResolverFunc->getName()));
+
   const TargetInfo &TI = getTarget();
   std::stable_sort(
       Options.begin(), Options.end(),
