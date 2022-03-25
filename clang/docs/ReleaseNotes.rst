@@ -65,6 +65,10 @@ Bug Fixes
   fixes `Issue 53044 <https://github.com/llvm/llvm-project/issues/53044>`_.
 - Allow `-Wno-gnu` to silence GNU extension diagnostics for pointer arithmetic
   diagnostics. Fixes `Issue 54444 <https://github.com/llvm/llvm-project/issues/54444>`_.
+- Placeholder constraints, as in `Concept auto x = f();`, were not checked when modifiers
+  like ``auto&`` or ``auto**`` were added. These constraints are now checked.
+  This fixes  `Issue 53911 <https://github.com/llvm/llvm-project/issues/53911>`_
+  and  `Issue 54443 <https://github.com/llvm/llvm-project/issues/54443>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
