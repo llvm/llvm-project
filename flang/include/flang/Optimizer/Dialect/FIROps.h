@@ -40,6 +40,10 @@ static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";
 }
 
+static constexpr llvm::StringRef getNormalizedLowerBoundAttrName() {
+  return "normalized.lb";
+}
+
 } // namespace fir
 
 #define GET_OP_CLASSES
