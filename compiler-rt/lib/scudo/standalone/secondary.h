@@ -362,6 +362,18 @@ private:
     u64 Time;
   };
 
+  // Template specialization to avoid producing zero-length array
+  template <size_t Size> class QuarantineBlocks {
+  public:
+    CachedBlock &operator[](uptr Idx) { return Blocks[Idx]; }
+  private:
+    CachedBlock Blocks[Size];
+  };
+  template <> class QuarantineBlocks<0> {
+  public:
+    CachedBlock &operator[](uptr UNUSED Idx) { UNREACHABLE("Unsupported!"); }
+  };
+
   void releaseIfOlderThan(CachedBlock &Entry, u64 Time) {
     if (!Entry.CommitBase || !Entry.Time)
       return;
@@ -395,7 +407,7 @@ private:
   atomic_s32 ReleaseToOsIntervalMs = {};
 
   CachedBlock Entries[Config::SecondaryCacheEntriesArraySize] = {};
-  CachedBlock Quarantine[Config::SecondaryCacheQuarantineSize] = {};
+  QuarantineBlocks<Config::SecondaryCacheQuarantineSize> Quarantine = {};
 };
 
 template <typename Config> class MapAllocator {
