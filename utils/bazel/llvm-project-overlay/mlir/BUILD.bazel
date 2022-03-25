@@ -7223,6 +7223,7 @@ cc_library(
         ":AMX",
         ":AMXTransforms",
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":ArmNeon",
         ":ArmSVE",
         ":ArmSVETransforms",
