@@ -153,16 +153,12 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
   // rollback b to its initial state before returning, which we will do by
   // removing all constraints beyond the original number of inequalities
   // and equalities, so we store these counts first.
-  const unsigned bInitNumIneqs = b.getNumInequalities();
-  const unsigned bInitNumEqs = b.getNumEqualities();
-  const unsigned bInitNumLocals = b.getNumLocalIds();
+  const IntegerRelation::CountsSnapshot bCounts = b.getCounts();
   // Similarly, we also want to rollback simplex to its original state.
   const unsigned initialSnapshot = simplex.getSnapshot();
 
   auto restoreState = [&]() {
-    b.removeIdRange(IdKind::Local, bInitNumLocals, b.getNumLocalIds());
-    b.removeInequalityRange(bInitNumIneqs, b.getNumInequalities());
-    b.removeEqualityRange(bInitNumEqs, b.getNumEqualities());
+    b.truncate(bCounts);
     simplex.rollback(initialSnapshot);
   };
 
@@ -198,7 +194,8 @@ static void subtractRecursively(IntegerRelation &b, Simplex &simplex,
   }
 
   unsigned offset = simplex.getNumConstraints();
-  unsigned numLocalsAdded = b.getNumLocalIds() - bInitNumLocals;
+  unsigned numLocalsAdded =
+      b.getNumLocalIds() - bCounts.getSpace().getNumLocalIds();
   simplex.appendVariable(numLocalsAdded);
 
   unsigned snapshotBeforeIntersect = simplex.getSnapshot();

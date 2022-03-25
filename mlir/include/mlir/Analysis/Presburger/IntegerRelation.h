@@ -148,6 +148,30 @@ public:
     return inequalities.getRow(idx);
   }
 
+  /// The struct CountsSnapshot stores the count of each IdKind, and also of
+  /// each constraint type. getCounts() returns a CountsSnapshot object
+  /// describing the current state of the IntegerRelation. truncate() truncates
+  /// all ids of each IdKind and all constraints of both kinds beyond the counts
+  /// in the specified CountsSnapshot object. This can be used to achieve
+  /// rudimentary rollback support. As long as none of the existing constraints
+  /// or ids are disturbed, and only additional ids or constraints are added,
+  /// this addition can be rolled back using truncate.
+  struct CountsSnapshot {
+  public:
+    CountsSnapshot(const PresburgerLocalSpace &space, unsigned numIneqs,
+                   unsigned numEqs)
+        : space(space), numIneqs(numIneqs), numEqs(numEqs) {}
+    const PresburgerLocalSpace &getSpace() const { return space; };
+    unsigned getNumIneqs() const { return numIneqs; }
+    unsigned getNumEqs() const { return numEqs; }
+
+  private:
+    PresburgerLocalSpace space;
+    unsigned numIneqs, numEqs;
+  };
+  CountsSnapshot getCounts() const;
+  void truncate(const CountsSnapshot &counts);
+
   /// Insert `num` identifiers of the specified kind at position `pos`.
   /// Positions are relative to the kind of identifier. The coefficient columns
   /// corresponding to the added identifiers are initialized to zero. Return the
@@ -490,6 +514,11 @@ protected:
   /// remaining valid data into place, updates member variables, and resizes
   /// arrays as needed.
   void removeIdRange(unsigned idStart, unsigned idLimit);
+
+  using PresburgerSpace::truncateIdKind;
+  /// Truncate the ids to the number in the space of the specified
+  /// CountsSnapshot.
+  void truncateIdKind(IdKind kind, const CountsSnapshot &counts);
 
   /// A parameter that controls detection of an unrealistic number of
   /// constraints. If the number of constraints is this many times the number of
