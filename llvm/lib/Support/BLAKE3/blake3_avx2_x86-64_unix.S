@@ -12,7 +12,15 @@
 #define _CET_ENDBR
 #endif
 
+#ifdef __APPLE__
+#define HIDDEN .private_extern
+#else
+#define HIDDEN .hidden
+#endif
+
 .intel_syntax noprefix
+HIDDEN _blake3_hash_many_avx2
+HIDDEN blake3_hash_many_avx2
 .global _blake3_hash_many_avx2
 .global blake3_hash_many_avx2
 #ifdef __APPLE__

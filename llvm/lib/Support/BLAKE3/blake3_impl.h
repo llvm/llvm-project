@@ -7,7 +7,19 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "blake3.h"
+#include "llvm-c/blake3.h"
+// For \p LLVM_LIBRARY_VISIBILITY
+#include "llvm/Support/Compiler.h"
+
+// Remove the 'llvm_' prefix for the rest of the internal implementation.
+#define BLAKE3_VERSION_STRING LLVM_BLAKE3_VERSION_STRING
+#define BLAKE3_KEY_LEN LLVM_BLAKE3_KEY_LEN
+#define BLAKE3_OUT_LEN LLVM_BLAKE3_OUT_LEN
+#define BLAKE3_BLOCK_LEN LLVM_BLAKE3_BLOCK_LEN
+#define BLAKE3_CHUNK_LEN LLVM_BLAKE3_CHUNK_LEN
+#define BLAKE3_MAX_DEPTH LLVM_BLAKE3_MAX_DEPTH
+#define blake3_hasher llvm_blake3_hasher
+#define blake3_chunk_state llvm_blake3_chunk_state
 
 // internal flags
 enum blake3_flags {
@@ -178,35 +190,42 @@ INLINE void store_cv_words(uint8_t bytes_out[32], uint32_t cv_words[8]) {
   store32(&bytes_out[7 * 4], cv_words[7]);
 }
 
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_in_place(uint32_t cv[8],
                               const uint8_t block[BLAKE3_BLOCK_LEN],
                               uint8_t block_len, uint64_t counter,
                               uint8_t flags);
 
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_xof(const uint32_t cv[8],
                          const uint8_t block[BLAKE3_BLOCK_LEN],
                          uint8_t block_len, uint64_t counter, uint8_t flags,
                          uint8_t out[64]);
 
+LLVM_LIBRARY_VISIBILITY
 void blake3_hash_many(const uint8_t *const *inputs, size_t num_inputs,
                       size_t blocks, const uint32_t key[8], uint64_t counter,
                       bool increment_counter, uint8_t flags,
                       uint8_t flags_start, uint8_t flags_end, uint8_t *out);
 
+LLVM_LIBRARY_VISIBILITY
 size_t blake3_simd_degree(void);
 
 
 // Declarations for implementation-specific functions.
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_in_place_portable(uint32_t cv[8],
                                        const uint8_t block[BLAKE3_BLOCK_LEN],
                                        uint8_t block_len, uint64_t counter,
                                        uint8_t flags);
 
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_xof_portable(const uint32_t cv[8],
                                   const uint8_t block[BLAKE3_BLOCK_LEN],
                                   uint8_t block_len, uint64_t counter,
                                   uint8_t flags, uint8_t out[64]);
 
+LLVM_LIBRARY_VISIBILITY
 void blake3_hash_many_portable(const uint8_t *const *inputs, size_t num_inputs,
                                size_t blocks, const uint32_t key[8],
                                uint64_t counter, bool increment_counter,
@@ -215,14 +234,17 @@ void blake3_hash_many_portable(const uint8_t *const *inputs, size_t num_inputs,
 
 #if defined(IS_X86)
 #if !defined(BLAKE3_NO_SSE2)
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_in_place_sse2(uint32_t cv[8],
                                    const uint8_t block[BLAKE3_BLOCK_LEN],
                                    uint8_t block_len, uint64_t counter,
                                    uint8_t flags);
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_xof_sse2(const uint32_t cv[8],
                               const uint8_t block[BLAKE3_BLOCK_LEN],
                               uint8_t block_len, uint64_t counter,
                               uint8_t flags, uint8_t out[64]);
+LLVM_LIBRARY_VISIBILITY
 void blake3_hash_many_sse2(const uint8_t *const *inputs, size_t num_inputs,
                            size_t blocks, const uint32_t key[8],
                            uint64_t counter, bool increment_counter,
@@ -230,14 +252,17 @@ void blake3_hash_many_sse2(const uint8_t *const *inputs, size_t num_inputs,
                            uint8_t flags_end, uint8_t *out);
 #endif
 #if !defined(BLAKE3_NO_SSE41)
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_in_place_sse41(uint32_t cv[8],
                                     const uint8_t block[BLAKE3_BLOCK_LEN],
                                     uint8_t block_len, uint64_t counter,
                                     uint8_t flags);
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_xof_sse41(const uint32_t cv[8],
                                const uint8_t block[BLAKE3_BLOCK_LEN],
                                uint8_t block_len, uint64_t counter,
                                uint8_t flags, uint8_t out[64]);
+LLVM_LIBRARY_VISIBILITY
 void blake3_hash_many_sse41(const uint8_t *const *inputs, size_t num_inputs,
                             size_t blocks, const uint32_t key[8],
                             uint64_t counter, bool increment_counter,
@@ -245,6 +270,7 @@ void blake3_hash_many_sse41(const uint8_t *const *inputs, size_t num_inputs,
                             uint8_t flags_end, uint8_t *out);
 #endif
 #if !defined(BLAKE3_NO_AVX2)
+LLVM_LIBRARY_VISIBILITY
 void blake3_hash_many_avx2(const uint8_t *const *inputs, size_t num_inputs,
                            size_t blocks, const uint32_t key[8],
                            uint64_t counter, bool increment_counter,
@@ -252,16 +278,19 @@ void blake3_hash_many_avx2(const uint8_t *const *inputs, size_t num_inputs,
                            uint8_t flags_end, uint8_t *out);
 #endif
 #if !defined(BLAKE3_NO_AVX512)
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_in_place_avx512(uint32_t cv[8],
                                      const uint8_t block[BLAKE3_BLOCK_LEN],
                                      uint8_t block_len, uint64_t counter,
                                      uint8_t flags);
 
+LLVM_LIBRARY_VISIBILITY
 void blake3_compress_xof_avx512(const uint32_t cv[8],
                                 const uint8_t block[BLAKE3_BLOCK_LEN],
                                 uint8_t block_len, uint64_t counter,
                                 uint8_t flags, uint8_t out[64]);
 
+LLVM_LIBRARY_VISIBILITY
 void blake3_hash_many_avx512(const uint8_t *const *inputs, size_t num_inputs,
                              size_t blocks, const uint32_t key[8],
                              uint64_t counter, bool increment_counter,
@@ -271,6 +300,7 @@ void blake3_hash_many_avx512(const uint8_t *const *inputs, size_t num_inputs,
 #endif
 
 #if BLAKE3_USE_NEON == 1
+LLVM_LIBRARY_VISIBILITY
 void blake3_hash_many_neon(const uint8_t *const *inputs, size_t num_inputs,
                            size_t blocks, const uint32_t key[8],
                            uint64_t counter, bool increment_counter,

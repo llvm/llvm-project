@@ -228,6 +228,7 @@ INLINE void load_counters4(uint64_t counter, bool increment_counter,
       counter_high(counter + (mask & 2)), counter_high(counter + (mask & 3)));
 }
 
+static
 void blake3_hash4_neon(const uint8_t *const *inputs, size_t blocks,
                        const uint32_t key[8], uint64_t counter,
                        bool increment_counter, uint8_t flags,
