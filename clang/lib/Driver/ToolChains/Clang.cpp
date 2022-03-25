@@ -7558,11 +7558,12 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
 
   // This controls whether or not we emit stack-protector instrumentation.
   // In MSVC, Buffer Security Check (/GS) is on by default.
-  if (!isNVPTX && Args.hasFlag(options::OPT__SLASH_GS, options::OPT__SLASH_GS_,
-                               /*Default=*/true)) {
-    CmdArgs.push_back("-stack-protector");
-    CmdArgs.push_back(Args.MakeArgString(Twine(LangOptions::SSPStrong)));
-  }
+  // [HACKY] NO NO NO. We dont need /GS
+  // if (!isNVPTX && Args.hasFlag(options::OPT__SLASH_GS, options::OPT__SLASH_GS_,
+  //                              /*Default=*/true)) {
+  //   CmdArgs.push_back("-stack-protector");
+  //   CmdArgs.push_back(Args.MakeArgString(Twine(LangOptions::SSPStrong)));
+  // }
 
   // Emit CodeView if -Z7 or -gline-tables-only are present.
   if (Arg *DebugInfoArg = Args.getLastArg(options::OPT__SLASH_Z7,
@@ -7689,27 +7690,28 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back("-fdiagnostics-format");
     CmdArgs.push_back("msvc");
   }
-
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
-    StringRef GuardArgs = A->getValue();
-    // The only valid options are "cf", "cf,nochecks", "cf-", "ehcont" and
-    // "ehcont-".
-    if (GuardArgs.equals_insensitive("cf")) {
-      // Emit CFG instrumentation and the table of address-taken functions.
-      CmdArgs.push_back("-cfguard");
-    } else if (GuardArgs.equals_insensitive("cf,nochecks")) {
-      // Emit only the table of address-taken functions.
-      CmdArgs.push_back("-cfguard-no-checks");
-    } else if (GuardArgs.equals_insensitive("ehcont")) {
-      // Emit EH continuation table.
-      CmdArgs.push_back("-ehcontguard");
-    } else if (GuardArgs.equals_insensitive("cf-") ||
-               GuardArgs.equals_insensitive("ehcont-")) {
-      // Do nothing, but we might want to emit a security warning in future.
-    } else {
-      D.Diag(diag::err_drv_invalid_value) << A->getSpelling() << GuardArgs;
-    }
-  }
+  
+  // [HACKY] NO NO NO. We dont need /guard.
+  // if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
+  //   StringRef GuardArgs = A->getValue();
+  //   // The only valid options are "cf", "cf,nochecks", "cf-", "ehcont" and
+  //   // "ehcont-".
+  //   if (GuardArgs.equals_insensitive("cf")) {
+  //     // Emit CFG instrumentation and the table of address-taken functions.
+  //     CmdArgs.push_back("-cfguard");
+  //   } else if (GuardArgs.equals_insensitive("cf,nochecks")) {
+  //     // Emit only the table of address-taken functions.
+  //     CmdArgs.push_back("-cfguard-no-checks");
+  //   } else if (GuardArgs.equals_insensitive("ehcont")) {
+  //     // Emit EH continuation table.
+  //     CmdArgs.push_back("-ehcontguard");
+  //   } else if (GuardArgs.equals_insensitive("cf-") ||
+  //              GuardArgs.equals_insensitive("ehcont-")) {
+  //     // Do nothing, but we might want to emit a security warning in future.
+  //   } else {
+  //     D.Diag(diag::err_drv_invalid_value) << A->getSpelling() << GuardArgs;
+  //   }
+  // }
 }
 
 const char *Clang::getBaseInputName(const ArgList &Args,
