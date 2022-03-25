@@ -485,21 +485,22 @@ public:
   }
 
   // Handle functions/lambdas with `auto` typed parameters.
-  // We'll examine visible specializations and see if they yield a unique type.
+  // We deduce the type if there's exactly one instantiation visible.
   bool VisitParmVarDecl(ParmVarDecl *PVD) {
     if (!PVD->getType()->isDependentType())
       return true;
     // 'auto' here does not name an AutoType, but an implicit template param.
     TemplateTypeParmTypeLoc Auto =
-        findContainedAutoTTPLoc(PVD->getTypeSourceInfo()->getTypeLoc());
+        getContainedAutoParamType(PVD->getTypeSourceInfo()->getTypeLoc());
     if (Auto.isNull() || Auto.getNameLoc() != SearchedLocation)
       return true;
+
     // We expect the TTP to be attached to this function template.
     // Find the template and the param index.
-    auto *FD = llvm::dyn_cast<FunctionDecl>(PVD->getDeclContext());
-    if (!FD)
+    auto *Templated = llvm::dyn_cast<FunctionDecl>(PVD->getDeclContext());
+    if (!Templated)
       return true;
-    auto *FTD = FD->getDescribedFunctionTemplate();
+    auto *FTD = Templated->getDescribedFunctionTemplate();
     if (!FTD)
       return true;
     int ParamIndex = paramIndex(*FTD, *Auto.getDecl());
@@ -508,51 +509,16 @@ public:
       return true;
     }
 
-    // Now determine the unique type arg among the implicit specializations.
-    const ASTContext &Ctx = PVD->getASTContext();
-    QualType UniqueType;
-    CanQualType CanUniqueType;
-    for (const FunctionDecl *Spec : FTD->specializations()) {
-      // Meaning `auto` is a bit overloaded if the function is specialized.
-      if (Spec->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
-        return true;
-      // Find the type for this specialization.
-      const auto *Args = Spec->getTemplateSpecializationArgs();
-      if (Args->size() != FTD->getTemplateParameters()->size())
-        continue; // no weird variadic stuff
-      QualType SpecType = Args->get(ParamIndex).getAsType();
-      if (SpecType.isNull())
-        continue;
-
-      // Deduced types need only be *canonically* equal.
-      CanQualType CanSpecType = Ctx.getCanonicalType(SpecType);
-      if (CanUniqueType.isNull()) {
-        CanUniqueType = CanSpecType;
-        UniqueType = SpecType;
-        continue;
-      }
-      if (CanUniqueType != CanSpecType)
-        return true; // deduced type is not unique
-    }
-    DeducedType = UniqueType;
+    // Now find the instantiation and the deduced template type arg.
+    auto *Instantiation =
+        llvm::dyn_cast_or_null<FunctionDecl>(getOnlyInstantiation(Templated));
+    if (!Instantiation)
+      return true;
+    const auto *Args = Instantiation->getTemplateSpecializationArgs();
+    if (Args->size() != FTD->getTemplateParameters()->size())
+      return true; // no weird variadic stuff
+    DeducedType = Args->get(ParamIndex).getAsType();
     return true;
-  }
-
-  // Find the abbreviated-function-template `auto` within a type.
-  // Similar to getContainedAutoTypeLoc, but these `auto`s are
-  // TemplateTypeParmTypes for implicit TTPs, instead of AutoTypes.
-  // Also we don't look very hard, just stripping const, references, pointers.
-  // FIXME: handle more types: vector<auto>?
-  static TemplateTypeParmTypeLoc findContainedAutoTTPLoc(TypeLoc TL) {
-    if (auto QTL = TL.getAs<QualifiedTypeLoc>())
-      return findContainedAutoTTPLoc(QTL.getUnqualifiedLoc());
-    if (llvm::isa<PointerType, ReferenceType>(TL.getTypePtr()))
-      return findContainedAutoTTPLoc(TL.getNextTypeLoc());
-    if (auto TTPTL = TL.getAs<TemplateTypeParmTypeLoc>()) {
-      if (TTPTL.getTypePtr()->getDecl()->isImplicit())
-        return TTPTL;
-    }
-    return {};
   }
 
   static int paramIndex(const TemplateDecl &TD, NamedDecl &Param) {
@@ -578,6 +544,45 @@ llvm::Optional<QualType> getDeducedType(ASTContext &ASTCtx,
   if (V.DeducedType.isNull())
     return llvm::None;
   return V.DeducedType;
+}
+
+TemplateTypeParmTypeLoc getContainedAutoParamType(TypeLoc TL) {
+  if (auto QTL = TL.getAs<QualifiedTypeLoc>())
+    return getContainedAutoParamType(QTL.getUnqualifiedLoc());
+  if (llvm::isa<PointerType, ReferenceType, ParenType>(TL.getTypePtr()))
+    return getContainedAutoParamType(TL.getNextTypeLoc());
+  if (auto FTL = TL.getAs<FunctionTypeLoc>())
+    return getContainedAutoParamType(FTL.getReturnLoc());
+  if (auto TTPTL = TL.getAs<TemplateTypeParmTypeLoc>()) {
+    if (TTPTL.getTypePtr()->getDecl()->isImplicit())
+      return TTPTL;
+  }
+  return {};
+}
+
+template <typename TemplateDeclTy>
+static NamedDecl *getOnlyInstantiationImpl(TemplateDeclTy *TD) {
+  NamedDecl *Only = nullptr;
+  for (auto *Spec : TD->specializations()) {
+    if (Spec->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+      continue;
+    if (Only != nullptr)
+      return nullptr;
+    Only = Spec;
+  }
+  return Only;
+}
+
+NamedDecl *getOnlyInstantiation(NamedDecl *TemplatedDecl) {
+  if (TemplateDecl *TD = TemplatedDecl->getDescribedTemplate()) {
+    if (auto *CTD = llvm::dyn_cast<ClassTemplateDecl>(TD))
+      return getOnlyInstantiationImpl(CTD);
+    if (auto *FTD = llvm::dyn_cast<FunctionTemplateDecl>(TD))
+      return getOnlyInstantiationImpl(FTD);
+    if (auto *VTD = llvm::dyn_cast<VarTemplateDecl>(TD))
+      return getOnlyInstantiationImpl(VTD);
+  }
+  return nullptr;
 }
 
 std::vector<const Attr *> getAttributes(const DynTypedNode &N) {
