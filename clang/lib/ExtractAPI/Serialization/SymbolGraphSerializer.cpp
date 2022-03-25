@@ -367,6 +367,14 @@ Object serializeSymbolKind(const APIRecord &Record,
     Kind["identifier"] = AddLangPrefix("enum");
     Kind["displayName"] = "Enumeration";
     break;
+  case APIRecord::RK_StructField:
+    Kind["identifier"] = AddLangPrefix("property");
+    Kind["displayName"] = "Instance Property";
+    break;
+  case APIRecord::RK_Struct:
+    Kind["identifier"] = AddLangPrefix("struct");
+    Kind["displayName"] = "Structure";
+    break;
   }
 
   return Kind;
@@ -474,6 +482,23 @@ void SymbolGraphSerializer::serializeEnumRecord(const EnumRecord &Record) {
   }
 }
 
+void SymbolGraphSerializer::serializeStructRecord(const StructRecord &Record) {
+  auto Struct = serializeAPIRecord(Record);
+  if (!Struct)
+    return;
+
+  Symbols.emplace_back(std::move(*Struct));
+
+  for (const auto &Field : Record.Fields) {
+    auto StructField = serializeAPIRecord(*Field);
+    if (!StructField)
+      continue;
+
+    Symbols.emplace_back(std::move(*StructField));
+    serializeRelationship(RelationshipKind::MemberOf, *Field, Record);
+  }
+}
+
 Object SymbolGraphSerializer::serialize() {
   Object Root;
   serializeObject(Root, "metadata", serializeMetadata());
@@ -486,6 +511,10 @@ Object SymbolGraphSerializer::serialize() {
   // Serialize enum records in the API set.
   for (const auto &Enum : API.getEnums())
     serializeEnumRecord(*Enum.second);
+
+  // Serialize struct records in the API set.
+  for (const auto &Struct : API.getStructs())
+    serializeStructRecord(*Struct.second);
 
   Root["symbols"] = std::move(Symbols);
   Root["relationhips"] = std::move(Relationships);

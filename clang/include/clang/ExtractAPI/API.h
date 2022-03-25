@@ -94,6 +94,8 @@ struct APIRecord {
     RK_Global,
     RK_EnumConstant,
     RK_Enum,
+    RK_StructField,
+    RK_Struct,
   };
 
 private:
@@ -176,6 +178,36 @@ struct EnumRecord : APIRecord {
   }
 };
 
+/// This holds information associated with struct fields.
+struct StructFieldRecord : APIRecord {
+  StructFieldRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                    const AvailabilityInfo &Availability,
+                    const DocComment &Comment, DeclarationFragments Declaration,
+                    DeclarationFragments SubHeading)
+      : APIRecord(RK_StructField, Name, USR, Loc, Availability,
+                  LinkageInfo::none(), Comment, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_StructField;
+  }
+};
+
+/// This holds information associated with structs.
+struct StructRecord : APIRecord {
+  SmallVector<APIRecordUniquePtr<StructFieldRecord>> Fields;
+
+  StructRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+               const AvailabilityInfo &Availability, const DocComment &Comment,
+               DeclarationFragments Declaration,
+               DeclarationFragments SubHeading)
+      : APIRecord(RK_Struct, Name, USR, Loc, Availability, LinkageInfo::none(),
+                  Comment, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_Struct;
+  }
+};
+
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
 public:
@@ -242,6 +274,31 @@ public:
                       DeclarationFragments Declaration,
                       DeclarationFragments SubHeading);
 
+  /// Create and add a struct field record into the API set.
+  ///
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  StructFieldRecord *addStructField(StructRecord *Struct, StringRef Name,
+                                    StringRef USR, PresumedLoc Loc,
+                                    const AvailabilityInfo &Availability,
+                                    const DocComment &Comment,
+                                    DeclarationFragments Declaration,
+                                    DeclarationFragments SubHeading);
+
+  /// Create and add a struct record into the API set.
+  ///
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  StructRecord *addStruct(StringRef Name, StringRef USR, PresumedLoc Loc,
+                          const AvailabilityInfo &Availability,
+                          const DocComment &Comment,
+                          DeclarationFragments Declaration,
+                          DeclarationFragments SubHeading);
+
   /// A map to store the set of GlobalRecord%s with the declaration name as the
   /// key.
   using GlobalRecordMap =
@@ -252,6 +309,11 @@ public:
   using EnumRecordMap =
       llvm::MapVector<StringRef, APIRecordUniquePtr<EnumRecord>>;
 
+  /// A map to store the set of StructRecord%s with the declaration name as the
+  /// key.
+  using StructRecordMap =
+      llvm::MapVector<StringRef, APIRecordUniquePtr<StructRecord>>;
+
   /// Get the target triple for the ExtractAPI invocation.
   const llvm::Triple &getTarget() const { return Target; }
 
@@ -260,6 +322,7 @@ public:
 
   const GlobalRecordMap &getGlobals() const { return Globals; }
   const EnumRecordMap &getEnums() const { return Enums; }
+  const StructRecordMap &getStructs() const { return Structs; }
 
   /// Generate and store the USR of declaration \p D.
   ///
@@ -285,6 +348,7 @@ private:
 
   GlobalRecordMap Globals;
   EnumRecordMap Enums;
+  StructRecordMap Structs;
 };
 
 } // namespace extractapi
