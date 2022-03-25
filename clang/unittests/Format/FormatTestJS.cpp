@@ -337,6 +337,13 @@ TEST_F(FormatTestJS, ReservedWords) {
                "  x: 'x'\n"
                "};",
                "const Axis = {for: 'for', x:   'x'};");
+  verifyFormat("export class Foo extends Bar {\n"
+               "  get case(): Case {\n"
+               "    return (\n"
+               "        (this.Bar$has('case')) ? (this.Bar$get('case')) :\n"
+               "                                 (this.case = new Case()));\n"
+               "  }\n"
+               "}");
 }
 
 TEST_F(FormatTestJS, ReservedWordsMethods) {
