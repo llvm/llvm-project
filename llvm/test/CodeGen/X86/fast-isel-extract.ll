@@ -1,7 +1,6 @@
 ; RUN: llc < %s -mtriple x86_64-apple-darwin11 -O0 -fast-isel-abort=1 | FileCheck %s
 
 %struct.x = type { i64, i64 }
-%addovf = type { i32, i1 }
 declare %struct.x @f()
 
 define void @test1(i64*) nounwind ssp {
@@ -28,13 +27,13 @@ define void @test2(i64*) nounwind ssp {
 ; CHECK: addq $10, %rdx
 }
 
-declare %addovf @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
+declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
 
 define void @test3(i32 %x, i32 %y, i32* %z) {
-  %r = call %addovf @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)
-  %sum = extractvalue %addovf %r, 0
+  %r = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)
+  %sum = extractvalue { i32, i1 } %r, 0
   %sum3 = mul i32 %sum, 3
-  %bit = extractvalue %addovf %r, 1
+  %bit = extractvalue { i32, i1 } %r, 1
   br i1 %bit, label %then, label %end
   
 then:
