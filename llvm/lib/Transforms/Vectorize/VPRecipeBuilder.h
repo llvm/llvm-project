@@ -74,9 +74,9 @@ class VPRecipeBuilder {
 
   /// Check if an induction recipe should be constructed for \I. If so build and
   /// return it. If not, return null.
-  VPWidenIntOrFpInductionRecipe *
-  tryToOptimizeInductionPHI(PHINode *Phi, ArrayRef<VPValue *> Operands,
-                            VFRange &Range) const;
+  VPRecipeBase *tryToOptimizeInductionPHI(PHINode *Phi,
+                                          ArrayRef<VPValue *> Operands,
+                                          VFRange &Range) const;
 
   /// Optimize the special case where the operand of \p I is a constant integer
   /// induction variable.
