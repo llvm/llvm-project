@@ -183,8 +183,9 @@ private:
 
 class ExtractAPIConsumer : public ASTConsumer {
 public:
-  ExtractAPIConsumer(ASTContext &Context, std::unique_ptr<raw_pwrite_stream> OS)
-      : Visitor(Context), OS(std::move(OS)) {}
+  ExtractAPIConsumer(ASTContext &Context, StringRef ProductName,
+                     std::unique_ptr<raw_pwrite_stream> OS)
+      : Visitor(Context), ProductName(ProductName), OS(std::move(OS)) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     // Use ExtractAPIVisitor to traverse symbol declarations in the context.
@@ -193,12 +194,13 @@ public:
     // Setup a SymbolGraphSerializer to write out collected API information in
     // the Symbol Graph format.
     // FIXME: Make the kind of APISerializer configurable.
-    SymbolGraphSerializer SGSerializer(Visitor.getAPI());
+    SymbolGraphSerializer SGSerializer(Visitor.getAPI(), ProductName);
     SGSerializer.serialize(*OS);
   }
 
 private:
   ExtractAPIVisitor Visitor;
+  std::string ProductName;
   std::unique_ptr<raw_pwrite_stream> OS;
 };
 
@@ -209,8 +211,9 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return nullptr;
-  return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(),
-                                              std::move(OS));
+  return std::make_unique<ExtractAPIConsumer>(
+      CI.getASTContext(), CI.getInvocation().getFrontendOpts().ProductName,
+      std::move(OS));
 }
 
 std::unique_ptr<raw_pwrite_stream>

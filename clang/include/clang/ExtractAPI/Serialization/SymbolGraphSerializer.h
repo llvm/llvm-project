@@ -90,8 +90,9 @@ private:
   void serializeGlobalRecord(const GlobalRecord &Record);
 
 public:
-  SymbolGraphSerializer(const APISet &API, APISerializerOption Options = {})
-      : APISerializer(API, Options) {}
+  SymbolGraphSerializer(const APISet &API, StringRef ProductName,
+                        APISerializerOption Options = {})
+      : APISerializer(API, ProductName, Options) {}
 };
 
 } // namespace extractapi
