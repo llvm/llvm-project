@@ -1074,22 +1074,16 @@ define i32 @firewall(i8* %data) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[I]], 17
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i16 [[I2]], 1
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP]], i1 [[CMP3]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.end:
 ; CHECK-NEXT:    [[CMP10:%.*]] = icmp eq i16 [[I2]], 2
 ; CHECK-NEXT:    [[OR_COND33:%.*]] = select i1 [[CMP]], i1 [[CMP10]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND33]], label [[CLEANUP]], label [[IF_END13:%.*]]
-; CHECK:       if.end13:
+; CHECK-NEXT:    [[OR_COND1:%.*]] = select i1 [[OR_COND]], i1 true, i1 [[OR_COND33]]
 ; CHECK-NEXT:    [[CMP19:%.*]] = icmp eq i16 [[I2]], 3
 ; CHECK-NEXT:    [[OR_COND34:%.*]] = select i1 [[CMP]], i1 [[CMP19]], i1 false
-; CHECK-NEXT:    br i1 [[OR_COND34]], label [[CLEANUP]], label [[IF_END22:%.*]]
-; CHECK:       if.end22:
+; CHECK-NEXT:    [[OR_COND2:%.*]] = select i1 [[OR_COND1]], i1 true, i1 [[OR_COND34]]
 ; CHECK-NEXT:    [[CMP28:%.*]] = icmp eq i16 [[I2]], 4
 ; CHECK-NEXT:    [[OR_COND35:%.*]] = select i1 [[CMP]], i1 [[CMP28]], i1 false
 ; CHECK-NEXT:    [[DOT:%.*]] = zext i1 [[OR_COND35]] to i32
-; CHECK-NEXT:    br label [[CLEANUP]]
-; CHECK:       cleanup:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ 1, [[IF_END]] ], [ 1, [[IF_END13]] ], [ [[DOT]], [[IF_END22]] ]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = select i1 [[OR_COND2]], i32 1, i32 [[DOT]]
 ; CHECK-NEXT:    ret i32 [[RETVAL_0]]
 ;
 entry:
