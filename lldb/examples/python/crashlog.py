@@ -76,10 +76,12 @@ class CrashLog(symbolication.Symbolicator):
 
         def __init__(self, index, app_specific_backtrace):
             self.index = index
+            self.id = index
             self.frames = list()
             self.idents = list()
             self.registers = dict()
             self.reason = None
+            self.name = None
             self.queue = None
             self.crashed = False
             self.app_specific_backtrace = app_specific_backtrace
@@ -521,14 +523,18 @@ class JSONCrashLogParser:
         for json_thread in json_threads:
             thread = self.crashlog.Thread(idx, False)
             if 'name' in json_thread:
+                thread.name = json_thread['name']
                 thread.reason = json_thread['name']
+            if 'id' in json_thread:
+                thread.id = int(json_thread['id'])
             if json_thread.get('triggered', False):
                 self.crashlog.crashed_thread_idx = idx
                 thread.crashed = True
                 if 'threadState' in json_thread:
                     thread.registers = self.parse_thread_registers(
                         json_thread['threadState'])
-            thread.queue = json_thread.get('queue')
+            if 'queue' in json_thread:
+                thread.queue = json_thread.get('queue')
             self.parse_frames(thread, json_thread.get('frames', []))
             self.crashlog.threads.append(thread)
             idx += 1

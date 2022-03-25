@@ -219,8 +219,8 @@ class ScriptedThread:
         self.scripted_process = None
         self.process = None
         self.args = None
-
-        self.id = None
+        self.idx = 0
+        self.tid = 0
         self.idx = None
         self.name = None
         self.queue = None
@@ -236,24 +236,29 @@ class ScriptedThread:
             self.process = self.target.GetProcess()
             self.get_register_info()
 
+    def get_thread_idx(self):
+        """ Get the scripted thread index.
 
-    @abstractmethod
+        Returns:
+            int: The index of the scripted thread in the scripted process.
+        """
+        return self.idx
+
     def get_thread_id(self):
         """ Get the scripted thread identifier.
 
         Returns:
             int: The identifier of the scripted thread.
         """
-        pass
+        return self.tid
 
-    @abstractmethod
     def get_name(self):
         """ Get the scripted thread name.
 
         Returns:
             str: The name of the scripted thread.
         """
-        pass
+        return self.name
 
     def get_state(self):
         """ Get the scripted thread state type.
@@ -277,7 +282,7 @@ class ScriptedThread:
         Returns:
             str: The queue name associated with the scripted thread.
         """
-        pass
+        return self.queue
 
     @abstractmethod
     def get_stop_reason(self):
