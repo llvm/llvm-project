@@ -65,12 +65,31 @@ Bug Fixes
   fixes `Issue 53044 <https://github.com/llvm/llvm-project/issues/53044>`_.
 - Allow `-Wno-gnu` to silence GNU extension diagnostics for pointer arithmetic
   diagnostics. Fixes `Issue 54444 <https://github.com/llvm/llvm-project/issues/54444>`_.
+- Placeholder constraints, as in `Concept auto x = f();`, were not checked when modifiers
+  like ``auto&`` or ``auto**`` were added. These constraints are now checked.
+  This fixes  `Issue 53911 <https://github.com/llvm/llvm-project/issues/53911>`_
+  and  `Issue 54443 <https://github.com/llvm/llvm-project/issues/54443>`_.
+- Previously invalid member variables with template parameters would crash clang.
+  Now fixed by setting identifiers for them.
+  This fixes `Issue 28475 (PR28101) <https://github.com/llvm/llvm-project/issues/28475>`_.
+- Now allow the `restrict` and `_Atomic` qualifiers to be used in conjunction
+  with `__auto_type` to match the behavior in GCC. This fixes
+  `Issue 53652 <https://github.com/llvm/llvm-project/issues/53652>`_.
+- No longer crash when specifying a variably-modified parameter type in a
+  function with the ``naked`` attribute. This fixes
+  `Issue 50541 <https://github.com/llvm/llvm-project/issues/50541>`_.
+
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 - ``-Wliteral-range`` will warn on floating-point equality comparisons with
   constants that are not representable in a casted value. For example,
   ``(float) f == 0.1`` is always false.
+- ``-Winline-namespace-reopened-noninline`` now takes into account that the
+  ``inline`` keyword must appear on the original but not necessarily all
+  extension definitions of an inline namespace and therefore points its note
+  at the original definition. This fixes `Issue 50794 (PR51452)
+  <https://github.com/llvm/llvm-project/issues/50794>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -111,6 +130,9 @@ Attribute Changes in Clang
   can be used to control inlining decisions at callsites.
 
 - ``#pragma clang attribute push`` now supports multiple attributes within a single directive.
+
+- The ``__declspec(naked)`` attribute can no longer be written on a member
+  function in Microsoft compatibility mode, matching the behavior of cl.exe.
 
 Windows Support
 ---------------

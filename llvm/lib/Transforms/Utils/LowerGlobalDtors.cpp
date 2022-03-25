@@ -141,15 +141,14 @@ static bool runImpl(Module &M) {
                         /*isVarArg=*/false));
 
   // Declare __dso_local.
-  Constant *DsoHandle = M.getNamedValue("__dso_handle");
-  if (!DsoHandle) {
-    Type *DsoHandleTy = Type::getInt8Ty(C);
-    GlobalVariable *Handle = new GlobalVariable(
-        M, DsoHandleTy, /*isConstant=*/true,
-        GlobalVariable::ExternalWeakLinkage, nullptr, "__dso_handle");
-    Handle->setVisibility(GlobalVariable::HiddenVisibility);
-    DsoHandle = Handle;
-  }
+  Type *DsoHandleTy = Type::getInt8Ty(C);
+  Constant *DsoHandle = M.getOrInsertGlobal("__dso_handle", DsoHandleTy, [&] {
+    auto *GV = new GlobalVariable(M, DsoHandleTy, /*isConstant=*/true,
+                                  GlobalVariable::ExternalWeakLinkage, nullptr,
+                                  "__dso_handle");
+    GV->setVisibility(GlobalVariable::HiddenVisibility);
+    return GV;
+  });
 
   // For each unique priority level and associated symbol, generate a function
   // to call all the destructors at that level, and a function to register the

@@ -50,6 +50,7 @@ void initializeCoroCleanupLegacyPass(PassRegistry &);
 
 namespace coro {
 
+bool declaresAnyIntrinsic(const Module &M);
 bool declaresIntrinsics(const Module &M,
                         const std::initializer_list<StringRef>);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);

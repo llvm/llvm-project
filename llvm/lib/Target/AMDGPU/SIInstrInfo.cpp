@@ -540,8 +540,9 @@ static void reportIllegalCopy(const SIInstrInfo *TII, MachineBasicBlock &MBB,
     .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
-/// Handle copying from SGPR to AGPR, or from AGPR to AGPR. It is not possible
-/// to directly copy, so an intermediate VGPR needs to be used.
+/// Handle copying from SGPR to AGPR, or from AGPR to AGPR on GFX908. It is not
+/// possible to have a direct copy in these cases on GFX908, so an intermediate
+/// VGPR copy is required.
 static void indirectCopyToAGPR(const SIInstrInfo &TII,
                                MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
@@ -550,10 +551,18 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
                                RegScavenger &RS,
                                Register ImpDefSuperReg = Register(),
                                Register ImpUseSuperReg = Register()) {
-  const SIRegisterInfo &RI = TII.getRegisterInfo();
+  assert((TII.getSubtarget().hasMAIInsts() &&
+          !TII.getSubtarget().hasGFX90AInsts()) &&
+         "Expected GFX908 subtarget.");
 
-  assert(AMDGPU::SReg_32RegClass.contains(SrcReg) ||
-         AMDGPU::AGPR_32RegClass.contains(SrcReg));
+  assert((AMDGPU::SReg_32RegClass.contains(SrcReg) ||
+          AMDGPU::AGPR_32RegClass.contains(SrcReg)) &&
+         "Source register of the copy should be either an SGPR or an AGPR.");
+
+  assert(AMDGPU::AGPR_32RegClass.contains(DestReg) &&
+         "Destination register of the copy should be an AGPR.");
+
+  const SIRegisterInfo &RI = TII.getRegisterInfo();
 
   // First try to find defining accvgpr_write to avoid temporary registers.
   for (auto Def = MI, E = MBB.begin(); Def != E; ) {
@@ -605,23 +614,18 @@ static void indirectCopyToAGPR(const SIInstrInfo &TII,
   // Registers in the sequence are allocated contiguously so we can just
   // use register number to pick one of three round-robin temps.
   unsigned RegNo = DestReg % 3;
-  Register Tmp;
-  if (!TII.getSubtarget().hasGFX90AInsts()) {
-    Tmp = AMDGPU::VGPR32;
-    assert(MBB.getParent()->getRegInfo().isReserved(AMDGPU::VGPR32));
+  Register Tmp = AMDGPU::VGPR32;
+  assert(MBB.getParent()->getRegInfo().isReserved(Tmp) &&
+         "VGPR used for an intermediate copy should have been reserved.");
 
-    // Only loop through if there are any free registers left, otherwise
-    // scavenger may report a fatal error without emergency spill slot
-    // or spill with the slot.
-    while (RegNo-- && RS.FindUnusedReg(&AMDGPU::VGPR_32RegClass)) {
-      Register Tmp2 = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
-      if (!Tmp2 || RI.getHWRegIndex(Tmp2) >= MaxVGPRs)
-        break;
-      Tmp = Tmp2;
-      RS.setRegUsed(Tmp);
-    }
-  } else {
-    Tmp = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+  // Only loop through if there are any free registers left, otherwise
+  // scavenger may report a fatal error without emergency spill slot
+  // or spill with the slot.
+  while (RegNo-- && RS.FindUnusedReg(&AMDGPU::VGPR_32RegClass)) {
+    Register Tmp2 = RS.scavengeRegister(&AMDGPU::VGPR_32RegClass, 0);
+    if (!Tmp2 || RI.getHWRegIndex(Tmp2) >= MaxVGPRs)
+      break;
+    Tmp = Tmp2;
     RS.setRegUsed(Tmp);
   }
 

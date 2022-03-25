@@ -70,3 +70,16 @@ TEST(LlvmLibcFenvTest, Set_FE_DFL_ENV) {
   int rm = __llvm_libc::fegetround();
   EXPECT_EQ(rm, FE_TONEAREST);
 }
+
+#ifdef _WIN32
+TEST(LlvmLibcFenvTest, Windows_Set_Get_Test) {
+  // If a valid fenv_t is written, then reading it back out should be identical.
+  fenv_t setEnv = {0x7e00053e, 0x0f00000f};
+  fenv_t getEnv;
+  ASSERT_EQ(__llvm_libc::fesetenv(&setEnv), 0);
+  ASSERT_EQ(__llvm_libc::fegetenv(&getEnv), 0);
+
+  ASSERT_EQ(setEnv._Fe_ctl, getEnv._Fe_ctl);
+  ASSERT_EQ(setEnv._Fe_stat, getEnv._Fe_stat);
+}
+#endif

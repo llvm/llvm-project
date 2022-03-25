@@ -130,11 +130,10 @@ LogicalResult LLVM::detail::vectorOneToOneRewrite(
 
   auto callback = [op, targetOp, &rewriter](Type llvm1DVectorTy,
                                             ValueRange operands) {
-    OperationState state(op->getLoc(), targetOp);
-    state.addTypes(llvm1DVectorTy);
-    state.addOperands(operands);
-    state.addAttributes(op->getAttrs());
-    return rewriter.createOperation(state)->getResult(0);
+    return rewriter
+        .create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
+                llvm1DVectorTy, op->getAttrs())
+        ->getResult(0);
   };
 
   return handleMultidimensionalVectors(op, operands, typeConverter, callback,

@@ -340,18 +340,25 @@ multiclass VPatNConvertFP2ISDNode_V<SDNode vop, string instruction_name> {
   }
 }
 
-multiclass VPatWidenBinarySDNode_VV_VX_WV_WX<SDNode op, PatFrags extop, string instruction_name> {
+multiclass VPatWidenBinarySDNode_VV_VX<SDNode op, PatFrags extop1, PatFrags extop2,
+                                       string instruction_name> {
   foreach vti = AllWidenableIntVectors in {
-    def : Pat<(op (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
-                  (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
+    def : Pat<(op (vti.Wti.Vector (extop1 (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
+                  (vti.Wti.Vector (extop2 (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
               (!cast<Instruction>(instruction_name#"_VV_"#vti.Vti.LMul.MX)
                  vti.Vti.RegClass:$rs2, vti.Vti.RegClass:$rs1,
                  vti.Vti.AVL, vti.Vti.Log2SEW)>;
-    def : Pat<(op (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
-                  (vti.Wti.Vector (extop (vti.Vti.Vector (SplatPat GPR:$rs1))))),
+    def : Pat<(op (vti.Wti.Vector (extop1 (vti.Vti.Vector vti.Vti.RegClass:$rs2))),
+                  (vti.Wti.Vector (extop2 (vti.Vti.Vector (SplatPat GPR:$rs1))))),
               (!cast<Instruction>(instruction_name#"_VX_"#vti.Vti.LMul.MX)
                  vti.Vti.RegClass:$rs2, GPR:$rs1,
                  vti.Vti.AVL, vti.Vti.Log2SEW)>;
+  }
+}
+
+multiclass VPatWidenBinarySDNode_WV_WX<SDNode op, PatFrags extop,
+                                       string instruction_name> {
+  foreach vti = AllWidenableIntVectors in {
     def : Pat<(op (vti.Wti.Vector vti.Wti.RegClass:$rs2),
                   (vti.Wti.Vector (extop (vti.Vti.Vector vti.Vti.RegClass:$rs1)))),
               (!cast<Instruction>(instruction_name#"_WV_"#vti.Vti.LMul.MX)
@@ -363,6 +370,12 @@ multiclass VPatWidenBinarySDNode_VV_VX_WV_WX<SDNode op, PatFrags extop, string i
                  vti.Wti.RegClass:$rs2, GPR:$rs1,
                  vti.Vti.AVL, vti.Vti.Log2SEW)>;
   }
+}
+
+multiclass VPatWidenBinarySDNode_VV_VX_WV_WX<SDNode op, PatFrags extop,
+                                             string instruction_name> {
+  defm : VPatWidenBinarySDNode_VV_VX<op, extop, extop, instruction_name>;
+  defm : VPatWidenBinarySDNode_WV_WX<op, extop, instruction_name>;
 }
 
 multiclass VPatWidenMulAddSDNode_VV<PatFrags extop1, PatFrags extop2, string instruction_name> {
@@ -631,6 +644,20 @@ defm : VPatBinarySDNode_VV_VX<udiv, "PseudoVDIVU">;
 defm : VPatBinarySDNode_VV_VX<sdiv, "PseudoVDIV">;
 defm : VPatBinarySDNode_VV_VX<urem, "PseudoVREMU">;
 defm : VPatBinarySDNode_VV_VX<srem, "PseudoVREM">;
+
+// 12.12. Vector Widening Integer Multiply Instructions
+defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, sext_oneuse,
+                                   "PseudoVWMUL">;
+defm : VPatWidenBinarySDNode_VV_VX<mul, zext_oneuse, zext_oneuse,
+                                   "PseudoVWMULU">;
+defm : VPatWidenBinarySDNode_VV_VX<mul, anyext_oneuse, anyext_oneuse,
+                                   "PseudoVWMULU">;
+defm : VPatWidenBinarySDNode_VV_VX<mul, zext_oneuse, anyext_oneuse,
+                                   "PseudoVWMULU">;
+defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, zext_oneuse,
+                                   "PseudoVWMULSU">;
+defm : VPatWidenBinarySDNode_VV_VX<mul, sext_oneuse, anyext_oneuse,
+                                   "PseudoVWMULSU">;
 
 // 12.13 Vector Single-Width Integer Multiply-Add Instructions.
 foreach vti = AllIntegerVectors in {

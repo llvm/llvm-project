@@ -171,7 +171,7 @@ namespace PR50561 {
 }
 
 namespace PR49188 {
-  template<class T> concept C = false;     // expected-note 6 {{because 'false' evaluated to false}}
+  template<class T> concept C = false;     // expected-note 7 {{because 'false' evaluated to false}}
 
   C auto f1() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
     return void();
@@ -189,7 +189,7 @@ namespace PR49188 {
   }
   C decltype(auto) f6() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
   }
-  C auto& f7() { // expected-error {{cannot form a reference to 'void'}}
+  C auto& f7() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
     return void();
   }
   C auto& f8() {
@@ -199,13 +199,16 @@ namespace PR49188 {
   }
 }
 namespace PR53911 {
-  template<class T> concept C = false;
+  template<class T> concept C = false; // expected-note 3 {{because 'false' evaluated to false}}
 
-  C auto *f1() {
-    return (void*)nullptr; // FIXME: should error
+  C auto *f1() { // expected-error {{deduced type 'void' does not satisfy 'C'}}
+    return (void*)nullptr;
   }
-  C auto *f2() {
-    return (int*)nullptr; // FIXME: should error
+  C auto *f2() { // expected-error {{deduced type 'int' does not satisfy 'C'}}
+    return (int*)nullptr;
+  }
+  C auto *****f3() { // expected-error {{deduced type 'int' does not satisfy 'C'}}
+    return (int*****)nullptr;
   }
 }
 
@@ -221,4 +224,35 @@ struct B {
   template <int N2 = 1> static void f() requires (N2 == 0) { return; }  // expected-note {{candidate template ignored: constraints not satisfied [with N2 = 1]}} expected-note {{evaluated to false}}
 };
 void (*f2)() = B::f; // expected-error {{address of overloaded function 'f' does not match required type}}
+}
+
+namespace PR54443 {
+
+template <class T, class U>
+struct is_same { static constexpr bool value = false; };
+
+template <class T>
+struct is_same<T, T> { static constexpr bool value = true; };
+
+template <class T, class U>
+concept same_as = is_same<T, U>::value; // expected-note-re 4 {{because {{.*}} evaluated to false}}
+
+int const &f();
+
+same_as<int const> auto i1 = f(); // expected-error {{deduced type 'int' does not satisfy 'same_as<const int>'}}
+same_as<int const> auto &i2 = f();
+same_as<int const> auto &&i3 = f(); // expected-error {{deduced type 'const int &' does not satisfy 'same_as<const int>'}}
+
+same_as<int const &> auto i4 = f(); // expected-error {{deduced type 'int' does not satisfy 'same_as<const int &>'}}
+same_as<int const &> auto &i5 = f(); // expected-error {{deduced type 'const int' does not satisfy 'same_as<const int &>'}}
+same_as<int const &> auto &&i6 = f();
+
+template <class T>
+concept C = false; // expected-note 3 {{because 'false' evaluated to false}}
+
+int **const &g();
+
+C auto **j1 = g();   // expected-error {{deduced type 'int' does not satisfy 'C'}}
+C auto **&j2 = g();  // expected-error {{deduced type 'int' does not satisfy 'C'}}
+C auto **&&j3 = g(); // expected-error {{deduced type 'int' does not satisfy 'C'}}
 }

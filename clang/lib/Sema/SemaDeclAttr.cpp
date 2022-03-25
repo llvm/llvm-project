@@ -2158,6 +2158,14 @@ static void handleNakedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
           << AL << Triple.getArchName();
       return;
     }
+
+    // This form is not allowed to be written on a member function (static or
+    // nonstatic) when in Microsoft compatibility mode.
+    if (S.getLangOpts().MSVCCompat && isa<CXXMethodDecl>(D)) {
+      S.Diag(AL.getLoc(), diag::err_attribute_wrong_decl_type_str)
+          << AL << "non-member functions";
+      return;
+    }
   }
 
   D->addAttr(::new (S.Context) NakedAttr(S.Context, AL));
@@ -9028,8 +9036,8 @@ void Sema::checkUnusedDeclAttributes(Declarator &D) {
 
 /// DeclClonePragmaWeak - clone existing decl (maybe definition),
 /// \#pragma weak needs a non-definition decl and source may not have one.
-NamedDecl * Sema::DeclClonePragmaWeak(NamedDecl *ND, IdentifierInfo *II,
-                                      SourceLocation Loc) {
+NamedDecl *Sema::DeclClonePragmaWeak(NamedDecl *ND, const IdentifierInfo *II,
+                                     SourceLocation Loc) {
   assert(isa<FunctionDecl>(ND) || isa<VarDecl>(ND));
   NamedDecl *NewD = nullptr;
   if (auto *FD = dyn_cast<FunctionDecl>(ND)) {

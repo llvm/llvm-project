@@ -27,6 +27,9 @@
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendOptions.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -145,6 +148,75 @@ public:
     return true;
   }
 
+  bool VisitEnumDecl(const EnumDecl *Decl) {
+    if (!Decl->isComplete())
+      return true;
+
+    // Skip forward declaration.
+    if (!Decl->isThisDeclarationADefinition())
+      return true;
+
+    // Collect symbol information.
+    StringRef Name = Decl->getName();
+    StringRef USR = API.recordUSR(Decl);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    AvailabilityInfo Availability = getAvailability(Decl);
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the enum.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForEnum(Decl);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+    EnumRecord *EnumRecord = API.addEnum(Name, USR, Loc, Availability, Comment,
+                                         Declaration, SubHeading);
+
+    // Now collect information about the enumerators in this enum.
+    recordEnumConstants(EnumRecord, Decl->enumerators());
+
+    return true;
+  }
+
+  bool VisitRecordDecl(const RecordDecl *Decl) {
+    if (!Decl->isCompleteDefinition())
+      return true;
+
+    // Skip C++ structs/classes/unions
+    // TODO: support C++ records
+    if (isa<CXXRecordDecl>(Decl))
+      return true;
+
+    // Collect symbol information.
+    StringRef Name = Decl->getName();
+    StringRef USR = API.recordUSR(Decl);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    AvailabilityInfo Availability = getAvailability(Decl);
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the struct.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForStruct(Decl);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+    StructRecord *StructRecord = API.addStruct(
+        Name, USR, Loc, Availability, Comment, Declaration, SubHeading);
+
+    // Now collect information about the fields in this struct.
+    recordStructFields(StructRecord, Decl->fields());
+
+    return true;
+  }
+
 private:
   /// Get availability information of the declaration \p D.
   AvailabilityInfo getAvailability(const Decl *D) const {
@@ -177,14 +249,69 @@ private:
     return Availability;
   }
 
+  /// Collect API information for the enum constants and associate with the
+  /// parent enum.
+  void recordEnumConstants(EnumRecord *EnumRecord,
+                           const EnumDecl::enumerator_range Constants) {
+    for (const auto *Constant : Constants) {
+      // Collect symbol information.
+      StringRef Name = Constant->getName();
+      StringRef USR = API.recordUSR(Constant);
+      PresumedLoc Loc =
+          Context.getSourceManager().getPresumedLoc(Constant->getLocation());
+      AvailabilityInfo Availability = getAvailability(Constant);
+      DocComment Comment;
+      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Constant))
+        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                                Context.getDiagnostics());
+
+      // Build declaration fragments and sub-heading for the enum constant.
+      DeclarationFragments Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForEnumConstant(Constant);
+      DeclarationFragments SubHeading =
+          DeclarationFragmentsBuilder::getSubHeading(Constant);
+
+      API.addEnumConstant(EnumRecord, Name, USR, Loc, Availability, Comment,
+                          Declaration, SubHeading);
+    }
+  }
+
+  /// Collect API information for the struct fields and associate with the
+  /// parent struct.
+  void recordStructFields(StructRecord *StructRecord,
+                          const RecordDecl::field_range Fields) {
+    for (const auto *Field : Fields) {
+      // Collect symbol information.
+      StringRef Name = Field->getName();
+      StringRef USR = API.recordUSR(Field);
+      PresumedLoc Loc =
+          Context.getSourceManager().getPresumedLoc(Field->getLocation());
+      AvailabilityInfo Availability = getAvailability(Field);
+      DocComment Comment;
+      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Field))
+        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                                Context.getDiagnostics());
+
+      // Build declaration fragments and sub-heading for the struct field.
+      DeclarationFragments Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForField(Field);
+      DeclarationFragments SubHeading =
+          DeclarationFragmentsBuilder::getSubHeading(Field);
+
+      API.addStructField(StructRecord, Name, USR, Loc, Availability, Comment,
+                         Declaration, SubHeading);
+    }
+  }
+
   ASTContext &Context;
   APISet API;
 };
 
 class ExtractAPIConsumer : public ASTConsumer {
 public:
-  ExtractAPIConsumer(ASTContext &Context, std::unique_ptr<raw_pwrite_stream> OS)
-      : Visitor(Context), OS(std::move(OS)) {}
+  ExtractAPIConsumer(ASTContext &Context, StringRef ProductName,
+                     std::unique_ptr<raw_pwrite_stream> OS)
+      : Visitor(Context), ProductName(ProductName), OS(std::move(OS)) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     // Use ExtractAPIVisitor to traverse symbol declarations in the context.
@@ -193,12 +320,13 @@ public:
     // Setup a SymbolGraphSerializer to write out collected API information in
     // the Symbol Graph format.
     // FIXME: Make the kind of APISerializer configurable.
-    SymbolGraphSerializer SGSerializer(Visitor.getAPI());
+    SymbolGraphSerializer SGSerializer(Visitor.getAPI(), ProductName);
     SGSerializer.serialize(*OS);
   }
 
 private:
   ExtractAPIVisitor Visitor;
+  std::string ProductName;
   std::unique_ptr<raw_pwrite_stream> OS;
 };
 
@@ -209,8 +337,38 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return nullptr;
-  return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(),
-                                              std::move(OS));
+  return std::make_unique<ExtractAPIConsumer>(
+      CI.getASTContext(), CI.getInvocation().getFrontendOpts().ProductName,
+      std::move(OS));
+}
+
+bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
+  auto &Inputs = CI.getFrontendOpts().Inputs;
+  if (Inputs.empty())
+    return true;
+
+  auto Kind = Inputs[0].getKind();
+
+  // Convert the header file inputs into a single input buffer.
+  SmallString<256> HeaderContents;
+  for (const FrontendInputFile &FIF : Inputs) {
+    if (Kind.isObjectiveC())
+      HeaderContents += "#import";
+    else
+      HeaderContents += "#include";
+    HeaderContents += " \"";
+    HeaderContents += FIF.getFile();
+    HeaderContents += "\"\n";
+  }
+
+  Buffer = llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
+                                                getInputBufferName());
+
+  // Set that buffer up as our "real" input in the CompilerInstance.
+  Inputs.clear();
+  Inputs.emplace_back(Buffer->getMemBufferRef(), Kind, /*IsSystem*/ false);
+
+  return true;
 }
 
 std::unique_ptr<raw_pwrite_stream>

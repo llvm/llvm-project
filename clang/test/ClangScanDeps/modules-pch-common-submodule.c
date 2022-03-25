@@ -63,10 +63,8 @@
 
 // Explicitly build the PCH:
 //
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --module-name=ModCommon > %t/mod_common.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_pch.json \
-// RUN:   --tu-index=0 > %t/pch.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --module-name=ModCommon > %t/mod_common.cc1.rsp
+// RUN: %deps-to-rsp %t/result_pch.json --tu-index=0 > %t/pch.rsp
 //
 // RUN: %clang @%t/mod_common.cc1.rsp
 // RUN: %clang @%t/pch.rsp
@@ -124,10 +122,8 @@
 
 // Explicitly build the TU:
 //
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu.json \
-// RUN:   --module-name=ModTU > %t/mod_tu.cc1.rsp
-// RUN: %python %S/../../utils/module-deps-to-rsp.py %t/result_tu.json \
-// RUN:   --tu-index=0 > %t/tu.rsp
+// RUN: %deps-to-rsp %t/result_tu.json --module-name=ModTU > %t/mod_tu.cc1.rsp
+// RUN: %deps-to-rsp %t/result_tu.json --tu-index=0 > %t/tu.rsp
 //
 // RUN: %clang @%t/mod_tu.cc1.rsp
 // RUN: %clang @%t/tu.rsp

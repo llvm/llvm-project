@@ -299,17 +299,6 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
 }
 
-/// Create a new vectorized verstion of `op` with the given operands and types.
-static Operation *createVectorizedOp(OpBuilder &b, Operation *op,
-                                     ValueRange newOperands,
-                                     ArrayRef<Type> types) {
-  OperationState state(op->getLoc(), op->getName());
-  state.addAttributes(op->getAttrs());
-  state.addOperands(newOperands);
-  state.addTypes(types);
-  return b.createOperation(state);
-}
-
 /// Emit reduction operations if the shapes of the value to reduce is different
 /// that the result shape.
 static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
@@ -326,7 +315,9 @@ static Operation *reduceIfNeeded(OpBuilder &b, LinalgOp linalgOp, Operation *op,
     return nullptr;
   SmallVector<bool> reductionMask = getReductionMask(linalgOp);
   Value reduce = buildMultiDimReduce(b, op, reduceVec, reductionMask);
-  return createVectorizedOp(b, op, {reduce, outputVec}, reduce.getType());
+  return b.create(op->getLoc(), op->getName().getIdentifier(),
+                  /*operands=*/{reduce, outputVec}, reduce.getType(),
+                  op->getAttrs());
 }
 
 /// Generic vectorization for a single operation `op`, given already vectorized
@@ -420,8 +411,9 @@ vectorizeOneOp(OpBuilder &b, LinalgOp linalgOp, Operation *op,
   // Build and return the new op.
   return VectorizationResult{
       VectorizationStatus::NewOp,
-      createVectorizedOp(b, op, llvm::to_vector<4>(vectorizedOperands),
-                         llvm::to_vector<4>(returnTypes))};
+      b.create(op->getLoc(), op->getName().getIdentifier(),
+               llvm::to_vector<4>(vectorizedOperands),
+               llvm::to_vector<4>(returnTypes), op->getAttrs())};
 }
 
 /// Detect whether `r` has only ConstantOp, ElementwiseMappable and YieldOp.

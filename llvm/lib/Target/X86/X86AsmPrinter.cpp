@@ -362,6 +362,12 @@ void X86AsmPrinter::PrintIntelMemReference(const MachineInstr *MI,
       BaseReg.getReg() == X86::RIP)
     HasBaseReg = false;
 
+  // If we really just want to print out displacement.
+  if (Modifier && (DispSpec.isGlobal() || DispSpec.isSymbol()) &&
+      !strcmp(Modifier, "disp-only")) {
+    HasBaseReg = false;
+  }
+
   // If this has a segment register, print it.
   if (SegReg.getReg()) {
     PrintOperand(MI, OpNo + X86::AddrSegmentReg, O);
@@ -605,11 +611,14 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
         PrintMemReference(MI, OpNo, O, "H");
       }
       return false;
-    case 'P': // Don't print @PLT, but do print as memory.
+   // Print memory only with displacement. The Modifer 'P' is used in inline
+   // asm to present a call symbol or a global symbol which can not use base
+   // reg or index reg.
+    case 'P':
       if (MI->getInlineAsmDialect() == InlineAsm::AD_Intel) {
-        PrintIntelMemReference(MI, OpNo, O, "no-rip");
+        PrintIntelMemReference(MI, OpNo, O, "disp-only");
       } else {
-        PrintMemReference(MI, OpNo, O, "no-rip");
+        PrintMemReference(MI, OpNo, O, "disp-only");
       }
       return false;
     }

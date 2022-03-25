@@ -152,6 +152,10 @@ private:
 
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
                                                 unsigned StackBumpBytes) const;
+  void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) const;
+  void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI) const;
 };
 
 } // End llvm namespace

@@ -637,6 +637,25 @@ convertOmpSections(Operation &opInst, llvm::IRBuilderBase &builder,
   return bodyGenStatus;
 }
 
+/// Converts an OpenMP single construct into LLVM IR using OpenMPIRBuilder.
+static LogicalResult
+convertOmpSingle(omp::SingleOp &singleOp, llvm::IRBuilderBase &builder,
+                 LLVM::ModuleTranslation &moduleTranslation) {
+  using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  LogicalResult bodyGenStatus = success();
+  auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP,
+                    llvm::BasicBlock &continuationBB) {
+    convertOmpOpRegions(singleOp.region(), "omp.single.region",
+                        *codegenIP.getBlock(), continuationBB, builder,
+                        moduleTranslation, bodyGenStatus);
+  };
+  auto finiCB = [&](InsertPointTy codeGenIP) {};
+  builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createSingle(
+      ompLoc, bodyCB, finiCB, /*DidIt=*/nullptr));
+  return bodyGenStatus;
+}
+
 /// Converts an OpenMP workshare loop into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -1354,6 +1373,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
       })
       .Case([&](omp::SectionsOp) {
         return convertOmpSections(*op, builder, moduleTranslation);
+      })
+      .Case([&](omp::SingleOp op) {
+        return convertOmpSingle(op, builder, moduleTranslation);
       })
       .Case<omp::YieldOp, omp::TerminatorOp, omp::ReductionDeclareOp,
             omp::CriticalDeclareOp>([](auto op) {

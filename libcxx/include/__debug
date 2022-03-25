@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_DEBUG_H
-#define _LIBCPP_DEBUG_H
+#ifndef _LIBCPP___DEBUG
+#define _LIBCPP___DEBUG
 
 #include <__assert>
 #include <__config>
@@ -229,4 +229,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11 inline void __debug_db_inser
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_DEBUG_H
+#endif // _LIBCPP___DEBUG

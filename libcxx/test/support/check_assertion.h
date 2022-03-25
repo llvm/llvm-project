@@ -9,16 +9,6 @@
 #ifndef TEST_SUPPORT_CHECK_ASSERTION_H
 #define TEST_SUPPORT_CHECK_ASSERTION_H
 
-#ifndef _LIBCPP_DEBUG
-#error _LIBCPP_DEBUG must be defined before including this header
-#endif
-
-#include <ciso646>
-#ifndef _LIBCPP_VERSION
-#error "This header may only be used for libc++ tests"
-#endif
-
-#include <__debug>
 #include <cassert>
 #include <cstddef>
 #include <cstdio>
@@ -33,28 +23,31 @@
 #include "test_macros.h"
 #include "test_allocator.h"
 
+#ifndef _LIBCPP_VERSION
+# error "This header may only be used for libc++ tests"
+#endif
+
 #if TEST_STD_VER < 11
 # error "C++11 or greater is required to use this header"
 #endif
 
-struct DebugInfoMatcher {
+struct AssertionInfoMatcher {
   static const int any_line = -1;
   static constexpr const char* any_file = "*";
   static constexpr const char* any_msg = "*";
 
-  constexpr DebugInfoMatcher() : is_empty_(true), msg_(any_msg, __builtin_strlen(any_msg)), file_(any_file, __builtin_strlen(any_file)), line_(any_line) { }
-  constexpr DebugInfoMatcher(const char* msg, const char* file = any_file, int line = any_line)
+  constexpr AssertionInfoMatcher() : is_empty_(true), msg_(any_msg, __builtin_strlen(any_msg)), file_(any_file, __builtin_strlen(any_file)), line_(any_line) { }
+  constexpr AssertionInfoMatcher(const char* msg, const char* file = any_file, int line = any_line)
     : is_empty_(false), msg_(msg, __builtin_strlen(msg)), file_(file, __builtin_strlen(file)), line_(line) {}
 
-  bool Matches(std::__libcpp_debug_info const& got) const {
+  bool Matches(char const* file, int line, char const* message) const {
     assert(!empty() && "empty matcher");
 
-    if (CheckLineMatches(got.__line_) && CheckFileMatches(got.__file_) &&
-        CheckMessageMatches(got.__msg_))
+    if (CheckLineMatches(line) && CheckFileMatches(file) && CheckMessageMatches(message))
         return true;
     // Write to stdout because that's the file descriptor captured by the parent
     // process.
-    std::printf("Failed to match debug info!\n%s\nVS\n%s\n", ToString().data(), got.what().data());
+    std::printf("Failed to match assertion info!\n%s\nVS\n%s:%d (%s)\n", ToString().data(), file, line, message);
     return false;
   }
 
@@ -108,10 +101,10 @@ private:
   int line_;
 };
 
-static constexpr DebugInfoMatcher AnyMatcher(DebugInfoMatcher::any_msg);
+static constexpr AssertionInfoMatcher AnyMatcher(AssertionInfoMatcher::any_msg);
 
-inline DebugInfoMatcher& GlobalMatcher() {
-  static DebugInfoMatcher GMatch;
+inline AssertionInfoMatcher& GlobalMatcher() {
+  static AssertionInfoMatcher GMatch;
   return GMatch;
 }
 
@@ -136,15 +129,7 @@ struct DeathTest {
     return val >= RK_DidNotDie && val <= RK_Unknown;
   }
 
-  TEST_NORETURN static void DeathTestDebugHandler(std::__libcpp_debug_info const& info) {
-    assert(!GlobalMatcher().empty());
-    if (GlobalMatcher().Matches(info)) {
-      std::exit(RK_MatchFound);
-    }
-    std::exit(RK_MatchFailure);
-  }
-
-  DeathTest(DebugInfoMatcher const& Matcher) : matcher_(Matcher) {}
+  DeathTest(AssertionInfoMatcher const& Matcher) : matcher_(Matcher) {}
 
   template <class Func>
   ResultKind Run(Func&& f) {
@@ -180,7 +165,6 @@ private:
     DupFD(GetStdErrWriteFD(), STDERR_FILENO);
 
     GlobalMatcher() = matcher_;
-    std::__libcpp_set_debug_function(&DeathTestDebugHandler);
     f();
     std::exit(RK_DidNotDie);
   }
@@ -242,7 +226,7 @@ private:
     return stderr_pipe_fd_[1];
   }
 private:
-  DebugInfoMatcher matcher_;
+  AssertionInfoMatcher matcher_;
   pid_t child_pid_ = -1;
   int exit_code_ = -1;
   int stdout_pipe_fd_[2];
@@ -251,8 +235,16 @@ private:
   std::string stderr_from_child_;
 };
 
+void std::__libcpp_assertion_handler(char const* file, int line, char const* /*expression*/, char const* message) {
+  assert(!GlobalMatcher().empty());
+  if (GlobalMatcher().Matches(file, line, message)) {
+    std::exit(DeathTest::RK_MatchFound);
+  }
+  std::exit(DeathTest::RK_MatchFailure);
+}
+
 template <class Func>
-inline bool ExpectDeath(const char* stmt, Func&& func, DebugInfoMatcher Matcher) {
+inline bool ExpectDeath(const char* stmt, Func&& func, AssertionInfoMatcher Matcher) {
   DeathTest DT(Matcher);
   DeathTest::ResultKind RK = DT.Run(func);
   auto OnFailure = [&](const char* msg) {
@@ -293,6 +285,6 @@ inline bool ExpectDeath(const char* stmt, Func&& func) {
 
 #define EXPECT_DEATH_MATCHES(Matcher, ...) assert((ExpectDeath(#__VA_ARGS__, [&]() { __VA_ARGS__; }, Matcher)))
 
-#define TEST_LIBCPP_ASSERT_FAILURE(expr, message) assert((ExpectDeath(#expr, [&]() { (void)(expr); }, DebugInfoMatcher(message))))
+#define TEST_LIBCPP_ASSERT_FAILURE(expr, message) assert((ExpectDeath(#expr, [&]() { (void)(expr); }, AssertionInfoMatcher(message))))
 
 #endif // TEST_SUPPORT_CHECK_ASSERTION_H

@@ -2608,8 +2608,9 @@ MallocChecker::ReallocMemAux(CheckerContext &C, const CallEvent &Call,
 
   // Compare the size argument to 0.
   DefinedOrUnknownSVal SizeZero =
-    svalBuilder.evalEQ(State, TotalSize.castAs<DefinedOrUnknownSVal>(),
-                       svalBuilder.makeIntValWithPtrWidth(0, false));
+      svalBuilder.evalEQ(State, TotalSize.castAs<DefinedOrUnknownSVal>(),
+                         svalBuilder.makeIntValWithWidth(
+                             svalBuilder.getContext().getSizeType(), 0));
 
   ProgramStateRef StatePtrIsNull, StatePtrNotNull;
   std::tie(StatePtrIsNull, StatePtrNotNull) = State->assume(PtrEQ);

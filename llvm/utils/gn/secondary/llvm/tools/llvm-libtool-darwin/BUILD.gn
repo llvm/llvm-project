@@ -1,3 +1,22 @@
+import("//llvm/tools/cctools_symlinks.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+if (llvm_install_cctools_symlinks) {
+  symlink_or_copy("libtool") {
+    deps = [ ":llvm-libtool-darwin" ]
+    source = "llvm-libtool-darwin"
+    output = "$root_out_dir/bin/libtool"
+  }
+}
+
+# //:llvm-libtool-darwin depends on this symlink target, see comment in
+# //BUILD.gn.
+group("symlinks") {
+  if (llvm_install_cctools_symlinks) {
+    deps = [ ":libtool" ]
+  }
+}
+
 executable("llvm-libtool-darwin") {
   deps = [
     "//llvm/lib/Object",
