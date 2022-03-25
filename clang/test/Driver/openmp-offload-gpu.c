@@ -344,4 +344,4 @@
 // RUN:          -fopenmp-new-driver -no-canonical-prefixes -nogpulib %s -o openmp-offload-gpu 2>&1 \
 // RUN:   | FileCheck -check-prefix=NEW_DRIVER_EMBEDDING %s
 
-// NEW_DRIVER_EMBEDDING: -fembed-offload-object=[[CUBIN:.*\.cubin]],openmp.nvptx64-nvidia-cuda.sm_70
+// NEW_DRIVER_EMBEDDING: -fembed-offload-object=[[CUBIN:.*\.cubin]],openmp,nvptx64-nvidia-cuda,sm_70

@@ -6940,13 +6940,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       const ArgList &TCArgs = C.getArgsForToolChain(TC, "", Action::OFK_OpenMP);
       StringRef File =
           C.getArgs().MakeArgString(TC->getInputFilename(*InputFile));
-      StringRef InputName = Clang::getBaseInputStem(Args, Inputs);
 
-      CmdArgs.push_back(Args.MakeArgString(
-          "-fembed-offload-object=" + File + "," +
-          Action::GetOffloadKindName(Action::OFK_OpenMP) + "." +
-          TC->getTripleString() + "." +
-          TCArgs.getLastArgValue(options::OPT_march_EQ) + "." + InputName));
+      CmdArgs.push_back(
+          Args.MakeArgString("-fembed-offload-object=" + File + "," +
+                             Action::GetOffloadKindName(Action::OFK_OpenMP) +
+                             "," + TC->getTripleString() + "," +
+                             TCArgs.getLastArgValue(options::OPT_march_EQ)));
     }
   }
 

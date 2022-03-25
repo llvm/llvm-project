@@ -265,15 +265,15 @@ void VFABI::setVectorVariantNames(CallInst *CI,
 }
 
 void llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
-                               StringRef SectionName) {
-  // Embed the buffer into the module.
+                               StringRef SectionName, Align Alignment) {
+  // Embed the memory buffer into the module.
   Constant *ModuleConstant = ConstantDataArray::get(
       M.getContext(), makeArrayRef(Buf.getBufferStart(), Buf.getBufferSize()));
   GlobalVariable *GV = new GlobalVariable(
-      M, ModuleConstant->getType(), true, GlobalValue::ExternalLinkage,
-      ModuleConstant, SectionName.drop_front());
+      M, ModuleConstant->getType(), true, GlobalValue::PrivateLinkage,
+      ModuleConstant, "llvm.embedded.object");
   GV->setSection(SectionName);
-  GV->setVisibility(GlobalValue::HiddenVisibility);
+  GV->setAlignment(Alignment);
 
   appendToCompilerUsed(M, GV);
 }
