@@ -530,7 +530,6 @@
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
 // CHECK-BASIC-LIBCXX-INSTALL: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-BASIC-LIBCXX-INSTALL: "--sysroot=[[SYSROOT]]"
-// CHECK-BASIC-LIBCXX-INSTALL: "-L[[SYSROOT]]/usr/bin/../lib"
 //
 // Test that we can use -stdlib=libc++ in a build system even when it
 // occasionally links C code instead of C++ code.
@@ -547,7 +546,6 @@
 // CHECK-BASIC-LIBCXX-C-LINK-NOT: "-internal-isystem" "[[SYSROOT]]/usr/bin/../include/c++/v1"
 // CHECK-BASIC-LIBCXX-C-LINK: "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // CHECK-BASIC-LIBCXX-C-LINK: "--sysroot=[[SYSROOT]]"
-// CHECK-BASIC-LIBCXX-C-LINK: "-L[[SYSROOT]]/usr/bin/../lib"
 //
 // Check multi arch support on Ubuntu 12.04 LTS.
 // RUN: %clang -no-canonical-prefixes %s -no-pie -### -o %t.o 2>&1 \
