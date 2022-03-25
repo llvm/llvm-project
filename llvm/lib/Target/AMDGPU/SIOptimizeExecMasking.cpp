@@ -451,20 +451,19 @@ static bool optimizeVCMPSaveExecSequence(MachineInstr &SaveExecInstr,
   auto Builder = BuildMI(*VCmp.getParent(), std::next(InsertPosIt),
                          VCmp.getDebugLoc(), TII->get(NewOpcode));
 
-  if (AMDGPU::getNamedOperandIdx(NewOpcode, AMDGPU::OpName::src0_modifiers) !=
-      -1)
-    Builder.addImm(0);
+  auto TryAddImmediateValueFromNamedOperand =
+      [&](unsigned OperandName) -> void {
+    if (auto *Mod = TII->getNamedOperand(VCmp, OperandName))
+      Builder.addImm(Mod->getImm());
+  };
 
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::src0_modifiers);
   Builder.add(*Src0);
 
-  if (AMDGPU::getNamedOperandIdx(NewOpcode, AMDGPU::OpName::src1_modifiers) !=
-      -1)
-    Builder.addImm(0);
-
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::src1_modifiers);
   Builder.add(*Src1);
 
-  if (AMDGPU::getNamedOperandIdx(NewOpcode, AMDGPU::OpName::clamp) != -1)
-    Builder.addImm(0);
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
 
   return true;
 }
