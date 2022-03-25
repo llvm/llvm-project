@@ -6,21 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <string>
+// Make sure that we diagnose any usage of the default assertion handler on a platform
+// that doesn't support it at compile-time.
 
-// void pop_back();
-
-// UNSUPPORTED: c++03, windows
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
-#include <string>
+// REQUIRES: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
 
-#include "check_assertion.h"
+#include <__assert>
 
-int main(int, char**) {
-    std::string s;
-    TEST_LIBCPP_ASSERT_FAILURE(s.pop_back(), "string::pop_back(): string is already empty");
-
-    return 0;
+void f() {
+  _LIBCPP_ASSERT(true, "message"); // expected-error {{'__libcpp_assertion_handler' is unavailable}}
 }

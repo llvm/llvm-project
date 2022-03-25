@@ -183,6 +183,14 @@ DEFAULT_PARAMETERS = [
               AddFeature('libcxx-no-debug-mode')
             ]),
 
+  Parameter(name='enable_assertions', choices=[True, False], type=bool, default=False,
+            help="Whether to enable assertions when compiling the test suite. This is only meaningful when "
+                 "running the tests against libc++.",
+            actions=lambda assertions: [
+              AddCompileFlag('-D_LIBCPP_ENABLE_ASSERTIONS=1'),
+              AddFeature('libcpp-has-assertions')
+            ] if assertions else []),
+
   Parameter(name='additional_features', type=list, default=[],
             help="A comma-delimited list of additional features that will be enabled when running the tests. "
                  "This should be used sparingly since specifying ad-hoc features manually is error-prone and "

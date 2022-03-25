@@ -6,23 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <vector>
+// Test that we can set a custom assertion handler.
 
-// pop_back() more than the number of elements in a vector
-
-// UNSUPPORTED: c++03, windows
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
 
-#include <vector>
+// We flag uses of the assertion handler in older dylibs at compile-time to avoid runtime
+// failures when back-deploying.
+// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
 
-#include "check_assertion.h"
+#include <__assert>
+#include <cassert>
+
+bool handler_called = false;
+void std::__libcpp_assertion_handler(char const*, int, char const*, char const*) {
+  handler_called = true;
+}
 
 int main(int, char**) {
-    std::vector<int> v;
-    v.push_back(0);
-    v.pop_back();
-    TEST_LIBCPP_ASSERT_FAILURE(v.pop_back(), "vector::pop_back called on an empty vector");
-
-    return 0;
+  _LIBCPP_ASSERT(false, "message");
+  assert(handler_called);
+  return 0;
 }
