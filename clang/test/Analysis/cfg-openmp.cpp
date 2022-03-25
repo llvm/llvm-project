@@ -747,3 +747,27 @@ void parallelloop(int argc) {
   for (int i = 0; i < 10; ++i)
     argc = x;
 }
+
+// CHECK-LABEL:  void targetparallelloop(int argc)
+void targetparallelloop(int argc) {
+  int x, cond, fp, rd, map;
+// CHECK-DAG:   [B3]
+// CHECK-DAG:  [[#TTDB:]]: x
+// CHECK-DAG:  [[#TTDB+1]]: [B3.[[#TTDB]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#TTDB+2]]: argc
+// CHECK-DAG:  [[#TTDB+3]]: [B3.[[#TTDB+2]]] = [B3.[[#TTDB+1]]]
+// CHECK-DAG:   [B1]
+// CHECK-DAG:  [[#TTD:]]: cond
+// CHECK-DAG:  [[#TTD+1]]: [B1.[[#TTD]]] (ImplicitCastExpr, LValueToRValue, int)
+// CHECK-DAG:  [[#TTD+2]]: [B1.[[#TTD+1]]] (ImplicitCastExpr, IntegralToBoolean, _Bool)
+// CHECK-DAG:  [[#TTD+3]]: fp
+// CHECK-DAG:  [[#TTD+4]]: rd
+// CHECK-DAG:  [[#TTD+5]]: [B3.[[#TTDB+2]]]
+// CHECK-DAG:  [[#TTD+6]]: [B3.[[#TTDB]]]
+// CHECK-DAG:  [[#TTD+7]]: #pragma omp target parallel loop if(cond) firstprivate(fp) reduction(+: rd) map(alloc: map)
+// CHECK-DAG:    for (int i = 0;
+// CHECK-DAG:        [B3.[[#TTDB+3]]];
+#pragma omp target parallel loop if(cond) firstprivate(fp) reduction(+:rd) map(alloc:map)
+  for (int i = 0; i < 10; ++i)
+    argc = x;
+}

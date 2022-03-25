@@ -2612,7 +2612,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPParallelGenericLoopDirective = 298,
 
-  CXCursor_LastStmt = CXCursor_OMPParallelGenericLoopDirective,
+  /** OpenMP target parallel loop directive.
+   */
+  CXCursor_OMPTargetParallelGenericLoopDirective = 299,
+
+  CXCursor_LastStmt = CXCursor_OMPTargetParallelGenericLoopDirective,
 
   /**
    * Cursor that represents the translation unit itself.
