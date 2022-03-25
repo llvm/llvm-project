@@ -25,10 +25,10 @@ void f3(struct S s) { // expected-warning{{parameter 's' set but not used}}
   s = t;
 }
 
-void f4(int j) { //TODO: warn
+void f4(int j) { // expected-warning{{parameter 'j' set but not used}}
     j++;
 }
 
-void f5(int k) { //TODO: warn
+void f5(int k) { // expected-warning{{parameter 'k' set but not used}}
     --k;
 }

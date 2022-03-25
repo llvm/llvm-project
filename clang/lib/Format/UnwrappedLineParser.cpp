@@ -1940,11 +1940,6 @@ bool UnwrappedLineParser::tryToParseLambda() {
   if (!tryToParseLambdaIntroducer())
     return false;
 
-  // `[something] >` is not a lambda, but an array type in a template parameter
-  // list.
-  if (FormatTok->is(tok::greater))
-    return false;
-
   bool SeenArrow = false;
   bool InTemplateParameterList = false;
 
@@ -3534,7 +3529,7 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr) {
           // Don't try parsing a lambda if we had a closing parenthesis before,
           // it was probably a pointer to an array: int (*)[].
           if (!tryToParseLambda())
-            continue;
+            break;
         } else {
           parseSquare();
           continue;

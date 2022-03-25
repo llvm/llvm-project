@@ -411,7 +411,7 @@ bool RealOutputEditing<binaryPrecision>::EditListDirectedOutput(
 template <int binaryPrecision>
 bool RealOutputEditing<binaryPrecision>::EditEXOutput(const DataEdit &) {
   io_.GetIoErrorHandler().Crash(
-      "EX output editing is not yet implemented"); // TODO
+      "not yet implemented: EX output editing"); // TODO
 }
 
 template <int KIND> bool RealOutputEditing<KIND>::Edit(const DataEdit &edit) {

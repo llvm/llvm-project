@@ -244,7 +244,7 @@ public:
     return Result{1};
   }
 
-  Result operator()(const Symbol &symbol0) const {
+  Result GetLowerBound(const Symbol &symbol0, NamedEntity &&base) const {
     const Symbol &symbol{symbol0.GetUltimate()};
     if (const auto *details{
             symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
@@ -301,7 +301,7 @@ public:
           }
         }
         if (IsDescriptor(symbol)) {
-          return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
+          return ExtentExpr{DescriptorInquiry{std::move(base),
               DescriptorInquiry::Field::LowerBound, dimension_}};
         }
       }
@@ -310,7 +310,7 @@ public:
       if (assoc->rank()) { // SELECT RANK case
         const Symbol &resolved{ResolveAssociations(symbol)};
         if (IsDescriptor(resolved) && dimension_ < *assoc->rank()) {
-          return ExtentExpr{DescriptorInquiry{NamedEntity{symbol0},
+          return ExtentExpr{DescriptorInquiry{std::move(base),
               DescriptorInquiry::Field::LowerBound, dimension_}};
         }
       } else {
@@ -324,9 +324,14 @@ public:
     }
   }
 
+  Result operator()(const Symbol &symbol0) const {
+    return GetLowerBound(symbol0, NamedEntity{symbol0});
+  }
+
   Result operator()(const Component &component) const {
     if (component.base().Rank() == 0) {
-      return (*this)(component.GetLastSymbol());
+      return GetLowerBound(
+          component.GetLastSymbol(), NamedEntity{common::Clone(component)});
     }
     return Result{1};
   }

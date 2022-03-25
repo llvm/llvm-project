@@ -8,7 +8,6 @@
 
 #include "PrettyClassDefinitionDumper.h"
 
-#include "LinePrinter.h"
 #include "PrettyClassLayoutGraphicalDumper.h"
 #include "llvm-pdbutil.h"
 

@@ -499,6 +499,7 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genMinval(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genMod(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genModulo(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  void genMvbits(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genNearest(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNint(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genNot(mlir::Type, llvm::ArrayRef<mlir::Value>);
@@ -805,6 +806,13 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/false},
     {"mod", &I::genMod},
     {"modulo", &I::genModulo},
+    {"mvbits",
+     &I::genMvbits,
+     {{{"from", asValue},
+       {"frompos", asValue},
+       {"len", asValue},
+       {"to", asAddr},
+       {"topos", asValue}}}},
     {"nearest", &I::genNearest},
     {"nint", &I::genNint},
     {"not", &I::genNot},
@@ -2852,6 +2860,53 @@ mlir::Value IntrinsicLibrary::genModulo(mlir::Type resultType,
   auto remPlusP = builder.create<mlir::arith::AddFOp>(loc, remainder, args[1]);
   return builder.create<mlir::arith::SelectOp>(loc, mustAddP, remPlusP,
                                                remainder);
+}
+
+// MVBITS
+void IntrinsicLibrary::genMvbits(llvm::ArrayRef<fir::ExtendedValue> args) {
+  // A conformant MVBITS(FROM,FROMPOS,LEN,TO,TOPOS) call satisfies:
+  //     FROMPOS >= 0
+  //     LEN >= 0
+  //     TOPOS >= 0
+  //     FROMPOS + LEN <= BIT_SIZE(FROM)
+  //     TOPOS + LEN <= BIT_SIZE(TO)
+  // MASK = -1 >> (BIT_SIZE(FROM) - LEN)
+  // TO = LEN == 0 ? TO : ((!(MASK << TOPOS)) & TO) |
+  //                      (((FROM >> FROMPOS) & MASK) << TOPOS)
+  assert(args.size() == 5);
+  auto unbox = [&](fir::ExtendedValue exv) {
+    const mlir::Value *arg = exv.getUnboxed();
+    assert(arg && "nonscalar mvbits argument");
+    return *arg;
+  };
+  mlir::Value from = unbox(args[0]);
+  mlir::Type resultType = from.getType();
+  mlir::Value frompos = builder.createConvert(loc, resultType, unbox(args[1]));
+  mlir::Value len = builder.createConvert(loc, resultType, unbox(args[2]));
+  mlir::Value toAddr = unbox(args[3]);
+  assert(fir::dyn_cast_ptrEleTy(toAddr.getType()) == resultType &&
+         "mismatched mvbits types");
+  auto to = builder.create<fir::LoadOp>(loc, resultType, toAddr);
+  mlir::Value topos = builder.createConvert(loc, resultType, unbox(args[4]));
+  mlir::Value zero = builder.createIntegerConstant(loc, resultType, 0);
+  mlir::Value ones = builder.createIntegerConstant(loc, resultType, -1);
+  mlir::Value bitSize = builder.createIntegerConstant(
+      loc, resultType, resultType.cast<mlir::IntegerType>().getWidth());
+  auto shiftCount = builder.create<mlir::arith::SubIOp>(loc, bitSize, len);
+  auto mask = builder.create<mlir::arith::ShRUIOp>(loc, ones, shiftCount);
+  auto unchangedTmp1 = builder.create<mlir::arith::ShLIOp>(loc, mask, topos);
+  auto unchangedTmp2 =
+      builder.create<mlir::arith::XOrIOp>(loc, unchangedTmp1, ones);
+  auto unchanged = builder.create<mlir::arith::AndIOp>(loc, unchangedTmp2, to);
+  auto frombitsTmp1 = builder.create<mlir::arith::ShRUIOp>(loc, from, frompos);
+  auto frombitsTmp2 =
+      builder.create<mlir::arith::AndIOp>(loc, frombitsTmp1, mask);
+  auto frombits = builder.create<mlir::arith::ShLIOp>(loc, frombitsTmp2, topos);
+  auto resTmp = builder.create<mlir::arith::OrIOp>(loc, unchanged, frombits);
+  auto lenIsZero = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::eq, len, zero);
+  auto res = builder.create<mlir::arith::SelectOp>(loc, lenIsZero, to, resTmp);
+  builder.create<fir::StoreOp>(loc, res, toAddr);
 }
 
 // NEAREST

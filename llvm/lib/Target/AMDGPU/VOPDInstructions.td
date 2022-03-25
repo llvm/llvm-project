@@ -64,6 +64,8 @@ class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX,
   bits<5> OpX = XasVC.VOPDOp;
   bits<5> OpY = YasVC.VOPDOp;
 
+  let VALU = 1;
+
   let DecoderNamespace = "GFX11";
   let AssemblerPredicate = isGFX11Plus;
   let WaveSizePredicate = isWave32;

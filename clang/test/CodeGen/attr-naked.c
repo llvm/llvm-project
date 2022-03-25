@@ -23,5 +23,13 @@ __attribute((naked)) void t3(int x) {
 // CHECK: unreachable
 }
 
+// Make sure naked functions do not attempt to evaluate parameters with a
+// variably-modified type. Naked functions get no prolog, so this evaluation
+// should not take place.
+__attribute__((naked)) void t4(int len, char x[len]) {
+  // CHECK: define{{.*}} void @t4(i32 noundef{{.*}}, i8* noundef{{.*}})
+  // CHECK: unreachable
+}
+
 // CHECK: attributes [[NAKED_OPTNONE]] = { naked noinline nounwind optnone{{.*}} }
 // CHECK: attributes [[NAKED]] = { naked noinline nounwind{{.*}} }

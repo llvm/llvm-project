@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 add_custom_target(ClangPseudoUnitTests)
 add_unittest(ClangPseudoUnitTests ClangPseudoTests
   DirectiveMapTest.cpp
+  ForestTest.cpp
   GrammarTest.cpp
   LRTableTest.cpp
   TokenTest.cpp

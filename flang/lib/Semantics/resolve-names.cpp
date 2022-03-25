@@ -4721,7 +4721,7 @@ bool DeclarationVisitor::Pre(const parser::StructureDef &def) {
 }
 
 bool DeclarationVisitor::Pre(const parser::Union::UnionStmt &) {
-  Say("UNION is not yet supported"_err_en_US); // TODO
+  Say("not yet implemented: support for UNION"_err_en_US); // TODO
   return true;
 }
 

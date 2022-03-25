@@ -3984,6 +3984,14 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0);
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src1);
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2);
+  int Src3Idx = -1;
+  if (Src0Idx == -1) {
+    // VOPD V_DUAL_* instructions use different operand names.
+    Src0Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0X);
+    Src1Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vsrc1X);
+    Src2Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0Y);
+    Src3Idx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vsrc1Y);
+  }
 
   // Make sure the number of operands is correct.
   const MCInstrDesc &Desc = get(Opcode);
@@ -4244,8 +4252,12 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     bool UsesLiteral = false;
     const MachineOperand *LiteralVal = nullptr;
 
-    if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1)
+    int ImmIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm);
+    if (ImmIdx != -1) {
       ++ConstantBusCount;
+      UsesLiteral = true;
+      LiteralVal = &MI.getOperand(ImmIdx);
+    }
 
     SmallVector<Register, 2> SGPRsUsed;
     Register SGPRUsed;
@@ -4253,9 +4265,9 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // Only look at the true operands. Only a real operand can use the constant
     // bus, and we don't want to check pseudo-operands like the source modifier
     // flags.
-    for (int OpIdx : {Src0Idx, Src1Idx, Src2Idx}) {
+    for (int OpIdx : {Src0Idx, Src1Idx, Src2Idx, Src3Idx}) {
       if (OpIdx == -1)
-        break;
+        continue;
       const MachineOperand &MO = MI.getOperand(OpIdx);
       if (usesConstantBus(MRI, MO, MI.getDesc().OpInfo[OpIdx])) {
         if (MO.isReg()) {
@@ -4766,6 +4778,9 @@ adjustAllocatableRegClass(const GCNSubtarget &ST, const SIRegisterInfo &RI,
       break;
     case AMDGPU::AV_160RegClassID:
       RCID = AMDGPU::VReg_160RegClassID;
+      break;
+    case AMDGPU::AV_512RegClassID:
+      RCID = AMDGPU::VReg_512RegClassID;
       break;
     default:
       break;

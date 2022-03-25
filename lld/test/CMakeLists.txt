@@ -63,7 +63,7 @@ if (NOT LLD_BUILT_STANDALONE)
     split-file
     yaml2obj
     )
-    if (NOT WIN32)
+    if (NOT WIN32 AND LLVM_BUILD_EXAMPLES)
       list(APPEND LLD_TEST_DEPS
         Bye
         )

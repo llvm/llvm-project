@@ -1,3 +1,8 @@
+if(NOT (TARGET libc.src.__support.threads.mutex))
+  # Not all platforms have a mutex implementation. If mutex is unvailable,
+  # we just skip everything about files.
+  return()
+endif()
 
 add_libc_unittest(
   file_test

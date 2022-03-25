@@ -81,3 +81,6 @@ TSAN_FLAG(bool, ignore_noninstrumented_modules, SANITIZER_MAC ? true : false,
           "modules.")
 TSAN_FLAG(bool, shared_ptr_interceptor, true,
           "Track atomic reference counting in libc++ shared_ptr and weak_ptr.")
+TSAN_FLAG(bool, print_full_thread_history, false,
+          "If set, prints thread creation stacks for the threads involved in "
+          "the report and their ancestors up to the main thread.")
