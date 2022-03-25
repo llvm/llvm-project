@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "loader_test.h"
 #include "src/stdlib/getenv.h"
+
+#include "utils/IntegrationTest/test.h"
 
 static bool my_streq(const char *lhs, const char *rhs) {
   if (lhs == rhs)

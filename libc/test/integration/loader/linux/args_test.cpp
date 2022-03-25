@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "loader_test.h"
+#include "utils/IntegrationTest/test.h"
 
 static bool my_streq(const char *lhs, const char *rhs) {
   const char *l, *r;
