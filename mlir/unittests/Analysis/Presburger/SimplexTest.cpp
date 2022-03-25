@@ -548,3 +548,10 @@ TEST(SimplexTest, addDivisionVariable) {
   ASSERT_TRUE(sample.hasValue());
   EXPECT_EQ((*sample)[0] / 2, (*sample)[1]);
 }
+
+TEST(LexSimplexTest, addEquality) {
+  IntegerRelation rel(/*numDomain=*/0, /*numRange=*/1);
+  rel.addEquality({1, 0});
+  LexSimplex simplex(rel);
+  EXPECT_EQ(simplex.getNumConstraints(), 1u);
+}
