@@ -5,9 +5,8 @@
 
 define i32 @srem2_ashr_mask(i32 %a0) {
 ; CHECK-LABEL: @srem2_ashr_mask(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A0:%.*]], -2147483647
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp eq i32 [[TMP1]], -2147483647
-; CHECK-NEXT:    [[MASK:%.*]] = select i1 [[ISNEG]], i32 2, i32 0
+; CHECK-NEXT:    [[SREM:%.*]] = srem i32 [[A0:%.*]], 2
+; CHECK-NEXT:    [[MASK:%.*]] = and i32 [[SREM]], 2
 ; CHECK-NEXT:    ret i32 [[MASK]]
 ;
   %srem = srem i32 %a0, 2 ; result = (1,0,-1) num signbits = 31
@@ -16,6 +15,7 @@ define i32 @srem2_ashr_mask(i32 %a0) {
   ret i32 %mask
 }
 
+; Negative test - mask demands non-signbit from shift source
 define i32 @srem8_ashr_mask(i32 %a0) {
 ; CHECK-LABEL: @srem8_ashr_mask(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A0:%.*]], -2147483641
@@ -31,9 +31,8 @@ define i32 @srem8_ashr_mask(i32 %a0) {
 
 define <2 x i32> @srem2_ashr_mask_vector(<2 x i32> %a0) {
 ; CHECK-LABEL: @srem2_ashr_mask_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[A0:%.*]], <i32 -2147483647, i32 -2147483647>
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 -2147483647, i32 -2147483647>
-; CHECK-NEXT:    [[MASK:%.*]] = select <2 x i1> [[ISNEG]], <2 x i32> <i32 2, i32 2>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[SREM:%.*]] = srem <2 x i32> [[A0:%.*]], <i32 2, i32 2>
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[SREM]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[MASK]]
 ;
   %srem = srem <2 x i32> %a0, <i32 2, i32 2>
@@ -45,8 +44,7 @@ define <2 x i32> @srem2_ashr_mask_vector(<2 x i32> %a0) {
 define <2 x i32> @srem2_ashr_mask_vector_nonconstant(<2 x i32> %a0, <2 x i32> %a1) {
 ; CHECK-LABEL: @srem2_ashr_mask_vector_nonconstant(
 ; CHECK-NEXT:    [[SREM:%.*]] = srem <2 x i32> [[A0:%.*]], <i32 2, i32 2>
-; CHECK-NEXT:    [[ASHR:%.*]] = ashr <2 x i32> [[SREM]], [[A1:%.*]]
-; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[ASHR]], <i32 2, i32 2>
+; CHECK-NEXT:    [[MASK:%.*]] = and <2 x i32> [[SREM]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[MASK]]
 ;
   %srem = srem <2 x i32> %a0, <i32 2, i32 2>

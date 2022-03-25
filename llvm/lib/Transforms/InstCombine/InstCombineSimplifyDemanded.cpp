@@ -637,6 +637,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     break;
   }
   case Instruction::AShr: {
+    unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
+
+    // If we only want bits that already match the signbit then we don't need
+    // to shift.
+    unsigned NumHiDemandedBits = BitWidth - DemandedMask.countTrailingZeros();
+    if (SignBits >= NumHiDemandedBits)
+      return I->getOperand(0);
+
     // If this is an arithmetic shift right and only the low-bit is set, we can
     // always convert this into a logical shr, even if the shift amount is
     // variable.  The low bit of the shift cannot be an input sign bit unless
@@ -647,11 +655,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
                         I->getOperand(0), I->getOperand(1), I->getName());
       return InsertNewInstWith(NewVal, *I);
     }
-
-    // If the sign bit is the only bit demanded by this ashr, then there is no
-    // need to do it, the shift doesn't change the high bit.
-    if (DemandedMask.isSignMask())
-      return I->getOperand(0);
 
     const APInt *SA;
     if (match(I->getOperand(1), m_APInt(SA))) {
@@ -671,8 +674,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
       if (SimplifyDemandedBits(I, 0, DemandedMaskIn, Known, Depth + 1))
         return I;
-
-      unsigned SignBits = ComputeNumSignBits(I->getOperand(0), Depth + 1, CxtI);
 
       assert(!Known.hasConflict() && "Bits known to be one AND zero?");
       // Compute the new bits that are at the top now plus sign bits.
