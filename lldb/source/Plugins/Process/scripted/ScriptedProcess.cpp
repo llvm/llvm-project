@@ -304,35 +304,55 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
 
   StructuredData::DictionarySP thread_info_sp = GetInterface().GetThreadsInfo();
 
-  // FIXME: Need to sort the dictionary otherwise the thread ids won't match the
-  // thread indices.
-
   if (!thread_info_sp)
     return ScriptedInterface::ErrorWithMessage<bool>(
         LLVM_PRETTY_FUNCTION,
         "Couldn't fetch thread list from Scripted Process.", error);
 
+  // Because `StructuredData::Dictionary` uses a `std::map<ConstString,
+  // ObjectSP>` for storage, each item is sorted based on the key alphabetical
+  // order. Since `GetThreadsInfo` provides thread indices as the key element,
+  // thread info comes ordered alphabetically, instead of numerically, so we
+  // need to sort the thread indices before creating thread.
+
+  StructuredData::ArraySP keys = thread_info_sp->GetKeys();
+
+  std::map<size_t, StructuredData::ObjectSP> sorted_threads;
+  auto sort_keys = [&sorted_threads,
+                    &thread_info_sp](StructuredData::Object *item) -> bool {
+    if (!item)
+      return false;
+
+    llvm::StringRef key = item->GetStringValue();
+    size_t idx = 0;
+
+    // Make sure the provided index is actually an integer
+    if (!llvm::to_integer(key, idx))
+      return false;
+
+    sorted_threads[idx] = thread_info_sp->GetValueForKey(key);
+    return true;
+  };
+
+  size_t thread_count = thread_info_sp->GetSize();
+
+  if (!keys->ForEach(sort_keys) || sorted_threads.size() != thread_count)
+    // Might be worth showing the unsorted thread list instead of return early.
+    return ScriptedInterface::ErrorWithMessage<bool>(
+        LLVM_PRETTY_FUNCTION, "Couldn't sort thread list.", error);
+
   auto create_scripted_thread =
-      [this, &old_thread_list, &error,
-       &new_thread_list](ConstString key, StructuredData::Object *val) -> bool {
-    if (!val)
+      [this, &error, &new_thread_list](
+          const std::pair<size_t, StructuredData::ObjectSP> pair) -> bool {
+    size_t idx = pair.first;
+    StructuredData::ObjectSP object_sp = pair.second;
+
+    if (!object_sp)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION, "Invalid thread info object", error);
 
-    lldb::tid_t tid = LLDB_INVALID_THREAD_ID;
-    if (!llvm::to_integer(key.AsCString(), tid))
-      return ScriptedInterface::ErrorWithMessage<bool>(
-          LLVM_PRETTY_FUNCTION, "Invalid thread id", error);
-
-    if (ThreadSP thread_sp =
-            old_thread_list.FindThreadByID(tid, false /*=can_update*/)) {
-      // If the thread was already in the old_thread_list,
-      // just add it back to the new_thread_list.
-      new_thread_list.AddThread(thread_sp);
-      return true;
-    }
-
-    auto thread_or_error = ScriptedThread::Create(*this, val->GetAsGeneric());
+    auto thread_or_error =
+        ScriptedThread::Create(*this, object_sp->GetAsGeneric());
 
     if (!thread_or_error)
       return ScriptedInterface::ErrorWithMessage<bool>(
@@ -345,8 +365,7 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
     if (!reg_ctx_sp)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
-          llvm::Twine("Invalid Register Context for thread " +
-                      llvm::Twine(key.AsCString()))
+          llvm::Twine("Invalid Register Context for thread " + llvm::Twine(idx))
               .str(),
           error);
 
@@ -355,7 +374,7 @@ bool ScriptedProcess::DoUpdateThreadList(ThreadList &old_thread_list,
     return true;
   };
 
-  thread_info_sp->ForEach(create_scripted_thread);
+  llvm::for_each(sorted_threads, create_scripted_thread);
 
   return new_thread_list.GetSize(false) > 0;
 }
