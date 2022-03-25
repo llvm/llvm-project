@@ -9,9 +9,10 @@ add_llvm_fuzzer(lldb-target-fuzzer
   lldb-target-fuzzer.cpp
   )
 
-target_link_libraries(lldb-target-fuzzer
-  PRIVATE
-  liblldb
-  lldbFuzzerUtils
-  )
-
+if(TARGET lldb-target-fuzzer)
+  target_link_libraries(lldb-target-fuzzer
+    PRIVATE
+    liblldb
+    lldbFuzzerUtils
+    )
+endif()
