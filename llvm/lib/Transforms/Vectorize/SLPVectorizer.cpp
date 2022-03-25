@@ -8100,11 +8100,14 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
       }
 
       // If we have an inalloc alloca instruction, it needs to be scheduled
-      // after any preceeding stacksave.
-      if (match(BundleMember->Inst, m_Intrinsic<Intrinsic::stacksave>())) {
+      // after any preceeding stacksave.  We also need to prevent any alloca
+      // from reordering above a preceeding stackrestore.
+      if (match(BundleMember->Inst, m_Intrinsic<Intrinsic::stacksave>()) ||
+          match(BundleMember->Inst, m_Intrinsic<Intrinsic::stackrestore>())) {
         for (Instruction *I = BundleMember->Inst->getNextNode();
              I != ScheduleEnd; I = I->getNextNode()) {
-          if (match(I, m_Intrinsic<Intrinsic::stacksave>()))
+          if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
+              match(I, m_Intrinsic<Intrinsic::stackrestore>()))
             // Any allocas past here must be control dependent on I, and I
             // must be memory dependend on BundleMember->Inst.
             break;
@@ -8117,6 +8120,21 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       }
 
+      // In addition to the cases handle just above, we need to prevent
+      // allocas from moving below a stacksave.  The stackrestore case
+      // is currently thought to be conservatism.
+      if (isa<AllocaInst>(BundleMember->Inst)) {
+        for (Instruction *I = BundleMember->Inst->getNextNode();
+             I != ScheduleEnd; I = I->getNextNode()) {
+          if (!match(I, m_Intrinsic<Intrinsic::stacksave>()) &&
+              !match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+            continue;
+
+          // Add the dependency
+          makeControlDependent(I);
+          break;
+        }
+      }
 
       // Handle the memory dependencies (if any).
       ScheduleData *DepDest = BundleMember->NextLoadStore;
