@@ -135,7 +135,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
 
 // Convenience class grouping together type and shaped type op interfaces for
 // ops that have tensor return types.
-class InferTensorType<list<string> overridenMethods = []> : TraitList<
+class InferTensorTypeBase<list<string> overridenMethods = []> : TraitList<
   [
     // Op implements infer type op interface.
     InferTypeOpInterface,
@@ -146,9 +146,10 @@ class InferTensorType<list<string> overridenMethods = []> : TraitList<
     // along with knowledge that it is producing Tensors to infer the type.
     NativeOpTrait<"InferTensorType">
   ]>;
-def InferTensorTypeWithReify: TraitList<InferTensorType<[
-    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>.traits>;
 
+def InferTensorType : InferTensorTypeBase<["inferReturnTypeComponents"]>;
+def InferTensorTypeWithReify: InferTensorTypeBase<[
+    "inferReturnTypeComponents", "reifyReturnTypeShapes"]>;
 
 def ReifyRankedShapedTypeOpInterface :
     OpInterface<"ReifyRankedShapedTypeOpInterface"> {
