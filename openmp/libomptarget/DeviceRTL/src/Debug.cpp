@@ -21,7 +21,30 @@ using namespace _OMP;
 #pragma omp declare target
 
 extern "C" {
-void __assert_assume(bool condition) { __builtin_assume(condition); }
+
+/// AMDGCN Implementation
+///
+///{
+#pragma omp begin declare variant match(device = {arch(amdgcn)})
+namespace impl {
+void omp_assert_assume(bool condition) {}
+}
+#pragma omp end declare variant
+///}
+
+/// NVPTX Implementation
+///
+///{
+
+#pragma omp begin declare variant match(                                       \
+    device = {arch(nvptx, nvptx64)}, implementation = {extension(match_any)})
+namespace impl {
+void omp_assert_assume(bool condition) { __builtin_assume(condition); }
+}
+#pragma omp end declare variant
+///}
+
+void __assert_assume(bool condition) { impl::omp_assert_assume(condition); }
 
 void __assert_fail(const char *assertion, const char *file, unsigned line,
                    const char *function) {
