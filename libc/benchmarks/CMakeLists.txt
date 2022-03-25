@@ -43,6 +43,27 @@ endfunction()
 # Build Google Benchmark for libc
 #==============================================================================
 
+include(ExternalProject)
+ExternalProject_Add(google-benchmark-libc
+        EXCLUDE_FROM_ALL ON
+        PREFIX google-benchmark-libc
+        SOURCE_DIR ${LLVM_THIRD_PARTY_DIR}/benchmark
+        INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/google-benchmark-libc
+        CMAKE_CACHE_ARGS
+          -DBENCHMARK_ENABLE_EXCEPTIONS:BOOL=OFF
+          -DBENCHMARK_ENABLE_LTO:BOOL=OFF
+          -DBENCHMARK_ENABLE_TESTING:BOOL=OFF
+          -DBENCHMARK_ENABLE_WERROR:BOOL=${LLVM_ENABLE_WERROR}
+          -DBENCHMARK_FORCE_WERROR:BOOL=OFF
+          -DBENCHMARK_USE_LIBCXX:BOOL=OFF
+          -DCMAKE_BUILD_TYPE:STRING=RELEASE
+          -DCMAKE_C_COMPILER:STRING=${CMAKE_C_COMPILER}
+          -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
+          -DCMAKE_CXX_FLAGS:STRING=${BENCHMARK_LIBC_COMPILE_FLAGS}
+          -DCMAKE_CXX_STANDARD:STRING=14
+          -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+        )
+
 add_custom_target(libc-benchmark-util-tests)
 
 # libc-benchmark
@@ -52,13 +73,14 @@ add_library(libc-benchmark
     LibcBenchmark.cpp
     LibcBenchmark.h
 )
-add_dependencies(libc-benchmark benchmark)
+
 target_link_libraries(libc-benchmark
     PUBLIC
-    benchmark
+    benchmark::benchmark
     LLVMSupport
     Threads::Threads
 )
+add_dependencies(libc-benchmark google-benchmark-libc)
 llvm_update_compile_flags(libc-benchmark)
 
 add_libc_benchmark_unittest(libc-benchmark-test
