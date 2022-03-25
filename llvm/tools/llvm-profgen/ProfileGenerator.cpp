@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "ProfileGenerator.h"
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include <algorithm>
 #include <float.h>
 #include <unordered_set>
 
@@ -370,6 +370,39 @@ void ProfileGeneratorBase::updateTotalSamples() {
   }
 }
 
+void ProfileGeneratorBase::collectProfiledFunctions() {
+  std::unordered_set<const BinaryFunction *> ProfiledFunctions;
+  // Go through all the stacks, ranges and branches in sample counters, use the
+  // start of the range to look up the function it belongs and record the
+  // function.
+  for (const auto &CI : SampleCounters) {
+    if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(CI.first.getPtr())) {
+      for (auto Addr : CtxKey->Context) {
+        if (FuncRange *FRange = Binary->findFuncRangeForOffset(
+                Binary->virtualAddrToOffset(Addr)))
+          ProfiledFunctions.insert(FRange->Func);
+      }
+    }
+
+    for (auto Item : CI.second.RangeCounter) {
+      uint64_t StartOffset = Item.first.first;
+      if (FuncRange *FRange = Binary->findFuncRangeForOffset(StartOffset))
+        ProfiledFunctions.insert(FRange->Func);
+    }
+
+    for (auto Item : CI.second.BranchCounter) {
+      uint64_t SourceOffset = Item.first.first;
+      uint64_t TargetOffset = Item.first.first;
+      if (FuncRange *FRange = Binary->findFuncRangeForOffset(SourceOffset))
+        ProfiledFunctions.insert(FRange->Func);
+      if (FuncRange *FRange = Binary->findFuncRangeForOffset(TargetOffset))
+        ProfiledFunctions.insert(FRange->Func);
+    }
+  }
+
+  Binary->setProfiledFunctions(ProfiledFunctions);
+}
+
 FunctionSamples &
 ProfileGenerator::getTopLevelFunctionProfile(StringRef FuncName) {
   SampleContext Context(FuncName);
@@ -382,6 +415,7 @@ ProfileGenerator::getTopLevelFunctionProfile(StringRef FuncName) {
 }
 
 void ProfileGenerator::generateProfile() {
+  collectProfiledFunctions();
   if (Binary->usePseudoProbes()) {
     generateProbeBasedProfile();
   } else {
@@ -428,6 +462,7 @@ void ProfileGenerator::generateLineNumBasedProfile() {
 void ProfileGenerator::generateProbeBasedProfile() {
   assert(SampleCounters.size() == 1 &&
          "Must have one entry for profile generation.");
+  Binary->decodePseudoProbe();
   // Enable pseudo probe functionalities in SampleProf
   FunctionSamples::ProfileIsProbeBased = true;
   const SampleCounter &SC = SampleCounters.begin()->second;
@@ -442,16 +477,18 @@ void ProfileGenerator::generateProbeBasedProfile() {
 void ProfileGenerator::populateBodySamplesWithProbesForAllFunctions(
     const RangeSample &RangeCounter) {
   ProbeCounterMap ProbeCounter;
-  // preprocessRangeCounter returns disjoint ranges, so no longer to redo it inside
-  // extractProbesFromRange.
-  extractProbesFromRange(preprocessRangeCounter(RangeCounter), ProbeCounter, false);
+  // preprocessRangeCounter returns disjoint ranges, so no longer to redo it
+  // inside extractProbesFromRange.
+  extractProbesFromRange(preprocessRangeCounter(RangeCounter), ProbeCounter,
+                         false);
 
   for (const auto &PI : ProbeCounter) {
     const MCDecodedPseudoProbe *Probe = PI.first;
     uint64_t Count = PI.second;
     SampleContextFrameVector FrameVec;
     Binary->getInlineContextForProbe(Probe, FrameVec, true);
-    FunctionSamples &FunctionProfile = getLeafProfileAndAddTotalSamples(FrameVec, Count);
+    FunctionSamples &FunctionProfile =
+        getLeafProfileAndAddTotalSamples(FrameVec, Count);
     FunctionProfile.addBodySamplesForProbe(Probe->getIndex(), Count);
     if (Probe->isEntry())
       FunctionProfile.addHeadSamples(Count);
@@ -496,7 +533,8 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
       &getTopLevelFunctionProfile(FrameVec[0].FuncName);
   FunctionProfile->addTotalSamples(Count);
   if (Binary->usePseudoProbes()) {
-    const auto *FuncDesc = Binary->getFuncDescForGUID(Function::getGUID(FunctionProfile->getName()));
+    const auto *FuncDesc = Binary->getFuncDescForGUID(
+        Function::getGUID(FunctionProfile->getName()));
     FunctionProfile->setFunctionHash(FuncDesc->FuncHash);
   }
 
@@ -515,7 +553,8 @@ FunctionSamples &ProfileGenerator::getLeafProfileAndAddTotalSamples(
     FunctionProfile = &Ret.first->second;
     FunctionProfile->addTotalSamples(Count);
     if (Binary->usePseudoProbes()) {
-      const auto *FuncDesc = Binary->getFuncDescForGUID(Function::getGUID(FunctionProfile->getName()));
+      const auto *FuncDesc = Binary->getFuncDescForGUID(
+          Function::getGUID(FunctionProfile->getName()));
       FunctionProfile->setFunctionHash(FuncDesc->FuncHash);
     }
   }
@@ -646,32 +685,23 @@ FunctionSamples &CSProfileGenerator::getFunctionProfileForContext(
 void CSProfileGenerator::generateProfile() {
   FunctionSamples::ProfileIsCSFlat = true;
 
-  if (Binary->getTrackFuncContextSize())
-    computeSizeForProfiledFunctions();
+  collectProfiledFunctions();
 
   if (Binary->usePseudoProbes()) {
     generateProbeBasedProfile();
   } else {
     generateLineNumBasedProfile();
   }
+
+  if (Binary->getTrackFuncContextSize())
+    computeSizeForProfiledFunctions();
+
   postProcessProfiles();
 }
 
 void CSProfileGenerator::computeSizeForProfiledFunctions() {
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
-
-  // Go through all the ranges in the CS counters, use the start of the range to
-  // look up the function it belongs and record the function.
-  for (const auto &CI : SampleCounters) {
-    for (const auto &Item : CI.second.RangeCounter) {
-      // FIXME: Filter the bogus crossing function range.
-      uint64_t StartOffset = Item.first.first;
-      if (FuncRange *FRange = Binary->findFuncRangeForOffset(StartOffset))
-        ProfiledFunctions.insert(FRange->Func);
-    }
-  }
-
-  for (auto *Func : ProfiledFunctions)
+  for (auto *Func : Binary->getProfiledFunctions())
     Binary->computeInlinedContextSizeForFunc(Func);
 
   // Flush the symbolizer to save memory.
@@ -907,25 +937,44 @@ void ProfileGeneratorBase::extractProbesFromRange(
   }
 }
 
-// Helper function to extract context prefix string stack
-// Extract context stack for reusing, leaf context stack will
-// be added compressed while looking up function profile
-static void extractPrefixContextStack(
-    SampleContextFrameVector &ContextStack,
-    const SmallVectorImpl<const MCDecodedPseudoProbe *> &Probes,
-    ProfiledBinary *Binary) {
+static void
+extractPrefixContextStack(SampleContextFrameVector &ContextStack,
+                          const SmallVectorImpl<uint64_t> &Addresses,
+                          ProfiledBinary *Binary) {
+  SmallVector<const MCDecodedPseudoProbe *, 16> Probes;
+  for (auto Addr : reverse(Addresses)) {
+    const MCDecodedPseudoProbe *CallProbe = Binary->getCallProbeForAddr(Addr);
+    // These could be the cases when a probe is not found at a calliste. Cutting
+    // off the context from here since the inliner will not know how to consume
+    // a context with unknown callsites.
+    // 1. for functions that are not sampled when
+    // --decode-probe-for-profiled-functions-only is on.
+    // 2. for a merged callsite. Callsite merging may cause the loss of original
+    // probe IDs.
+    // 3. for an external callsite.
+    if (!CallProbe)
+      break;
+    Probes.push_back(CallProbe);
+  }
+
+  std::reverse(Probes.begin(), Probes.end());
+
+  // Extract context stack for reusing, leaf context stack will be added
+  // compressed while looking up function profile.
   for (const auto *P : Probes) {
     Binary->getInlineContextForProbe(P, ContextStack, true);
   }
 }
 
 void CSProfileGenerator::generateProbeBasedProfile() {
+  Binary->decodePseudoProbe();
   // Enable pseudo probe functionalities in SampleProf
   FunctionSamples::ProfileIsProbeBased = true;
   for (const auto &CI : SampleCounters) {
-    const auto *CtxKey = cast<ProbeBasedCtxKey>(CI.first.getPtr());
+    const AddrBasedCtxKey *CtxKey =
+        dyn_cast<AddrBasedCtxKey>(CI.first.getPtr());
     SampleContextFrameVector ContextStack;
-    extractPrefixContextStack(ContextStack, CtxKey->Probes, Binary);
+    extractPrefixContextStack(ContextStack, CtxKey->Context, Binary);
     // Fill in function body samples from probes, also infer caller's samples
     // from callee's probe
     populateBodySamplesWithProbes(CI.second.RangeCounter, ContextStack);

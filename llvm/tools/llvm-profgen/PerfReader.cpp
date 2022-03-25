@@ -179,17 +179,12 @@ std::shared_ptr<StringBasedCtxKey> FrameStack::getContextKey() {
   return KeyStr;
 }
 
-std::shared_ptr<ProbeBasedCtxKey> ProbeStack::getContextKey() {
-  std::shared_ptr<ProbeBasedCtxKey> ProbeBasedKey =
-      std::make_shared<ProbeBasedCtxKey>();
-  for (auto CallProbe : Stack) {
-    ProbeBasedKey->Probes.emplace_back(CallProbe);
-  }
-  CSProfileGenerator::compressRecursionContext<const MCDecodedPseudoProbe *>(
-      ProbeBasedKey->Probes);
-  CSProfileGenerator::trimContext<const MCDecodedPseudoProbe *>(
-      ProbeBasedKey->Probes);
-  return ProbeBasedKey;
+std::shared_ptr<AddrBasedCtxKey> AddressStack::getContextKey() {
+  std::shared_ptr<AddrBasedCtxKey> KeyStr = std::make_shared<AddrBasedCtxKey>();
+  KeyStr->Context = Stack;
+  CSProfileGenerator::compressRecursionContext<uint64_t>(KeyStr->Context);
+  CSProfileGenerator::trimContext<uint64_t>(KeyStr->Context);
+  return KeyStr;
 }
 
 template <typename T>
@@ -252,8 +247,8 @@ void VirtualUnwinder::collectSamplesFromFrameTrie(
 void VirtualUnwinder::collectSamplesFromFrameTrie(
     UnwindState::ProfiledFrame *Cur) {
   if (Binary->usePseudoProbes()) {
-    ProbeStack Stack(Binary);
-    collectSamplesFromFrameTrie<ProbeStack>(Cur, Stack);
+    AddressStack Stack(Binary);
+    collectSamplesFromFrameTrie<AddressStack>(Cur, Stack);
   } else {
     FrameStack Stack(Binary);
     collectSamplesFromFrameTrie<FrameStack>(Cur, Stack);
@@ -461,14 +456,17 @@ static std::string getContextKeyStr(ContextKey *K,
                                     const ProfiledBinary *Binary) {
   if (const auto *CtxKey = dyn_cast<StringBasedCtxKey>(K)) {
     return SampleContext::getContextString(CtxKey->Context);
-  } else if (const auto *CtxKey = dyn_cast<ProbeBasedCtxKey>(K)) {
-    SampleContextFrameVector ContextStack;
-    for (const auto *Probe : CtxKey->Probes) {
-      Binary->getInlineContextForProbe(Probe, ContextStack, true);
+  } else if (const auto *CtxKey = dyn_cast<AddrBasedCtxKey>(K)) {
+    std::ostringstream OContextStr;
+    for (uint32_t I = 0; I < CtxKey->Context.size(); I++) {
+      if (OContextStr.str().size())
+        OContextStr << " @ ";
+      OContextStr << "0x"
+                  << to_hexString(
+                         Binary->virtualAddrToOffset(CtxKey->Context[I]),
+                         false);
     }
-    // Probe context key at this point does not have leaf probe, so do not
-    // include the leaf inline location.
-    return SampleContext::getContextString(ContextStack, true);
+    return OContextStr.str();
   } else {
     llvm_unreachable("unexpected key type");
   }
