@@ -376,14 +376,12 @@ define <4 x i32> @combine_vec_add_add_not(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %r
 }
 
-; FIXME: Fold to adc $32, %edi
 define i32 @combine_add_adc_constant(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: combine_add_adc_constant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    btl $7, %edx
-; CHECK-NEXT:    adcl $0, %edi
-; CHECK-NEXT:    leal 32(%rdi), %eax
+; CHECK-NEXT:    adcl $32, %eax
 ; CHECK-NEXT:    retq
   %and = lshr i32 %z, 7
   %bit = and i32 %and, 1

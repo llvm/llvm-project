@@ -52262,6 +52262,11 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   SDValue CarryIn = N->getOperand(2);
 
+  // Canonicalize constant to RHS.
+  if (isa<ConstantSDNode>(LHS) && !isa<ConstantSDNode>(RHS))
+    return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), RHS, LHS,
+                       CarryIn);
+
   // If the LHS and RHS of the ADC node are zero, then it can't overflow and
   // the result is either zero or one (depending on the input carry bit).
   // Strength reduce this down to a "set on carry" aka SETCC_CARRY&1.
@@ -52902,6 +52907,14 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op1.getOperand(0));
       return DAG.getNode(ISD::SUB, DL, VT, Op0, SExt);
     }
+  }
+
+  // Fold ADD(ADC(Y,0,W),X) -> ADC(X,Y,W)
+  if (Op0.getOpcode() == X86ISD::ADC && Op0->hasOneUse() &&
+      X86::isZeroNode(Op0.getOperand(1))) {
+    assert(!Op0->hasAnyUseOfValue(1) && "Overflow bit in use");
+    return DAG.getNode(X86ISD::ADC, SDLoc(Op0), Op0->getVTList(), Op1,
+                       Op0.getOperand(0), Op0.getOperand(2));
   }
 
   return combineAddOrSubToADCOrSBB(N, DAG);
