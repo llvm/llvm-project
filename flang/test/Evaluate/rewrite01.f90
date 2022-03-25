@@ -26,7 +26,7 @@ end function
 subroutine ubound_test(x, n, m)
   integer :: x(n, m)
   integer :: y(0:n, 0:m) ! UBOUND could be 0 if n or m are < 0
-  !CHECK: PRINT *, [INTEGER(4)::int(size(x,dim=1),kind=4),int(size(x,dim=2),kind=4)]
+  !CHECK: PRINT *, [INTEGER(4)::int(size(x,dim=1,kind=8),kind=4),int(size(x,dim=2,kind=8),kind=4)]
   print *, ubound(x)
   !CHECK: PRINT *, ubound(returns_array(n,m))
   print *, ubound(returns_array(n, m))
@@ -44,7 +44,7 @@ end subroutine
 
 subroutine size_test(x, n, m)
   integer :: x(n, m)
-  !CHECK: PRINT *, int(size(x,dim=1)*size(x,dim=2),kind=4)
+  !CHECK: PRINT *, int(size(x,dim=1,kind=8)*size(x,dim=2,kind=8),kind=4)
   print *, size(x)
   !CHECK: PRINT *, size(returns_array(n,m))
   print *, size(returns_array(n, m))
@@ -58,7 +58,7 @@ end subroutine
 
 subroutine shape_test(x, n, m)
   integer :: x(n, m)
-  !CHECK: PRINT *, [INTEGER(4)::int(size(x,dim=1),kind=4),int(size(x,dim=2),kind=4)]
+  !CHECK: PRINT *, [INTEGER(4)::int(size(x,dim=1,kind=8),kind=4),int(size(x,dim=2,kind=8),kind=4)]
   print *, shape(x)
   !CHECK: PRINT *, shape(returns_array(n,m))
   print *, shape(returns_array(n, m))
@@ -71,6 +71,10 @@ end subroutine
 subroutine lbound_test(x, n, m)
   integer :: x(n, m)
   integer :: y(0:n, 0:m) ! LBOUND could be 1 if n or m are < 0
+  type t
+    real, pointer :: p(:, :)
+  end type
+  type(t) :: a(10)
   !CHECK: PRINT *, [INTEGER(4)::1_4,1_4]
   print *, lbound(x)
   !CHECK: PRINT *, [INTEGER(4)::1_4,1_4]
@@ -85,6 +89,8 @@ subroutine lbound_test(x, n, m)
   print *, lbound(y)
   !CHECK: PRINT *, lbound(y,1_4)
   print *, lbound(y, 1)
+  !CHECK: PRINT *, lbound(a(1_8)%p,dim=1,kind=8)
+  print *, lbound(a(1)%p, 1, kind=8)
 end subroutine
 
 !CHECK: len_test
@@ -98,8 +104,8 @@ subroutine len_test(a,b, c, d, e, n, m)
   integer, intent(in) :: n, m
   character(n), intent(in) :: e
 
-  !CHECK: PRINT *, int(a%len,kind=4)
-  print *, len(a)
+  !CHECK: PRINT *, int(a%len,kind=8)
+  print *, len(a, kind=8)
   !CHECK: PRINT *, 5_4
   print *, len(a(1:5))
   !CHECK: PRINT *, len(b(a))

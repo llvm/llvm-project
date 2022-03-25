@@ -19,11 +19,11 @@ end
 !contains
 ! function f1(x) result(y)
 !  integer(4)::x(:)
-!  integer(4)::y(1_8:size(x,dim=1))
+!  integer(4)::y(1_8:size(x,dim=1,kind=8))
 ! end
 ! function f2(x)
 !  integer(4)::x(:)
-!  integer(4)::f2(1_8:size(x,dim=1))
+!  integer(4)::f2(1_8:size(x,dim=1,kind=8))
 ! end
 !end
 
