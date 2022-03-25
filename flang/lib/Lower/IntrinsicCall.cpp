@@ -648,6 +648,7 @@ static constexpr bool handleDynamicOptional = true;
 /// should be provided for all the intrinsic arguments for completeness.
 static constexpr IntrinsicHandler handlers[]{
     {"abs", &I::genAbs},
+    {"achar", &I::genChar},
     {"adjustl",
      &I::genAdjustRtCall<fir::runtime::genAdjustL>,
      {{{"string", asAddr}}},
