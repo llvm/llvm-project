@@ -245,6 +245,22 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   // unqualified base type.
   QualType Base = T->getCanonicalTypeUnqualified();
 
+  // Render Objective-C `id`/`instancetype` as keywords.
+  if (T->isObjCIdType())
+    return Fragments.append(Base.getAsString(),
+                            DeclarationFragments::FragmentKind::Keyword);
+
+  // If the base type is an ObjCInterfaceType, use the underlying
+  // ObjCInterfaceDecl for the true USR.
+  if (const auto *ObjCIT = dyn_cast<ObjCInterfaceType>(Base)) {
+    const auto *Decl = ObjCIT->getDecl();
+    SmallString<128> USR;
+    index::generateUSRForDecl(Decl, USR);
+    return Fragments.append(Decl->getName(),
+                            DeclarationFragments::FragmentKind::TypeIdentifier,
+                            USR);
+  }
+
   // Default fragment builder for other kinds of types (BuiltinType etc.)
   SmallString<128> USR;
   clang::index::generateUSRForType(Base, Context, USR);
@@ -454,26 +470,182 @@ DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
   return Fragments;
 }
 
-FunctionSignature
-DeclarationFragmentsBuilder::getFunctionSignature(const FunctionDecl *Func) {
-  FunctionSignature Signature;
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCInterface(
+    const ObjCInterfaceDecl *Interface) {
+  DeclarationFragments Fragments;
+  // Build the base of the Objective-C interface declaration.
+  Fragments.append("@interface", DeclarationFragments::FragmentKind::Keyword)
+      .appendSpace()
+      .append(Interface->getName(),
+              DeclarationFragments::FragmentKind::Identifier);
 
-  for (const auto *Param : Func->parameters()) {
-    StringRef Name = Param->getName();
-    DeclarationFragments Fragments = getFragmentsForParam(Param);
-
-    Signature.addParameter(Name, Fragments);
+  // Build the inheritance part of the declaration.
+  if (const ObjCInterfaceDecl *SuperClass = Interface->getSuperClass()) {
+    SmallString<128> SuperUSR;
+    index::generateUSRForDecl(SuperClass, SuperUSR);
+    Fragments.append(" : ", DeclarationFragments::FragmentKind::Text)
+        .append(SuperClass->getName(),
+                DeclarationFragments::FragmentKind::TypeIdentifier, SuperUSR);
   }
 
-  DeclarationFragments After;
-  DeclarationFragments Returns =
-      getFragmentsForType(Func->getReturnType(), Func->getASTContext(), After)
-          .append(std::move(After));
+  return Fragments;
+}
 
-  Signature.setReturnType(Returns);
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCMethod(
+    const ObjCMethodDecl *Method) {
+  DeclarationFragments Fragments, After;
+  // Build the instance/class method indicator.
+  if (Method->isClassMethod())
+    Fragments.append("+ ", DeclarationFragments::FragmentKind::Text);
+  else if (Method->isInstanceMethod())
+    Fragments.append("- ", DeclarationFragments::FragmentKind::Text);
+
+  // Build the return type.
+  Fragments.append("(", DeclarationFragments::FragmentKind::Text)
+      .append(getFragmentsForType(Method->getReturnType(),
+                                  Method->getASTContext(), After))
+      .append(std::move(After))
+      .append(")", DeclarationFragments::FragmentKind::Text);
+
+  // Build the selector part.
+  Selector Selector = Method->getSelector();
+  if (Selector.getNumArgs() == 0)
+    // For Objective-C methods that don't take arguments, the first (and only)
+    // slot of the selector is the method name.
+    Fragments.appendSpace().append(
+        Selector.getNameForSlot(0),
+        DeclarationFragments::FragmentKind::Identifier);
+
+  // For Objective-C methods that take arguments, build the selector slots.
+  for (unsigned i = 0, end = Method->param_size(); i != end; ++i) {
+    Fragments.appendSpace()
+        .append(Selector.getNameForSlot(i),
+                // The first slot is the name of the method, record as an
+                // identifier, otherwise as exteranl parameters.
+                i == 0 ? DeclarationFragments::FragmentKind::Identifier
+                       : DeclarationFragments::FragmentKind::ExternalParam)
+        .append(":", DeclarationFragments::FragmentKind::Text);
+
+    // Build the internal parameter.
+    const ParmVarDecl *Param = Method->getParamDecl(i);
+    Fragments.append(getFragmentsForParam(Param));
+  }
+
+  return Fragments;
+}
+
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
+    const ObjCPropertyDecl *Property) {
+  DeclarationFragments Fragments, After;
+
+  // Build the Objective-C property keyword.
+  Fragments.append("@property", DeclarationFragments::FragmentKind::Keyword);
+
+  const auto Attributes = Property->getPropertyAttributes();
+  // Build the attributes if there is any associated with the property.
+  if (Attributes != ObjCPropertyAttribute::kind_noattr) {
+    // No leading comma for the first attribute.
+    bool First = true;
+    Fragments.append(" (", DeclarationFragments::FragmentKind::Text);
+    // Helper function to render the attribute.
+    auto RenderAttribute =
+        [&](ObjCPropertyAttribute::Kind Kind, StringRef Spelling,
+            StringRef Arg = "",
+            DeclarationFragments::FragmentKind ArgKind =
+                DeclarationFragments::FragmentKind::Identifier) {
+          // Check if the `Kind` attribute is set for this property.
+          if ((Attributes & Kind) && !Spelling.empty()) {
+            // Add a leading comma if this is not the first attribute rendered.
+            if (!First)
+              Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+            // Render the spelling of this attribute `Kind` as a keyword.
+            Fragments.append(Spelling,
+                             DeclarationFragments::FragmentKind::Keyword);
+            // If this attribute takes in arguments (e.g. `getter=getterName`),
+            // render the arguments.
+            if (!Arg.empty())
+              Fragments.append("=", DeclarationFragments::FragmentKind::Text)
+                  .append(Arg, ArgKind);
+            First = false;
+          }
+        };
+
+    // Go through all possible Objective-C property attributes and render set
+    // ones.
+    RenderAttribute(ObjCPropertyAttribute::kind_class, "class");
+    RenderAttribute(ObjCPropertyAttribute::kind_direct, "direct");
+    RenderAttribute(ObjCPropertyAttribute::kind_nonatomic, "nonatomic");
+    RenderAttribute(ObjCPropertyAttribute::kind_atomic, "atomic");
+    RenderAttribute(ObjCPropertyAttribute::kind_assign, "assign");
+    RenderAttribute(ObjCPropertyAttribute::kind_retain, "retain");
+    RenderAttribute(ObjCPropertyAttribute::kind_strong, "strong");
+    RenderAttribute(ObjCPropertyAttribute::kind_copy, "copy");
+    RenderAttribute(ObjCPropertyAttribute::kind_weak, "weak");
+    RenderAttribute(ObjCPropertyAttribute::kind_unsafe_unretained,
+                    "unsafe_unretained");
+    RenderAttribute(ObjCPropertyAttribute::kind_readwrite, "readwrite");
+    RenderAttribute(ObjCPropertyAttribute::kind_readonly, "readonly");
+    RenderAttribute(ObjCPropertyAttribute::kind_getter, "getter",
+                    Property->getGetterName().getAsString());
+    RenderAttribute(ObjCPropertyAttribute::kind_setter, "setter",
+                    Property->getSetterName().getAsString());
+
+    // Render nullability attributes.
+    if (Attributes & ObjCPropertyAttribute::kind_nullability) {
+      QualType Type = Property->getType();
+      if (const auto Nullability =
+              AttributedType::stripOuterNullability(Type)) {
+        if (!First)
+          Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+        if (*Nullability == NullabilityKind::Unspecified &&
+            (Attributes & ObjCPropertyAttribute::kind_null_resettable))
+          Fragments.append("null_resettable",
+                           DeclarationFragments::FragmentKind::Keyword);
+        else
+          Fragments.append(
+              getNullabilitySpelling(*Nullability, /*isContextSensitive=*/true),
+              DeclarationFragments::FragmentKind::Keyword);
+        First = false;
+      }
+    }
+
+    Fragments.append(")", DeclarationFragments::FragmentKind::Text);
+  }
+
+  // Build the property type and name, and return the completed fragments.
+  return Fragments.appendSpace()
+      .append(getFragmentsForType(Property->getType(),
+                                  Property->getASTContext(), After))
+      .append(Property->getName(),
+              DeclarationFragments::FragmentKind::Identifier)
+      .append(std::move(After));
+}
+
+template <typename FunctionT>
+FunctionSignature
+DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
+  FunctionSignature Signature;
+
+  DeclarationFragments ReturnType, After;
+  ReturnType
+      .append(getFragmentsForType(Function->getReturnType(),
+                                  Function->getASTContext(), After))
+      .append(std::move(After));
+  Signature.setReturnType(ReturnType);
+
+  for (const auto *Param : Function->parameters())
+    Signature.addParameter(Param->getName(), getFragmentsForParam(Param));
 
   return Signature;
 }
+
+// Instantiate template for FunctionDecl.
+template FunctionSignature
+DeclarationFragmentsBuilder::getFunctionSignature(const FunctionDecl *);
+
+// Instantiate template for ObjCMethodDecl.
+template FunctionSignature
+DeclarationFragmentsBuilder::getFunctionSignature(const ObjCMethodDecl *);
 
 // Subheading of a symbol defaults to its name.
 DeclarationFragments
@@ -483,4 +655,18 @@ DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
     Fragments.append(Decl->getName(),
                      DeclarationFragments::FragmentKind::Identifier);
   return Fragments;
+}
+
+// Subheading of an Objective-C method is a `+` or `-` sign indicating whether
+// it's a class method or an instance method, followed by the selector name.
+DeclarationFragments
+DeclarationFragmentsBuilder::getSubHeading(const ObjCMethodDecl *Method) {
+  DeclarationFragments Fragments;
+  if (Method->isClassMethod())
+    Fragments.append("+ ", DeclarationFragments::FragmentKind::Text);
+  else if (Method->isInstanceMethod())
+    Fragments.append("- ", DeclarationFragments::FragmentKind::Text);
+
+  return Fragments.append(Method->getNameAsString(),
+                          DeclarationFragments::FragmentKind::Identifier);
 }

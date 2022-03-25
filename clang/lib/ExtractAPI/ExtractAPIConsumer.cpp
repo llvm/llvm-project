@@ -216,6 +216,50 @@ public:
     return true;
   }
 
+  bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *Decl) {
+    // Skip forward declaration for classes (@class)
+    if (!Decl->isThisDeclarationADefinition())
+      return true;
+
+    // Collect symbol information.
+    StringRef Name = Decl->getName();
+    StringRef USR = API.recordUSR(Decl);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    AvailabilityInfo Availability = getAvailability(Decl);
+    LinkageInfo Linkage = Decl->getLinkageAndVisibility();
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the interface.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForObjCInterface(Decl);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+    // Collect super class information.
+    SymbolReference SuperClass;
+    if (const auto *SuperClassDecl = Decl->getSuperClass()) {
+      SuperClass.Name = SuperClassDecl->getObjCRuntimeNameAsString();
+      SuperClass.USR = API.recordUSR(SuperClassDecl);
+    }
+
+    ObjCInterfaceRecord *ObjCInterfaceRecord =
+        API.addObjCInterface(Name, USR, Loc, Availability, Linkage, Comment,
+                             Declaration, SubHeading, SuperClass);
+
+    // Record all methods (selectors). This doesn't include automatically
+    // synthesized property methods.
+    recordObjCMethods(ObjCInterfaceRecord, Decl->methods());
+    recordObjCProperties(ObjCInterfaceRecord, Decl->properties());
+    recordObjCInstanceVariables(ObjCInterfaceRecord, Decl->ivars());
+    recordObjCProtocols(ObjCInterfaceRecord, Decl->protocols());
+
+    return true;
+  }
+
 private:
   /// Get availability information of the declaration \p D.
   AvailabilityInfo getAvailability(const Decl *D) const {
@@ -300,6 +344,116 @@ private:
       API.addStructField(StructRecord, Name, USR, Loc, Availability, Comment,
                          Declaration, SubHeading);
     }
+  }
+
+  /// Collect API information for the Objective-C methods and associate with the
+  /// parent container.
+  void recordObjCMethods(ObjCContainerRecord *Container,
+                         const ObjCContainerDecl::method_range Methods) {
+    for (const auto *Method : Methods) {
+      // Don't record selectors for properties.
+      if (Method->isPropertyAccessor())
+        continue;
+
+      StringRef Name = API.copyString(Method->getSelector().getAsString());
+      StringRef USR = API.recordUSR(Method);
+      PresumedLoc Loc =
+          Context.getSourceManager().getPresumedLoc(Method->getLocation());
+      AvailabilityInfo Availability = getAvailability(Method);
+      DocComment Comment;
+      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Method))
+        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                                Context.getDiagnostics());
+
+      // Build declaration fragments, sub-heading, and signature for the method.
+      DeclarationFragments Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForObjCMethod(Method);
+      DeclarationFragments SubHeading =
+          DeclarationFragmentsBuilder::getSubHeading(Method);
+      FunctionSignature Signature =
+          DeclarationFragmentsBuilder::getFunctionSignature(Method);
+
+      API.addObjCMethod(Container, Name, USR, Loc, Availability, Comment,
+                        Declaration, SubHeading, Signature,
+                        Method->isInstanceMethod());
+    }
+  }
+
+  void recordObjCProperties(ObjCContainerRecord *Container,
+                            const ObjCContainerDecl::prop_range Properties) {
+    for (const auto *Property : Properties) {
+      StringRef Name = Property->getName();
+      StringRef USR = API.recordUSR(Property);
+      PresumedLoc Loc =
+          Context.getSourceManager().getPresumedLoc(Property->getLocation());
+      AvailabilityInfo Availability = getAvailability(Property);
+      DocComment Comment;
+      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Property))
+        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                                Context.getDiagnostics());
+
+      // Build declaration fragments and sub-heading for the property.
+      DeclarationFragments Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForObjCProperty(Property);
+      DeclarationFragments SubHeading =
+          DeclarationFragmentsBuilder::getSubHeading(Property);
+
+      StringRef GetterName =
+          API.copyString(Property->getGetterName().getAsString());
+      StringRef SetterName =
+          API.copyString(Property->getSetterName().getAsString());
+
+      // Get the attributes for property.
+      unsigned Attributes = ObjCPropertyRecord::NoAttr;
+      if (Property->getPropertyAttributes() &
+          ObjCPropertyAttribute::kind_readonly)
+        Attributes |= ObjCPropertyRecord::ReadOnly;
+      if (Property->getPropertyAttributes() & ObjCPropertyAttribute::kind_class)
+        Attributes |= ObjCPropertyRecord::Class;
+
+      API.addObjCProperty(
+          Container, Name, USR, Loc, Availability, Comment, Declaration,
+          SubHeading,
+          static_cast<ObjCPropertyRecord::AttributeKind>(Attributes),
+          GetterName, SetterName, Property->isOptional());
+    }
+  }
+
+  void recordObjCInstanceVariables(
+      ObjCContainerRecord *Container,
+      const llvm::iterator_range<
+          DeclContext::specific_decl_iterator<ObjCIvarDecl>>
+          Ivars) {
+    for (const auto *Ivar : Ivars) {
+      StringRef Name = Ivar->getName();
+      StringRef USR = API.recordUSR(Ivar);
+      PresumedLoc Loc =
+          Context.getSourceManager().getPresumedLoc(Ivar->getLocation());
+      AvailabilityInfo Availability = getAvailability(Ivar);
+      DocComment Comment;
+      if (auto *RawComment = Context.getRawCommentForDeclNoCache(Ivar))
+        Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                                Context.getDiagnostics());
+
+      // Build declaration fragments and sub-heading for the instance variable.
+      DeclarationFragments Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForField(Ivar);
+      DeclarationFragments SubHeading =
+          DeclarationFragmentsBuilder::getSubHeading(Ivar);
+
+      ObjCInstanceVariableRecord::AccessControl Access =
+          Ivar->getCanonicalAccessControl();
+
+      API.addObjCInstanceVariable(Container, Name, USR, Loc, Availability,
+                                  Comment, Declaration, SubHeading, Access);
+    }
+  }
+
+  void recordObjCProtocols(ObjCContainerRecord *Container,
+                           ObjCInterfaceDecl::protocol_range Protocols) {
+    for (const auto *Protocol : Protocols)
+      Container->Protocols.emplace_back(Protocol->getName(),
+                                        API.recordUSR(Protocol));
   }
 
   ASTContext &Context;

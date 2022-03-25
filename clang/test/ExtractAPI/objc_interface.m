@@ -1,0 +1,402 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+// RUN: sed -e "s@INPUT_DIR@%/t@g" %t/reference.output.json.in >> \
+// RUN: %t/reference.output.json
+// RUN: %clang -extract-api -x objective-c-header -target arm64-apple-macosx \
+// RUN: %t/input.h -o %t/output.json | FileCheck -allow-empty %s
+
+// Generator version is not consistent across test runs, normalize it.
+// RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
+// RUN: %t/output.json >> %t/output-normalized.json
+// RUN: diff %t/reference.output.json %t/output-normalized.json
+
+// CHECK-NOT: error:
+// CHECK-NOT: warning:
+
+//--- input.h
+@protocol Protocol;
+
+@interface Super <Protocol>
+@property(readonly, getter=getProperty) unsigned Property;
++ (id)getWithProperty:(unsigned) Property;
+@end
+
+@interface Derived : Super {
+  char Ivar;
+}
+- (char)getIvar;
+@end
+
+//--- reference.output.json.in
+{
+  "metadata": {
+    "formatVersion": {
+      "major": 0,
+      "minor": 5,
+      "patch": 3
+    },
+    "generator": "?"
+  },
+  "module": {
+    "name": "",
+    "platform": {
+      "architecture": "arm64",
+      "operatingSystem": {
+        "minimumVersion": {
+          "major": 11,
+          "minor": 0,
+          "patch": 0
+        },
+        "name": "macosx"
+      },
+      "vendor": "apple"
+    }
+  },
+  "relationhips": [
+    {
+      "kind": "memberOf",
+      "source": "c:objc(cs)Super(cm)getWithProperty:",
+      "target": "c:objc(cs)Super"
+    },
+    {
+      "kind": "memberOf",
+      "source": "c:objc(cs)Super(py)Property",
+      "target": "c:objc(cs)Super"
+    },
+    {
+      "kind": "conformsTo",
+      "source": "c:objc(cs)Super",
+      "target": "c:objc(pl)Protocol"
+    },
+    {
+      "kind": "memberOf",
+      "source": "c:objc(cs)Derived@Ivar",
+      "target": "c:objc(cs)Derived"
+    },
+    {
+      "kind": "memberOf",
+      "source": "c:objc(cs)Derived(im)getIvar",
+      "target": "c:objc(cs)Derived"
+    },
+    {
+      "kind": "inheritsFrom",
+      "source": "c:objc(cs)Derived",
+      "target": "c:objc(cs)Super"
+    }
+  ],
+  "symbols": [
+    {
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "@interface"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "Super"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Super"
+      },
+      "kind": {
+        "displayName": "Class",
+        "identifier": "objective-c.class"
+      },
+      "location": {
+        "character": 12,
+        "line": 3,
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "Super"
+          }
+        ],
+        "title": "Super"
+      }
+    },
+    {
+      "declarationFragments": [
+        {
+          "kind": "text",
+          "spelling": "+ ("
+        },
+        {
+          "kind": "keyword",
+          "spelling": "id"
+        },
+        {
+          "kind": "text",
+          "spelling": ")"
+        },
+        {
+          "kind": "identifier",
+          "spelling": "getWithProperty"
+        },
+        {
+          "kind": "text",
+          "spelling": ":"
+        },
+        {
+          "kind": "text",
+          "spelling": "("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:i",
+          "spelling": "unsigned int"
+        },
+        {
+          "kind": "text",
+          "spelling": ")"
+        },
+        {
+          "kind": "internalParam",
+          "spelling": "Property"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Super(cm)getWithProperty:"
+      },
+      "kind": {
+        "displayName": "Type Method",
+        "identifier": "objective-c.type.method"
+      },
+      "location": {
+        "character": 1,
+        "line": 5,
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "subHeading": [
+          {
+            "kind": "text",
+            "spelling": "+ "
+          },
+          {
+            "kind": "identifier",
+            "spelling": "getWithProperty:"
+          }
+        ],
+        "title": "getWithProperty:"
+      }
+    },
+    {
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "@property"
+        },
+        {
+          "kind": "text",
+          "spelling": " ("
+        },
+        {
+          "kind": "keyword",
+          "spelling": "atomic"
+        },
+        {
+          "kind": "text",
+          "spelling": ", "
+        },
+        {
+          "kind": "keyword",
+          "spelling": "readonly"
+        },
+        {
+          "kind": "text",
+          "spelling": ", "
+        },
+        {
+          "kind": "keyword",
+          "spelling": "getter"
+        },
+        {
+          "kind": "text",
+          "spelling": "="
+        },
+        {
+          "kind": "identifier",
+          "spelling": "getProperty"
+        },
+        {
+          "kind": "text",
+          "spelling": ")"
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:i",
+          "spelling": "unsigned int"
+        },
+        {
+          "kind": "identifier",
+          "spelling": "Property"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Super(py)Property"
+      },
+      "kind": {
+        "displayName": "Instance Property",
+        "identifier": "objective-c.property"
+      },
+      "location": {
+        "character": 50,
+        "line": 4,
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "Property"
+          }
+        ],
+        "title": "Property"
+      }
+    },
+    {
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "@interface"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "Derived"
+        },
+        {
+          "kind": "text",
+          "spelling": " : "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:objc(cs)Super",
+          "spelling": "Super"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Derived"
+      },
+      "kind": {
+        "displayName": "Class",
+        "identifier": "objective-c.class"
+      },
+      "location": {
+        "character": 12,
+        "line": 8,
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "Derived"
+          }
+        ],
+        "title": "Derived"
+      }
+    },
+    {
+      "declarationFragments": [
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:C",
+          "spelling": "char"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "Ivar"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Derived@Ivar"
+      },
+      "kind": {
+        "displayName": "Instance Variable",
+        "identifier": "objective-c.ivar"
+      },
+      "location": {
+        "character": 8,
+        "line": 9,
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "Ivar"
+          }
+        ],
+        "title": "Ivar"
+      }
+    },
+    {
+      "declarationFragments": [
+        {
+          "kind": "text",
+          "spelling": "- ("
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:C",
+          "spelling": "char"
+        },
+        {
+          "kind": "text",
+          "spelling": ")"
+        },
+        {
+          "kind": "identifier",
+          "spelling": "getIvar"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "objective-c",
+        "precise": "c:objc(cs)Derived(im)getIvar"
+      },
+      "kind": {
+        "displayName": "Instance Method",
+        "identifier": "objective-c.method"
+      },
+      "location": {
+        "character": 1,
+        "line": 11,
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "subHeading": [
+          {
+            "kind": "text",
+            "spelling": "- "
+          },
+          {
+            "kind": "identifier",
+            "spelling": "getIvar"
+          }
+        ],
+        "title": "getIvar"
+      }
+    }
+  ]
+}
