@@ -192,6 +192,17 @@ void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ReshapeConstOptimization>(context);
 }
 
+LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
+  auto notOp = op.pred().getDefiningOp<tosa::LogicalNotOp>();
+  if (!notOp)
+    return failure();
+  rewriter.updateRootInPlace(op, [&]() {
+    op.getOperation()->setOperands(
+        {notOp.input1(), op.on_false(), op.on_true()});
+  });
+  return success();
+}
+
 struct ConstantTransposeOptimization
     : public OpRewritePattern<tosa::TransposeOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -585,12 +596,15 @@ OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
     return {};                                                                 \
   }
 
-ReduceFolder(ReduceAllOp) ReduceFolder(ReduceAnyOp) ReduceFolder(ReduceMaxOp)
-    ReduceFolder(ReduceMinOp) ReduceFolder(ReduceProdOp)
-        ReduceFolder(ReduceSumOp)
+ReduceFolder(ReduceAllOp);
+ReduceFolder(ReduceAnyOp);
+ReduceFolder(ReduceMaxOp);
+ReduceFolder(ReduceMinOp);
+ReduceFolder(ReduceProdOp);
+ReduceFolder(ReduceSumOp);
 #undef ReduceFolder
 
-            OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   auto inputTy = input1().getType().dyn_cast<RankedTensorType>();
   auto outputTy = getType().dyn_cast<RankedTensorType>();
 
@@ -621,6 +635,20 @@ OpFoldResult SliceOp::fold(ArrayRef<Attribute> operands) {
     return input();
 
   return {};
+}
+
+OpFoldResult tosa::SelectOp::fold(ArrayRef<Attribute> operands) {
+  if (on_true() == on_false())
+    return on_true();
+
+  auto predicate = operands[0].dyn_cast_or_null<DenseIntElementsAttr>();
+  if (!predicate)
+    return {};
+
+  if (!predicate.isSplat())
+    return {};
+  return predicate.getSplatValue<APInt>().getBoolValue() ? on_true()
+                                                         : on_false();
 }
 
 OpFoldResult TileOp::fold(ArrayRef<Attribute> operands) {
@@ -1951,7 +1979,7 @@ LogicalResult WhileOp::inferReturnTypeComponents(
               resultKnowledge[index],
               ValueKnowledge::getKnowledgeFromType(it.value().getType()))) {
         resultKnowledge[index] = meet;
-      };
+      }
     }
   }
 
