@@ -362,7 +362,7 @@ define i1 @wrapping_offset_sum(i64 %x) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NON_ZERO]])
 ; CHECK-NEXT:    [[ADD:%.*]] = sub nuw i64 [[X]], 9223372036854775802
 ; CHECK-NEXT:    [[ULT:%.*]] = icmp ugt i64 200, [[ADD]]
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 [[ULT]]
 ;
   %non.zero = icmp ugt i64 %x, 0
   call void @llvm.assume(i1 %non.zero)
