@@ -127,7 +127,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "product") {
     auto one{Scalar<T>::FromInteger(value::Integer<8>{1}).value};
     return FoldProduct<T>(context, std::move(funcRef), one);
-  } else if (name == "real") {
+  } else if (name == "real" || name == "dble") {
     if (auto *expr{args[0].value().UnwrapExpr()}) {
       return ToReal<KIND>(context, std::move(*expr));
     }
