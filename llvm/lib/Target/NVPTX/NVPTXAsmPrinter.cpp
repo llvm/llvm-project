@@ -329,7 +329,7 @@ MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
 void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
   const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
-  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
+  const TargetLowering *TLI = STI.getTargetLowering();
 
   Type *Ty = F->getReturnType();
 
@@ -363,7 +363,7 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
       unsigned retAlignment = 0;
       if (!getAlign(*F, 0, retAlignment))
-        retAlignment = TLI->getFunctionParamOptimizedAlign(F, Ty, DL).value();
+        retAlignment = DL.getABITypeAlignment(Ty);
       O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
         << "]";
     } else
@@ -1348,8 +1348,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
   const AttributeList &PAL = F->getAttributes();
   const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
-  const auto *TLI = cast<NVPTXTargetLowering>(STI.getTargetLowering());
-
+  const TargetLowering *TLI = STI.getTargetLowering();
   Function::const_arg_iterator I, E;
   unsigned paramIndex = 0;
   bool first = true;
@@ -1406,24 +1405,18 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       }
     }
 
-    auto getOptimalAlignForParam = [TLI, &DL, &PAL, F,
-                                    paramIndex](Type *Ty) -> Align {
-      Align TypeAlign = TLI->getFunctionParamOptimizedAlign(F, Ty, DL);
-      MaybeAlign ParamAlign = PAL.getParamAlignment(paramIndex);
-      return max(TypeAlign, ParamAlign);
-    };
-
     if (!PAL.hasParamAttr(paramIndex, Attribute::ByVal)) {
       if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
         // Just print .param .align <a> .b8 .param[size];
-        // <a>  = optimal alignment for the element type; always multiple of
-        //        PAL.getParamAlignment
+        // <a> = PAL.getparamalignment
         // size = typeallocsize of element type
-        Align OptimalAlign = getOptimalAlignForParam(Ty);
+        const Align align = DL.getValueOrABITypeAlignment(
+            PAL.getParamAlignment(paramIndex), Ty);
 
-        O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
+        unsigned sz = DL.getTypeAllocSize(Ty);
+        O << "\t.param .align " << align.value() << " .b8 ";
         printParamName(I, paramIndex, O);
-        O << "[" << DL.getTypeAllocSize(Ty) << "]";
+        O << "[" << sz << "]";
 
         continue;
       }
@@ -1499,11 +1492,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
     if (isABI || isKernelFunc) {
       // Just print .param .align <a> .b8 .param[size];
-      // <a>  = optimal alignment for the element type; always multiple of
-      //        PAL.getParamAlignment
+      // <a> = PAL.getparamalignment
       // size = typeallocsize of element type
-      Align OptimalAlign = getOptimalAlignForParam(ETy);
-
+      Align align =
+          DL.getValueOrABITypeAlignment(PAL.getParamAlignment(paramIndex), ETy);
       // Work around a bug in ptxas. When PTX code takes address of
       // byval parameter with alignment < 4, ptxas generates code to
       // spill argument into memory. Alas on sm_50+ ptxas generates
@@ -1515,10 +1507,10 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       // TODO: this will need to be undone when we get to support multi-TU
       // device-side compilation as it breaks ABI compatibility with nvcc.
       // Hopefully ptxas bug is fixed by then.
-      if (!isKernelFunc && OptimalAlign < Align(4))
-        OptimalAlign = Align(4);
+      if (!isKernelFunc && align < Align(4))
+        align = Align(4);
       unsigned sz = DL.getTypeAllocSize(ETy);
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 ";
+      O << "\t.param .align " << align.value() << " .b8 ";
       printParamName(I, paramIndex, O);
       O << "[" << sz << "]";
       continue;
