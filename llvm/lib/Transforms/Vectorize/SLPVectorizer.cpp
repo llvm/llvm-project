@@ -8069,6 +8069,18 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       }
 
+      auto makeControlDependent = [&](Instruction *I) {
+        auto *DepDest = getScheduleData(I);
+        assert(DepDest && "must be in schedule window");
+        DepDest->ControlDependencies.push_back(BundleMember);
+        BundleMember->Dependencies++;
+        ScheduleData *DestBundle = DepDest->FirstInBundle;
+        if (!DestBundle->IsScheduled)
+          BundleMember->incrementUnscheduledDeps(1);
+        if (!DestBundle->hasValidDependencies())
+          WorkList.push_back(DestBundle);
+      };
+
       // Any instruction which isn't safe to speculate at the begining of the
       // block is control dependend on any early exit or non-willreturn call
       // which proceeds it.
@@ -8079,15 +8091,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
             continue;
 
           // Add the dependency
-          auto *DepDest = getScheduleData(I);
-          assert(DepDest && "must be in schedule window");
-          DepDest->ControlDependencies.push_back(BundleMember);
-          BundleMember->Dependencies++;
-          ScheduleData *DestBundle = DepDest->FirstInBundle;
-          if (!DestBundle->IsScheduled)
-            BundleMember->incrementUnscheduledDeps(1);
-          if (!DestBundle->hasValidDependencies())
-            WorkList.push_back(DestBundle);
+          makeControlDependent(I);
 
           if (!isGuaranteedToTransferExecutionToSuccessor(I))
             // Everything past here must be control dependent on I.
@@ -8109,15 +8113,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
             continue;
 
           // Add the dependency
-          auto *DepDest = getScheduleData(I);
-          assert(DepDest && "must be in schedule window");
-          DepDest->ControlDependencies.push_back(BundleMember);
-          BundleMember->Dependencies++;
-          ScheduleData *DestBundle = DepDest->FirstInBundle;
-          if (!DestBundle->IsScheduled)
-            BundleMember->incrementUnscheduledDeps(1);
-          if (!DestBundle->hasValidDependencies())
-            WorkList.push_back(DestBundle);
+          makeControlDependent(I);
         }
       }
 
