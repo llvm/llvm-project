@@ -168,8 +168,6 @@ struct DeviceDataTy {
 /// accordingly. The implementation should not raise any exception.
 template <typename T> struct AllocatorTy {
   using ElementTy = T;
-  virtual ~AllocatorTy() {}
-
   /// Create a resource and assign to R.
   virtual int create(T &R) noexcept = 0;
   /// Destroy the resource.
