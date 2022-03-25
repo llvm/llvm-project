@@ -29,6 +29,34 @@ subroutine atan_testcd(z)
   z = atan(z)
 end subroutine
 
+! CHECK-LABEL: cos_testr
+subroutine cos_testr(a, b)
+  real :: a, b
+! CHECK: fir.call @fir.cos.f32.f32
+  b = cos(a)
+end subroutine
+
+! CHECK-LABEL: cos_testd
+subroutine cos_testd(a, b)
+  real(kind=8) :: a, b
+! CHECK: fir.call @fir.cos.f64.f64
+  b = cos(a)
+end subroutine
+
+! CHECK-LABEL: cos_testc
+subroutine cos_testc(z)
+  complex :: z
+! CHECK: fir.call @fir.cos.z4.z4
+  z = cos(z)
+end subroutine
+
+! CHECK-LABEL: cos_testcd
+subroutine cos_testcd(z)
+  complex(kind=8) :: z
+! CHECK: fir.call @fir.cos.z8.z8
+  z = cos(z)
+end subroutine
+
 ! CHECK-LABEL: cosh_testr
 subroutine cosh_testr(a, b)
   real :: a, b
@@ -55,6 +83,34 @@ subroutine cosh_testcd(z)
   complex(kind=8) :: z
 ! CHECK: fir.call @fir.cosh.z8.z8
   z = cosh(z)
+end subroutine
+
+! CHECK-LABEL: sin_testr
+subroutine sin_testr(a, b)
+  real :: a, b
+! CHECK: fir.call @fir.sin.f32.f32
+  b = sin(a)
+end subroutine
+
+! CHECK-LABEL: sin_testd
+subroutine sin_testd(a, b)
+  real(kind=8) :: a, b
+! CHECK: fir.call @fir.sin.f64.f64
+  b = sin(a)
+end subroutine
+
+! CHECK-LABEL: sin_testc
+subroutine sin_testc(z)
+  complex :: z
+! CHECK: fir.call @fir.sin.z4.z4
+  z = sin(z)
+end subroutine
+
+! CHECK-LABEL: sin_testcd
+subroutine sin_testcd(z)
+  complex(kind=8) :: z
+! CHECK: fir.call @fir.sin.z8.z8
+  z = sin(z)
 end subroutine
 
 ! CHECK-LABEL: sinh_testr
@@ -97,6 +153,18 @@ end subroutine
 ! CHECK-LABEL: @fir.atan.z8.z8
 ! CHECK: fir.call {{.*}}atan
 
+! CHECK-LABEL: @fir.cos.f32.f32
+! CHECK: fir.call {{.*}}cos
+
+! CHECK-LABEL: @fir.cos.f64.f64
+! CHECK: fir.call {{.*}}cos
+
+! CHECK-LABEL: @fir.cos.z4.z4
+! CHECK: fir.call {{.*}}cos
+
+! CHECK-LABEL: @fir.cos.z8.z8
+! CHECK: fir.call {{.*}}cos
+
 ! CHECK-LABEL: @fir.cosh.f32.f32
 ! CHECK: fir.call {{.*}}cosh
 
@@ -108,6 +176,18 @@ end subroutine
 
 ! CHECK-LABEL: @fir.cosh.z8.z8
 ! CHECK: fir.call {{.*}}cosh
+
+! CHECK-LABEL: @fir.sin.f32.f32
+! CHECK: fir.call {{.*}}sin
+
+! CHECK-LABEL: @fir.sin.f64.f64
+! CHECK: fir.call {{.*}}sin
+
+! CHECK-LABEL: @fir.sin.z4.z4
+! CHECK: fir.call {{.*}}sin
+
+! CHECK-LABEL: @fir.sin.z8.z8
+! CHECK: fir.call {{.*}}sin
 
 ! CHECK-LABEL: @fir.sinh.f32.f32
 ! CHECK: fir.call {{.*}}sinh
