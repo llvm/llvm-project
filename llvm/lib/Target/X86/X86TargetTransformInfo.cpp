@@ -2695,7 +2695,7 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   static const CostTblEntry SSE2CostTbl[] = {
     { ISD::SETCC,   MVT::v2f64,   2 },
     { ISD::SETCC,   MVT::f64,     1 },
-    { ISD::SETCC,   MVT::v2i64,   8 },
+    { ISD::SETCC,   MVT::v2i64,   5 }, // pcmpeqd/pcmpgtd expansion
     { ISD::SETCC,   MVT::v4i32,   1 },
     { ISD::SETCC,   MVT::v8i16,   1 },
     { ISD::SETCC,   MVT::v16i8,   1 },

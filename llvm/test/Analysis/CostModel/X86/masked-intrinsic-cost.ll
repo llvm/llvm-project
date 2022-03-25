@@ -1408,7 +1408,7 @@ define i32 @masked_compressstore() {
 
 define <2 x double> @test1(<2 x i64> %trigger, <2 x double>* %addr, <2 x double> %dst) {
 ; SSE2-LABEL: 'test1'
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %mask = icmp eq <2 x i64> %trigger, zeroinitializer
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %mask = icmp eq <2 x i64> %trigger, zeroinitializer
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1> %mask, <2 x double> %dst)
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <2 x double> %res
 ;

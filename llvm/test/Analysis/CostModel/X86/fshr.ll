@@ -22,9 +22,9 @@ target triple = "x86_64-apple-macosx10.8.0"
 define void @var_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512, i64 %b64, <2 x i64> %b128, <4 x i64> %b256, <8 x i64> %b512, i64 %c64, <2 x i64> %c128, <4 x i64> %c256, <8 x i64> %c512) {
 ; SSSE3-LABEL: 'var_funnel_i64'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 %c64)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %c128)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %c256)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 19 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %c128)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 38 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %c256)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %c512)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'var_funnel_i64'
@@ -312,9 +312,9 @@ define void @splatvar_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u128 = shufflevector <2 x i64> %c128, <2 x i64> undef, <2 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u256 = shufflevector <4 x i64> %c256, <4 x i64> undef, <4 x i32> zeroinitializer
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %u512 = shufflevector <8 x i64> %c512, <8 x i64> undef, <8 x i32> zeroinitializer
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> %u128)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> %u256)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 52 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> %u512)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'splatvar_funnel_i64'
@@ -678,9 +678,9 @@ define void @splatvar_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 define void @constant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512, i64 %b64, <2 x i64> %b128, <4 x i64> %b256, <8 x i64> %b512) {
 ; SSSE3-LABEL: 'constant_funnel_i64'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 21 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 1, i64 7>)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 1, i64 7, i64 15, i64 31>)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 1, i64 7, i64 15, i64 31, i64 1, i64 7, i64 15, i64 31>)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'constant_funnel_i64'
@@ -966,9 +966,9 @@ define void @constant_funnel_i8(i8 %a8, <16 x i8> %a128, <32 x i8> %a256, <64 x 
 define void @splatconstant_funnel_i64(i64 %a64, <2 x i64> %a128, <4 x i64> %a256, <8 x i64> %a512, i64 %b64, <2 x i64> %b128, <4 x i64> %b256, <8 x i64> %b512) {
 ; SSSE3-LABEL: 'splatconstant_funnel_i64'
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %I64 = call i64 @llvm.fshr.i64(i64 %a64, i64 %b64, i64 7)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 7, i64 7>)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 7, i64 7, i64 7, i64 7>)
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 60 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V2I64 = call <2 x i64> @llvm.fshr.v2i64(<2 x i64> %a128, <2 x i64> %b128, <2 x i64> <i64 7, i64 7>)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V4I64 = call <4 x i64> @llvm.fshr.v4i64(<4 x i64> %a256, <4 x i64> %b256, <4 x i64> <i64 7, i64 7, i64 7, i64 7>)
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V8I64 = call <8 x i64> @llvm.fshr.v8i64(<8 x i64> %a512, <8 x i64> %b512, <8 x i64> <i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7, i64 7>)
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; SSE42-LABEL: 'splatconstant_funnel_i64'

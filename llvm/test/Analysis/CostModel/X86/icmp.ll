@@ -33,10 +33,10 @@ define i32 @cmp_int_eq(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp eq <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp eq <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp eq i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_eq'
@@ -56,10 +56,10 @@ define i32 @cmp_int_eq(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp eq <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp eq <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp eq i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_eq'
@@ -79,10 +79,10 @@ define i32 @cmp_int_eq(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp eq <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp eq <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp eq i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_eq'
@@ -102,10 +102,10 @@ define i32 @cmp_int_eq(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp eq <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp eq <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp eq i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp eq <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp eq <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp eq <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp eq <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_eq'
@@ -337,10 +337,10 @@ define i32 @cmp_int_ne(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ne'
@@ -360,10 +360,10 @@ define i32 @cmp_int_ne(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ne'
@@ -383,10 +383,10 @@ define i32 @cmp_int_ne(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ne'
@@ -406,10 +406,10 @@ define i32 @cmp_int_ne(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ne <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ne <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ne i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp ne <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp ne <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp ne <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp ne <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ne'
@@ -641,10 +641,10 @@ define i32 @cmp_int_sge(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_sge'
@@ -664,10 +664,10 @@ define i32 @cmp_int_sge(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_sge'
@@ -687,10 +687,10 @@ define i32 @cmp_int_sge(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_sge'
@@ -710,10 +710,10 @@ define i32 @cmp_int_sge(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sge <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sge <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sge i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sge <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sge <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sge <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sge <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_sge'
@@ -945,10 +945,10 @@ define i32 @cmp_int_uge(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp uge <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp uge <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_uge'
@@ -968,10 +968,10 @@ define i32 @cmp_int_uge(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp uge <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp uge <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_uge'
@@ -991,10 +991,10 @@ define i32 @cmp_int_uge(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp uge <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp uge <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_uge'
@@ -1014,10 +1014,10 @@ define i32 @cmp_int_uge(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp uge <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp uge <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp uge i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp uge <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp uge <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp uge <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp uge <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_uge'
@@ -1249,10 +1249,10 @@ define i32 @cmp_int_sgt(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sgt <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sgt <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sgt i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_sgt'
@@ -1272,10 +1272,10 @@ define i32 @cmp_int_sgt(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sgt <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sgt <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sgt i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_sgt'
@@ -1295,10 +1295,10 @@ define i32 @cmp_int_sgt(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sgt <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sgt <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sgt i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_sgt'
@@ -1318,10 +1318,10 @@ define i32 @cmp_int_sgt(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp sgt <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp sgt <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sgt i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp sgt <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp sgt <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp sgt <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp sgt <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_sgt'
@@ -1553,10 +1553,10 @@ define i32 @cmp_int_ugt(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ugt'
@@ -1576,10 +1576,10 @@ define i32 @cmp_int_ugt(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ugt'
@@ -1599,10 +1599,10 @@ define i32 @cmp_int_ugt(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ugt'
@@ -1622,10 +1622,10 @@ define i32 @cmp_int_ugt(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ugt <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ugt <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ugt i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ugt <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ugt <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ugt <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ugt <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ugt'
@@ -1857,10 +1857,10 @@ define i32 @cmp_int_sle(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_sle'
@@ -1880,10 +1880,10 @@ define i32 @cmp_int_sle(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_sle'
@@ -1903,10 +1903,10 @@ define i32 @cmp_int_sle(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_sle'
@@ -1926,10 +1926,10 @@ define i32 @cmp_int_sle(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp sle <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp sle <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp sle i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V2I64 = icmp sle <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V4I64 = icmp sle <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V8I64 = icmp sle <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %V16I64 = icmp sle <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_sle'
@@ -2161,10 +2161,10 @@ define i32 @cmp_int_ule(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp ule <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp ule <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ule'
@@ -2184,10 +2184,10 @@ define i32 @cmp_int_ule(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp ule <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp ule <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ule'
@@ -2207,10 +2207,10 @@ define i32 @cmp_int_ule(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V16I32 = icmp ule <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V32I32 = icmp ule <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ule'
@@ -2230,10 +2230,10 @@ define i32 @cmp_int_ule(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V16I32 = icmp ule <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V32I32 = icmp ule <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ule i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 88 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp ule <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp ule <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp ule <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp ule <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ule'
@@ -2465,10 +2465,10 @@ define i32 @cmp_int_slt(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp slt <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp slt <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp slt i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_slt'
@@ -2488,10 +2488,10 @@ define i32 @cmp_int_slt(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp slt <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp slt <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp slt i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_slt'
@@ -2511,10 +2511,10 @@ define i32 @cmp_int_slt(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp slt <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp slt <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp slt i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_slt'
@@ -2534,10 +2534,10 @@ define i32 @cmp_int_slt(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V16I32 = icmp slt <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V32I32 = icmp slt <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp slt i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V2I64 = icmp slt <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V4I64 = icmp slt <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V8I64 = icmp slt <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V16I64 = icmp slt <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_slt'
@@ -2769,10 +2769,10 @@ define i32 @cmp_int_ult(i32 %arg) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE3-LABEL: 'cmp_int_ult'
@@ -2792,10 +2792,10 @@ define i32 @cmp_int_ult(i32 %arg) {
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
-; SSE3-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
+; SSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
 ; SSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSSE3-LABEL: 'cmp_int_ult'
@@ -2815,10 +2815,10 @@ define i32 @cmp_int_ult(i32 %arg) {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
-; SSSE3-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE41-LABEL: 'cmp_int_ult'
@@ -2838,10 +2838,10 @@ define i32 @cmp_int_ult(i32 %arg) {
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: %V16I32 = icmp ult <16 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %V32I32 = icmp ult <32 x i32> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %I64 = icmp ult i64 undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
-; SSE41-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 7 for instruction: %V2I64 = icmp ult <2 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %V4I64 = icmp ult <4 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 28 for instruction: %V8I64 = icmp ult <8 x i64> undef, undef
+; SSE41-NEXT:  Cost Model: Found an estimated cost of 56 for instruction: %V16I64 = icmp ult <16 x i64> undef, undef
 ; SSE41-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
 ;
 ; SSE42-LABEL: 'cmp_int_ult'
