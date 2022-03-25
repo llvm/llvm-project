@@ -25,6 +25,9 @@
 
 using namespace mlir;
 
+// Special value for * passed in device_type or gang clauses.
+static constexpr std::int64_t starCst{-1};
+
 static const Fortran::parser::Name *
 getDesignatorNameIfDataRef(const Fortran::parser::Designator &designator) {
   const auto *dataRef{std::get_if<Fortran::parser::DataRef>(&designator.u)};
@@ -130,6 +133,27 @@ static void genAsyncClause(Fortran::lower::AbstractConverter &converter,
         *Fortran::semantics::GetExpr(*asyncClauseValue), stmtCtx));
   } else {
     addAsyncAttr = true;
+  }
+}
+
+static void genDeviceTypeClause(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::parser::AccClause::DeviceType *deviceTypeClause,
+    SmallVectorImpl<mlir::Value> &operands,
+    Fortran::lower::StatementContext &stmtCtx) {
+  const auto &deviceTypeValue = deviceTypeClause->v;
+  if (deviceTypeValue) {
+    for (const auto &scalarIntExpr : *deviceTypeValue) {
+      mlir::Value expr = fir::getBase(converter.genExprValue(
+          *Fortran::semantics::GetExpr(scalarIntExpr), stmtCtx));
+      operands.push_back(expr);
+    }
+  } else {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    // * was passed as value and will be represented as a special constant.
+    mlir::Value star = firOpBuilder.createIntegerConstant(
+        converter.getCurrentLocation(), firOpBuilder.getIndexType(), starCst);
+    operands.push_back(star);
   }
 }
 
@@ -738,22 +762,19 @@ static void
 genACCInitShutdownOp(Fortran::lower::AbstractConverter &converter,
                      const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond, deviceNum;
-  SmallVector<Value, 2> deviceTypeOperands;
+  SmallVector<mlir::Value> deviceTypeOperands;
 
-  auto &firOpBuilder = converter.getFirOpBuilder();
-  auto currentLocation = converter.getCurrentLocation();
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
 
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separatly as clauses can appear
   // more than once.
-  for (const auto &clause : accClauseList.v) {
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *ifClause =
             std::get_if<Fortran::parser::AccClause::If>(&clause.u)) {
-      mlir::Value cond = fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(ifClause->v), stmtCtx));
-      ifCond = firOpBuilder.createConvert(currentLocation,
-                                          firOpBuilder.getI1Type(), cond);
+      genIfClause(converter, ifClause, ifCond, stmtCtx);
     } else if (const auto *deviceNumClause =
                    std::get_if<Fortran::parser::AccClause::DeviceNum>(
                        &clause.u)) {
@@ -762,21 +783,8 @@ genACCInitShutdownOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceTypeClause =
                    std::get_if<Fortran::parser::AccClause::DeviceType>(
                        &clause.u)) {
-
-      const auto &deviceTypeValue = deviceTypeClause->v;
-      if (deviceTypeValue) {
-        for (const auto &scalarIntExpr : *deviceTypeValue) {
-          mlir::Value expr = fir::getBase(converter.genExprValue(
-              *Fortran::semantics::GetExpr(scalarIntExpr), stmtCtx));
-          deviceTypeOperands.push_back(expr);
-        }
-      } else {
-        // * was passed as value and will be represented as a -1 constant
-        // integer.
-        mlir::Value star = firOpBuilder.createIntegerConstant(
-            currentLocation, firOpBuilder.getIntegerType(32), /* STAR */ -1);
-        deviceTypeOperands.push_back(star);
-      }
+      genDeviceTypeClause(converter, deviceTypeClause, deviceTypeOperands,
+                          stmtCtx);
     }
   }
 
