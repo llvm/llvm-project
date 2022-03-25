@@ -9,6 +9,7 @@ static_library("lib") {
   include_dirs = [ "../include" ]
   sources = [
     "DirectiveMap.cpp",
+    "Forest.cpp",
     "Grammar.cpp",
     "GrammarBNF.cpp",
     "LRGraph.cpp",

@@ -15,8 +15,6 @@
 #include "BytesOutputStyle.h"
 #include "DumpOutputStyle.h"
 #include "ExplainOutputStyle.h"
-#include "InputFile.h"
-#include "LinePrinter.h"
 #include "OutputStyle.h"
 #include "PrettyClassDefinitionDumper.h"
 #include "PrettyCompilandDumper.h"
@@ -55,6 +53,7 @@
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStreamBuilder.h"
+#include "llvm/DebugInfo/PDB/Native/InputFile.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
@@ -198,6 +197,8 @@ static cl::opt<bool> VTShapes("vtshapes", cl::desc("Dump virtual table shapes"),
 static cl::opt<bool> Typedefs("typedefs", cl::desc("Dump typedefs"),
                               cl::sub(DiaDumpSubcommand));
 } // namespace diadump
+
+FilterOptions Filters;
 
 namespace pretty {
 cl::list<std::string> InputFilenames(cl::Positional,
@@ -1072,7 +1073,7 @@ static void dumpPretty(StringRef Path) {
   const bool UseColor = opts::pretty::ColorOutput == cl::BOU_UNSET
                             ? Stream.has_colors()
                             : opts::pretty::ColorOutput == cl::BOU_TRUE;
-  LinePrinter Printer(2, UseColor, Stream);
+  LinePrinter Printer(2, UseColor, Stream, opts::Filters);
 
   auto GlobalScope(Session->getGlobalScope());
   if (!GlobalScope)
@@ -1510,6 +1511,25 @@ int main(int Argc, const char **Argv) {
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
 
+  // Initialize the filters for LinePrinter.
+  auto propagate = [&](auto &Target, auto &Reference) {
+    for (std::string &Option : Reference)
+      Target.push_back(Option);
+  };
+
+  propagate(opts::Filters.ExcludeTypes, opts::pretty::ExcludeTypes);
+  propagate(opts::Filters.ExcludeTypes, opts::pretty::ExcludeTypes);
+  propagate(opts::Filters.ExcludeSymbols, opts::pretty::ExcludeSymbols);
+  propagate(opts::Filters.ExcludeCompilands, opts::pretty::ExcludeCompilands);
+  propagate(opts::Filters.IncludeTypes, opts::pretty::IncludeTypes);
+  propagate(opts::Filters.IncludeSymbols, opts::pretty::IncludeSymbols);
+  propagate(opts::Filters.IncludeCompilands, opts::pretty::IncludeCompilands);
+  opts::Filters.PaddingThreshold = opts::pretty::PaddingThreshold;
+  opts::Filters.SizeThreshold = opts::pretty::SizeThreshold;
+  opts::Filters.JustMyCode = opts::dump::JustMyCode;
+  if (opts::dump::DumpModi.getNumOccurrences())
+    opts::Filters.DumpModi = opts::dump::DumpModi;
+
   if (opts::PdbToYamlSubcommand) {
     pdb2Yaml(opts::pdb2yaml::InputFilename.front());
   } else if (opts::YamlToPdbSubcommand) {
@@ -1548,14 +1568,14 @@ int main(int Argc, const char **Argv) {
     // it needs to be escaped again in the C++.  So matching a single \ in the
     // input requires 4 \es in the C++.
     if (opts::pretty::ExcludeCompilerGenerated) {
-      opts::pretty::ExcludeTypes.push_back("__vc_attributes");
-      opts::pretty::ExcludeCompilands.push_back("\\* Linker \\*");
+      opts::Filters.ExcludeTypes.push_back("__vc_attributes");
+      opts::Filters.ExcludeCompilands.push_back("\\* Linker \\*");
     }
     if (opts::pretty::ExcludeSystemLibraries) {
-      opts::pretty::ExcludeCompilands.push_back(
+      opts::Filters.ExcludeCompilands.push_back(
           "f:\\\\binaries\\\\Intermediate\\\\vctools\\\\crt_bld");
-      opts::pretty::ExcludeCompilands.push_back("f:\\\\dd\\\\vctools\\\\crt");
-      opts::pretty::ExcludeCompilands.push_back(
+      opts::Filters.ExcludeCompilands.push_back("f:\\\\dd\\\\vctools\\\\crt");
+      opts::Filters.ExcludeCompilands.push_back(
           "d:\\\\th.obj.x86fre\\\\minkernel");
     }
     llvm::for_each(opts::pretty::InputFilenames, dumpPretty);

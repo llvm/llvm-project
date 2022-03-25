@@ -529,12 +529,6 @@ using _IsValidExpansion _LIBCPP_NODEBUG = decltype(__sfinae_test_impl<_Templ, _A
 template <class>
 struct __void_t { typedef void type; };
 
-template <class _Tp>
-struct __identity { typedef _Tp type; };
-
-template <class _Tp>
-using __identity_t _LIBCPP_NODEBUG = typename __identity<_Tp>::type;
-
 template <class _Tp, bool>
 struct _LIBCPP_TEMPLATE_VIS __dependent_type : public _Tp {};
 
@@ -1333,6 +1327,13 @@ template <class _Tp> using add_pointer_t = typename add_pointer<_Tp>::type;
 #endif
 
 // type_identity
+
+template <class _Tp>
+struct __type_identity { typedef _Tp type; };
+
+template <class _Tp>
+using __type_identity_t _LIBCPP_NODEBUG = typename __type_identity<_Tp>::type;
+
 #if _LIBCPP_STD_VER > 17
 template<class _Tp> struct type_identity { typedef _Tp type; };
 template<class _Tp> using type_identity_t = typename type_identity<_Tp>::type;

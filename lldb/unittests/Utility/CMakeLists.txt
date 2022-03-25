@@ -38,6 +38,7 @@ add_lldb_unittest(UtilityTests
   TildeExpressionResolverTest.cpp
   TimeoutTest.cpp
   TimerTest.cpp
+  TraceGDBRemotePacketsTest.cpp
   UriParserTest.cpp
   UserIDResolverTest.cpp
   UUIDTest.cpp

@@ -389,6 +389,36 @@ class VOP3Pe_MAI <bits<7> op, VOPProfile P, bit acc_cd = 0> : Enc64 {
   let Inst{63-61} = !if(P.HasSrc1, blgp, 0);
 }
 
+class VOP3Pe_SMFMAC <bits<7> op> : Enc64 {
+  bits<10> vdst;
+  bits<10> src0;
+  bits<10> src1;
+  bits<9> idx;
+  bits<3> blgp;
+  bits<3> cbsz;
+  bits<4> abid;
+
+  let vdst{8} = 1; // VGPR or AGPR, but not SGPR
+  let blgp = 0;
+
+  let Inst{7-0} = vdst{7-0};
+
+  let Inst{10-8}  = cbsz;
+  let Inst{14-11} = abid;
+
+  let Inst{15} = vdst{9}; // acc(vdst)
+
+  let Inst{22-16} = op;
+  let Inst{31-23} = 0x1a7; // encoding
+  let Inst{40-32} = src0{8-0};
+  let Inst{49-41} = src1{8-0};
+  let Inst{58-50} = idx;
+
+  let Inst{59}    = src0{9}; // acc(0)
+  let Inst{60}    = src1{9}; // acc(1)
+
+  let Inst{63-61} = blgp;
+}
 
 class VOP3Pe_gfx10 <bits<7> op, VOPProfile P> : VOP3Pe<op, P> {
   let Inst{31-23} = 0x198; //encoding
@@ -1142,8 +1172,13 @@ class getVOP3ClampPat<VOPProfile P, SDPatternOperator node> {
 }
 
 class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
-  list<dag> ret = [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
-                                        timm:$cbsz, timm:$abid, timm:$blgp))];
+  list<dag> ret = !if(!eq(P.Src0VT, P.Src1VT),
+                      // mfma
+                      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
+                                            timm:$cbsz, timm:$abid, timm:$blgp))],
+                      // smfmac
+                      [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2, i32:$idx,
+                                            timm:$cbsz, timm:$abid))]);
 }
 
 class VOP3Features<bit Clamp, bit OpSel, bit Packed, bit MAI> {

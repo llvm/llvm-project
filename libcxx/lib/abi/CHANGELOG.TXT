@@ -13,17 +13,32 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 15.0
+------------
+
+* b0fd9497af6d - [libc++] Add a lightweight overridable assertion handler
+
+  This patch adds a lightweight assertion handler mechanism that can be
+  overriden at link-time in a fashion similar to `operator new`. A default
+  assertion handler is provided in the shared library, hence the added
+  symbol.
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__126__libcpp_assertion_handlerEPKciS1_S1_
+
+------------
 Version 14.0
 ------------
 
-* [libc++] `to_chars` for floating point.
+* abb5dd6e99df - [libc++] `to_chars` for floating point.
 
   This commit added the `to_chars` implementation for floating point values.
   The entire implementation resides in the dylib and the functions specified
   in the Standard are now part of the ABI.
 
-  arm64-apple-darwin
-  ------------------
+  All platforms
+  -------------
   Symbol added: _ZNSt3__18to_charsEPcS0_d
   Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatE
   Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatEi
@@ -34,31 +49,7 @@ Version 14.0
   Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatE
   Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatEi
 
-  x86_64-apple-darwin
-  -------------------
-  Symbol added: _ZNSt3__18to_charsEPcS0_d
-  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatE
-  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatEi
-  Symbol added: _ZNSt3__18to_charsEPcS0_e
-  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatE
-  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatEi
-  Symbol added: _ZNSt3__18to_charsEPcS0_f
-  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatE
-  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatEi
-
-  x86_64-unknown-linux-gnu
-  ------------------------
-  Symbol added: _ZNSt3__18to_charsEPcS0_d
-  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatE
-  Symbol added: _ZNSt3__18to_charsEPcS0_dNS_12chars_formatEi
-  Symbol added: _ZNSt3__18to_charsEPcS0_e
-  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatE
-  Symbol added: _ZNSt3__18to_charsEPcS0_eNS_12chars_formatEi
-  Symbol added: _ZNSt3__18to_charsEPcS0_f
-  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatE
-  Symbol added: _ZNSt3__18to_charsEPcS0_fNS_12chars_formatEi
-
-* [libc++] Resolve missing table_size symbol
+* 049f6c29a6f0 - [libc++] Resolve missing table_size symbol
 
   This commit added an out-of-line definition for `table_size` in the library.
   This is not an ABI break since we are just adding a symbol to the library.
@@ -73,7 +64,7 @@ Version 14.0
   ------------------------
   Symbol added: _ZNSt3__15ctypeIcE10table_sizeE
 
-* [libc++] Always define a key function for std::bad_function_call in the dylib
+* 434dc0a5bcae - [libc++] Always define a key function for std::bad_function_call in the dylib
 
   This commit added a new explicit instantiation of std::bad_function_call's
   vtable in the shared library. This change is not an ABI break as it only
@@ -89,23 +80,17 @@ Version 14.0
   function needs to be available to users in order to use std::bad_function_call
   before this patch too.
 
-  x86_64-apple-apple-darwin
-  -------------------------
-  Symbol added: __ZNSt3__117bad_function_callD0Ev
-  Symbol added: __ZNSt3__117bad_function_callD1Ev
-  Symbol added: __ZNSt3__117bad_function_callD2Ev
-  Symbol added: __ZTINSt3__117bad_function_callE
-  Symbol added: __ZTSNSt3__117bad_function_callE
-  Symbol added: __ZTVNSt3__117bad_function_callE
-
-  x86_64-unknown-linux-gnu
-  ------------------------
+  All platforms
+  -------------
   Symbol added: _ZNSt3__117bad_function_callD0Ev
   Symbol added: _ZNSt3__117bad_function_callD1Ev
   Symbol added: _ZNSt3__117bad_function_callD2Ev
   Symbol added: _ZTINSt3__117bad_function_callE
   Symbol added: _ZTSNSt3__117bad_function_callE
   Symbol added: _ZTVNSt3__117bad_function_callE
+
+  <arch>-unknown-linux-gnu
+  ------------------------
   Added dependency on symbol: _ZNKSt9exception4whatEv
 
 ------------
@@ -117,89 +102,51 @@ Version 12.0
   This commit added new instantiations with char8_t for classes codecvt and
   codecvt_byname in <locale> in the library.
 
-  x86_64-apple-apple-darwin
-  -------------------------
-  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
-  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE11do_encodingEv
-  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE13do_max_lengthEv
-  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE16do_always_noconvEv
-  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDiS7_RS7_
-  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE6do_outERS1_PKDiS5_RS5_PDuS7_RS7_
-  Symbol added: __ZNKSt3__17codecvtIDiDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
-  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
-  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE11do_encodingEv
-  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE13do_max_lengthEv
-  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE16do_always_noconvEv
-  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDsS7_RS7_
-  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE6do_outERS1_PKDsS5_RS5_PDuS7_RS7_
-  Symbol added: __ZNKSt3__17codecvtIDsDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
-  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED0Ev
-  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED1Ev
-  Symbol added: __ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED2Ev
-  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED0Ev
-  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED1Ev
-  Symbol added: __ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED2Ev
-  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tE2idE
-  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev
-  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev
-  Symbol added: __ZNSt3__17codecvtIDiDu11__mbstate_tED2Ev
-  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tE2idE
-  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED0Ev
-  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED1Ev
-  Symbol added: __ZNSt3__17codecvtIDsDu11__mbstate_tED2Ev
-  Symbol added: __ZTINSt3__114codecvt_bynameIDiDu11__mbstate_tEE
-  Symbol added: __ZTINSt3__114codecvt_bynameIDsDu11__mbstate_tEE
-  Symbol added: __ZTINSt3__17codecvtIDiDu11__mbstate_tEE
-  Symbol added: __ZTINSt3__17codecvtIDsDu11__mbstate_tEE
-  Symbol added: __ZTSNSt3__17codecvtIDiDu11__mbstate_tEE
-  Symbol added: __ZTSNSt3__17codecvtIDsDu11__mbstate_tEE
-  Symbol added: __ZTVNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
-  Symbol added: __ZTVNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
-  Symbol added: __ZTVNSt3__17codecvtIDiDu11__mbstate_tEE
-  Symbol added: __ZTVNSt3__17codecvtIDsDu11__mbstate_tEE
-
-  x86_64-unknown-linux-gnu
-  ------------------------
-  Symbol added: _ZTINSt3__17codecvtIDsDu11__mbstate_tEE
-  Symbol added: _ZTINSt3__114codecvt_bynameIDsDu11__mbstate_tEE
-  Symbol added: _ZTINSt3__17codecvtIDiDu11__mbstate_tEE
-  Symbol added: _ZTINSt3__114codecvt_bynameIDiDu11__mbstate_tEE
-  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
-  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE13do_max_lengthEv
-  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tE2idE
-  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE16do_always_noconvEv
-  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE13do_max_lengthEv
-  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tE2idE
-  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE6do_outERS1_PKDsS5_RS5_PDuS7_RS7_
-  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev
-  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDiS7_RS7_
-  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED0Ev
-  Symbol added: _ZTSNSt3__17codecvtIDiDu11__mbstate_tEE
-  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev
-  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED1Ev
-  Symbol added: _ZTVNSt3__17codecvtIDiDu11__mbstate_tEE
-  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED2Ev
-  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED0Ev
-  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED2Ev
-  Symbol added: _ZTVNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
-  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE16do_always_noconvEv
-  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED1Ev
-  Symbol added: _ZTVNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  All platforms
+  -------------
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
   Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE11do_encodingEv
-  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED0Ev
-  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED2Ev
-  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED1Ev
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE16do_always_noconvEv
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDiS7_RS7_
+  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE6do_outERS1_PKDiS5_RS5_PDuS7_RS7_
   Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
   Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
-  Symbol added: _ZTSNSt3__17codecvtIDsDu11__mbstate_tEE
-  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED2Ev
-  Symbol added: _ZTVNSt3__17codecvtIDsDu11__mbstate_tEE
-  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE6do_outERS1_PKDiS5_RS5_PDuS7_RS7_
-  Symbol added: _ZTSNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
   Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE11do_encodingEv
-  Symbol added: _ZNKSt3__17codecvtIDiDu11__mbstate_tE10do_unshiftERS1_PDuS4_RS4_
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE13do_max_lengthEv
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE16do_always_noconvEv
   Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE5do_inERS1_PKDuS5_RS5_PDsS7_RS7_
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE6do_outERS1_PKDsS5_RS5_PDuS7_RS7_
+  Symbol added: _ZNKSt3__17codecvtIDsDu11__mbstate_tE9do_lengthERS1_PKDuS5_m
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED1Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDiDu11__mbstate_tED2Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED1Ev
+  Symbol added: _ZNSt3__114codecvt_bynameIDsDu11__mbstate_tED2Ev
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tE2idE
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev
+  Symbol added: _ZNSt3__17codecvtIDiDu11__mbstate_tED2Ev
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tE2idE
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED0Ev
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED1Ev
+  Symbol added: _ZNSt3__17codecvtIDsDu11__mbstate_tED2Ev
+  Symbol added: _ZTINSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZTINSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZTSNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZTSNSt3__17codecvtIDsDu11__mbstate_tEE
+  Symbol added: _ZTVNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: _ZTVNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
+  Symbol added: _ZTVNSt3__17codecvtIDiDu11__mbstate_tEE
+  Symbol added: _ZTVNSt3__17codecvtIDsDu11__mbstate_tEE
+
+  <arch>-unknown-linux-gnu
+  ------------------------
   Symbol added: _ZTSNSt3__114codecvt_bynameIDiDu11__mbstate_tEE
+  Symbol added: _ZTSNSt3__114codecvt_bynameIDsDu11__mbstate_tEE
 
 * 997d41cdec53 - [libc++] Instantiate additional <iostream> members in the dylib
 
@@ -209,81 +156,8 @@ Version 12.0
   impact on both code size and load times. This change is not an ABI break,
   since we are just adding additional symbols.
 
-  x86_64-apple-apple-darwin
-  -------------------------
-  Symbol added: __ZNKSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strEv
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE11__read_modeEv
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE12__write_modeEv
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4openEPKcj
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4swapERS3_
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE4syncEv
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE5closeEv
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE5imbueERKNS_6localeE
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE6setbufEPcl
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE7seekoffExNS_8ios_base7seekdirEj
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE7seekposENS_4fposI11__mbstate_tEEj
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE8overflowEi
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE9pbackfailEi
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE9underflowEv
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC1EOS3_
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC1Ev
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC2EOS3_
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEEC2Ev
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED0Ev
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED1Ev
-  Symbol added: __ZNSt3__113basic_filebufIcNS_11char_traitsIcEEED2Ev
-  Symbol added: __ZNSt3__114basic_ifstreamIcNS_11char_traitsIcEEE4openEPKcj
-  Symbol added: __ZNSt3__114basic_ifstreamIcNS_11char_traitsIcEEE4openERKNS_12basic_stringIcS2_NS_9allocatorIcEEEEj
-  Symbol added: __ZNSt3__114basic_ofstreamIcNS_11char_traitsIcEEE4openEPKcj
-  Symbol added: __ZNSt3__114basic_ofstreamIcNS_11char_traitsIcEEE4openERKNS_12basic_stringIcS2_NS_9allocatorIcEEEEj
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strERKNS_12basic_stringIcS2_S4_EE
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE4swapERS5_
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE7seekoffExNS_8ios_base7seekdirEj
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE8overflowEi
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE9pbackfailEi
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE9underflowEv
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEC1EOS5_
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEC2EOS5_
-  Symbol added: __ZNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
-  Symbol added: __ZNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
-  Symbol added: __ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
-  Symbol added: __ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_
-  Symbol added: __ZTCNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE0_NS_13basic_istreamIcS2_EE
-  Symbol added: __ZTCNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE0_NS_13basic_ostreamIcS2_EE
-  Symbol added: __ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_istreamIcS2_EE
-  Symbol added: __ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_14basic_iostreamIcS2_EE
-  Symbol added: __ZTCNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE16_NS_13basic_ostreamIcS2_EE
-  Symbol added: __ZTCNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_istreamIcS2_EE
-  Symbol added: __ZTCNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE0_NS_13basic_ostreamIcS2_EE
-  Symbol added: __ZTINSt3__113basic_filebufIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTINSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTINSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTINSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTINSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTINSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTINSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTSNSt3__113basic_filebufIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTSNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTSNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTSNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTSNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTSNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTSNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTTNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTTNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTTNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTTNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTTNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTVNSt3__113basic_filebufIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTVNSt3__114basic_ifstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTVNSt3__114basic_ofstreamIcNS_11char_traitsIcEEEE
-  Symbol added: __ZTVNSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTVNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTVNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-  Symbol added: __ZTVNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE
-
-  x86_64-unknown-linux-gnu
-  ------------------------
+  All platforms
+  -------------
   Symbol added: _ZNKSt3__115basic_stringbufIcNS_11char_traitsIcEENS_9allocatorIcEEE3strEv
   Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE11__read_modeEv
   Symbol added: _ZNSt3__113basic_filebufIcNS_11char_traitsIcEEE12__write_modeEv
@@ -361,7 +235,7 @@ Version 12.0
   Those were previously defined in both libc++ and libc++abi, which was an
   ODR violation.
 
-  x86_64-apple-apple-darwin
+  <arch>-apple-apple-darwin
   -------------------------
   The following symbols are now re-exported from libc++abi instead of exported
   by libc++ directly (this should not be an ABI break):
@@ -387,7 +261,7 @@ Version 12.0
   Symbol moved: __ZnwmSt11align_val_t
   Symbol moved: __ZnwmSt11align_val_tRKSt9nothrow_t
 
-  x86_64-unknown-linux-gnu
+  <arch>-unknown-linux-gnu
   ------------------------
   The following symbols were moved to libc++abi, but are NOT being re-exported
   by libc++. This constitutes an ABI break if one links against libc++ but
@@ -438,7 +312,7 @@ Version 10.0
   ------------------------
   TODO
 
-  x86_64-apple-apple-darwin
+  <arch>-apple-apple-darwin
   -------------------------
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEEx
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKvx
@@ -480,8 +354,8 @@ Version 9.0
   such, new symbols required to implement <filesystem> are exported from
   the shared library.
 
-  x86_64-unknown-linux-gnu
-  ------------------------
+  All platforms
+  -------------
   Symbol added: _ZNKSt3__14__fs10filesystem18directory_iterator13__dereferenceEv
   Symbol added: _ZNKSt3__14__fs10filesystem28recursive_directory_iterator13__dereferenceEv
   Symbol added: _ZNKSt3__14__fs10filesystem28recursive_directory_iterator5depthEv
@@ -514,10 +388,10 @@ Version 9.0
   Symbol added: _ZNSt3__14__fs10filesystem14__current_pathERKNS1_4pathEPNS_10error_codeE
   Symbol added: _ZNSt3__14__fs10filesystem14__read_symlinkERKNS1_4pathEPNS_10error_codeE
   Symbol added: _ZNSt3__14__fs10filesystem15directory_entry12__do_refreshEv
-  Symbol added: _ZNSt3__14__fs10filesystem16_FilesystemClock3nowEv
-  Symbol added: _ZNSt3__14__fs10filesystem16_FilesystemClock9is_steadyE
   Symbol added: _ZNSt3__14__fs10filesystem16__create_symlinkERKNS1_4pathES4_PNS_10error_codeE
   Symbol added: _ZNSt3__14__fs10filesystem16__symlink_statusERKNS1_4pathEPNS_10error_codeE
+  Symbol added: _ZNSt3__14__fs10filesystem16_FilesystemClock3nowEv
+  Symbol added: _ZNSt3__14__fs10filesystem16_FilesystemClock9is_steadyE
   Symbol added: _ZNSt3__14__fs10filesystem16filesystem_error13__create_whatEi
   Symbol added: _ZNSt3__14__fs10filesystem16filesystem_errorD0Ev
   Symbol added: _ZNSt3__14__fs10filesystem16filesystem_errorD1Ev
@@ -553,119 +427,6 @@ Version 9.0
   Symbol added: _ZTINSt3__14__fs10filesystem16filesystem_errorE
   Symbol added: _ZTSNSt3__14__fs10filesystem16filesystem_errorE
   Symbol added: _ZTVNSt3__14__fs10filesystem16filesystem_errorE
-
-  x86_64-apple-apple-darwin
-  -------------------------
-  Symbol added: __ZNKSt3__14__fs10filesystem18directory_iterator13__dereferenceEv
-  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator13__dereferenceEv
-  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator5depthEv
-  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator7optionsEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path10__filenameEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path11__extensionEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path11__root_nameEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path13__parent_pathEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path15__relative_pathEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path15__root_path_rawEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path16__root_directoryEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path16lexically_normalEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path18lexically_relativeERKS2_
-  Symbol added: __ZNKSt3__14__fs10filesystem4path3endEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path5beginEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path6__stemEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path9__compareENS_17basic_string_viewIcNS_11char_traitsIcEEEE
-  Symbol added: __ZNSt3__14__fs10filesystem10__absoluteERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem10hash_valueERKNS1_4pathE
-  Symbol added: __ZNSt3__14__fs10filesystem11__canonicalERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem11__copy_fileERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem11__file_sizeERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem12__equivalentERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem12__remove_allERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem13__fs_is_emptyERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem13__permissionsERKNS1_4pathENS1_5permsENS1_12perm_optionsEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem13__resize_fileERKNS1_4pathEmPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__copy_symlinkERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__read_symlinkERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem15directory_entry12__do_refreshEv
-  Symbol added: __ZNSt3__14__fs10filesystem16__create_symlinkERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem16__symlink_statusERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem16_FilesystemClock3nowEv
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_error13__create_whatEi
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD0Ev
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD1Ev
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD2Ev
-  Symbol added: __ZNSt3__14__fs10filesystem17__hard_link_countERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathENS_6chrono10time_pointINS1_16_FilesystemClockENS5_8durationInNS_5ratioILl1ELl1000000000EEEEEEEPNS_10error_codeE
-  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator5depthEv
-  Symbol added: __ZNKSt3__14__fs10filesystem28recursive_directory_iterator7optionsEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path10__filenameEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path11__extensionEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path11__root_nameEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path13__parent_pathEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path15__relative_pathEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path15__root_path_rawEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path16__root_directoryEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path16lexically_normalEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path18lexically_relativeERKS2_
-  Symbol added: __ZNKSt3__14__fs10filesystem4path3endEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path5beginEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path6__stemEv
-  Symbol added: __ZNKSt3__14__fs10filesystem4path9__compareENS_17basic_string_viewIcNS_11char_traitsIcEEEE
-  Symbol added: __ZNSt3__14__fs10filesystem10__absoluteERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem10hash_valueERKNS1_4pathE
-  Symbol added: __ZNSt3__14__fs10filesystem11__canonicalERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem11__copy_fileERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem11__file_sizeERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem12__equivalentERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem12__remove_allERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem13__fs_is_emptyERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem13__permissionsERKNS1_4pathENS1_5permsENS1_12perm_optionsEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem13__resize_fileERKNS1_4pathEmPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__copy_symlinkERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__current_pathERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem14__read_symlinkERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem15directory_entry12__do_refreshEv
-  Symbol added: __ZNSt3__14__fs10filesystem16__create_symlinkERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem16__symlink_statusERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem16_FilesystemClock3nowEv
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_error13__create_whatEi
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD0Ev
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD1Ev
-  Symbol added: __ZNSt3__14__fs10filesystem16filesystem_errorD2Ev
-  Symbol added: __ZNSt3__14__fs10filesystem17__hard_link_countERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathENS_6chrono10time_pointINS1_16_FilesystemClockENS5_8durationInNS_5ratioILl1ELl1000000000EEEEEEEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem17__last_write_timeERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem18__create_directoryERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem18__create_directoryERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem18__create_hard_linkERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem18__weakly_canonicalERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem18directory_iterator11__incrementEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem18directory_iteratorC1ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE
-  Symbol added: __ZNSt3__14__fs10filesystem18directory_iteratorC2ERKNS1_4pathEPNS_10error_codeENS1_17directory_optionsE
-  Symbol added: __ZNSt3__14__fs10filesystem20__create_directoriesERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem21__temp_directory_pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem26__create_directory_symlinkERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator11__incrementEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator15__try_recursionEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator5__popEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iterator9__advanceEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iteratorC1ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem28recursive_directory_iteratorC2ERKNS1_4pathENS1_17directory_optionsEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem4path17replace_extensionERKS2_
-  Symbol added: __ZNSt3__14__fs10filesystem4path8iterator11__decrementEv
-  Symbol added: __ZNSt3__14__fs10filesystem4path8iterator11__incrementEv
-  Symbol added: __ZNSt3__14__fs10filesystem6__copyERKNS1_4pathES4_NS1_12copy_optionsEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem7__spaceERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem8__removeERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem8__renameERKNS1_4pathES4_PNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem8__statusERKNS1_4pathEPNS_10error_codeE
-  Symbol added: __ZNSt3__14__fs10filesystem16_FilesystemClock9is_steadyE
-  Symbol added: __ZNSt3__14__fs10filesystem4path19preferred_separatorE
-  Symbol added: __ZTINSt3__14__fs10filesystem16filesystem_errorE
-  Symbol added: __ZTSNSt3__14__fs10filesystem16filesystem_errorE
-  Symbol added: __ZTVNSt3__14__fs10filesystem16filesystem_errorE
 
 * r356417 - Remove exception throwing debug mode handler support.
 
@@ -717,18 +478,10 @@ Version 9.0
   The fix requires unconditionally breaking the debug mode ABI. Users should not expect ABI
   stability from debug mode.
 
-
-  x86_64-unknown-linux-gnu
-  ------------------------
+  All platforms
+  -------------
   Symbol added: _ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
   Symbol removed: _ZNSt3__111__libcpp_db10__insert_cEPv
-
-
-  x86_64-apple-apple-darwin
-  -------------------------
-  Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
-  Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
-
 
 -----------
 Version 8.0
@@ -856,9 +609,8 @@ Version 7.0
 
   All Platforms
   ----------------
-  SYMBOL REMOVED: __cxa_uncaught_exception
+  Symbol removed: __cxa_uncaught_exception
   Symbol added: __cxa_uncaught_exceptions
-
 
 -----------
 Version 5.0
@@ -883,24 +635,24 @@ Version 5.0
 
   x86_64-linux-gnu
   ----------------
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE15__do_get_signedIlEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE15__do_get_signedIxEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedIjEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedImEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedItEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedIyEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE23__do_get_floating_pointIdEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE23__do_get_floating_pointIeEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE23__do_get_floating_pointIfEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE15__do_get_signedIlEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE15__do_get_signedIxEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedIjEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedImEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedItEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedIyEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIdEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIeEES4_S4_S4_RNS_8ios_baseERjRT_
-  SYMBOL REMOVED: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIfEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE15__do_get_signedIlEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE15__do_get_signedIxEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedIjEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedImEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedItEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE17__do_get_unsignedIyEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE23__do_get_floating_pointIdEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE23__do_get_floating_pointIeEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIcNS_19istreambuf_iteratorIcNS_11char_traitsIcEEEEE23__do_get_floating_pointIfEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE15__do_get_signedIlEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE15__do_get_signedIxEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedIjEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedImEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedItEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE17__do_get_unsignedIyEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIdEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIeEES4_S4_S4_RNS_8ios_baseERjRT_
+  Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIfEES4_S4_S4_RNS_8ios_baseERjRT_
 
   x86_64-apple-darwin16.0
   -----------------------
@@ -950,8 +702,8 @@ Version 4.0
 
   x86_64-linux-gnu
   ----------------
-  SYMBOL REMOVED: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendIPcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
-  SYMBOL REMOVED: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6appendIPwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
+  Symbol removed: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendIPcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
+  Symbol removed: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6appendIPwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
 
   x86_64-apple-darwin16.0
   -----------------------
@@ -966,30 +718,29 @@ Version 4.0
 
   x86_64-linux-gnu
   ----------------
-  SYMBOL REMOVED: _ZNSt12bad_any_castD0Ev
-  SYMBOL REMOVED: _ZNSt12experimental15fundamentals_v112bad_any_castD0Ev
-  SYMBOL REMOVED: _ZNSt3__114__codecvt_utf8IDiED0Ev
-  SYMBOL REMOVED: _ZNSt3__114__codecvt_utf8IDsED0Ev
-  SYMBOL REMOVED: _ZNSt3__114__codecvt_utf8IwED0Ev
-  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDiLb0EED0Ev
-  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDiLb1EED0Ev
-  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDsLb0EED0Ev
-  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IDsLb1EED0Ev
-  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IwLb0EED0Ev
-  SYMBOL REMOVED: _ZNSt3__115__codecvt_utf16IwLb1EED0Ev
-  SYMBOL REMOVED: _ZNSt3__117__assoc_sub_stateD0Ev
-  SYMBOL REMOVED: _ZNSt3__117__assoc_sub_stateD2Ev
-  SYMBOL REMOVED: _ZNSt3__117__libcpp_sscanf_lEPKcP15__locale_structS1_z
-  SYMBOL REMOVED: _ZNSt3__119__libcpp_asprintf_lEPPcP15__locale_structPKcz
-  SYMBOL REMOVED: _ZNSt3__119__libcpp_snprintf_lEPcmP15__locale_structPKcz
-  SYMBOL REMOVED: _ZNSt3__120__codecvt_utf8_utf16IDiED0Ev
-  SYMBOL REMOVED: _ZNSt3__120__codecvt_utf8_utf16IDsED0Ev
-  SYMBOL REMOVED: _ZNSt3__120__codecvt_utf8_utf16IwED0Ev
+  Symbol removed: _ZNSt12bad_any_castD0Ev
+  Symbol removed: _ZNSt12experimental15fundamentals_v112bad_any_castD0Ev
+  Symbol removed: _ZNSt3__114__codecvt_utf8IDiED0Ev
+  Symbol removed: _ZNSt3__114__codecvt_utf8IDsED0Ev
+  Symbol removed: _ZNSt3__114__codecvt_utf8IwED0Ev
+  Symbol removed: _ZNSt3__115__codecvt_utf16IDiLb0EED0Ev
+  Symbol removed: _ZNSt3__115__codecvt_utf16IDiLb1EED0Ev
+  Symbol removed: _ZNSt3__115__codecvt_utf16IDsLb0EED0Ev
+  Symbol removed: _ZNSt3__115__codecvt_utf16IDsLb1EED0Ev
+  Symbol removed: _ZNSt3__115__codecvt_utf16IwLb0EED0Ev
+  Symbol removed: _ZNSt3__115__codecvt_utf16IwLb1EED0Ev
+  Symbol removed: _ZNSt3__117__assoc_sub_stateD0Ev
+  Symbol removed: _ZNSt3__117__assoc_sub_stateD2Ev
+  Symbol removed: _ZNSt3__117__libcpp_sscanf_lEPKcP15__locale_structS1_z
+  Symbol removed: _ZNSt3__119__libcpp_asprintf_lEPPcP15__locale_structPKcz
+  Symbol removed: _ZNSt3__119__libcpp_snprintf_lEPcmP15__locale_structPKcz
+  Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IDiED0Ev
+  Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IDsED0Ev
+  Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IwED0Ev
 
   x86_64-apple-darwin16.0
   -----------------------
   No Changes - inline symbols are already hidden
-
 
 * r284206 - Implement C++17 aligned allocation in <new>
 
@@ -1037,7 +788,7 @@ Version 4.0
 
   x86_64-linux-gnu
   ----------------
-  SYMBOL REMOVED: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6insertIPKcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorISA_EE5valueENS_11__wrap_iterIPcEEE4typeENSB_IS8_EESA_SA_
-  SYMBOL REMOVED: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7replaceIPKcEENS_9enable_ifIXsr19__is_input_iteratorIT_EE5valueERS5_E4typeENS_11__wrap_iterIS8_EESF_SA_SA_
-  SYMBOL REMOVED: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6insertIPKwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorISA_EE5valueENS_11__wrap_iterIPwEEE4typeENSB_IS8_EESA_SA_
-  SYMBOL REMOVED: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7replaceIPKwEENS_9enable_ifIXsr19__is_input_iteratorIT_EE5valueERS5_E4typeENS_11__wrap_iterIS8_EESF_SA_SA_
+  Symbol removed: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6insertIPKcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorISA_EE5valueENS_11__wrap_iterIPcEEE4typeENSB_IS8_EESA_SA_
+  Symbol removed: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE7replaceIPKcEENS_9enable_ifIXsr19__is_input_iteratorIT_EE5valueERS5_E4typeENS_11__wrap_iterIS8_EESF_SA_SA_
+  Symbol removed: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6insertIPKwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorISA_EE5valueENS_11__wrap_iterIPwEEE4typeENSB_IS8_EESA_SA_
+  Symbol removed: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE7replaceIPKwEENS_9enable_ifIXsr19__is_input_iteratorIT_EE5valueERS5_E4typeENS_11__wrap_iterIS8_EESF_SA_SA_

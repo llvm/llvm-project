@@ -15,6 +15,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_LINUX_PERF_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_LINUX_PERF_H
 
+#include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
 
 #include "llvm/Support/Error.h"
@@ -232,29 +233,9 @@ private:
   resource_handle::MmapUP m_aux_base;
 };
 
-/// TSC to nanoseconds conversion values defined by the Linux perf_event API
-/// when the capibilities cap_user_time and cap_user_time_zero are set. See the
-/// documentation of `time_zero` in
-/// https://man7.org/linux/man-pages/man2/perf_event_open.2.html for more
-/// information.
-struct PerfTscConversionParameters {
-  uint32_t m_time_mult;
-  uint16_t m_time_shift;
-  uint64_t m_time_zero;
-
-  /// Convert TSC value to nanosecond wall time.
-  ///
-  /// \a param[in] tsc
-  ///   The TSC value to be converted.
-  ///
-  /// \return
-  ///   Nanosecond wall time.
-  std::chrono::nanoseconds ToWallTime(uint64_t tsc);
-};
-
-/// Fetch \a PerfTscConversionParameters from \a perf_event_mmap_page, if
+/// Load \a PerfTscConversionParameters from \a perf_event_mmap_page, if
 /// available.
-llvm::Expected<PerfTscConversionParameters> FetchPerfTscConversionParameters();
+llvm::Expected<LinuxPerfZeroTscConversion> LoadPerfTscConversionParameters();
 
 } // namespace process_linux
 } // namespace lldb_private
