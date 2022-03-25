@@ -4,14 +4,14 @@
 define double @double() {
   ret double 0x2000000000800001
 }
-; CHECK:              .globl  __real@2000000000800001
-; CHECK-NEXT:         .section        .rdata,"dr",discard,__real@2000000000800001
+; CHECK:              .globl "__real@2000000000800001"
+; CHECK-NEXT:         .section        .rdata,"dr",discard,"__real@2000000000800001"
 ; CHECK-NEXT:         .p2align  3
-; CHECK-NEXT: __real@2000000000800001:
+; CHECK-NEXT: "__real@2000000000800001":
 ; CHECK-NEXT:         .xword   0x2000000000800001
 ; CHECK:      double:
-; CHECK:               adrp    x8, __real@2000000000800001
-; CHECK-NEXT:          ldr     d0, [x8, :lo12:__real@2000000000800001]
+; CHECK:               adrp    x8, "__real@2000000000800001"
+; CHECK-NEXT:          ldr     d0, [x8, :lo12:"__real@2000000000800001"]
 ; CHECK-NEXT:          ret
 
 ; MINGW:              .section        .rdata,"dr"
