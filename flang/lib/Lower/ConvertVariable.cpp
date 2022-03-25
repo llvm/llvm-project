@@ -1035,7 +1035,8 @@ static mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
   // Let the folder deal with the common `ub - <const> + 1` case.
   auto diff = builder.create<mlir::arith::SubIOp>(loc, idxTy, ub, lb);
   mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  return builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one);
+  auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one);
+  return Fortran::lower::genMaxWithZero(builder, loc, rawExtent);
 }
 
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
@@ -1068,13 +1069,13 @@ static void lowerExplicitLowerBounds(
 /// Lower explicit extents into \p result if this is an explicit-shape or
 /// assumed-size array. Does nothing if this is not an explicit-shape or
 /// assumed-size array.
-static void lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
-                                 mlir::Location loc,
-                                 const Fortran::lower::BoxAnalyzer &box,
-                                 llvm::ArrayRef<mlir::Value> lowerBounds,
-                                 llvm::SmallVectorImpl<mlir::Value> &result,
-                                 Fortran::lower::SymMap &symMap,
-                                 Fortran::lower::StatementContext &stmtCtx) {
+static void
+lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
+                     mlir::Location loc, const Fortran::lower::BoxAnalyzer &box,
+                     llvm::SmallVectorImpl<mlir::Value> &lowerBounds,
+                     llvm::SmallVectorImpl<mlir::Value> &result,
+                     Fortran::lower::SymMap &symMap,
+                     Fortran::lower::StatementContext &stmtCtx) {
   if (!box.isArray())
     return;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
@@ -1090,7 +1091,7 @@ static void lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
       mlir::Value ub = builder.createConvert(
           loc, idxTy, genScalarValue(converter, loc, expr, symMap, stmtCtx));
       if (lowerBounds.empty())
-        result.emplace_back(ub);
+        result.emplace_back(Fortran::lower::genMaxWithZero(builder, loc, ub));
       else
         result.emplace_back(
             computeExtent(builder, loc, lowerBounds[spec.index()], ub));
@@ -1194,7 +1195,7 @@ void Fortran::lower::mapSymbolAttributes(
     mlir::Value dummyArg = symMap.lookupSymbol(sym).getAddr();
     if (lowerToBoxValue(sym, dummyArg)) {
       llvm::SmallVector<mlir::Value> lbounds;
-      llvm::SmallVector<mlir::Value> extents;
+      llvm::SmallVector<mlir::Value> explicitExtents;
       llvm::SmallVector<mlir::Value> explicitParams;
       // Lower lower bounds, explicit type parameters and explicit
       // extents if any.
@@ -1204,10 +1205,10 @@ void Fortran::lower::mapSymbolAttributes(
           explicitParams.push_back(len);
       // TODO: derived type length parameters.
       lowerExplicitLowerBounds(converter, loc, ba, lbounds, symMap, stmtCtx);
-      lowerExplicitExtents(converter, loc, ba, lbounds, extents, symMap,
+      lowerExplicitExtents(converter, loc, ba, lbounds, explicitExtents, symMap,
                            stmtCtx);
-      symMap.addBoxSymbol(sym, dummyArg, lbounds, explicitParams, extents,
-                          replace);
+      symMap.addBoxSymbol(sym, dummyArg, lbounds, explicitParams,
+                          explicitExtents, replace);
       return;
     }
   }
@@ -1229,7 +1230,8 @@ void Fortran::lower::mapSymbolAttributes(
       if (auto high = spec->ubound().GetExplicit()) {
         Fortran::lower::SomeExpr highEx{*high};
         mlir::Value ub = genValue(highEx);
-        shapes.emplace_back(builder.createConvert(loc, idxTy, ub));
+        ub = builder.createConvert(loc, idxTy, ub);
+        shapes.emplace_back(genMaxWithZero(builder, loc, ub));
       } else if (spec->ubound().isColon()) {
         assert(box && "assumed bounds require a descriptor");
         mlir::Value dim =
@@ -1276,16 +1278,15 @@ void Fortran::lower::mapSymbolAttributes(
         } else {
           TODO(loc, "assumed rank lowering");
         }
+        lbounds.emplace_back(lb);
 
         if (auto high = spec->ubound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*high};
           ub = builder.createConvert(loc, idxTy, genValue(expr));
-          lbounds.emplace_back(lb);
           extents.emplace_back(computeExtent(builder, loc, lb, ub));
         } else {
           // An assumed size array. The extent is not computed.
           assert(spec->ubound().isStar() && "expected assumed size");
-          lbounds.emplace_back(lb);
           extents.emplace_back(builder.create<fir::UndefOp>(loc, idxTy));
         }
       }

@@ -468,6 +468,9 @@ public:
                  [](const auto &box) -> unsigned { return box.rank(); });
   }
 
+  /// Is this an assumed size array ?
+  bool isAssumedSize() const;
+
   /// LLVM style debugging of extended values
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
 
