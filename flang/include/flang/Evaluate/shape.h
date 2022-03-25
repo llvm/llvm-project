@@ -68,14 +68,18 @@ template <typename A> std::optional<Shape> GetShape(const A &);
 // in its scope, and it will not have been forced to 1 on an empty dimension.
 // GetLBOUND()'s result is safer, but it is optional because it does fail
 // in those circumstances.
+// Similarly, GetUBOUND result will be forced to 0 on an empty dimension,
+// but will fail if the extent is not a compile time constant.
 ExtentExpr GetRawLowerBound(const NamedEntity &, int dimension);
 ExtentExpr GetRawLowerBound(
     FoldingContext &, const NamedEntity &, int dimension);
 MaybeExtentExpr GetLBOUND(const NamedEntity &, int dimension);
 MaybeExtentExpr GetLBOUND(FoldingContext &, const NamedEntity &, int dimension);
-MaybeExtentExpr GetUpperBound(const NamedEntity &, int dimension);
-MaybeExtentExpr GetUpperBound(
+MaybeExtentExpr GetRawUpperBound(const NamedEntity &, int dimension);
+MaybeExtentExpr GetRawUpperBound(
     FoldingContext &, const NamedEntity &, int dimension);
+MaybeExtentExpr GetUBOUND(const NamedEntity &, int dimension);
+MaybeExtentExpr GetUBOUND(FoldingContext &, const NamedEntity &, int dimension);
 MaybeExtentExpr ComputeUpperBound(ExtentExpr &&lower, MaybeExtentExpr &&extent);
 MaybeExtentExpr ComputeUpperBound(
     FoldingContext &, ExtentExpr &&lower, MaybeExtentExpr &&extent);
@@ -83,8 +87,8 @@ Shape GetRawLowerBounds(const NamedEntity &);
 Shape GetRawLowerBounds(FoldingContext &, const NamedEntity &);
 Shape GetLBOUNDs(const NamedEntity &);
 Shape GetLBOUNDs(FoldingContext &, const NamedEntity &);
-Shape GetUpperBounds(const NamedEntity &);
-Shape GetUpperBounds(FoldingContext &, const NamedEntity &);
+Shape GetUBOUNDs(const NamedEntity &);
+Shape GetUBOUNDs(FoldingContext &, const NamedEntity &);
 MaybeExtentExpr GetExtent(const NamedEntity &, int dimension);
 MaybeExtentExpr GetExtent(FoldingContext &, const NamedEntity &, int dimension);
 MaybeExtentExpr GetExtent(
