@@ -206,3 +206,37 @@ using ET = E<1, 3>;
 // CHECK:                 `-TemplateArgument expr
 // CHECK-NOT: Subst
 // CHECK:                   `-DeclRefExpr {{.*}} 'int' NonTypeTemplateParm [[M2]] 'M2' 'int'
+
+template <char = 'x'> struct F;
+
+template <char> struct F {
+  template <typename U>
+  requires(false) F(U);
+  template <typename U>
+  requires(true) F(U);
+};
+
+F s(0);
+
+// CHECK-LABEL: Dumping <deduction guide for F>:
+// CHECK: FunctionTemplateDecl
+// CHECK: |-NonTypeTemplateParmDecl {{.*}} 'char' depth 0 index 0
+// CHECK:   `-TemplateArgument expr
+// CHECK: |   |-inherited from NonTypeTemplateParm {{.*}} '' 'char'
+// CHECK: |   `-ConstantExpr {{.*}} 'char'
+// CHECK: |     |-value: Int 120
+// CHECK: |     `-CharacterLiteral {{.*}} 'char' 120
+// CHECK: |-TemplateTypeParmDecl {{.*}} typename depth 0 index 1 U
+// CHECK: |-ParenExpr {{.*}} 'bool'
+// CHECK: | `-CXXBoolLiteralExpr {{.*}} 'bool' false
+// CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (type-parameter-0-1) -> F<>'
+// CHECK: | `-ParmVarDecl {{.*}} 'type-parameter-0-1'
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for F> 'auto (int) -> F<'x'>'
+// CHECK:   |-TemplateArgument integral 120
+// CHECK:   |-TemplateArgument type 'int'
+// CHECK:   | `-BuiltinType {{.*}} 'int'
+// CHECK:   `-ParmVarDecl {{.*}} 'int':'int'
+// CHECK: FunctionProtoType {{.*}} 'auto (type-parameter-0-1) -> F<>' dependent trailing_return cdecl
+// CHECK: |-InjectedClassNameType {{.*}} 'F<>' dependent
+// CHECK: | `-CXXRecord {{.*}} 'F'
+// CHECK: `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
