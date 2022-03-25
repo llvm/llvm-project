@@ -3299,7 +3299,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
 
     case WEAK_UNDECLARED_IDENTIFIERS:
-      if (Record.size() % 4 != 0)
+      if (Record.size() % 3 != 0)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "invalid weak identifiers record");
 
@@ -3314,8 +3314,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         WeakUndeclaredIdentifiers.push_back(
           getGlobalIdentifierID(F, Record[I++]));
         WeakUndeclaredIdentifiers.push_back(
-          ReadSourceLocation(F, Record, I).getRawEncoding());
-        WeakUndeclaredIdentifiers.push_back(Record[I++]);
+            ReadSourceLocation(F, Record, I).getRawEncoding());
       }
       break;
 
@@ -8398,11 +8397,9 @@ void ASTReader::ReadWeakUndeclaredIdentifiers(
       = DecodeIdentifierInfo(WeakUndeclaredIdentifiers[I++]);
     IdentifierInfo *AliasId
       = DecodeIdentifierInfo(WeakUndeclaredIdentifiers[I++]);
-    SourceLocation Loc
-      = SourceLocation::getFromRawEncoding(WeakUndeclaredIdentifiers[I++]);
-    bool Used = WeakUndeclaredIdentifiers[I++];
+    SourceLocation Loc =
+        SourceLocation::getFromRawEncoding(WeakUndeclaredIdentifiers[I++]);
     WeakInfo WI(AliasId, Loc);
-    WI.setUsed(Used);
     WeakIDs.push_back(std::make_pair(WeakId, WI));
   }
   WeakUndeclaredIdentifiers.clear();
