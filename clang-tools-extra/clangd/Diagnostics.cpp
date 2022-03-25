@@ -30,6 +30,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 
 namespace clang {
@@ -407,7 +408,8 @@ void toLSPDiags(
 
   // Main diagnostic should always refer to a range inside main file. If a
   // diagnostic made it so for, it means either itself or one of its notes is
-  // inside main file.
+  // inside main file. It's also possible that there's a fix in the main file,
+  // but we preserve fixes iff primary diagnostic is in the main file.
   if (D.InsideMainFile) {
     Main.range = D.Range;
   } else {
@@ -643,13 +645,12 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     return;
   }
 
-  bool InsideMainFile = isInsideMainFile(Info);
   SourceManager &SM = Info.getSourceManager();
 
   auto FillDiagBase = [&](DiagBase &D) {
     fillNonLocationData(DiagLevel, Info, D);
 
-    D.InsideMainFile = InsideMainFile;
+    D.InsideMainFile = isInsideMainFile(Info);
     D.Range = diagnosticRange(Info, *LangOpts);
     D.File = std::string(SM.getFilename(Info.getLocation()));
     D.AbsFile = getCanonicalPath(
@@ -661,9 +662,9 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   auto AddFix = [&](bool SyntheticMessage) -> bool {
     assert(!Info.getFixItHints().empty() &&
            "diagnostic does not have attached fix-its");
-    if (!InsideMainFile)
+    // No point in generating fixes, if the diagnostic is for a different file.
+    if (!LastDiag->InsideMainFile)
       return false;
-
     // Copy as we may modify the ranges.
     auto FixIts = Info.getFixItHints().vec();
     llvm::SmallVector<TextEdit, 1> Edits;

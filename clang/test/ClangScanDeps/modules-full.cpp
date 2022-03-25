@@ -8,6 +8,7 @@
 // RUN: cp %S/Inputs/header2.h %t.dir/Inputs/header2.h
 // RUN: cp %S/Inputs/module.modulemap %t.dir/Inputs/module.modulemap
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb.json > %t.cdb
+// RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/modules_cdb_clangcl.json > %t_clangcl.cdb
 //
 // RUN: clang-scan-deps -compilation-database %t.cdb -j 4 -format experimental-full \
 // RUN:   -mode preprocess-minimized-sources > %t.result
@@ -21,6 +22,10 @@
 // RUN:   -generate-modules-path-args -module-files-dir %t.dir/custom \
 // RUN:   -mode preprocess-minimized-sources > %t.result
 // RUN: cat %t.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK,CHECK-CUSTOM %s
+//
+// RUN: clang-scan-deps -compilation-database %t_clangcl.cdb -j 4 -format experimental-full \
+// RUN:   -mode preprocess-minimized-sources > %t_clangcl.result
+// RUN: cat %t_clangcl.result | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t.dir --check-prefixes=CHECK,CHECK-NO-ABS %s
 
 #include "header.h"
 
@@ -38,7 +43,7 @@
 // CHECK-NEXT:         "-cc1"
 // CHECK:              "-emit-module"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS:          "-fmodule-file=[[PREFIX]]/module-cache/[[HASH_H2_DINCLUDE]]/header2-{{[A-Z0-9]+}}.pcm"
+// CHECK-ABS:          "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H2_DINCLUDE]]/header2-{{[A-Z0-9]+}}.pcm"
 // CHECK-CUSTOM:       "-fmodule-file=[[PREFIX]]/custom/[[HASH_H2_DINCLUDE]]/header2-{{[A-Z0-9]+}}.pcm"
 // CHECK-NOT:          "-fimplicit-module-maps"
 // CHECK:              "-fmodule-name=header1"
@@ -99,7 +104,7 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-CUSTOM-NEXT:  "-fmodule-file=[[PREFIX]]/custom/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
@@ -119,7 +124,7 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}},
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-CUSTOM-NEXT:  "-fmodule-file=[[PREFIX]]/custom/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
@@ -139,7 +144,7 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-CUSTOM-NEXT:  "-fmodule-file=[[PREFIX]]/custom/[[HASH_H1]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
@@ -159,7 +164,7 @@
 // CHECK:              "-fno-implicit-modules"
 // CHECK-NEXT:         "-fno-implicit-module-maps"
 // CHECK-NO-ABS-NOT:   "-fmodule-file={{.*}}"
-// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache/[[HASH_H1_DINCLUDE]]/header1-{{[A-Z0-9]+}}.pcm"
+// CHECK-ABS-NEXT:     "-fmodule-file=[[PREFIX]]/module-cache{{(_clangcl)?}}/[[HASH_H1_DINCLUDE]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-CUSTOM-NEXT:  "-fmodule-file=[[PREFIX]]/custom/[[HASH_H1_DINCLUDE]]/header1-{{[A-Z0-9]+}}.pcm"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [

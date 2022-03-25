@@ -1,6 +1,7 @@
 static_library("Support") {
   output_name = "LLVMSupport"
   deps = [
+    "BLAKE3",
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",
@@ -53,6 +54,9 @@ static_library("Support") {
     "BuryPointer.cpp",
     "COM.cpp",
     "CRC.cpp",
+    "CSKYAttributeParser.cpp",
+    "CSKYAttributes.cpp",
+    "CSKYTargetParser.cpp",
     "CachePruning.cpp",
     "Caching.cpp",
     "Chrono.cpp",
@@ -62,9 +66,6 @@ static_library("Support") {
     "ConvertUTF.cpp",
     "ConvertUTFWrapper.cpp",
     "CrashRecoveryContext.cpp",
-    "CSKYAttributeParser.cpp",
-    "CSKYAttributes.cpp",
-    "CSKYTargetParser.cpp",
     "DAGDeltaAlgorithm.cpp",
     "DJB.cpp",
     "DataExtractor.cpp",

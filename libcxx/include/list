@@ -2020,6 +2020,17 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __i)
     }
 }
 
+template <class _Iterator>
+_LIBCPP_HIDE_FROM_ABI
+bool __iterator_in_range(_Iterator __first, _Iterator __last, _Iterator __it) {
+    for (_Iterator __p = __first; __p != __last; ++__p) {
+        if (__p == __it) {
+            return true;
+        }
+    }
+    return false;
+}
+
 template <class _Tp, class _Alloc>
 void
 list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, const_iterator __l)
@@ -2030,16 +2041,10 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
         "list::splice(iterator, list, iterator, iterator) called with second iterator not referring to the list argument");
     _LIBCPP_DEBUG_ASSERT(__get_const_db()->__find_c_from_i(_VSTD::addressof(__l)) == _VSTD::addressof(__c),
         "list::splice(iterator, list, iterator, iterator) called with third iterator not referring to the list argument");
+    _LIBCPP_DEBUG_ASSERT(this != std::addressof(__c) || !std::__iterator_in_range(__f, __l, __p),
+        "list::splice(iterator, list, iterator, iterator)"
+        " called with the first iterator within the range of the second and third iterators");
 
-#if _LIBCPP_DEBUG_LEVEL == 2
-    if (this == _VSTD::addressof(__c))
-    {
-        for (const_iterator __i = __f; __i != __l; ++__i)
-            _LIBCPP_DEBUG_ASSERT(__i != __p,
-                "list::splice(iterator, list, iterator, iterator)"
-                " called with the first iterator within the range of the second and third iterators");
-    }
-#endif
     if (__f != __l)
     {
         __link_pointer __first = __f.__ptr_;

@@ -44,6 +44,16 @@ public:
     return 0;
   }
 
+  RuleID ruleFor(llvm::StringRef NonterminalName) const {
+    auto RuleRange = G->table().Nonterminals[id(NonterminalName)].RuleRange;
+    if (RuleRange.End - RuleRange.Start == 1)
+      return G->table().Nonterminals[id(NonterminalName)].RuleRange.Start;
+    ADD_FAILURE() << "Expected a single rule for " << NonterminalName
+                  << ", but it has " << RuleRange.End - RuleRange.Start
+                  << " rule!\n";
+    return 0;
+  }
+
 protected:
   std::unique_ptr<Grammar> G;
   std::vector<std::string> Diags;
@@ -74,6 +84,21 @@ TEST_F(GrammarTest, EliminatedOptional) {
                                    Sequence(id("INT"), id(";"))));
 }
 
+TEST_F(GrammarTest, RuleIDSorted) {
+  build(R"bnf(
+    _ := x
+
+    x := y
+    y := z
+    z := IDENTIFIER
+  )bnf");
+  ASSERT_TRUE(Diags.empty());
+
+  EXPECT_LT(ruleFor("z"), ruleFor("y"));
+  EXPECT_LT(ruleFor("y"), ruleFor("x"));
+  EXPECT_LT(ruleFor("x"), ruleFor("_"));
+}
+
 TEST_F(GrammarTest, Diagnostics) {
   build(R"cpp(
     _ := ,_opt
@@ -82,6 +107,9 @@ TEST_F(GrammarTest, Diagnostics) {
     _ := IDENFIFIE # a typo of the terminal IDENFITIER
 
     invalid
+    # cycle
+    a := b
+    b := a
   )cpp");
 
   EXPECT_EQ(G->startSymbol(), id("_"));
@@ -91,7 +119,8 @@ TEST_F(GrammarTest, Diagnostics) {
                          "No rules for nonterminal: undefined-sym",
                          "Failed to parse 'invalid': no separator :=",
                          "Token-like name IDENFIFIE is used as a nonterminal",
-                         "No rules for nonterminal: IDENFIFIE"));
+                         "No rules for nonterminal: IDENFIFIE",
+                         "The grammar contains a cycle involving symbol a"));
 }
 
 TEST_F(GrammarTest, FirstAndFollowSets) {

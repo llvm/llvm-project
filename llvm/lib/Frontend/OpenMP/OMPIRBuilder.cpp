@@ -2739,10 +2739,9 @@ OpenMPIRBuilder::createCopyPrivate(const LocationDescription &Loc,
   return Builder.saveIP();
 }
 
-OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createSingle(const LocationDescription &Loc,
-                              BodyGenCallbackTy BodyGenCB,
-                              FinalizeCallbackTy FiniCB, llvm::Value *DidIt) {
+OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createSingle(
+    const LocationDescription &Loc, BodyGenCallbackTy BodyGenCB,
+    FinalizeCallbackTy FiniCB, bool IsNowait, llvm::Value *DidIt) {
 
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -2770,9 +2769,16 @@ OpenMPIRBuilder::createSingle(const LocationDescription &Loc,
   //		.... single region ...
   // 		__kmpc_end_single
   // }
+  // __kmpc_barrier
 
-  return EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
-                              /*Conditional*/ true, /*hasFinalize*/ true);
+  EmitOMPInlinedRegion(OMPD, EntryCall, ExitCall, BodyGenCB, FiniCB,
+                       /*Conditional*/ true,
+                       /*hasFinalize*/ true);
+  if (!IsNowait)
+    createBarrier(LocationDescription(Builder.saveIP(), Loc.DL),
+                  omp::Directive::OMPD_unknown, /* ForceSimpleCall */ false,
+                  /* CheckCancelFlag */ false);
+  return Builder.saveIP();
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createCritical(
