@@ -181,14 +181,6 @@ static_library("Support") {
     "Watchdog.cpp",
   ]
 
-  defines = [
-    "BLAKE3_NO_AVX512",
-    "BLAKE3_NO_AVX2",
-    "BLAKE3_NO_SSE41",
-    "BLAKE3_NO_SSE2",
-    "BLAKE3_USE_NEON=0",
-  ]
-
   libs = []
 
   # FIXME: llvm/Config/BUILD.gn currently always sets LLVM_WITH_Z3
