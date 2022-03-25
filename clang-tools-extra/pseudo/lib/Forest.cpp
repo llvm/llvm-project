@@ -46,15 +46,23 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
       };
   CountVisits(this);
 
+  // The box-drawing characters that should be added as a child is rendered.
+  struct LineDecoration {
+    std::string Prefix;         // Prepended to every line.
+    llvm::StringRef First;      // added to the child's line.
+    llvm::StringRef Subsequent; // added to descendants' lines.
+  };
+
   // We print a "#<id>" for nonterminal forest nodes that are being dumped
   // multiple times.
   llvm::DenseMap<const ForestNode *, size_t> ReferenceIds;
   std::string Result;
   constexpr Token::Index KEnd = std::numeric_limits<Token::Index>::max();
-  std::function<void(const ForestNode *, unsigned, Token::Index,
-                     llvm::Optional<SymbolID>)>
-      Dump = [&](const ForestNode *P, unsigned Level, Token::Index End,
-                 llvm::Optional<SymbolID> ElidedParent) {
+  std::function<void(const ForestNode *, Token::Index, llvm::Optional<SymbolID>,
+                     LineDecoration &LineDec)>
+      Dump = [&](const ForestNode *P, Token::Index End,
+                 llvm::Optional<SymbolID> ElidedParent,
+                 LineDecoration LineDec) {
         llvm::ArrayRef<const ForestNode *> Children;
         auto EndOfElement = [&](size_t ChildIndex) {
           return ChildIndex + 1 == Children.size()
@@ -72,18 +80,19 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
               if (Children[I]->startTokenIndex() == P->startTokenIndex() &&
                   EndOfElement(I) == End) {
                 return Dump(
-                    Children[I], Level, End,
-                    /*ElidedParent=*/ElidedParent.getValueOr(P->symbol()));
+                    Children[I], End,
+                    /*ElidedParent=*/ElidedParent.getValueOr(P->symbol()),
+                    LineDec);
               }
           }
         }
 
-        // FIXME: pretty ascii trees
         if (End == KEnd)
           Result += llvm::formatv("[{0,3}, end) ", P->startTokenIndex());
         else
           Result += llvm::formatv("[{0,3}, {1,3}) ", P->startTokenIndex(), End);
-        Result.append(2 * Level, ' ');
+        Result += LineDec.Prefix;
+        Result += LineDec.First;
         if (ElidedParent.hasValue()) {
           Result += G.symbolName(*ElidedParent);
           Result += "~";
@@ -99,12 +108,23 @@ std::string ForestNode::dumpRecursive(const Grammar &G,
         }
         Result.push_back('\n');
 
-        ++Level;
-        for (size_t I = 0; I < Children.size(); ++I)
-          Dump(Children[I], Level,
-               P->kind() == Sequence ? EndOfElement(I) : End, llvm::None);
+        auto OldPrefixSize = LineDec.Prefix.size();
+        LineDec.Prefix += LineDec.Subsequent;
+        for (size_t I = 0; I < Children.size(); ++I) {
+          if (I == Children.size() - 1) {
+            LineDec.First = "└─";
+            LineDec.Subsequent = "  ";
+          } else {
+            LineDec.First = "├─";
+            LineDec.Subsequent = "│ ";
+          }
+          Dump(Children[I], P->kind() == Sequence ? EndOfElement(I) : End,
+               llvm::None, LineDec);
+        }
+        LineDec.Prefix.resize(OldPrefixSize);
       };
-  Dump(this, 0, KEnd, llvm::None);
+  LineDecoration LineDec;
+  Dump(this, KEnd, llvm::None, LineDec);
   return Result;
 }
 
