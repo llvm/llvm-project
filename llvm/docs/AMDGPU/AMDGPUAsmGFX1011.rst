@@ -17,7 +17,7 @@ Introduction
 
 This document describes the syntax of *instructions specific to gfx1011 and gfx1012*.
 
-For a description of other gfx1011 and gfx1012 instructions see :doc:`Syntax of Core GFX10 Instructions<AMDGPUAsmGFX10>`.
+For a description of other gfx1011 and gfx1012 instructions see :doc:`Syntax of GFX10 RDNA1 Instructions<AMDGPUAsmGFX10>`.
 
 Notation
 ========

@@ -6,7 +6,7 @@
     **************************************************
 
 ====================================================================================
-Syntax of Core GFX10 Instructions
+Syntax of GFX10 RDNA1 Instructions
 ====================================================================================
 
 .. contents::
@@ -15,7 +15,7 @@ Syntax of Core GFX10 Instructions
 Introduction
 ============
 
-This document describes the syntax of *core* GFX10 instructions.
+This document describes the syntax of GFX10 RDNA1 (gfx1010) instructions.
 
 Notation
 ========

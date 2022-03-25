@@ -18,6 +18,7 @@ User Guide for AMDGPU Backend
    AMDGPU/AMDGPUAsmGFX90a
    AMDGPU/AMDGPUAsmGFX10
    AMDGPU/AMDGPUAsmGFX1011
+   AMDGPU/AMDGPUAsmGFX1030
    AMDGPUModifierSyntax
    AMDGPUOperandSyntax
    AMDGPUInstructionSyntax
@@ -14180,29 +14181,43 @@ Links to detailed instruction syntax description may be found in the following
 table. Note that features under development are not included
 in this description.
 
-    =================================== =======================================
-    Core ISA                            ISA Extensions
-    =================================== =======================================
-    :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`   \-
-    :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`   \-
-    :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`   :doc:`gfx900<AMDGPU/AMDGPUAsmGFX900>`
+    ============= ============================================= =======================================
+    Architecture  Core ISA                                      ISA Variants and Extensions
+    ============= ============================================= =======================================
+    GCN 2         :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`             \-
+    GCN 3, GCN 4  :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`             \-
+    GCN 5         :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx900<AMDGPU/AMDGPUAsmGFX900>`
 
-                                        :doc:`gfx902<AMDGPU/AMDGPUAsmGFX900>`
+                                                                :doc:`gfx902<AMDGPU/AMDGPUAsmGFX900>`
 
-                                        :doc:`gfx904<AMDGPU/AMDGPUAsmGFX904>`
+                                                                :doc:`gfx904<AMDGPU/AMDGPUAsmGFX904>`
 
-                                        :doc:`gfx906<AMDGPU/AMDGPUAsmGFX906>`
+                                                                :doc:`gfx906<AMDGPU/AMDGPUAsmGFX906>`
 
-                                        :doc:`gfx908<AMDGPU/AMDGPUAsmGFX908>`
+                                                                :doc:`gfx909<AMDGPU/AMDGPUAsmGFX900>`
 
-                                        :doc:`gfx909<AMDGPU/AMDGPUAsmGFX900>`
+    CDNA 1        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx908<AMDGPU/AMDGPUAsmGFX908>`
+    CDNA 2        :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`             :doc:`gfx90a<AMDGPU/AMDGPUAsmGFX90a>`
+    RDNA 1        :doc:`GFX10 RDNA1<AMDGPU/AMDGPUAsmGFX10>`     :doc:`gfx1010<AMDGPU/AMDGPUAsmGFX10>`
 
-                                        :doc:`gfx90a<AMDGPU/AMDGPUAsmGFX90a>`
+                                                                :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
 
-    :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>` :doc:`gfx1011<AMDGPU/AMDGPUAsmGFX1011>`
+                                                                :doc:`gfx1012<AMDGPU/AMDGPUAsmGFX1011>`
 
-                                        :doc:`gfx1012<AMDGPU/AMDGPUAsmGFX1011>`
-    =================================== =======================================
+    RDNA 2        :doc:`GFX10 RDNA2<AMDGPU/AMDGPUAsmGFX1030>`   :doc:`gfx1030<AMDGPU/AMDGPUAsmGFX1030>`
+
+                                                                :doc:`gfx1031<AMDGPU/AMDGPUAsmGFX1030>`
+
+                                                                :doc:`gfx1032<AMDGPU/AMDGPUAsmGFX1030>`
+
+                                                                :doc:`gfx1033<AMDGPU/AMDGPUAsmGFX1030>`
+
+                                                                :doc:`gfx1034<AMDGPU/AMDGPUAsmGFX1030>`
+
+                                                                :doc:`gfx1035<AMDGPU/AMDGPUAsmGFX1030>`
+
+                                                                :doc:`gfx1036<AMDGPU/AMDGPUAsmGFX1030>`
+    ============= ============================================= =======================================
 
 For more information about instructions, their semantics and supported
 combinations of operands, refer to one of instruction set architecture manuals
