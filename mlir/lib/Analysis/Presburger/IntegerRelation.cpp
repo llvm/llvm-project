@@ -784,6 +784,25 @@ bool IntegerRelation::containsPoint(ArrayRef<int64_t> point) const {
   return true;
 }
 
+/// Just substitute the values given and check if an integer sample exists for
+/// the local ids.
+///
+/// TODO: this could be made more efficient by handling divisions separately.
+/// Instead of finding an integer sample over all the locals, we can first
+/// compute the values of the locals that have division representations and
+/// only use the integer emptiness check for the locals that don't have this.
+/// Handling this correctly requires ordering the divs, though.
+Optional<SmallVector<int64_t, 8>>
+IntegerRelation::containsPointNoLocal(ArrayRef<int64_t> point) const {
+  assert(point.size() == getNumIds() - getNumLocalIds() &&
+         "Point should contain all ids except locals!");
+  assert(getIdKindOffset(IdKind::Local) == getNumIds() - getNumLocalIds() &&
+         "This function depends on locals being stored last!");
+  IntegerRelation copy = *this;
+  copy.setAndEliminate(0, point);
+  return copy.findIntegerSample();
+}
+
 void IntegerRelation::getLocalReprs(std::vector<MaybeLocalRepr> &repr) const {
   std::vector<SmallVector<int64_t, 8>> dividends(getNumLocalIds());
   SmallVector<unsigned, 4> denominators(getNumLocalIds());
