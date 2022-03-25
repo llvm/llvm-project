@@ -12,6 +12,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -34,6 +35,86 @@ TEST(HasNameDeathTest, DiesOnEmptyPattern) {
       EXPECT_TRUE(notMatches("class X {};", HasEmptyName));
     }, "");
 }
+
+// FIXME: Figure out why back traces aren't being generated on clang builds on
+// windows.
+#if ENABLE_BACKTRACES && (!defined(_MSC_VER) || !defined(__clang__))
+template <typename MatcherT>
+static void crashTestNodeDump(MatcherT Matcher,
+                              ArrayRef<StringRef> MatchedNodes,
+                              StringRef Code) {
+  llvm::EnablePrettyStackTrace();
+  MatchFinder Finder;
+
+  struct CrashCallback : public MatchFinder::MatchCallback {
+    void run(const MatchFinder::MatchResult &Result) override { abort(); }
+    llvm::Optional<TraversalKind> getCheckTraversalKind() const override {
+      return TK_IgnoreUnlessSpelledInSource;
+    }
+    StringRef getID() const override { return "CrashTester"; }
+  } Callback;
+  Finder.addMatcher(std::move(Matcher), &Callback);
+  if (MatchedNodes.empty()) {
+    ASSERT_DEATH(tooling::runToolOnCode(
+                     newFrontendActionFactory(&Finder)->create(), Code),
+                 testing::HasSubstr(
+                     "ASTMatcher: Processing 'CrashTester'\nNo bound nodes"));
+  } else {
+    std::vector<testing::PolymorphicMatcher<
+        testing::internal::HasSubstrMatcher<std::string>>>
+        Matchers;
+    Matchers.reserve(MatchedNodes.size());
+    for (auto Node : MatchedNodes) {
+      Matchers.push_back(testing::HasSubstr(Node.str()));
+    }
+    auto CrashMatcher = testing::AllOf(
+        testing::HasSubstr(
+            "ASTMatcher: Processing 'CrashTester'\n--- Bound Nodes Begin ---"),
+        testing::HasSubstr("--- Bound Nodes End ---"),
+        testing::AllOfArray(Matchers));
+
+    ASSERT_DEATH(tooling::runToolOnCode(
+                     newFrontendActionFactory(&Finder)->create(), Code),
+                 CrashMatcher);
+  }
+}
+TEST(MatcherCrashDeathTest, CrashOnCallbackDump) {
+  crashTestNodeDump(forStmt(), {}, "void foo() { for(;;); }");
+  crashTestNodeDump(
+      forStmt(hasLoopInit(declStmt(hasSingleDecl(
+                                       varDecl(hasType(qualType().bind("QT")),
+                                               hasType(type().bind("T")),
+                                               hasInitializer(
+                                                   integerLiteral().bind("IL")))
+                                           .bind("VD")))
+                              .bind("DS")))
+          .bind("FS"),
+      {"FS - { ForStmt : <input.cc:3:5, line:4:5> }",
+       "DS - { DeclStmt : <input.cc:3:10, col:19> }",
+       "IL - { IntegerLiteral : <input.cc:3:18> }", "QT - { QualType : int }",
+       "T - { BuiltinType : int }",
+       "VD - { VarDecl I : <input.cc:3:10, col:18> }"},
+      R"cpp(
+  void foo() {
+    for (int I = 0; I < 5; ++I) {
+    }
+  }
+  )cpp");
+  crashTestNodeDump(
+      cxxRecordDecl(hasMethod(cxxMethodDecl(hasName("operator+")).bind("Op+")))
+          .bind("Unnamed"),
+      {"Unnamed - { CXXRecordDecl (anonymous) : <input.cc:1:1, col:36> }",
+       "Op+ - { CXXMethodDecl (anonymous struct)::operator+ : <input.cc:1:10, "
+       "col:29> }"},
+      "struct { int operator+(int) const; } Unnamed;");
+  crashTestNodeDump(
+      cxxRecordDecl(hasMethod(cxxConstructorDecl(isDefaulted()).bind("Ctor")),
+                    hasMethod(cxxDestructorDecl(isDefaulted()).bind("Dtor"))),
+      {"Ctor - { CXXConstructorDecl Foo::Foo : <input.cc:1:14, col:28> }",
+       "Dtor - { CXXDestructorDecl Foo::~Foo : <input.cc:1:31, col:46> }"},
+      "struct Foo { Foo() = default; ~Foo() = default; };");
+}
+#endif // ENABLE_BACKTRACES
 #endif
 
 TEST(ConstructVariadic, MismatchedTypes_Regression) {
