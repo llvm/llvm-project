@@ -12176,8 +12176,7 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
 
   Instruction *User = I->user_back();
 
-  if (User &&
-      !(User->getOpcode() == Instruction::FSub ||
+  if (!(User->getOpcode() == Instruction::FSub ||
         User->getOpcode() == Instruction::FAdd))
     return true;
 
