@@ -188,6 +188,14 @@ public:
   /// Build DeclarationFragments for a function declaration FunctionDecl.
   static DeclarationFragments getFragmentsForFunction(const FunctionDecl *);
 
+  /// Build DeclarationFragments for an enum constant declaration
+  /// EnumConstantDecl.
+  static DeclarationFragments
+  getFragmentsForEnumConstant(const EnumConstantDecl *);
+
+  /// Build DeclarationFragments for an enum declaration EnumDecl.
+  static DeclarationFragments getFragmentsForEnum(const EnumDecl *);
+
   /// Build sub-heading fragments for a NamedDecl.
   static DeclarationFragments getSubHeading(const NamedDecl *);
 
