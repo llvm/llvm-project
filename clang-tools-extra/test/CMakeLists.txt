@@ -73,7 +73,7 @@ foreach(dep ${LLVM_UTILS_DEPS})
 endforeach()
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
-  if (NOT WIN32 AND NOT LLVM_LINK_LLVM_DYLIB)
+  if (NOT WIN32 OR NOT LLVM_LINK_LLVM_DYLIB)
     llvm_add_library(
         CTTestTidyModule
         MODULE clang-tidy/CTTestTidyModule.cpp
