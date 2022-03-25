@@ -485,7 +485,7 @@ def CmpOpKind : I32EnumAttr<
 // FIXME: Pure might not work when we add overloading.
 def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 
-  let summary = "comapre operation";
+  let summary = "compare operation";
   let description = [{
     "cir.cmp compares two input operands and produces a bool result. The input
      operands must have the same type. The kinds of comparison available are:
