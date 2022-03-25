@@ -137,6 +137,7 @@ public:
         }
       }
       assert(NumEntries == 0 && "Node count imbalance!");
+      (void)NumEntries;
     }
     setNumEntries(0);
     setNumTombstones(0);
