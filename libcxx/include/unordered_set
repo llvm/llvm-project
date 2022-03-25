@@ -490,9 +490,9 @@ public:
     // types
     typedef _Value                                                     key_type;
     typedef key_type                                                   value_type;
-    typedef __identity_t<_Hash>                                        hasher;
-    typedef __identity_t<_Pred>                                        key_equal;
-    typedef __identity_t<_Alloc>                                       allocator_type;
+    typedef __type_identity_t<_Hash>                                   hasher;
+    typedef __type_identity_t<_Pred>                                   key_equal;
+    typedef __type_identity_t<_Alloc>                                  allocator_type;
     typedef value_type&                                                reference;
     typedef const value_type&                                          const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
@@ -1150,9 +1150,9 @@ public:
     // types
     typedef _Value                                                     key_type;
     typedef key_type                                                   value_type;
-    typedef __identity_t<_Hash>                                        hasher;
-    typedef __identity_t<_Pred>                                        key_equal;
-    typedef __identity_t<_Alloc>                                       allocator_type;
+    typedef __type_identity_t<_Hash>                                   hasher;
+    typedef __type_identity_t<_Pred>                                   key_equal;
+    typedef __type_identity_t<_Alloc>                                  allocator_type;
     typedef value_type&                                                reference;
     typedef const value_type&                                          const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),

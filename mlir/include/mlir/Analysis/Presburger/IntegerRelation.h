@@ -24,7 +24,7 @@
 namespace mlir {
 namespace presburger {
 
-/// An IntegerRelation is a PresburgerLocalSpace subject to affine constraints.
+/// An IntegerRelation is a PresburgerSpace subject to affine constraints.
 /// Affine constraints can be inequalities or equalities in the form:
 ///
 /// Inequality: c_0*x_0 + c_1*x_1 + .... + c_{n-1}*x_{n-1} + c_n >= 0
@@ -42,7 +42,7 @@ namespace presburger {
 ///
 /// Since IntegerRelation makes a distinction between dimensions, IdKind::Range
 /// and IdKind::Domain should be used to refer to dimension identifiers.
-class IntegerRelation : public PresburgerLocalSpace {
+class IntegerRelation : public PresburgerSpace {
 public:
   /// All derived classes of IntegerRelation.
   enum class Kind {
@@ -59,7 +59,7 @@ public:
                   unsigned numReservedEqualities, unsigned numReservedCols,
                   unsigned numDomain, unsigned numRange, unsigned numSymbols,
                   unsigned numLocals)
-      : PresburgerLocalSpace(numDomain, numRange, numSymbols, numLocals),
+      : PresburgerSpace(numDomain, numRange, numSymbols, numLocals),
         equalities(0, getNumIds() + 1, numReservedEqualities, numReservedCols),
         inequalities(0, getNumIds() + 1, numReservedInequalities,
                      numReservedCols) {
@@ -158,15 +158,15 @@ public:
   /// this addition can be rolled back using truncate.
   struct CountsSnapshot {
   public:
-    CountsSnapshot(const PresburgerLocalSpace &space, unsigned numIneqs,
+    CountsSnapshot(const PresburgerSpace &space, unsigned numIneqs,
                    unsigned numEqs)
         : space(space), numIneqs(numIneqs), numEqs(numEqs) {}
-    const PresburgerLocalSpace &getSpace() const { return space; };
+    const PresburgerSpace &getSpace() const { return space; };
     unsigned getNumIneqs() const { return numIneqs; }
     unsigned getNumEqs() const { return numEqs; }
 
   private:
-    PresburgerLocalSpace space;
+    PresburgerSpace space;
     unsigned numIneqs, numEqs;
   };
   CountsSnapshot getCounts() const;
@@ -540,7 +540,7 @@ protected:
   Matrix inequalities;
 };
 
-/// An IntegerPolyhedron is a PresburgerLocalSpace subject to affine
+/// An IntegerPolyhedron is a PresburgerSpace subject to affine
 /// constraints. Affine constraints can be inequalities or equalities in the
 /// form:
 ///

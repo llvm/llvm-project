@@ -883,7 +883,7 @@ public:
              typename enable_if<__is_cpp17_input_iterator<_InpIter>::value>::type* = 0);
 
     list(const list& __c);
-    list(const list& __c, const __identity_t<allocator_type>& __a);
+    list(const list& __c, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_INLINE_VISIBILITY
     list& operator=(const list& __c);
 #ifndef _LIBCPP_CXX03_LANG
@@ -894,7 +894,7 @@ public:
     list(list&& __c)
         _NOEXCEPT_(is_nothrow_move_constructible<__node_allocator>::value);
     _LIBCPP_INLINE_VISIBILITY
-    list(list&& __c, const __identity_t<allocator_type>& __a);
+    list(list&& __c, const __type_identity_t<allocator_type>& __a);
     _LIBCPP_INLINE_VISIBILITY
     list& operator=(list&& __c)
         _NOEXCEPT_(
@@ -1255,7 +1255,7 @@ list<_Tp, _Alloc>::list(const list& __c)
 }
 
 template <class _Tp, class _Alloc>
-list<_Tp, _Alloc>::list(const list& __c, const __identity_t<allocator_type>& __a)
+list<_Tp, _Alloc>::list(const list& __c, const __type_identity_t<allocator_type>& __a)
     : base(__a)
 {
     _VSTD::__debug_db_insert_c(this);
@@ -1294,7 +1294,7 @@ inline list<_Tp, _Alloc>::list(list&& __c)
 
 template <class _Tp, class _Alloc>
 inline
-list<_Tp, _Alloc>::list(list&& __c, const __identity_t<allocator_type>& __a)
+list<_Tp, _Alloc>::list(list&& __c, const __type_identity_t<allocator_type>& __a)
     : base(__a)
 {
     _VSTD::__debug_db_insert_c(this);
