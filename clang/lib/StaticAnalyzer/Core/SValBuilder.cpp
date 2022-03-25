@@ -682,8 +682,11 @@ SVal SValBuilder::evalCastSubKind(loc::ConcreteInt V, QualType CastTy,
   }
 
   // Pointer to any pointer.
-  if (Loc::isLocType(CastTy))
-    return V;
+  if (Loc::isLocType(CastTy)) {
+    llvm::APSInt Value = V.getValue();
+    BasicVals.getAPSIntType(CastTy).apply(Value);
+    return loc::ConcreteInt(BasicVals.getValue(Value));
+  }
 
   // Pointer to whatever else.
   return UnknownVal();
