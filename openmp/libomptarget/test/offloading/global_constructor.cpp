@@ -1,23 +1,25 @@
 // RUN: %libomptarget-compilexx-generic && %libomptarget-run-generic | %fcheck-generic
 
-// Fails in DAGToDAG on an address space problem
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-newDriver
-
-#include <cmath>
 #include <cstdio>
 
-const double Host = log(2.0) / log(2.0);
-#pragma omp declare target
-const double Device = log(2.0) / log(2.0);
-#pragma omp end declare target
+int foo() { return 1; }
+
+class C {
+public:
+  C() : x(foo()) {}
+
+  int x;
+};
+
+C c;
+#pragma omp declare target(c)
 
 int main() {
-  double X;
-#pragma omp target map(from : X)
-  { X = Device; }
+  int x = 0;
+#pragma omp target map(from : x)
+  { x = c.x; }
 
   // CHECK: PASS
-  if (X == Host)
+  if (x == 1)
     printf("PASS\n");
 }
