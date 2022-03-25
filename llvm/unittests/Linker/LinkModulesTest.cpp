@@ -359,4 +359,27 @@ TEST_F(LinkModuleTest, RemangleIntrinsics) {
   ASSERT_EQ(F->getNumUses(), (unsigned)2);
 }
 
+TEST_F(LinkModuleTest, StructTypeReusedMerge) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
+  const char *M1Str = "%t = type {i32}\n"
+                      "%q = type {%t}\n"
+                      "@t1 = weak global %q zeroinitializer\n";
+  std::unique_ptr<Module> M1 = parseAssemblyString(M1Str, Err, C);
+
+  const char *M2Str = "%t = type {i32}\n"
+                      "%q = type {%t}\n"
+                      "@t2 = weak global %q zeroinitializer\n";
+  std::unique_ptr<Module> M2 = parseAssemblyString(M2Str, Err, C);
+
+  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+  Linker::linkModules(*M1, std::move(M2));
+
+  EXPECT_EQ(M1->getNamedGlobal("t1")->getType(),
+            M1->getNamedGlobal("t2")->getType());
+  EXPECT_TRUE(llvm::for_each(M1->getIdentifiedStructTypes(), [](const StructType *STy) { return STy->hasName(); }));
+
+}
+
 } // end anonymous namespace
