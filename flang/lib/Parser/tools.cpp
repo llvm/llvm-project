@@ -17,7 +17,7 @@ const Name &GetLastName(const StructureComponent &x) {
 }
 
 const Name &GetLastName(const DataRef &x) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const Name &name) -> const Name & { return name; },
           [](const common::Indirection<StructureComponent> &sc)
@@ -36,7 +36,7 @@ const Name &GetLastName(const Substring &x) {
 }
 
 const Name &GetLastName(const Designator &x) {
-  return std::visit(
+  return common::visit(
       [](const auto &y) -> const Name & { return GetLastName(y); }, x.u);
 }
 
@@ -45,7 +45,7 @@ const Name &GetLastName(const ProcComponentRef &x) {
 }
 
 const Name &GetLastName(const ProcedureDesignator &x) {
-  return std::visit(
+  return common::visit(
       [](const auto &y) -> const Name & { return GetLastName(y); }, x.u);
 }
 
@@ -56,7 +56,7 @@ const Name &GetLastName(const Call &x) {
 const Name &GetLastName(const FunctionReference &x) { return GetLastName(x.v); }
 
 const Name &GetLastName(const Variable &x) {
-  return std::visit(
+  return common::visit(
       [](const auto &indirection) -> const Name & {
         return GetLastName(indirection.value());
       },
@@ -64,7 +64,7 @@ const Name &GetLastName(const Variable &x) {
 }
 
 const Name &GetLastName(const AllocateObject &x) {
-  return std::visit(
+  return common::visit(
       [](const auto &y) -> const Name & { return GetLastName(y); }, x.u);
 }
 
@@ -75,7 +75,7 @@ const Name &GetFirstName(const StructureComponent &x) {
 }
 
 const Name &GetFirstName(const DataRef &x) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const Name &name) -> const Name & { return name; },
           [](const common::Indirection<StructureComponent> &sc)
@@ -94,7 +94,7 @@ const Name &GetFirstName(const Substring &x) {
 }
 
 const Name &GetFirstName(const Designator &x) {
-  return std::visit(
+  return common::visit(
       [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
 }
 
@@ -103,7 +103,7 @@ const Name &GetFirstName(const ProcComponentRef &x) {
 }
 
 const Name &GetFirstName(const ProcedureDesignator &x) {
-  return std::visit(
+  return common::visit(
       [](const auto &y) -> const Name & { return GetFirstName(y); }, x.u);
 }
 
@@ -116,7 +116,7 @@ const Name &GetFirstName(const FunctionReference &x) {
 }
 
 const Name &GetFirstName(const Variable &x) {
-  return std::visit(
+  return common::visit(
       [](const auto &indirect) -> const Name & {
         return GetFirstName(indirect.value());
       },
@@ -124,7 +124,7 @@ const Name &GetFirstName(const Variable &x) {
 }
 
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const Name &) -> const CoindexedNamedObject * { return nullptr; },
           [](const common::Indirection<CoindexedNamedObject> &x)
@@ -137,19 +137,19 @@ const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
 }
 const CoindexedNamedObject *GetCoindexedNamedObject(
     const Designator &designator) {
-  return std::visit(common::visitors{
-                        [](const DataRef &x) -> const CoindexedNamedObject * {
-                          return GetCoindexedNamedObject(x);
-                        },
-                        [](const Substring &x) -> const CoindexedNamedObject * {
-                          return GetCoindexedNamedObject(
-                              std::get<DataRef>(x.t));
-                        },
-                    },
+  return common::visit(
+      common::visitors{
+          [](const DataRef &x) -> const CoindexedNamedObject * {
+            return GetCoindexedNamedObject(x);
+          },
+          [](const Substring &x) -> const CoindexedNamedObject * {
+            return GetCoindexedNamedObject(std::get<DataRef>(x.t));
+          },
+      },
       designator.u);
 }
 const CoindexedNamedObject *GetCoindexedNamedObject(const Variable &variable) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const common::Indirection<Designator> &designator)
               -> const CoindexedNamedObject * {
@@ -161,7 +161,7 @@ const CoindexedNamedObject *GetCoindexedNamedObject(const Variable &variable) {
 }
 const CoindexedNamedObject *GetCoindexedNamedObject(
     const AllocateObject &allocateObject) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const StructureComponent &x) -> const CoindexedNamedObject * {
             return GetCoindexedNamedObject(x.base);

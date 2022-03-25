@@ -30,7 +30,7 @@ template <int KIND>
 std::optional<Expr<SubscriptInteger>>
 Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
   using T = std::optional<Expr<SubscriptInteger>>;
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const Constant<Result> &c) -> T {
             return AsExpr(Constant<SubscriptInteger>{c.LEN()});
@@ -38,7 +38,7 @@ Expr<Type<TypeCategory::Character, KIND>>::LEN() const {
           [](const ArrayConstructor<Result> &a) -> T { return a.LEN(); },
           [](const Parentheses<Result> &x) { return x.left().LEN(); },
           [](const Convert<Result> &x) {
-            return std::visit(
+            return common::visit(
                 [&](const auto &kx) { return kx.LEN(); }, x.left().u);
           },
           [](const Concat<KIND> &c) -> T {
@@ -84,7 +84,7 @@ std::optional<DynamicType> ExpressionBase<A>::GetType() const {
   if constexpr (IsLengthlessIntrinsicType<Result>) {
     return Result::GetType();
   } else {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) -> std::optional<DynamicType> {
           if constexpr (!common::HasMember<decltype(x), TypelessExpression>) {
             return x.GetType();
@@ -96,7 +96,7 @@ std::optional<DynamicType> ExpressionBase<A>::GetType() const {
 }
 
 template <typename A> int ExpressionBase<A>::Rank() const {
-  return std::visit(
+  return common::visit(
       [](const auto &x) {
         if constexpr (common::HasMember<decltype(x), TypelessExpression>) {
           return 0;
@@ -309,19 +309,19 @@ void GenericAssignmentWrapper::Deleter(GenericAssignmentWrapper *p) {
 }
 
 template <TypeCategory CAT> int Expr<SomeKind<CAT>>::GetKind() const {
-  return std::visit(
+  return common::visit(
       [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
       u);
 }
 
 int Expr<SomeCharacter>::GetKind() const {
-  return std::visit(
+  return common::visit(
       [](const auto &kx) { return std::decay_t<decltype(kx)>::Result::kind; },
       u);
 }
 
 std::optional<Expr<SubscriptInteger>> Expr<SomeCharacter>::LEN() const {
-  return std::visit([](const auto &kx) { return kx.LEN(); }, u);
+  return common::visit([](const auto &kx) { return kx.LEN(); }, u);
 }
 
 #ifdef _MSC_VER // disable bogus warning about missing definitions

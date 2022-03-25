@@ -16,6 +16,7 @@
 #include "format.h"
 #include "internal-unit.h"
 #include "io-error.h"
+#include "flang/Common/visit.h"
 #include "flang/Runtime/descriptor.h"
 #include "flang/Runtime/io-api.h"
 #include <functional>
@@ -113,7 +114,7 @@ public:
 
   // N.B.: this also works with base classes
   template <typename A> A *get_if() const {
-    return std::visit(
+    return common::visit(
         [](auto &x) -> A * {
           if constexpr (std::is_convertible_v<decltype(x.get()), A &>) {
             return &x.get();
