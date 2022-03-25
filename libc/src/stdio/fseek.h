@@ -1,4 +1,4 @@
-//===-- Implementation header of fwrite -------------------------*- C++ -*-===//
+//===-- Implementation header of fseek --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STDIO_FWRITE_H
-#define LLVM_LIBC_SRC_STDIO_FWRITE_H
+#ifndef LLVM_LIBC_SRC_STDIO_FSEEK_H
+#define LLVM_LIBC_SRC_STDIO_FSEEK_H
 
 #include <stdio.h>
 
 namespace __llvm_libc {
 
-size_t fwrite(const void *__restrict ptr, size_t size, size_t nmemb,
-              ::FILE *__restrict stream);
+int fseek(::FILE *stream, long offset, int whence);
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STDIO_FWRITE_H
+#endif // LLVM_LIBC_SRC_STDIO_FSEEK_H
