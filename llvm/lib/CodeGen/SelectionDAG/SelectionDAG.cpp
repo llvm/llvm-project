@@ -844,6 +844,9 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddInteger(BA->getTargetFlags());
     break;
   }
+  case ISD::AssertAlign:
+    ID.AddInteger(cast<AssertAlignSDNode>(N)->getAlign().value());
+    break;
   } // end switch (N->getOpcode())
 
   // Target specific memory nodes could also have address spaces and flags
