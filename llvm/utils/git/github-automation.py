@@ -49,6 +49,8 @@ def setup_llvmbot_git(git_dir = '.'):
 
 class ReleaseWorkflow:
 
+    CHERRY_PICK_FAILED_LABEL = 'release:cherry-pick-failed'
+
     """
     This class implements the sub-commands for the release-workflow command.
     The current sub-commands are:
@@ -146,7 +148,7 @@ class ReleaseWorkflow:
         message += "Please manually backport the fix and push it to your github fork.  Once this is done, please add a comment like this:\n\n`/branch <user>/<repo>/<branch>`"
         issue = self.issue
         comment = issue.create_comment(message)
-        issue.add_to_labels('release:cherry-pick-failed')
+        issue.add_to_labels(self.CHERRY_PICK_FAILED_LABEL)
         return comment
 
     def issue_notify_pull_request_failure(self, branch:str) -> github.IssueComment.IssueComment:
@@ -154,6 +156,9 @@ class ReleaseWorkflow:
         message += self.action_url
         return self.issue.create_comment(message)
 
+    def issue_remove_cherry_pick_failed_label(self):
+        if self.CHERRY_PICK_FAILED_LABEL in [l.name for l in self.issue.labels]:
+            self.issue.remove_from_labels(self.CHERRY_PICK_FAILED_LABEL)
 
     def create_branch(self, commits:List[str]) -> bool:
         """
@@ -183,6 +188,7 @@ class ReleaseWorkflow:
         local_repo.git.push(push_url, 'HEAD:{}'.format(branch_name))
 
         self.issue_notify_branch()
+        self.issue_remove_cherry_pick_failed_label()
         return True
 
 
@@ -216,6 +222,7 @@ class ReleaseWorkflow:
             return False
 
         self.issue_notify_pull_request(pull)
+        self.issue_remove_cherry_pick_failed_label()
 
         # TODO(tstellar): Do you really want to always return True?
         return True
