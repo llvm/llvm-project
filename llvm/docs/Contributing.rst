@@ -5,7 +5,7 @@ Contributing to LLVM
 
 Thank you for your interest in contributing to LLVM! There are multiple ways to
 contribute, and we appreciate all contributions. In case you
-have questions, you can either use the `Developer's List (llvm-dev)`_
+have questions, you can either use the `Forum`_
 or the #llvm channel on `irc.oftc.net`_.
 
 If you want to contribute code, please familiarize yourself with the :doc:`DeveloperPolicy`.
@@ -45,9 +45,8 @@ Bigger Pieces of Work
 ---------------------
 In case you are interested in taking on a bigger piece of work, a list of
 interesting projects is maintained at the `LLVM's Open Projects page`_. In case
-you are interested in working on any of these projects, please send a mail to
-the `LLVM Developer's mailing list`_, so that we know the project is being
-worked on.
+you are interested in working on any of these projects, please post on the
+`Forum`_, so that we know the project is being worked on.
 
 How to Submit a Patch
 =====================
