@@ -2282,6 +2282,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::MOPS_MEMSET_TAGGING)
     MAKE_CASE(AArch64ISD::MOPS_MEMCOPY)
     MAKE_CASE(AArch64ISD::MOPS_MEMMOVE)
+    MAKE_CASE(AArch64ISD::CALL_BTI)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -6188,6 +6189,12 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
   bool IsSibCall = false;
+  bool GuardWithBTI = false;
+
+  if (CLI.CB && CLI.CB->getAttributes().hasFnAttr(Attribute::ReturnsTwice) &&
+      !Subtarget->noBTIAtReturnTwice()) {
+    GuardWithBTI = FuncInfo->branchTargetEnforcement();
+  }
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
@@ -6648,8 +6655,25 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
+  unsigned CallOpc = AArch64ISD::CALL;
+  // Calls with operand bundle "clang.arc.attachedcall" are special. They should
+  // be expanded to the call, directly followed by a special marker sequence and
+  // a call to an ObjC library function.  Use CALL_RVMARKER to do that.
+  if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
+    assert(!IsTailCall &&
+           "tail calls cannot be marked with clang.arc.attachedcall");
+    CallOpc = AArch64ISD::CALL_RVMARKER;
+
+    // Add a target global address for the retainRV/claimRV runtime function
+    // just before the call target.
+    Function *ARCFn = *objcarc::getAttachedARCFunction(CLI.CB);
+    auto GA = DAG.getTargetGlobalAddress(ARCFn, DL, PtrVT);
+    Ops.insert(Ops.begin() + 1, GA);
+  } else if (GuardWithBTI)
+    CallOpc = AArch64ISD::CALL_BTI;
+
   // Returns a chain and a flag for retval copy to use.
-  Chain = DAG.getNode(Opc, DL, NodeTys, Ops);
+  Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
   InFlag = Chain.getValue(1);
   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
