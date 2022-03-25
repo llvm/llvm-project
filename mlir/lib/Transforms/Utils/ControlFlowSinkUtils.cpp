@@ -34,8 +34,10 @@ class Sinker {
 public:
   /// Create an operation sinker with given dominance info.
   Sinker(function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion,
+         function_ref<void(Operation *, Region *)> moveIntoRegion,
          DominanceInfo &domInfo)
-      : shouldMoveIntoRegion(shouldMoveIntoRegion), domInfo(domInfo) {}
+      : shouldMoveIntoRegion(shouldMoveIntoRegion),
+        moveIntoRegion(moveIntoRegion), domInfo(domInfo), numSunk(0) {}
 
   /// Given a list of regions, find operations to sink and sink them. Return the
   /// number of operations sunk.
@@ -61,6 +63,8 @@ private:
 
   /// The callback to determine whether an op should be moved in to a region.
   function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion;
+  /// The calback to move an operation into the region.
+  function_ref<void(Operation *, Region *)> moveIntoRegion;
   /// Dominance info to determine op user dominance with respect to regions.
   DominanceInfo &domInfo;
   /// The number of operations sunk.
@@ -90,12 +94,7 @@ void Sinker::tryToSinkPredecessors(Operation *user, Region *region,
 
     // If the op's users are all in the region and it can be moved, then do so.
     if (allUsersDominatedBy(op, region) && shouldMoveIntoRegion(op, region)) {
-      // Move the op into the region's entry block. If the op is part of a
-      // subgraph, dependee ops would have been moved first, so inserting before
-      // the start of the block will ensure SSA dominance is preserved locally
-      // in the subgraph. Ops can only be safely moved into the entry block as
-      // the region's other blocks may for a loop.
-      op->moveBefore(&region->front(), region->front().begin());
+      moveIntoRegion(op, region);
       ++numSunk;
       // Add the op to the work queue.
       stack.push_back(op);
@@ -127,8 +126,10 @@ size_t Sinker::sinkRegions(ArrayRef<Region *> regions) {
 
 size_t mlir::controlFlowSink(
     ArrayRef<Region *> regions, DominanceInfo &domInfo,
-    function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion) {
-  return Sinker(shouldMoveIntoRegion, domInfo).sinkRegions(regions);
+    function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion,
+    function_ref<void(Operation *, Region *)> moveIntoRegion) {
+  return Sinker(shouldMoveIntoRegion, moveIntoRegion, domInfo)
+      .sinkRegions(regions);
 }
 
 void mlir::getSinglyExecutedRegionsToSink(RegionBranchOpInterface branch,

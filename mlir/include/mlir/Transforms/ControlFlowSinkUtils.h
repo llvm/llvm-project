@@ -51,12 +51,19 @@ class RegionBranchOpInterface;
 ///
 /// Users must supply a callback `shouldMoveIntoRegion` that determines whether
 /// the given operation that only has users in the given operation should be
-/// moved into that region.
+/// moved into that region. If this returns true, `moveIntoRegion` is called on
+/// the same operation and region.
+///
+/// `moveIntoRegion` must move the operation into the region such that dominance
+/// of the operation is preserved; for example, by moving the operation to the
+/// start of the entry block. This ensures the preservation of SSA dominance of
+/// the operation's results.
 ///
 /// Returns the number of operations sunk.
 size_t
 controlFlowSink(ArrayRef<Region *> regions, DominanceInfo &domInfo,
-                function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion);
+                function_ref<bool(Operation *, Region *)> shouldMoveIntoRegion,
+                function_ref<void(Operation *, Region *)> moveIntoRegion);
 
 /// Populates `regions` with regions of the provided region branch op that are
 /// executed at most once at that are reachable given the current operands of

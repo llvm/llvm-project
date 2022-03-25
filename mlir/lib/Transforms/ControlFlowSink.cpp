@@ -60,9 +60,14 @@ void ControlFlowSink::runOnOperation() {
     // Get the regions are that known to be executed at most once.
     getSinglyExecutedRegionsToSink(branch, regionsToSink);
     // Sink side-effect free operations.
-    numSunk =
-        controlFlowSink(regionsToSink, domInfo, [](Operation *op, Region *) {
-          return isSideEffectFree(op);
+    numSunk = controlFlowSink(
+        regionsToSink, domInfo,
+        [](Operation *op, Region *) { return isSideEffectFree(op); },
+        [](Operation *op, Region *region) {
+          // Move the operation to the beginning of the region's entry block.
+          // This guarantees the preservation of SSA dominance of all of the
+          // operation's uses are in the region.
+          op->moveBefore(&region->front(), region->front().begin());
         });
   });
 }
