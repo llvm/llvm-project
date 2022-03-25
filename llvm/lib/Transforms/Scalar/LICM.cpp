@@ -482,8 +482,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
       PredIteratorCache PIC;
 
       // Promoting one set of accesses may make the pointers for another set
-      // loop invariant, so run this in a loop (with the MaybePromotable set
-      // decreasing in size over time).
+      // loop invariant, so run this in a loop.
       bool Promoted = false;
       bool LocalPromoted;
       do {
@@ -2276,8 +2275,7 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
     return false;
   };
 
-  // Populate AST with potentially promotable accesses and remove them from
-  // MaybePromotable, so they will not be checked again on the next iteration.
+  // Populate AST with potentially promotable accesses.
   SmallPtrSet<Value *, 16> AttemptingPromotion;
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
     if (IsPotentiallyPromotable(I)) {

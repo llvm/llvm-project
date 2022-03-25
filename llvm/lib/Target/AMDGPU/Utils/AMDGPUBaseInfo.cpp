@@ -178,6 +178,7 @@ unsigned getHostcallImplicitArgPosition() {
 #define GET_MIMGBiasMappingTable_IMPL
 #define GET_MIMGOffsetMappingTable_IMPL
 #define GET_MIMGG16MappingTable_IMPL
+#define GET_MAIInstInfoTable_IMPL
 #include "AMDGPUGenSearchableTables.inc"
 
 int getMIMGOpcode(unsigned BaseOpcode, unsigned MIMGEncoding,
@@ -374,6 +375,16 @@ bool getVOP2IsSingle(unsigned Opc) {
 bool getVOP3IsSingle(unsigned Opc) {
   const VOPInfo *Info = getVOP3OpcodeHelper(Opc);
   return Info ? Info->IsSingle : false;
+}
+
+bool getMAIIsDGEMM(unsigned Opc) {
+  const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
+  return Info ? Info->is_dgemm : false;
+}
+
+bool getMAIIsGFX940XDL(unsigned Opc) {
+  const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
+  return Info ? Info->is_gfx940_xdl : false;
 }
 
 CanBeVOPD getCanBeVOPD (unsigned Opc) {

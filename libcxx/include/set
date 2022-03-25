@@ -503,9 +503,9 @@ public:
     // types:
     typedef _Key                                     key_type;
     typedef key_type                                 value_type;
-    typedef __identity_t<_Compare>                   key_compare;
+    typedef __type_identity_t<_Compare>              key_compare;
     typedef key_compare                              value_compare;
-    typedef __identity_t<_Allocator>                 allocator_type;
+    typedef __type_identity_t<_Allocator>            allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 
@@ -1036,9 +1036,9 @@ public:
     // types:
     typedef _Key                                     key_type;
     typedef key_type                                 value_type;
-    typedef __identity_t<_Compare>                   key_compare;
+    typedef __type_identity_t<_Compare>              key_compare;
     typedef key_compare                              value_compare;
-    typedef __identity_t<_Allocator>                 allocator_type;
+    typedef __type_identity_t<_Allocator>            allocator_type;
     typedef value_type&                              reference;
     typedef const value_type&                        const_reference;
 

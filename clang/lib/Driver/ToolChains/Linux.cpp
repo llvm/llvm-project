@@ -260,6 +260,14 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
 
   const std::string OSLibDir = std::string(getOSLibDir(Triple, Args));
   const std::string MultiarchTriple = getMultiarchTriple(D, Triple, SysRoot);
+  const std::string &ExtraPath = D.OverlayToolChainPath;
+
+  if (!D.OverlayToolChainPath.empty()) {
+    addPathIfExists(D, ExtraPath + "/lib/" + MultiarchTriple, Paths);
+    addPathIfExists(D, ExtraPath + "/lib/../" + OSLibDir, Paths);
+    addPathIfExists(D, ExtraPath + "/usr/lib/" + MultiarchTriple, Paths);
+    addPathIfExists(D, ExtraPath + "/usr/lib/../" + OSLibDir, Paths);
+  }
 
   // mips32: Debian multilib, we use /libo32, while in other case, /lib is
   // used. We need add both libo32 and /lib.
@@ -312,6 +320,11 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     addPathIfExists(D, D.Dir + "/../lib", Paths);
     if (OSLibDir != "lib")
       addPathIfExists(D, D.Dir + "/../" + OSLibDir, Paths);
+  }
+
+  if (!D.OverlayToolChainPath.empty()) {
+    addPathIfExists(D, ExtraPath + "/lib", Paths);
+    addPathIfExists(D, ExtraPath + "/usr/lib", Paths);
   }
 
   addPathIfExists(D, SysRoot + "/lib", Paths);
@@ -566,6 +579,10 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
+
+  if (!D.OverlayToolChainPath.empty())
+    addExternCSystemInclude(DriverArgs, CC1Args,
+                            D.OverlayToolChainPath + "/include");
 
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/local/include");

@@ -1835,7 +1835,7 @@ static std::optional<parser::CharBlock> GetPassName(
 static int GetPassIndex(const Symbol &proc) {
   CHECK(!proc.attrs().test(semantics::Attr::NOPASS));
   std::optional<parser::CharBlock> passName{GetPassName(proc)};
-  const auto *interface{semantics::FindInterface(proc)};
+  const auto *interface { semantics::FindInterface(proc) };
   if (!passName || !interface) {
     return 0; // first argument is passed-object
   }
@@ -3215,26 +3215,28 @@ void ArgumentAnalyzer::Analyze(
   // be detected and represented (they're not expressions).
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
-  std::visit(common::visitors{
-                 [&](const common::Indirection<parser::Expr> &x) {
-                   actual = AnalyzeExpr(x.value());
-                   SetArgSourceLocation(actual, x.value().source);
-                 },
-                 [&](const parser::AltReturnSpec &label) {
-                   if (!isSubroutine) {
-                     context_.Say(
-                         "alternate return specification may not appear on"
-                         " function reference"_err_en_US);
-                   }
-                   actual = ActualArgument(label.v);
-                 },
-                 [&](const parser::ActualArg::PercentRef &) {
-                   context_.Say("TODO: %REF() argument"_err_en_US);
-                 },
-                 [&](const parser::ActualArg::PercentVal &) {
-                   context_.Say("TODO: %VAL() argument"_err_en_US);
-                 },
-             },
+  std::visit(
+      common::visitors{
+          [&](const common::Indirection<parser::Expr> &x) {
+            actual = AnalyzeExpr(x.value());
+            SetArgSourceLocation(actual, x.value().source);
+          },
+          [&](const parser::AltReturnSpec &label) {
+            if (!isSubroutine) {
+              context_.Say("alternate return specification may not appear on"
+                           " function reference"_err_en_US);
+            }
+            actual = ActualArgument(label.v);
+          },
+          [&](const parser::ActualArg::PercentRef &) {
+            context_.Say(
+                "not yet implemented: %REF() intrinsic for arguments"_err_en_US);
+          },
+          [&](const parser::ActualArg::PercentVal &) {
+            context_.Say(
+                "not yet implemetned: %VAL() intrinsic for arguments"_err_en_US);
+          },
+      },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
     if (const auto &argKW{std::get<std::optional<parser::Keyword>>(arg.t)}) {

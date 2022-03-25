@@ -1828,6 +1828,10 @@ llvm.func @repeated_successor(%arg0: i64, %arg1: i64, %arg2: i64, %arg3: i1) {
 // CHECK-LABEL: @single
 // CHECK-SAME: (i32 %[[x:.*]], i32 %[[y:.*]], i32* %[[zaddr:.*]])
 llvm.func @single(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
+  // CHECK: %[[a:.*]] = sub i32 %[[x]], %[[y]]
+  %a = llvm.sub %x, %y : i32
+  // CHECK: store i32 %[[a]], i32* %[[zaddr]]
+  llvm.store %a, %zaddr : !llvm.ptr<i32>
   // CHECK: call i32 @__kmpc_single
   omp.single {
     // CHECK: %[[z:.*]] = add i32 %[[x]], %[[y]]
@@ -1835,8 +1839,40 @@ llvm.func @single(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
     // CHECK: store i32 %[[z]], i32* %[[zaddr]]
     llvm.store %z, %zaddr : !llvm.ptr<i32>
     // CHECK: call void @__kmpc_end_single
+    // CHECK: call void @__kmpc_barrier
     omp.terminator
   }
+  // CHECK: %[[b:.*]] = mul i32 %[[x]], %[[y]]
+  %b = llvm.mul %x, %y : i32
+  // CHECK: store i32 %[[b]], i32* %[[zaddr]]
+  llvm.store %b, %zaddr : !llvm.ptr<i32>
+  // CHECK: ret void
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @single_nowait
+// CHECK-SAME: (i32 %[[x:.*]], i32 %[[y:.*]], i32* %[[zaddr:.*]])
+llvm.func @single_nowait(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
+  // CHECK: %[[a:.*]] = sub i32 %[[x]], %[[y]]
+  %a = llvm.sub %x, %y : i32
+  // CHECK: store i32 %[[a]], i32* %[[zaddr]]
+  llvm.store %a, %zaddr : !llvm.ptr<i32>
+  // CHECK: call i32 @__kmpc_single
+  omp.single nowait {
+    // CHECK: %[[z:.*]] = add i32 %[[x]], %[[y]]
+    %z = llvm.add %x, %y : i32
+    // CHECK: store i32 %[[z]], i32* %[[zaddr]]
+    llvm.store %z, %zaddr : !llvm.ptr<i32>
+    // CHECK: call void @__kmpc_end_single
+    // CHECK-NOT: call void @__kmpc_barrier
+    omp.terminator
+  }
+  // CHECK: %[[t:.*]] = mul i32 %[[x]], %[[y]]
+  %t = llvm.mul %x, %y : i32
+  // CHECK: store i32 %[[t]], i32* %[[zaddr]]
+  llvm.store %t, %zaddr : !llvm.ptr<i32>
   // CHECK: ret void
   llvm.return
 }

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Downloads a prebuilt gn binary to a place where gn.py can find it."""
 
-from __future__ import print_function
-
 import io
 import os
 import sys

@@ -68,12 +68,19 @@ struct GcnBufferFormatInfo {
   unsigned DataFormat;
 };
 
+struct MAIInstInfo {
+  uint16_t Opcode;
+  bool is_dgemm;
+  bool is_gfx940_xdl;
+};
+
 #define GET_MIMGBaseOpcode_DECL
 #define GET_MIMGDim_DECL
 #define GET_MIMGEncoding_DECL
 #define GET_MIMGLZMapping_DECL
 #define GET_MIMGMIPMapping_DECL
 #define GET_MIMGBiASMapping_DECL
+#define GET_MAIInstInfoTable_DECL
 #include "AMDGPUGenSearchableTables.inc"
 
 namespace IsaInfo {
@@ -449,6 +456,13 @@ bool getVOP2IsSingle(unsigned Opc);
 
 LLVM_READONLY
 bool getVOP3IsSingle(unsigned Opc);
+
+/// Returns true if MAI operation is a double precision GEMM.
+LLVM_READONLY
+bool getMAIIsDGEMM(unsigned Opc);
+
+LLVM_READONLY
+bool getMAIIsGFX940XDL(unsigned Opc);
 
 struct CanBeVOPD {
     bool X;
