@@ -1,6 +1,7 @@
 static_library("Support") {
   output_name = "LLVMSupport"
   deps = [
+    "BLAKE3",
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/Demangle",
     "//llvm/utils/gn/build/libs/pthread",

@@ -1,0 +1,15 @@
+static_library("BLAKE3") {
+  output_name = "LLVMSupportBlake3"
+  sources = [
+    "blake3.c",
+    "blake3_dispatch.c",
+    "blake3_portable.c",
+  ]
+  defines = [
+   "BLAKE3_NO_AVX512",
+   "BLAKE3_NO_AVX2",
+   "BLAKE3_NO_SSE41",
+   "BLAKE3_NO_SSE2",
+   "BLAKE3_USE_NEON=0",
+  ]
+}
