@@ -64,16 +64,19 @@ SparseVectorizationStrategy sparseVectorizationStrategy(int32_t flag);
 /// Options for the Sparsification pass.
 struct SparsificationOptions {
   SparsificationOptions(SparseParallelizationStrategy p,
-                        SparseVectorizationStrategy v, unsigned vl, bool e)
+                        SparseVectorizationStrategy v, unsigned vl, bool e,
+                        bool vla)
       : parallelizationStrategy(p), vectorizationStrategy(v), vectorLength(vl),
-        enableSIMDIndex32(e) {}
+        enableSIMDIndex32(e), enableVLAVectorization(vla) {}
   SparsificationOptions()
       : SparsificationOptions(SparseParallelizationStrategy::kNone,
-                              SparseVectorizationStrategy::kNone, 1u, false) {}
+                              SparseVectorizationStrategy::kNone, 1u, false,
+                              false) {}
   SparseParallelizationStrategy parallelizationStrategy;
   SparseVectorizationStrategy vectorizationStrategy;
   unsigned vectorLength;
   bool enableSIMDIndex32;
+  bool enableVLAVectorization;
 };
 
 /// Sets up sparsification rewriting rules with the given options.
