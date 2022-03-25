@@ -479,6 +479,12 @@ void Formula::initialMatch(const SCEV *S, Loop *L, ScalarEvolution &SE) {
   canonicalize(*L);
 }
 
+static bool containsAddRecDependentOnLoop(const SCEV *S, const Loop &L) {
+  return SCEVExprContains(S, [&L](const SCEV *S) {
+    return isa<SCEVAddRecExpr>(S) && (cast<SCEVAddRecExpr>(S)->getLoop() == &L);
+  });
+}
+
 /// Check whether or not this formula satisfies the canonical
 /// representation.
 /// \see Formula::BaseRegs.
@@ -492,18 +498,15 @@ bool Formula::isCanonical(const Loop &L) const {
   if (Scale == 1 && BaseRegs.empty())
     return false;
 
-  const SCEVAddRecExpr *SAR = dyn_cast<const SCEVAddRecExpr>(ScaledReg);
-  if (SAR && SAR->getLoop() == &L)
+  if (containsAddRecDependentOnLoop(ScaledReg, L))
     return true;
 
   // If ScaledReg is not a recurrent expr, or it is but its loop is not current
   // loop, meanwhile BaseRegs contains a recurrent expr reg related with current
   // loop, we want to swap the reg in BaseRegs with ScaledReg.
-  auto I = find_if(BaseRegs, [&](const SCEV *S) {
-    return isa<const SCEVAddRecExpr>(S) &&
-           (cast<SCEVAddRecExpr>(S)->getLoop() == &L);
+  return none_of(BaseRegs, [&L](const SCEV *S) {
+    return containsAddRecDependentOnLoop(S, L);
   });
-  return I == BaseRegs.end();
 }
 
 /// Helper method to morph a formula into its canonical representation.
@@ -535,11 +538,9 @@ void Formula::canonicalize(const Loop &L) {
   // If ScaledReg is an invariant with respect to L, find the reg from
   // BaseRegs containing the recurrent expr related with Loop L. Swap the
   // reg with ScaledReg.
-  const SCEVAddRecExpr *SAR = dyn_cast<const SCEVAddRecExpr>(ScaledReg);
-  if (!SAR || SAR->getLoop() != &L) {
-    auto I = find_if(BaseRegs, [&](const SCEV *S) {
-      return isa<const SCEVAddRecExpr>(S) &&
-             (cast<SCEVAddRecExpr>(S)->getLoop() == &L);
+  if (!containsAddRecDependentOnLoop(ScaledReg, L)) {
+    auto I = find_if(BaseRegs, [&L](const SCEV *S) {
+      return containsAddRecDependentOnLoop(S, L);
     });
     if (I != BaseRegs.end())
       std::swap(ScaledReg, *I);
