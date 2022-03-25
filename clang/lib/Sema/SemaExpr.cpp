@@ -10069,9 +10069,11 @@ static bool tryVectorConvertAndSplat(Sema &S, ExprResult *scalar,
 static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
   const auto *VecTy = E->getType()->getAs<VectorType>();
   assert(VecTy && "Expression E must be a vector");
-  QualType NewVecTy = S.Context.getVectorType(ElementType,
-                                              VecTy->getNumElements(),
-                                              VecTy->getVectorKind());
+  QualType NewVecTy =
+      VecTy->isExtVectorType()
+          ? S.Context.getExtVectorType(ElementType, VecTy->getNumElements())
+          : S.Context.getVectorType(ElementType, VecTy->getNumElements(),
+                                    VecTy->getVectorKind());
 
   // Look through the implicit cast. Return the subexpression if its type is
   // NewVecTy.
@@ -10488,12 +10490,10 @@ QualType Sema::CheckSizelessVectorOperands(ExprResult &LHS, ExprResult &RHS,
   QualType LHSType = LHS.get()->getType().getUnqualifiedType();
   QualType RHSType = RHS.get()->getType().getUnqualifiedType();
 
-  const BuiltinType *LHSVecType = LHSType->getAs<BuiltinType>();
-  const BuiltinType *RHSVecType = RHSType->getAs<BuiltinType>();
-
   unsigned DiagID = diag::err_typecheck_invalid_operands;
   if ((OperationKind == ACK_Arithmetic) &&
-      (LHSVecType->isSVEBool() || RHSVecType->isSVEBool())) {
+      (LHSType->castAs<BuiltinType>()->isSVEBool() ||
+       RHSType->castAs<BuiltinType>()->isSVEBool())) {
     Diag(Loc, DiagID) << LHSType << RHSType << LHS.get()->getSourceRange()
                       << RHS.get()->getSourceRange();
     return QualType();

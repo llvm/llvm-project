@@ -4559,13 +4559,14 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // entire table, since later PCH files in a PCH chain are only interested in
   // the results at the end of the chain.
   RecordData WeakUndeclaredIdentifiers;
-  for (auto &WeakUndeclaredIdentifier : SemaRef.WeakUndeclaredIdentifiers) {
-    IdentifierInfo *II = WeakUndeclaredIdentifier.first;
-    WeakInfo &WI = WeakUndeclaredIdentifier.second;
-    AddIdentifierRef(II, WeakUndeclaredIdentifiers);
-    AddIdentifierRef(WI.getAlias(), WeakUndeclaredIdentifiers);
-    AddSourceLocation(WI.getLocation(), WeakUndeclaredIdentifiers);
-    WeakUndeclaredIdentifiers.push_back(WI.getUsed());
+  for (const auto &WeakUndeclaredIdentifierList :
+       SemaRef.WeakUndeclaredIdentifiers) {
+    const IdentifierInfo *const II = WeakUndeclaredIdentifierList.first;
+    for (const auto &WI : WeakUndeclaredIdentifierList.second) {
+      AddIdentifierRef(II, WeakUndeclaredIdentifiers);
+      AddIdentifierRef(WI.getAlias(), WeakUndeclaredIdentifiers);
+      AddSourceLocation(WI.getLocation(), WeakUndeclaredIdentifiers);
+    }
   }
 
   // Build a record containing all of the ext_vector declarations.

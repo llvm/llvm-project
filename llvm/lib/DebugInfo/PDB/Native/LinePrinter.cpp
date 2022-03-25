@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LinePrinter.h"
-
-#include "llvm-pdbutil.h"
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
+#include "llvm/DebugInfo/PDB/Native/InputFile.h"
+#include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/UDTLayout.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -27,6 +29,10 @@
 using namespace llvm;
 using namespace llvm::msf;
 using namespace llvm::pdb;
+
+// TODO: Move this Filters state inside the LinePrinter class and pass it by
+// reference to the iterate* functions.
+FilterOptions llvm::pdb::Filters;
 
 namespace {
 bool IsItemExcluded(llvm::StringRef Item,
@@ -47,25 +53,27 @@ bool IsItemExcluded(llvm::StringRef Item,
 
   return false;
 }
-}
+} // namespace
 
 using namespace llvm;
 
-LinePrinter::LinePrinter(int Indent, bool UseColor, llvm::raw_ostream &Stream)
+LinePrinter::LinePrinter(int Indent, bool UseColor, llvm::raw_ostream &Stream,
+                         FilterOptions &Filters)
     : OS(Stream), IndentSpaces(Indent), CurrentIndent(0), UseColor(UseColor) {
-  SetFilters(ExcludeTypeFilters, opts::pretty::ExcludeTypes.begin(),
-             opts::pretty::ExcludeTypes.end());
-  SetFilters(ExcludeSymbolFilters, opts::pretty::ExcludeSymbols.begin(),
-             opts::pretty::ExcludeSymbols.end());
-  SetFilters(ExcludeCompilandFilters, opts::pretty::ExcludeCompilands.begin(),
-             opts::pretty::ExcludeCompilands.end());
+  llvm::pdb::Filters = Filters;
+  SetFilters(ExcludeTypeFilters, Filters.ExcludeTypes.begin(),
+             Filters.ExcludeTypes.end());
+  SetFilters(ExcludeSymbolFilters, Filters.ExcludeSymbols.begin(),
+             Filters.ExcludeSymbols.end());
+  SetFilters(ExcludeCompilandFilters, Filters.ExcludeCompilands.begin(),
+             Filters.ExcludeCompilands.end());
 
-  SetFilters(IncludeTypeFilters, opts::pretty::IncludeTypes.begin(),
-             opts::pretty::IncludeTypes.end());
-  SetFilters(IncludeSymbolFilters, opts::pretty::IncludeSymbols.begin(),
-             opts::pretty::IncludeSymbols.end());
-  SetFilters(IncludeCompilandFilters, opts::pretty::IncludeCompilands.begin(),
-             opts::pretty::IncludeCompilands.end());
+  SetFilters(IncludeTypeFilters, Filters.IncludeTypes.begin(),
+             Filters.IncludeTypes.end());
+  SetFilters(IncludeSymbolFilters, Filters.IncludeSymbols.begin(),
+             Filters.IncludeSymbols.end());
+  SetFilters(IncludeCompilandFilters, Filters.IncludeCompilands.begin(),
+             Filters.IncludeCompilands.end());
 }
 
 void LinePrinter::Indent(uint32_t Amount) {
@@ -95,7 +103,7 @@ void LinePrinter::printLine(const Twine &T) {
 bool LinePrinter::IsClassExcluded(const ClassLayout &Class) {
   if (IsTypeExcluded(Class.getName(), Class.getSize()))
     return true;
-  if (Class.deepPaddingSize() < opts::pretty::PaddingThreshold)
+  if (Class.deepPaddingSize() < Filters.PaddingThreshold)
     return true;
   return false;
 }
@@ -273,7 +281,7 @@ void LinePrinter::formatMsfStreamBlocks(
 bool LinePrinter::IsTypeExcluded(llvm::StringRef TypeName, uint64_t Size) {
   if (IsItemExcluded(TypeName, IncludeTypeFilters, ExcludeTypeFilters))
     return true;
-  if (Size < opts::pretty::SizeThreshold)
+  if (Size < Filters.SizeThreshold)
     return true;
   return false;
 }

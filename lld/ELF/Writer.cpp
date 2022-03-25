@@ -710,13 +710,13 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     auto *osd = dyn_cast<OutputDesc>(cmd);
     if (!osd)
       continue;
-    OutputSection *sec = &osd->osec;
-    auto i = llvm::find_if(sec->commands, [](SectionCommand *cmd) {
+    OutputSection &osec = osd->osec;
+    auto i = llvm::find_if(osec.commands, [](SectionCommand *cmd) {
       if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
         return !isd->sections.empty();
       return false;
     });
-    if (i == sec->commands.end())
+    if (i == osec.commands.end())
       continue;
     InputSectionBase *isec = cast<InputSectionDescription>(*i)->sections[0];
 
@@ -733,9 +733,9 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     // Set the symbol to be relative to the output section so that its st_value
     // equals the output section address. Note, there may be a gap between the
     // start of the output section and isec.
-    in.symTab->addSymbol(
-        makeDefined(isec->file, "", STB_LOCAL, /*stOther=*/0, STT_SECTION,
-                    /*value=*/0, /*size=*/0, isec->getOutputSection()));
+    in.symTab->addSymbol(makeDefined(isec->file, "", STB_LOCAL, /*stOther=*/0,
+                                     STT_SECTION,
+                                     /*value=*/0, /*size=*/0, &osec));
   }
 }
 

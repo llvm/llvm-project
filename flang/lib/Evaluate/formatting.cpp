@@ -732,20 +732,23 @@ llvm::raw_ostream &DescriptorInquiry::AsFortran(llvm::raw_ostream &o) const {
     o << "%STRIDE(";
     break;
   case Field::Rank:
-    o << "rank(";
+    o << "int(rank(";
     break;
   case Field::Len:
+    o << "int(";
     break;
   }
   base_.AsFortran(o);
   if (field_ == Field::Len) {
-    return o << "%len";
+    o << "%len";
+  } else if (field_ == Field::Rank) {
+    o << ")";
   } else {
-    if (field_ != Field::Rank && dimension_ >= 0) {
+    if (dimension_ >= 0) {
       o << ",dim=" << (dimension_ + 1);
     }
-    return o << ')';
   }
+  return o << ",kind=" << DescriptorInquiry::Result::kind << ")";
 }
 
 llvm::raw_ostream &Assignment::AsFortran(llvm::raw_ostream &o) const {

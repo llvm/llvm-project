@@ -84,8 +84,7 @@ void MultiAffineFunction::print(raw_ostream &os) const {
 void MultiAffineFunction::dump() const { print(llvm::errs()); }
 
 bool MultiAffineFunction::isEqual(const MultiAffineFunction &other) const {
-  return PresburgerSpace::isEqual(other) &&
-         getDomain().isEqual(other.getDomain()) &&
+  return isSpaceCompatible(other) && getDomain().isEqual(other.getDomain()) &&
          isEqualWhereDomainsOverlap(other);
 }
 
@@ -117,7 +116,7 @@ void MultiAffineFunction::eliminateRedundantLocalId(unsigned posA,
 
 bool MultiAffineFunction::isEqualWhereDomainsOverlap(
     MultiAffineFunction other) const {
-  if (!PresburgerSpace::isEqual(other))
+  if (!isSpaceCompatible(other))
     return false;
 
   // `commonFunc` has the same output as `this`.
@@ -150,7 +149,7 @@ bool MultiAffineFunction::isEqualWhereDomainsOverlap(
 /// Two PWMAFunctions are equal if they have the same dimensionalities,
 /// the same domain, and take the same value at every point in the domain.
 bool PWMAFunction::isEqual(const PWMAFunction &other) const {
-  if (!PresburgerSpace::isEqual(other))
+  if (!isSpaceCompatible(other))
     return false;
 
   if (!this->getDomain().isEqual(other.getDomain()))
@@ -168,7 +167,7 @@ bool PWMAFunction::isEqual(const PWMAFunction &other) const {
 }
 
 void PWMAFunction::addPiece(const MultiAffineFunction &piece) {
-  assert(piece.isSpaceEqual(*this) &&
+  assert(piece.isSpaceCompatible(*this) &&
          "Piece to be added is not compatible with this PWMAFunction!");
   assert(piece.isConsistent() && "Piece is internally inconsistent!");
   assert(this->getDomain()

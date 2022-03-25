@@ -109,6 +109,9 @@ public:
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
+    /// This is a C++ 20 header unit.
+    ModuleHeaderUnit,
+
     /// This is a C++ 20 module partition interface.
     ModulePartitionInterface,
 

@@ -168,6 +168,15 @@ private:
   CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
 };
 
+class GenerateHeaderUnitAction : public GenerateModuleAction {
+
+private:
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
+
+  std::unique_ptr<raw_pwrite_stream>
+  CreateOutputFile(CompilerInstance &CI, StringRef InFile) override;
+};
+
 class SyntaxOnlyAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,

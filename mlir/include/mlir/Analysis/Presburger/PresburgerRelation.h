@@ -121,7 +121,7 @@ protected:
   /// dimension and symbols.
   PresburgerRelation(unsigned numDomain = 0, unsigned numRange = 0,
                      unsigned numSymbols = 0)
-      : PresburgerSpace(numDomain, numRange, numSymbols) {}
+      : PresburgerSpace(numDomain, numRange, numSymbols, /*numLocals=*/0) {}
 
   /// The list of disjuncts that this set is the union of.
   SmallVector<IntegerRelation, 2> integerRelations;

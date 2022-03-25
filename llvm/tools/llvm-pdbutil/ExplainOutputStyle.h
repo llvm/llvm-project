@@ -9,8 +9,9 @@
 #ifndef LLVM_TOOLS_LLVMPDBDUMP_EXPLAINOUTPUTSTYLE_H
 #define LLVM_TOOLS_LLVMPDBDUMP_EXPLAINOUTPUTSTYLE_H
 
-#include "LinePrinter.h"
 #include "OutputStyle.h"
+
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 
 #include <string>
 
