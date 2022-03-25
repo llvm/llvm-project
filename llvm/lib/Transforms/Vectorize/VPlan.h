@@ -2646,6 +2646,9 @@ public:
   VPRegionBlock *getVectorLoopRegion() {
     return cast<VPRegionBlock>(getEntry());
   }
+  const VPRegionBlock *getVectorLoopRegion() const {
+    return cast<VPRegionBlock>(getEntry());
+  }
 
   /// Returns the canonical induction recipe of the vector loop.
   VPCanonicalIVPHIRecipe *getCanonicalIV() {

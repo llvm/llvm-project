@@ -3758,7 +3758,8 @@ void InnerLoopVectorizer::fixCrossIterationPHIs(VPTransformState &State) {
   // the currently empty PHI nodes. At this point every instruction in the
   // original loop is widened to a vector form so we can use them to construct
   // the incoming edges.
-  VPBasicBlock *Header = State.Plan->getEntry()->getEntryBasicBlock();
+  VPBasicBlock *Header =
+      State.Plan->getVectorLoopRegion()->getEntryBasicBlock();
   for (VPRecipeBase &R : Header->phis()) {
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R))
       fixReduction(ReductionPhi, State);
@@ -8092,7 +8093,8 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
     // constructing the desired canonical IV in the header block as its first
     // non-phi instructions.
     assert(CM.foldTailByMasking() && "must fold the tail");
-    VPBasicBlock *HeaderVPBB = Plan->getEntry()->getEntryBasicBlock();
+    VPBasicBlock *HeaderVPBB =
+        Plan->getVectorLoopRegion()->getEntryBasicBlock();
     auto NewInsertionPoint = HeaderVPBB->getFirstNonPhi();
     auto *IV = new VPWidenCanonicalIVRecipe(Plan->getCanonicalIV());
     HeaderVPBB->insert(IV, HeaderVPBB->getFirstNonPhi());
@@ -8860,8 +8862,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
   // After here, VPBB should not be used.
   VPBB = nullptr;
 
-  assert(isa<VPRegionBlock>(Plan->getEntry()) &&
-         !Plan->getEntry()->getEntryBasicBlock()->empty() &&
+  assert(isa<VPRegionBlock>(Plan->getVectorLoopRegion()) &&
+         !Plan->getVectorLoopRegion()->getEntryBasicBlock()->empty() &&
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
   RecipeBuilder.fixHeaderPhis();
@@ -8946,7 +8948,8 @@ VPlanPtr LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
   // Introduce a recipe to combine the incoming and previous values of a
   // first-order recurrence.
-  for (VPRecipeBase &R : Plan->getEntry()->getEntryBasicBlock()->phis()) {
+  for (VPRecipeBase &R :
+       Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *RecurPhi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R);
     if (!RecurPhi)
       continue;
@@ -9162,7 +9165,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
   // dedicated latch block.
   if (CM.foldTailByMasking()) {
     Builder.setInsertPoint(LatchVPBB, LatchVPBB->begin());
-    for (VPRecipeBase &R : Plan->getEntry()->getEntryBasicBlock()->phis()) {
+    for (VPRecipeBase &R :
+         Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
       VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
       if (!PhiR || PhiR->isInLoop())
         continue;
@@ -10574,7 +10578,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
         // Ensure that the start values for any VPReductionPHIRecipes are
         // updated before vectorising the epilogue loop.
-        VPBasicBlock *Header = BestEpiPlan.getEntry()->getEntryBasicBlock();
+        VPBasicBlock *Header =
+            BestEpiPlan.getVectorLoopRegion()->getEntryBasicBlock();
         for (VPRecipeBase &R : Header->phis()) {
           if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
             if (auto *Resume = MainILV.getReductionResumeValue(

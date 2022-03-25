@@ -297,7 +297,7 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
 }
 
 void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
-  for (auto &Phi : Plan.getEntry()->getEntryBasicBlock()->phis()) {
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
     if (!IV || IV->getTruncInst())
       continue;
