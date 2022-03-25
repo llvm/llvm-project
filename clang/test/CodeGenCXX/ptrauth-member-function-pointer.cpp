@@ -386,3 +386,11 @@ void test_builtin_ptrauth_type_discriminator() {
 MethodTy1 gmethod0 = reinterpret_cast<MethodTy1>(&Base0::nonvirtual0);
 MethodTy0 gmethod1 = reinterpret_cast<MethodTy0>(&Derived0::nonvirtual5);
 MethodTy0 gmethod2 = reinterpret_cast<MethodTy0>(&Derived0::virtual1);
+
+// CHECK: define void @_Z15testConvertNullv(
+// CHECK: %[[T:.*]] = alloca { i64, i64 },
+// store { i64, i64 } zeroinitializer, { i64, i64 }* %[[T]],
+
+void testConvertNull() {
+  VariadicMethodTy0 t = (VariadicMethodTy0)(MethodTy0{});
+}

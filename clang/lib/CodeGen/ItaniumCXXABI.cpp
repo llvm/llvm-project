@@ -1017,11 +1017,16 @@ ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
       QualType srcType = E->getSubExpr()->getType();
       const auto &curAuthInfo = CGM.getMemberFunctionPointerAuthInfo(srcType);
       llvm::Constant *memFnPtr = llvm::ConstantExpr::getExtractValue(src, 0);
-      llvm::Constant *constPtr =
-          pointerAuthResignConstant(cast<llvm::User>(memFnPtr)->getOperand(0),
-                                    curAuthInfo, newAuthInfo, CGM);
-      constPtr = llvm::ConstantExpr::getPtrToInt(constPtr, memFnPtr->getType());
-      src = llvm::ConstantExpr::getInsertValue(src, constPtr, 0);
+      if (memFnPtr->getNumOperands() == 0) {
+        // src must be a pair of null pointers.
+        assert(isa<llvm::ConstantInt>(memFnPtr) && "constant int expected");
+      } else {
+        llvm::Constant *constPtr = pointerAuthResignConstant(
+            memFnPtr->getOperand(0), curAuthInfo, newAuthInfo, CGM);
+        constPtr =
+            llvm::ConstantExpr::getPtrToInt(constPtr, memFnPtr->getType());
+        src = llvm::ConstantExpr::getInsertValue(src, constPtr, 0);
+      }
     }
 
   // Under Itanium, reinterprets don't require any additional processing.
