@@ -309,8 +309,8 @@ public:
   /// Get the target triple for the ExtractAPI invocation.
   const llvm::Triple &getTarget() const { return Target; }
 
-  /// Get the language options used to parse the APIs.
-  const LangOptions &getLangOpts() const { return LangOpts; }
+  /// Get the language used by the APIs.
+  Language getLanguage() const { return Lang; }
 
   const GlobalRecordMap &getGlobals() const { return Globals; }
   const EnumRecordMap &getEnums() const { return Enums; }
@@ -328,8 +328,8 @@ public:
   /// \returns a StringRef of the copied string in APISet::Allocator.
   StringRef copyString(StringRef String);
 
-  APISet(const llvm::Triple &Target, const LangOptions &LangOpts)
-      : Target(Target), LangOpts(LangOpts) {}
+  APISet(const llvm::Triple &Target, Language Lang)
+      : Target(Target), Lang(Lang) {}
 
 private:
   /// BumpPtrAllocator to store generated/copied strings.
@@ -338,7 +338,7 @@ private:
   llvm::BumpPtrAllocator StringAllocator;
 
   const llvm::Triple Target;
-  const LangOptions LangOpts;
+  const Language Lang;
 
   GlobalRecordMap Globals;
   EnumRecordMap Enums;
