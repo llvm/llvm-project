@@ -155,12 +155,6 @@ FunctionPass *createAssumeSimplifyPass();
 // don't block SCEV.
 //
 Pass *createCanonicalizeFreezeInLoopsPass();
-
-//===----------------------------------------------------------------------===//
-// LowerGlobalDtorsLegacy - Lower @llvm.global_dtors by creating wrapper
-// functions that are registered in @llvm.global_ctors and which contain a call
-// to `__cxa_atexit` to register their destructor functions.
-ModulePass *createLowerGlobalDtorsLegacyPass();
 } // namespace llvm
 
 #endif
