@@ -1085,7 +1085,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *BaseTp,
                                            ArrayRef<int> Mask, int Index,
-                                           VectorType *SubTp) {
+                                           VectorType *SubTp,
+                                           ArrayRef<Value *> Args) {
   // 64-bit packed float vectors (v2f32) are widened to type v4f32.
   // 64-bit packed integer vectors (v2i32) are widened to type v4i32.
   std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, BaseTp);
@@ -1545,9 +1546,26 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     { TTI::SK_PermuteTwoSrc,    MVT::v16i8, 13 }, // blend+permute
   };
 
-  if (ST->hasSSE2())
+  static const CostTblEntry SSE3BroadcastLoadTbl[] = {
+      {TTI::SK_Broadcast, MVT::v2f64, 0}, // broadcast handled by movddup
+  };
+
+  if (ST->hasSSE2()) {
+    bool IsLoad = !Args.empty() && llvm::all_of(Args, [](const Value *V) {
+      return isa<LoadInst>(V);
+    });
+    if (ST->hasSSE3() && IsLoad)
+      if (const auto *Entry =
+              CostTableLookup(SSE3BroadcastLoadTbl, Kind, LT.second)) {
+        assert(isLegalBroadcastLoad(BaseTp->getElementType(),
+                                    LT.second.getVectorNumElements()) &&
+               "Table entry missing from isLegalBroadcastLoad()");
+        return LT.first * Entry->Cost;
+      }
+
     if (const auto *Entry = CostTableLookup(SSE2ShuffleTbl, Kind, LT.second))
       return LT.first * Entry->Cost;
+  }
 
   static const CostTblEntry SSE1ShuffleTbl[] = {
     { TTI::SK_Broadcast,        MVT::v4f32, 1 }, // shufps
@@ -5116,6 +5134,13 @@ bool X86TTIImpl::isLegalNTStore(Type *DataType, Align Alignment) {
   if (DataSize == 16)
     return ST->hasSSE1();
   return true;
+}
+
+bool X86TTIImpl::isLegalBroadcastLoad(Type *ElementTy,
+                                      unsigned NumElements) const {
+  // movddup
+  return ST->hasSSE3() && NumElements == 2 &&
+         ElementTy == Type::getDoubleTy(ElementTy->getContext());
 }
 
 bool X86TTIImpl::isLegalMaskedExpandLoad(Type *DataTy) {
