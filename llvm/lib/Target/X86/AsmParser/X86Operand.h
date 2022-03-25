@@ -287,12 +287,6 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isOffsetOfLocal() const override { return isImm() && Imm.LocalRef; }
 
-  bool isMemPlaceholder(const MCInstrDesc &Desc) const override {
-    // Only MS InlineAsm uses global variables with registers rather than
-    // rip/eip.
-    return isMem() && !Mem.DefaultBaseReg && Mem.FrontendSize;
-  }
-
   bool needAddressOf() const override { return AddressOf; }
 
   bool isMem() const override { return Kind == Memory; }
