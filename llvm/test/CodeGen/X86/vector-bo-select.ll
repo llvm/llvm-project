@@ -1083,9 +1083,8 @@ define <4 x i32> @mul_v4i32(<4 x i1> %b, <4 x i32> noundef %x, <4 x i32> noundef
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vptestmd %xmm0, %xmm0, %k1
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm0 = [1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm0 {%k1}
-; AVX512VL-NEXT:    vpmulld %xmm0, %xmm1, %xmm0
+; AVX512VL-NEXT:    vpmulld %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
   %s = select <4 x i1> %b, <4 x i32> %y, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   %r = mul <4 x i32> %x, %s
@@ -1118,9 +1117,8 @@ define <8 x i32> @mul_v8i32_commute(<8 x i1> %b, <8 x i32> noundef %x, <8 x i32>
 ; AVX512VL-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vptestmd %ymm0, %ymm0, %k1
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm0 = [1,1,1,1,1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %ymm2, %ymm0 {%k1}
-; AVX512VL-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmulld %ymm2, %ymm1, %ymm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %ymm1, %ymm0
 ; AVX512VL-NEXT:    retq
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %r = mul <8 x i32> %s, %x
@@ -1152,9 +1150,7 @@ define <8 x i32> @mul_v8i32_cast_cond(i8 noundef zeroext %pb, <8 x i32> noundef 
 ; AVX512VL-LABEL: mul_v8i32_cast_cond:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    kmovw %edi, %k1
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %ymm1, %ymm2 {%k1}
-; AVX512VL-NEXT:    vpmulld %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpmulld %ymm1, %ymm0, %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i32> %y, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
@@ -1197,16 +1193,14 @@ define <8 x i64> @mul_v8i64_cast_cond(i8 noundef zeroext %pb, <8 x i64> noundef 
 ; AVX512-LABEL: mul_v8i64_cast_cond:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw %edi, %k1
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vmovdqa64 %zmm1, %zmm2 {%k1}
-; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm1
-; AVX512-NEXT:    vpmuludq %zmm2, %zmm1, %zmm1
-; AVX512-NEXT:    vpsrlq $32, %zmm2, %zmm3
-; AVX512-NEXT:    vpmuludq %zmm3, %zmm0, %zmm3
-; AVX512-NEXT:    vpaddq %zmm1, %zmm3, %zmm1
-; AVX512-NEXT:    vpsllq $32, %zmm1, %zmm1
-; AVX512-NEXT:    vpmuludq %zmm2, %zmm0, %zmm0
-; AVX512-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpsrlq $32, %zmm1, %zmm2
+; AVX512-NEXT:    vpmuludq %zmm2, %zmm0, %zmm2
+; AVX512-NEXT:    vpsrlq $32, %zmm0, %zmm3
+; AVX512-NEXT:    vpmuludq %zmm1, %zmm3, %zmm3
+; AVX512-NEXT:    vpaddq %zmm3, %zmm2, %zmm2
+; AVX512-NEXT:    vpsllq $32, %zmm2, %zmm2
+; AVX512-NEXT:    vpmuludq %zmm1, %zmm0, %zmm1
+; AVX512-NEXT:    vpaddq %zmm2, %zmm1, %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %b = bitcast i8 %pb to <8 x i1>
   %s = select <8 x i1> %b, <8 x i64> %y, <8 x i64> <i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1, i64 1>
