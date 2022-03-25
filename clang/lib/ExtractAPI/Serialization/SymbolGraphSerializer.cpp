@@ -393,6 +393,10 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     Kind["identifier"] = AddLangPrefix("class");
     Kind["displayName"] = "Class";
     break;
+  case APIRecord::RK_ObjCProtocol:
+    Kind["identifier"] = AddLangPrefix("protocol");
+    Kind["displayName"] = "Protocol";
+    break;
   }
 
   return Kind;
@@ -592,6 +596,10 @@ Object SymbolGraphSerializer::serialize() {
   // Serialize Objective-C interface records in the API set.
   for (const auto &ObjCInterface : API.getObjCInterfaces())
     serializeObjCContainerRecord(*ObjCInterface.second);
+
+  // Serialize Objective-C protocol records in the API set.
+  for (const auto &ObjCProtocol : API.getObjCProtocols())
+    serializeObjCContainerRecord(*ObjCProtocol.second);
 
   Root["symbols"] = std::move(Symbols);
   Root["relationhips"] = std::move(Relationships);

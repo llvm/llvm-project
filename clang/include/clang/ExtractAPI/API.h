@@ -82,6 +82,7 @@ struct APIRecord {
     RK_ObjCIvar,
     RK_ObjCMethod,
     RK_ObjCInterface,
+    RK_ObjCProtocol,
   };
 
 private:
@@ -354,6 +355,25 @@ private:
   virtual void anchor();
 };
 
+/// This holds information associated with Objective-C protocols.
+struct ObjCProtocolRecord : ObjCContainerRecord {
+  ObjCProtocolRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                     const AvailabilityInfo &Availability,
+                     const DocComment &Comment,
+                     DeclarationFragments Declaration,
+                     DeclarationFragments SubHeading)
+      : ObjCContainerRecord(RK_ObjCProtocol, Name, USR, Loc, Availability,
+                            LinkageInfo::none(), Comment, Declaration,
+                            SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_ObjCProtocol;
+  }
+
+private:
+  virtual void anchor();
+};
+
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
 public:
@@ -497,6 +517,19 @@ public:
       DeclarationFragments SubHeading,
       ObjCInstanceVariableRecord::AccessControl Access);
 
+  /// Create and add an Objective-C protocol record into the API set.
+  ///
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSR(const Decl *D) is a helper method
+  /// to generate the USR for \c D and keep it alive in APISet.
+  ObjCProtocolRecord *addObjCProtocol(StringRef Name, StringRef USR,
+                                      PresumedLoc Loc,
+                                      const AvailabilityInfo &Availability,
+                                      const DocComment &Comment,
+                                      DeclarationFragments Declaration,
+                                      DeclarationFragments SubHeading);
+
   /// A map to store the set of GlobalRecord%s with the declaration name as the
   /// key.
   using GlobalRecordMap =
@@ -516,6 +549,11 @@ public:
   using ObjCInterfaceRecordMap =
       llvm::MapVector<StringRef, std::unique_ptr<ObjCInterfaceRecord>>;
 
+  /// A map to store the set of ObjCProtocolRecord%s with the declaration name
+  /// as the key.
+  using ObjCProtocolRecordMap =
+      llvm::MapVector<StringRef, std::unique_ptr<ObjCProtocolRecord>>;
+
   /// Get the target triple for the ExtractAPI invocation.
   const llvm::Triple &getTarget() const { return Target; }
 
@@ -527,6 +565,9 @@ public:
   const StructRecordMap &getStructs() const { return Structs; }
   const ObjCInterfaceRecordMap &getObjCInterfaces() const {
     return ObjCInterfaces;
+  }
+  const ObjCProtocolRecordMap &getObjCProtocols() const {
+    return ObjCProtocols;
   }
 
   /// Generate and store the USR of declaration \p D.
@@ -557,6 +598,7 @@ private:
   EnumRecordMap Enums;
   StructRecordMap Structs;
   ObjCInterfaceRecordMap ObjCInterfaces;
+  ObjCProtocolRecordMap ObjCProtocols;
 };
 
 } // namespace extractapi

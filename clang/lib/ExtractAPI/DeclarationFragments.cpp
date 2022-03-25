@@ -621,6 +621,35 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProperty(
       .append(std::move(After));
 }
 
+DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForObjCProtocol(
+    const ObjCProtocolDecl *Protocol) {
+  DeclarationFragments Fragments;
+  // Build basic protocol declaration.
+  Fragments.append("@protocol", DeclarationFragments::FragmentKind::Keyword)
+      .appendSpace()
+      .append(Protocol->getName(),
+              DeclarationFragments::FragmentKind::Identifier);
+
+  // If this protocol conforms to other protocols, build the conformance list.
+  if (!Protocol->protocols().empty()) {
+    Fragments.append(" <", DeclarationFragments::FragmentKind::Text);
+    for (ObjCProtocolDecl::protocol_iterator It = Protocol->protocol_begin();
+         It != Protocol->protocol_end(); It++) {
+      // Add a leading comma if this is not the first protocol rendered.
+      if (It != Protocol->protocol_begin())
+        Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+
+      SmallString<128> USR;
+      index::generateUSRForDecl(*It, USR);
+      Fragments.append((*It)->getName(),
+                       DeclarationFragments::FragmentKind::TypeIdentifier, USR);
+    }
+    Fragments.append(">", DeclarationFragments::FragmentKind::Text);
+  }
+
+  return Fragments;
+}
+
 template <typename FunctionT>
 FunctionSignature
 DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {

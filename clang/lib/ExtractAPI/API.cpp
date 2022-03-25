@@ -161,6 +161,20 @@ ObjCInstanceVariableRecord *APISet::addObjCInstanceVariable(
   return Container->Ivars.emplace_back(std::move(Record)).get();
 }
 
+ObjCProtocolRecord *APISet::addObjCProtocol(
+    StringRef Name, StringRef USR, PresumedLoc Loc,
+    const AvailabilityInfo &Availability, const DocComment &Comment,
+    DeclarationFragments Declaration, DeclarationFragments SubHeading) {
+  auto Result = ObjCProtocols.insert({Name, nullptr});
+  if (Result.second) {
+    // Create the record if it does not already exist.
+    auto Record = std::make_unique<ObjCProtocolRecord>(
+        Name, USR, Loc, Availability, Comment, Declaration, SubHeading);
+    Result.first->second = std::move(Record);
+  }
+  return Result.first->second.get();
+}
+
 StringRef APISet::recordUSR(const Decl *D) {
   SmallString<128> USR;
   index::generateUSRForDecl(D, USR);
@@ -193,3 +207,4 @@ void ObjCPropertyRecord::anchor() {}
 void ObjCInstanceVariableRecord::anchor() {}
 void ObjCMethodRecord::anchor() {}
 void ObjCInterfaceRecord::anchor() {}
+void ObjCProtocolRecord::anchor() {}

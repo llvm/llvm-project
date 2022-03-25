@@ -217,6 +217,11 @@ public:
   static DeclarationFragments
   getFragmentsForObjCProperty(const ObjCPropertyDecl *);
 
+  /// Build DeclarationFragments for an Objective-C protocol declaration
+  /// ObjCProtocolDecl.
+  static DeclarationFragments
+  getFragmentsForObjCProtocol(const ObjCProtocolDecl *);
+
   /// Build sub-heading fragments for a NamedDecl.
   static DeclarationFragments getSubHeading(const NamedDecl *);
 

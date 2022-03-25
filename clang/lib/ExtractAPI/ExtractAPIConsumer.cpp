@@ -260,6 +260,38 @@ public:
     return true;
   }
 
+  bool VisitObjCProtocolDecl(const ObjCProtocolDecl *Decl) {
+    // Skip forward declaration for protocols (@protocol).
+    if (!Decl->isThisDeclarationADefinition())
+      return true;
+
+    // Collect symbol information.
+    StringRef Name = Decl->getName();
+    StringRef USR = API.recordUSR(Decl);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+    AvailabilityInfo Availability = getAvailability(Decl);
+    DocComment Comment;
+    if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the protocol.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForObjCProtocol(Decl);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+    ObjCProtocolRecord *ObjCProtocolRecord = API.addObjCProtocol(
+        Name, USR, Loc, Availability, Comment, Declaration, SubHeading);
+
+    recordObjCMethods(ObjCProtocolRecord, Decl->methods());
+    recordObjCProperties(ObjCProtocolRecord, Decl->properties());
+    recordObjCProtocols(ObjCProtocolRecord, Decl->protocols());
+
+    return true;
+  }
+
 private:
   /// Get availability information of the declaration \p D.
   AvailabilityInfo getAvailability(const Decl *D) const {
