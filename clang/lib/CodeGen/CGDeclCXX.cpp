@@ -425,9 +425,8 @@ void CodeGenFunction::EmitCXXGuardedInitBranch(llvm::Value *NeedsInit,
 
 llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
     llvm::FunctionType *FTy, const Twine &Name, const CGFunctionInfo &FI,
-    SourceLocation Loc, bool TLS) {
-  llvm::Function *Fn = llvm::Function::Create(
-      FTy, llvm::GlobalValue::InternalLinkage, Name, &getModule());
+    SourceLocation Loc, bool TLS, llvm::GlobalVariable::LinkageTypes Linkage) {
+  llvm::Function *Fn = llvm::Function::Create(FTy, Linkage, Name, &getModule());
 
   if (!getLangOpts().AppleKext && !TLS) {
     // Set the section if needed.
@@ -435,7 +434,8 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
       Fn->setSection(Section);
   }
 
-  SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  if (Linkage == llvm::GlobalVariable::InternalLinkage)
+    SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
   Fn->setCallingConv(getRuntimeCC());
 
