@@ -386,29 +386,8 @@ void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 
 bool ReadFileToBuffer(const char *file_name, char **buff, uptr *buff_size,
                       uptr *read_len, uptr max_len, error_t *errno_p) {
-  zx_handle_t vmo;
-  zx_status_t status = __sanitizer_get_configuration(file_name, &vmo);
-  if (status == ZX_OK) {
-    uint64_t vmo_size;
-    status = _zx_vmo_get_size(vmo, &vmo_size);
-    if (status == ZX_OK) {
-      if (vmo_size < max_len)
-        max_len = vmo_size;
-      size_t map_size = RoundUpTo(max_len, GetPageSize());
-      uintptr_t addr;
-      status = _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ, 0, vmo, 0,
-                            map_size, &addr);
-      if (status == ZX_OK) {
-        *buff = reinterpret_cast<char *>(addr);
-        *buff_size = map_size;
-        *read_len = max_len;
-      }
-    }
-    _zx_handle_close(vmo);
-  }
-  if (status != ZX_OK && errno_p)
-    *errno_p = status;
-  return status == ZX_OK;
+  *errno_p = ZX_ERR_NOT_SUPPORTED;
+  return false;
 }
 
 void RawWrite(const char *buffer) {
