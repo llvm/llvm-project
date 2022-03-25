@@ -174,9 +174,8 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
 
   PreservedAnalyses PA = PreservedAnalyses::all();
   CG.buildRefSCCs();
-  for (auto RCI = CG.postorder_ref_scc_begin(),
-            RCE = CG.postorder_ref_scc_end();
-       RCI != RCE;) {
+  for (LazyCallGraph::RefSCC &RC :
+       llvm::make_early_inc_range(CG.postorder_ref_sccs())) {
     assert(RCWorklist.empty() &&
            "Should always start with an empty RefSCC worklist");
     // The postorder_ref_sccs range we are walking is lazily constructed, so
@@ -190,7 +189,7 @@ ModuleToPostOrderCGSCCPassAdaptor::run(Module &M, ModuleAnalysisManager &AM) {
     //
     // We also eagerly increment the iterator to the next position because
     // the CGSCC passes below may delete the current RefSCC.
-    RCWorklist.insert(&*RCI++);
+    RCWorklist.insert(&RC);
 
     do {
       LazyCallGraph::RefSCC *RC = RCWorklist.pop_back_val();
