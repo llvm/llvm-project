@@ -11,8 +11,8 @@ This repository is only intended to be checked out inside of a full LLVM+Clang
 tree, and in the 'tools/extra' subdirectory of the Clang checkout.
 
 All discussion regarding Clang, Clang-based tools, and code in this repository
-should be held using the standard Clang mailing lists:
-  http://lists.llvm.org/mailman/listinfo/cfe-dev
+should be held using the standard Clang forum:
+  https://discourse.llvm.org/c/clang
 
 Code review for this tree should take place on the standard Clang patch and
 commit lists:

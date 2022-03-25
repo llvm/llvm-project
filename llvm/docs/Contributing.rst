@@ -147,7 +147,7 @@ of LLVM's high-level design, as well as its internals:
 
   .. __: http://www.aosabook.org/en/llvm.html
 
-.. _Developer's List (llvm-dev): http://lists.llvm.org/mailman/listinfo/llvm-dev
+.. _Forum: https://discourse.llvm.org
 .. _irc.oftc.net: irc://irc.oftc.net/llvm
 .. _beginner: https://github.com/llvm/llvm-project/issues?q=is%3Aopen+is%3Aissue+label%3Abeginner
 .. _bug tracker: https://github.com/llvm/llvm-project/issues
@@ -155,4 +155,3 @@ of LLVM's high-level design, as well as its internals:
 .. _git-clang-format: https://reviews.llvm.org/source/llvm-github/browse/main/clang/tools/clang-format/git-clang-format
 .. _LLVM's Phabricator: https://reviews.llvm.org/
 .. _LLVM's Open Projects page: https://llvm.org/OpenProjects.html#what
-.. _LLVM Developer's mailing list: http://lists.llvm.org/mailman/listinfo/llvm-dev
