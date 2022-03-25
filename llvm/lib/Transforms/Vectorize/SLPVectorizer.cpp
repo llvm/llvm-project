@@ -1964,8 +1964,12 @@ public:
   /// Checks if the instruction is marked for deletion.
   bool isDeleted(Instruction *I) const { return DeletedInstructions.count(I); }
 
-  /// Marks values operands for later deletion by replacing them with Undefs.
-  void eraseInstructions(ArrayRef<Value *> AV);
+  /// Removes an instruction from its block and eventually deletes it.
+  /// It's like Instruction::eraseFromParent() except that the actual deletion
+  /// is delayed until BoUpSLP is destructed.
+  void eraseInstruction(Instruction *I) {
+    DeletedInstructions.insert(I);
+  }
 
   ~BoUpSLP();
 
@@ -2521,20 +2525,12 @@ private:
   // invalidates capture results.
   BatchAAResults BatchAA;
 
-  /// Removes an instruction from its block and eventually deletes it.
-  /// It's like Instruction::eraseFromParent() except that the actual deletion
-  /// is delayed until BoUpSLP is destructed.
-  /// This is required to ensure that there are no incorrect collisions in the
-  /// AliasCache, which can happen if a new instruction is allocated at the
-  /// same address as a previously deleted instruction.
-  void eraseInstruction(Instruction *I, bool ReplaceOpsWithUndef = false) {
-    auto It = DeletedInstructions.try_emplace(I, ReplaceOpsWithUndef).first;
-    It->getSecond() = It->getSecond() && ReplaceOpsWithUndef;
-  }
-
   /// Temporary store for deleted instructions. Instructions will be deleted
-  /// eventually when the BoUpSLP is destructed.
-  DenseMap<Instruction *, bool> DeletedInstructions;
+  /// eventually when the BoUpSLP is destructed.  The deferral is required to
+  /// ensure that there are no incorrect collisions in the AliasCache, which
+  /// can happen if a new instruction is allocated at the same address as a
+  /// previously deleted instruction.
+  DenseSet<Instruction *> DeletedInstructions;
 
   /// A list of values that need to extracted out of the tree.
   /// This list holds pairs of (Internal Scalar : External User). External User
@@ -3208,32 +3204,18 @@ template <> struct DOTGraphTraits<BoUpSLP *> : public DefaultDOTGraphTraits {
 } // end namespace llvm
 
 BoUpSLP::~BoUpSLP() {
-  for (const auto &Pair : DeletedInstructions) {
-    // Replace operands of ignored instructions with Undefs in case if they were
-    // marked for deletion.
-    if (Pair.getSecond()) {
-      Value *Undef = UndefValue::get(Pair.getFirst()->getType());
-      Pair.getFirst()->replaceAllUsesWith(Undef);
-    }
-    Pair.getFirst()->dropAllReferences();
-  }
-  for (const auto &Pair : DeletedInstructions) {
-    assert(Pair.getFirst()->use_empty() &&
+  for (auto *I : DeletedInstructions)
+    I->dropAllReferences();
+  for (auto *I : DeletedInstructions) {
+    assert(I->use_empty() &&
            "trying to erase instruction with users.");
-    Pair.getFirst()->eraseFromParent();
+    I->eraseFromParent();
   }
 #ifdef EXPENSIVE_CHECKS
   // If we could guarantee that this call is not extremely slow, we could
   // remove the ifdef limitation (see PR47712).
   assert(!verifyFunction(*F, &dbgs()));
 #endif
-}
-
-void BoUpSLP::eraseInstructions(ArrayRef<Value *> AV) {
-  for (auto *V : AV) {
-    if (auto *I = dyn_cast<Instruction>(V))
-      eraseInstruction(I, /*ReplaceOpsWithUndef=*/true);
-  };
 }
 
 /// Reorders the given \p Reuses mask according to the given \p Mask. \p Reuses
@@ -9831,9 +9813,26 @@ public:
 
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
-      // Mark all scalar reduction ops for deletion, they are replaced by the
-      // vector reductions.
-      V.eraseInstructions(IgnoreList);
+      // The original scalar reduction is expected to have no remaining
+      // uses outside the reduction tree itself.  Assert that we got this
+      // correct, replace internal uses with undef, and mark for eventual
+      // deletion.
+#ifndef NDEBUG
+      SmallSet<Value *, 4> IgnoreSet;
+      IgnoreSet.insert(IgnoreList.begin(), IgnoreList.end());
+#endif
+      for (auto *Ignore : IgnoreList) {
+#ifndef NDEBUG
+        for (auto *U : Ignore->users()) {
+          assert(IgnoreSet.count(U));
+        }
+#endif
+        if (!Ignore->use_empty()) {
+          Value *Undef = UndefValue::get(Ignore->getType());
+          Ignore->replaceAllUsesWith(Undef);
+        }
+        V.eraseInstruction(cast<Instruction>(Ignore));
+      }
     }
     return VectorizedTree;
   }
