@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMPDBDUMP_LINEPRINTER_H
-#define LLVM_TOOLS_LLVMPDBDUMP_LINEPRINTER_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_LINEPRINTER_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_LINEPRINTER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
 #include "llvm/Support/BinaryStreamRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -19,11 +20,27 @@
 
 #include <list>
 
+// Container for filter options to control which elements will be printed.
+struct FilterOptions {
+  std::list<std::string> ExcludeTypes;
+  std::list<std::string> ExcludeSymbols;
+  std::list<std::string> ExcludeCompilands;
+  std::list<std::string> IncludeTypes;
+  std::list<std::string> IncludeSymbols;
+  std::list<std::string> IncludeCompilands;
+  uint32_t PaddingThreshold;
+  uint32_t SizeThreshold;
+  uint32_t DumpModi;
+  bool JustMyCode;
+};
+
 namespace llvm {
 namespace msf {
 class MSFStreamLayout;
 } // namespace msf
 namespace pdb {
+
+extern FilterOptions Filters;
 
 class ClassLayout;
 class PDBFile;
@@ -32,7 +49,8 @@ class LinePrinter {
   friend class WithColor;
 
 public:
-  LinePrinter(int Indent, bool UseColor, raw_ostream &Stream);
+  LinePrinter(int Indent, bool UseColor, raw_ostream &Stream,
+              FilterOptions &Filters);
 
   void Indent(uint32_t Amount = 0);
   void Unindent(uint32_t Amount = 0);
@@ -40,10 +58,10 @@ public:
 
   void printLine(const Twine &T);
   void print(const Twine &T);
-  template <typename... Ts> void formatLine(const char *Fmt, Ts &&... Items) {
+  template <typename... Ts> void formatLine(const char *Fmt, Ts &&...Items) {
     printLine(formatv(Fmt, std::forward<Ts>(Items)...));
   }
-  template <typename... Ts> void format(const char *Fmt, Ts &&... Items) {
+  template <typename... Ts> void format(const char *Fmt, Ts &&...Items) {
     print(formatv(Fmt, std::forward<Ts>(Items)...));
   }
 
@@ -161,7 +179,7 @@ private:
   raw_ostream &OS;
   bool UseColor;
 };
-}
-}
+} // namespace pdb
+} // namespace llvm
 
 #endif

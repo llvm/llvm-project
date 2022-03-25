@@ -6,10 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InputFile.h"
-
-#include "FormatUtil.h"
-#include "LinePrinter.h"
+#include "llvm/DebugInfo/PDB/Native/InputFile.h"
 
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
@@ -17,6 +14,8 @@
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/DebugInfo/PDB/Native/NativeSession.h"
 #include "llvm/DebugInfo/PDB/Native/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
@@ -35,8 +34,9 @@ using namespace llvm::pdb;
 InputFile::InputFile() {}
 InputFile::~InputFile() {}
 
-static Expected<ModuleDebugStreamRef>
-getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index) {
+Expected<ModuleDebugStreamRef>
+llvm::pdb::getModuleDebugStream(PDBFile &File, StringRef &ModuleName,
+                                uint32_t Index) {
   Expected<DbiStream &> DbiOrErr = File.getPDBDbiStream();
   if (!DbiOrErr)
     return DbiOrErr.takeError();
@@ -59,6 +59,30 @@ getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index) {
 
   ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
   if (auto EC = ModS.reload())
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Invalid module stream");
+
+  return std::move(ModS);
+}
+
+Expected<ModuleDebugStreamRef> llvm::pdb::getModuleDebugStream(PDBFile &File,
+                                                               uint32_t Index) {
+  Expected<DbiStream &> DbiOrErr = File.getPDBDbiStream();
+  if (!DbiOrErr)
+    return DbiOrErr.takeError();
+  DbiStream &Dbi = *DbiOrErr;
+  const auto &Modules = Dbi.modules();
+  auto Modi = Modules.getModuleDescriptor(Index);
+
+  uint16_t ModiStream = Modi.getModuleStreamIndex();
+  if (ModiStream == kInvalidStreamIndex)
+    return make_error<RawError>(raw_error_code::no_stream,
+                                "Module stream not present");
+
+  auto ModStreamData = File.createIndexedStream(ModiStream);
+
+  ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
+  if (Error Err = ModS.reload())
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Invalid module stream");
 
@@ -122,7 +146,7 @@ static std::string formatChecksumKind(FileChecksumKind Kind) {
 }
 
 template <typename... Args>
-static void formatInternal(LinePrinter &Printer, bool Append, Args &&... args) {
+static void formatInternal(LinePrinter &Printer, bool Append, Args &&...args) {
   if (Append)
     Printer.format(std::forward<Args>(args)...);
   else
@@ -209,6 +233,26 @@ const ModuleDebugStreamRef &SymbolGroup::getPdbModuleStream() const {
 
 Expected<StringRef> SymbolGroup::getNameFromStringTable(uint32_t Offset) const {
   return SC.strings().getString(Offset);
+}
+
+Expected<StringRef> SymbolGroup::getNameFromChecksums(uint32_t Offset) const {
+  StringRef Name;
+  if (!SC.hasChecksums()) {
+    return std::move(Name);
+  }
+
+  auto Iter = SC.checksums().getArray().at(Offset);
+  if (Iter == SC.checksums().getArray().end()) {
+    return std::move(Name);
+  }
+
+  uint32_t FO = Iter->FileNameOffset;
+  auto ExpectedFile = getNameFromStringTable(FO);
+  if (!ExpectedFile) {
+    return std::move(Name);
+  }
+
+  return *ExpectedFile;
 }
 
 void SymbolGroup::formatFromFileName(LinePrinter &Printer, StringRef File,
@@ -509,4 +553,34 @@ bool SymbolGroupIterator::isEnd() const {
 
   assert(SectionIter.hasValue());
   return *SectionIter == Value.File->obj().section_end();
+}
+
+static bool isMyCode(const SymbolGroup &Group) {
+  if (Group.getFile().isObj())
+    return true;
+
+  StringRef Name = Group.name();
+  if (Name.startswith("Import:"))
+    return false;
+  if (Name.endswith_insensitive(".dll"))
+    return false;
+  if (Name.equals_insensitive("* linker *"))
+    return false;
+  if (Name.startswith_insensitive("f:\\binaries\\Intermediate\\vctools"))
+    return false;
+  if (Name.startswith_insensitive("f:\\dd\\vctools\\crt"))
+    return false;
+  return true;
+}
+
+bool llvm::pdb::shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group) {
+  if (llvm::pdb::Filters.JustMyCode && !isMyCode(Group))
+    return false;
+
+  // If the arg was not specified on the command line, always dump all modules.
+  if (llvm::pdb::Filters.DumpModi == 0)
+    return true;
+
+  // Otherwise, only dump if this is the same module specified.
+  return (llvm::pdb::Filters.DumpModi == Idx);
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMPDBDUMP_INPUTFILE_H
-#define LLVM_TOOLS_LLVMPDBDUMP_INPUTFILE_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_INPUTFILE_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_INPUTFILE_H
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -15,6 +15,7 @@
 #include "llvm/ADT/iterator.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
 #include "llvm/DebugInfo/CodeView/StringsAndChecksums.h"
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/DebugInfo/PDB/Native/ModuleDebugStream.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
@@ -54,6 +55,9 @@ class InputFile {
   getOrCreateTypeCollection(TypeCollectionKind Kind);
 
 public:
+  InputFile(PDBFile *Pdb) { PdbOrObj = Pdb; }
+  InputFile(object::COFFObjectFile *Obj) { PdbOrObj = Obj; }
+  InputFile(MemoryBuffer *Buffer) { PdbOrObj = Buffer; }
   ~InputFile();
   InputFile(InputFile &&Other) = default;
 
@@ -91,6 +95,7 @@ public:
   explicit SymbolGroup(InputFile *File, uint32_t GroupIndex = 0);
 
   Expected<StringRef> getNameFromStringTable(uint32_t Offset) const;
+  Expected<StringRef> getNameFromChecksums(uint32_t Offset) const;
 
   void formatFromFileName(LinePrinter &Printer, StringRef File,
                           bool Append = false) const;
@@ -147,6 +152,80 @@ private:
   Optional<object::section_iterator> SectionIter;
   SymbolGroup Value;
 };
+
+Expected<ModuleDebugStreamRef>
+getModuleDebugStream(PDBFile &File, StringRef &ModuleName, uint32_t Index);
+Expected<ModuleDebugStreamRef> getModuleDebugStream(PDBFile &File,
+                                                    uint32_t Index);
+
+bool shouldDumpSymbolGroup(uint32_t Idx, const SymbolGroup &Group);
+
+// TODO: Change these callbacks to be function_refs (de-templatify them).
+template <typename CallbackT>
+Error iterateOneModule(InputFile &File, const Optional<PrintScope> &HeaderScope,
+                       const SymbolGroup &SG, uint32_t Modi,
+                       CallbackT Callback) {
+  if (HeaderScope) {
+    HeaderScope->P.formatLine(
+        "Mod {0:4} | `{1}`: ",
+        fmt_align(Modi, AlignStyle::Right, HeaderScope->LabelWidth), SG.name());
+  }
+
+  AutoIndent Indent(HeaderScope);
+  return Callback(Modi, SG);
+}
+
+template <typename CallbackT>
+Error iterateSymbolGroups(InputFile &Input,
+                          const Optional<PrintScope> &HeaderScope,
+                          CallbackT Callback) {
+  AutoIndent Indent(HeaderScope);
+
+  if (llvm::pdb::Filters.DumpModi > 0) {
+    assert(llvm::pdb::Filters.DumpModi == 1);
+    uint32_t Modi = llvm::pdb::Filters.DumpModi;
+    SymbolGroup SG(&Input, Modi);
+    return iterateOneModule(Input, withLabelWidth(HeaderScope, NumDigits(Modi)),
+                            SG, Modi, Callback);
+  }
+
+  uint32_t I = 0;
+
+  for (const auto &SG : Input.symbol_groups()) {
+    if (shouldDumpSymbolGroup(I, SG))
+      if (auto Err =
+              iterateOneModule(Input, withLabelWidth(HeaderScope, NumDigits(I)),
+                               SG, I, Callback))
+        return Err;
+
+    ++I;
+  }
+  return Error::success();
+}
+
+template <typename SubsectionT>
+Error iterateModuleSubsections(
+    InputFile &File, const Optional<PrintScope> &HeaderScope,
+    llvm::function_ref<Error(uint32_t, const SymbolGroup &, SubsectionT &)>
+        Callback) {
+
+  return iterateSymbolGroups(
+      File, HeaderScope, [&](uint32_t Modi, const SymbolGroup &SG) -> Error {
+        for (const auto &SS : SG.getDebugSubsections()) {
+          SubsectionT Subsection;
+
+          if (SS.kind() != Subsection.kind())
+            continue;
+
+          BinaryStreamReader Reader(SS.getRecordData());
+          if (auto Err = Subsection.initialize(Reader))
+            continue;
+          if (auto Err = Callback(Modi, SG, Subsection))
+            return Err;
+        }
+        return Error::success();
+      });
+}
 
 } // namespace pdb
 } // namespace llvm

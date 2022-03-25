@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PrettyBuiltinDumper.h"
-#include "LinePrinter.h"
 
+#include "llvm/DebugInfo/PDB/Native/LinePrinter.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeBuiltin.h"
 
 using namespace llvm;
