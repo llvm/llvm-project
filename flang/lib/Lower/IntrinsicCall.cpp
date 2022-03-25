@@ -1014,9 +1014,13 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"aint", "llvm.trunc.f64", genF64F64FuncType},
     {"anint", "llvm.round.f32", genF32F32FuncType},
     {"anint", "llvm.round.f64", genF64F64FuncType},
+    {"atan", "atanf", genF32F32FuncType},
+    {"atan", "atan", genF64F64FuncType},
     // ceil is used for CEILING but is different, it returns a real.
     {"ceil", "llvm.ceil.f32", genF32F32FuncType},
     {"ceil", "llvm.ceil.f64", genF64F64FuncType},
+    {"cosh", "coshf", genF32F32FuncType},
+    {"cosh", "cosh", genF64F64FuncType},
     {"exp", "llvm.exp.f32", genF32F32FuncType},
     {"exp", "llvm.exp.f64", genF64F64FuncType},
     // llvm.floor is used for FLOOR, but returns real.
@@ -1036,6 +1040,8 @@ static constexpr RuntimeFunction llvmIntrinsics[] = {
     {"sign", "llvm.copysign.f64", genF64F64F64FuncType},
     {"sign", "llvm.copysign.f80", genF80F80F80FuncType},
     {"sign", "llvm.copysign.f128", genF128F128F128FuncType},
+    {"sinh", "sinhf", genF32F32FuncType},
+    {"sinh", "sinh", genF64F64FuncType},
     {"sqrt", "llvm.sqrt.f32", genF32F32FuncType},
     {"sqrt", "llvm.sqrt.f64", genF64F64FuncType},
 };
