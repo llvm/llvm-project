@@ -1287,8 +1287,6 @@ static void readConfigs(opt::InputArgList &args) {
       error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
             "'");
 
-  config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
-
   // Parse -mllvm options.
   for (auto *arg : args.filtered(OPT_mllvm))
     parseClangOption(arg->getValue(), arg->getSpelling());
