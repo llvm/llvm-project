@@ -243,12 +243,12 @@ declare void @dummy(i1) nounwind
 declare void @llvm.experimental.guard(i1, ...)
 ;.
 ; IS________OPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone }
-; IS________OPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
+; IS________OPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
 ; IS________OPM: attributes #[[ATTR2]] = { nounwind }
-; IS________OPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
+; IS________OPM: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync willreturn }
 ;.
 ; IS________NPM: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nofree nosync nounwind willreturn }
+; IS________NPM: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
 ; IS________NPM: attributes #[[ATTR2]] = { nounwind }
-; IS________NPM: attributes #[[ATTR3:[0-9]+]] = { nofree nosync willreturn }
+; IS________NPM: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync willreturn }
 ;.

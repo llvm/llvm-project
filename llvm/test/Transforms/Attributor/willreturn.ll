@@ -37,9 +37,9 @@ define i32 @fib(i32 %0) local_unnamed_addr #0 {
 ; IS________OPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
 ; IS________OPM:       3:
 ; IS________OPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS________OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR25:[0-9]+]]
+; IS________OPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR24:[0-9]+]]
 ; IS________OPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS________OPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR25]]
+; IS________OPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR24]]
 ; IS________OPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
 ; IS________OPM-NEXT:    ret i32 [[TMP8]]
 ; IS________OPM:       9:
@@ -52,9 +52,9 @@ define i32 @fib(i32 %0) local_unnamed_addr #0 {
 ; IS________NPM-NEXT:    br i1 [[TMP2]], label [[TMP9:%.*]], label [[TMP3:%.*]]
 ; IS________NPM:       3:
 ; IS________NPM-NEXT:    [[TMP4:%.*]] = add nsw i32 [[TMP0]], -1
-; IS________NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR27:[0-9]+]]
+; IS________NPM-NEXT:    [[TMP5:%.*]] = tail call i32 @fib(i32 [[TMP4]]) #[[ATTR26:[0-9]+]]
 ; IS________NPM-NEXT:    [[TMP6:%.*]] = add nsw i32 [[TMP0]], -2
-; IS________NPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR27]]
+; IS________NPM-NEXT:    [[TMP7:%.*]] = tail call i32 @fib(i32 [[TMP6]]) #[[ATTR26]]
 ; IS________NPM-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], [[TMP5]]
 ; IS________NPM-NEXT:    ret i32 [[TMP8]]
 ; IS________NPM:       9:
@@ -199,8 +199,8 @@ define void @mutual_recursion1(i1 %c) #0 {
 ; IS________OPM-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS________OPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; IS________OPM:       rec:
-; IS________OPM-NEXT:    call void @sink() #[[ATTR13:[0-9]+]]
-; IS________OPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) #[[ATTR26:[0-9]+]]
+; IS________OPM-NEXT:    call void @sink() #[[ATTR12:[0-9]+]]
+; IS________OPM-NEXT:    call void @mutual_recursion2(i1 [[C]]) #[[ATTR25:[0-9]+]]
 ; IS________OPM-NEXT:    br label [[END]]
 ; IS________OPM:       end:
 ; IS________OPM-NEXT:    ret void
@@ -210,8 +210,8 @@ define void @mutual_recursion1(i1 %c) #0 {
 ; IS________NPM-SAME: (i1 [[C:%.*]]) #[[ATTR4:[0-9]+]] {
 ; IS________NPM-NEXT:    br i1 [[C]], label [[REC:%.*]], label [[END:%.*]]
 ; IS________NPM:       rec:
-; IS________NPM-NEXT:    call void @sink() #[[ATTR13:[0-9]+]]
-; IS________NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) #[[ATTR28:[0-9]+]]
+; IS________NPM-NEXT:    call void @sink() #[[ATTR12:[0-9]+]]
+; IS________NPM-NEXT:    call void @mutual_recursion2(i1 noundef [[C]]) #[[ATTR27:[0-9]+]]
 ; IS________NPM-NEXT:    br label [[END]]
 ; IS________NPM:       end:
 ; IS________NPM-NEXT:    ret void
@@ -230,13 +230,13 @@ define void @mutual_recursion2(i1 %c) #0 {
 ; IS________OPM: Function Attrs: nofree noinline nosync nounwind uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@mutual_recursion2
 ; IS________OPM-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
-; IS________OPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR26]]
+; IS________OPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR25]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: nofree noinline nosync nounwind uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@mutual_recursion2
 ; IS________NPM-SAME: (i1 [[C:%.*]]) #[[ATTR4]] {
-; IS________NPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR28]]
+; IS________NPM-NEXT:    call void @mutual_recursion1(i1 [[C]]) #[[ATTR27]]
 ; IS________NPM-NEXT:    ret void
 ;
   call void @mutual_recursion1(i1 %c)
@@ -312,14 +312,14 @@ define void @conditional_exit(i32 %0, i32* nocapture readonly %1) local_unnamed_
 
 ; TEST 6 (positive case)
 ; Call intrinsic function
-; CHECK: Function Attrs: nofree nosync nounwind readnone speculatable willreturn
+; CHECK: Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
 ; CHECK-NEXT: declare float @llvm.floor.f32(float)
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@call_floor
-; CHECK-SAME: (float [[A:%.*]]) #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: (float [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    ret void
 ;
   tail call float @llvm.floor.f32(float %a)
@@ -327,16 +327,16 @@ define void @call_floor(float %a) #0 {
 }
 
 define float @call_floor2(float %a) #0 {
-; IS________OPM: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
+; IS________OPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@call_floor2
-; IS________OPM-SAME: (float [[A:%.*]]) #[[ATTR9]] {
-; IS________OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR27:[0-9]+]]
+; IS________OPM-SAME: (float [[A:%.*]]) #[[ATTR0]] {
+; IS________OPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR26:[0-9]+]]
 ; IS________OPM-NEXT:    ret float [[C]]
 ;
-; IS________NPM: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
+; IS________NPM: Function Attrs: nofree noinline norecurse nosync nounwind readnone willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@call_floor2
-; IS________NPM-SAME: (float [[A:%.*]]) #[[ATTR9]] {
-; IS________NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR29:[0-9]+]]
+; IS________NPM-SAME: (float [[A:%.*]]) #[[ATTR0]] {
+; IS________NPM-NEXT:    [[C:%.*]] = tail call float @llvm.floor.f32(float [[A]]) #[[ATTR28:[0-9]+]]
 ; IS________NPM-NEXT:    ret float [[C]]
 ;
   %c = tail call float @llvm.floor.f32(float %a)
@@ -356,13 +356,13 @@ define void @call_maybe_noreturn() #0 {
 ; IS________OPM: Function Attrs: noinline nounwind uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
 ; IS________OPM-SAME: () #[[ATTR7]] {
-; IS________OPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR28:[0-9]+]]
+; IS________OPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR27:[0-9]+]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: noinline nounwind uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@call_maybe_noreturn
 ; IS________NPM-SAME: () #[[ATTR7]] {
-; IS________NPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR30:[0-9]+]]
+; IS________NPM-NEXT:    tail call void @maybe_noreturn() #[[ATTR29:[0-9]+]]
 ; IS________NPM-NEXT:    ret void
 ;
   tail call void @maybe_noreturn()
@@ -380,14 +380,14 @@ declare void @will_return() willreturn norecurse
 define void @f1() #0 {
 ; IS________OPM: Function Attrs: noinline nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@f1
-; IS________OPM-SAME: () #[[ATTR11:[0-9]+]] {
-; IS________OPM-NEXT:    tail call void @will_return() #[[ATTR29:[0-9]+]]
+; IS________OPM-SAME: () #[[ATTR10:[0-9]+]] {
+; IS________OPM-NEXT:    tail call void @will_return() #[[ATTR28:[0-9]+]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: noinline nounwind willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@f1
-; IS________NPM-SAME: () #[[ATTR11:[0-9]+]] {
-; IS________NPM-NEXT:    tail call void @will_return() #[[ATTR31:[0-9]+]]
+; IS________NPM-SAME: () #[[ATTR10:[0-9]+]] {
+; IS________NPM-NEXT:    tail call void @will_return() #[[ATTR30:[0-9]+]]
 ; IS________NPM-NEXT:    ret void
 ;
   tail call void @will_return()
@@ -397,8 +397,8 @@ define void @f1() #0 {
 define void @f2() #0 {
 ; CHECK: Function Attrs: noinline nounwind willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@f2
-; CHECK-SAME: () #[[ATTR11:[0-9]+]] {
-; CHECK-NEXT:    tail call void @f1() #[[ATTR13:[0-9]+]]
+; CHECK-SAME: () #[[ATTR10:[0-9]+]] {
+; CHECK-NEXT:    tail call void @f1() #[[ATTR12:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @f1()
@@ -439,8 +439,8 @@ declare i1 @maybe_raise_exception() #1 willreturn
 define void @invoke_test() personality i32 (...)* @__gxx_personality_v0 {
 ; IS________OPM: Function Attrs: nounwind willreturn
 ; IS________OPM-LABEL: define {{[^@]+}}@invoke_test
-; IS________OPM-SAME: () #[[ATTR13]] personality i32 (...)* @__gxx_personality_v0 {
-; IS________OPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR29]]
+; IS________OPM-SAME: () #[[ATTR12]] personality i32 (...)* @__gxx_personality_v0 {
+; IS________OPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR28]]
 ; IS________OPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
 ; IS________OPM:       N:
 ; IS________OPM-NEXT:    ret void
@@ -451,8 +451,8 @@ define void @invoke_test() personality i32 (...)* @__gxx_personality_v0 {
 ;
 ; IS________NPM: Function Attrs: nounwind willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@invoke_test
-; IS________NPM-SAME: () #[[ATTR13]] personality i32 (...)* @__gxx_personality_v0 {
-; IS________NPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR31]]
+; IS________NPM-SAME: () #[[ATTR12]] personality i32 (...)* @__gxx_personality_v0 {
+; IS________NPM-NEXT:    [[TMP1:%.*]] = invoke i1 @maybe_raise_exception() #[[ATTR30]]
 ; IS________NPM-NEXT:    to label [[N:%.*]] unwind label [[F:%.*]]
 ; IS________NPM:       N:
 ; IS________NPM-NEXT:    ret void
@@ -487,7 +487,7 @@ declare i32 @__gxx_personality_v0(...)
 define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ; IS________OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS________OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]]) #[[ATTR14:[0-9]+]] {
+; IS________OPM-SAME: (i32* nocapture nofree readonly [[TMP0:%.*]]) #[[ATTR13:[0-9]+]] {
 ; IS________OPM-NEXT:    br label [[TMP3:%.*]]
 ; IS________OPM:       2:
 ; IS________OPM-NEXT:    ret i32 [[TMP8:%.*]]
@@ -503,7 +503,7 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 ;
 ; IS________NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@loop_constant_trip_count
-; IS________NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) #[[ATTR14:[0-9]+]] {
+; IS________NPM-SAME: (i32* nocapture nofree nonnull readonly dereferenceable(4) [[TMP0:%.*]]) #[[ATTR13:[0-9]+]] {
 ; IS________NPM-NEXT:    br label [[TMP3:%.*]]
 ; IS________NPM:       2:
 ; IS________NPM-NEXT:    ret i32 [[TMP8:%.*]]
@@ -547,7 +547,7 @@ define i32 @loop_constant_trip_count(i32* nocapture readonly %0) #0 {
 define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, i32 %3) local_unnamed_addr #0 {
 ; IS________OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; IS________OPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR14]] {
+; IS________OPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR13]] {
 ; IS________OPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 ; IS________OPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
 ; IS________OPM:       6:
@@ -566,7 +566,7 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 ;
 ; IS________NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@loop_trip_count_unbound
-; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR15:[0-9]+]] {
+; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32* nocapture nofree readonly [[TMP2:%.*]], i32 [[TMP3:%.*]]) local_unnamed_addr #[[ATTR14:[0-9]+]] {
 ; IS________NPM-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP0]], [[TMP1]]
 ; IS________NPM-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP8:%.*]]
 ; IS________NPM:       6:
@@ -617,7 +617,7 @@ define i32 @loop_trip_count_unbound(i32 %0, i32 %1, i32* nocapture readonly %2, 
 define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr #0 {
 ; IS________OPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS________OPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR14]] {
+; IS________OPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR13]] {
 ; IS________OPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
 ; IS________OPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
 ; IS________OPM:       4:
@@ -638,7 +638,7 @@ define i32 @loop_trip_dec(i32 %0, i32* nocapture readonly %1) local_unnamed_addr
 ;
 ; IS________NPM: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@loop_trip_dec
-; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR14]] {
+; IS________NPM-SAME: (i32 [[TMP0:%.*]], i32* nocapture nofree readonly [[TMP1:%.*]]) local_unnamed_addr #[[ATTR13]] {
 ; IS________NPM-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP0]], -1
 ; IS________NPM-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP14:%.*]]
 ; IS________NPM:       4:
@@ -709,16 +709,16 @@ f:
 define void @unreachable_exit_positive1() #0 {
 ; IS________OPM: Function Attrs: noinline nounwind willreturn uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS________OPM-SAME: () #[[ATTR11]] {
-; IS________OPM-NEXT:    tail call void @will_return() #[[ATTR29]]
+; IS________OPM-SAME: () #[[ATTR10]] {
+; IS________OPM-NEXT:    tail call void @will_return() #[[ATTR28]]
 ; IS________OPM-NEXT:    ret void
 ; IS________OPM:       unreachable_label:
 ; IS________OPM-NEXT:    unreachable
 ;
 ; IS________NPM: Function Attrs: noinline nounwind willreturn uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@unreachable_exit_positive1
-; IS________NPM-SAME: () #[[ATTR11]] {
-; IS________NPM-NEXT:    tail call void @will_return() #[[ATTR31]]
+; IS________NPM-SAME: () #[[ATTR10]] {
+; IS________NPM-NEXT:    tail call void @will_return() #[[ATTR30]]
 ; IS________NPM-NEXT:    ret void
 ; IS________NPM:       unreachable_label:
 ; IS________NPM-NEXT:    unreachable
@@ -811,7 +811,7 @@ unreachable_label:
 define void @unreachable_exit_negative2() #0 {
 ; IS________OPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
 ; IS________OPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
-; IS________OPM-SAME: () #[[ATTR15:[0-9]+]] {
+; IS________OPM-SAME: () #[[ATTR14:[0-9]+]] {
 ; IS________OPM-NEXT:    br label [[L1:%.*]]
 ; IS________OPM:       L1:
 ; IS________OPM-NEXT:    br label [[L2:%.*]]
@@ -822,7 +822,7 @@ define void @unreachable_exit_negative2() #0 {
 ;
 ; IS________NPM: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
 ; IS________NPM-LABEL: define {{[^@]+}}@unreachable_exit_negative2
-; IS________NPM-SAME: () #[[ATTR16:[0-9]+]] {
+; IS________NPM-SAME: () #[[ATTR15:[0-9]+]] {
 ; IS________NPM-NEXT:    br label [[L1:%.*]]
 ; IS________NPM:       L1:
 ; IS________NPM-NEXT:    br label [[L2:%.*]]
@@ -871,7 +871,7 @@ define void @call_longjmp(i8* nocapture readnone %0) local_unnamed_addr #0 {
 define i32 @infinite_loop_inside_bounded_loop(i32 %n) {
 ; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS________OPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
-; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17:[0-9]+]] {
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR16:[0-9]+]] {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS________OPM:       for.cond:
@@ -892,7 +892,7 @@ define i32 @infinite_loop_inside_bounded_loop(i32 %n) {
 ;
 ; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS________NPM-LABEL: define {{[^@]+}}@infinite_loop_inside_bounded_loop
-; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18:[0-9]+]] {
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR17:[0-9]+]] {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS________NPM:       for.cond:
@@ -953,7 +953,7 @@ for.end:                                          ; preds = %for.cond.cleanup
 define i32 @bounded_nested_loops(i32 %n) {
 ; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS________OPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS________OPM:       for.cond:
@@ -982,7 +982,7 @@ define i32 @bounded_nested_loops(i32 %n) {
 ;
 ; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@bounded_nested_loops
-; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR19:[0-9]+]] {
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18:[0-9]+]] {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    br label [[FOR_COND:%.*]]
 ; IS________NPM:       for.cond:
@@ -1059,7 +1059,7 @@ for.end:                                          ; preds = %for.cond.cleanup
 define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS________OPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
-; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    br label [[WHILE_COND:%.*]]
 ; IS________OPM:       while.cond:
@@ -1090,7 +1090,7 @@ define i32 @bounded_loop_inside_unbounded_loop(i32 %n) {
 ;
 ; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS________NPM-LABEL: define {{[^@]+}}@bounded_loop_inside_unbounded_loop
-; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    br label [[WHILE_COND:%.*]]
 ; IS________NPM:       while.cond:
@@ -1174,7 +1174,7 @@ while.end:                                        ; preds = %while.cond
 define i32 @nested_unbounded_loops(i32 %n) {
 ; IS________OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS________OPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
-; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS________OPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
 ; IS________OPM-NEXT:  entry:
 ; IS________OPM-NEXT:    br label [[WHILE_COND:%.*]]
 ; IS________OPM:       while.cond:
@@ -1204,7 +1204,7 @@ define i32 @nested_unbounded_loops(i32 %n) {
 ;
 ; IS________NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS________NPM-LABEL: define {{[^@]+}}@nested_unbounded_loops
-; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
+; IS________NPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
 ; IS________NPM-NEXT:  entry:
 ; IS________NPM-NEXT:    br label [[WHILE_COND:%.*]]
 ; IS________NPM:       while.cond:
@@ -1294,9 +1294,9 @@ while.end11:                                      ; preds = %while.cond
 define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__TUNIT_OPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS__TUNIT_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
 ; IS__TUNIT_OPM-NEXT:  entry:
-; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR25]]
+; IS__TUNIT_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR24]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__TUNIT_OPM:       if.then:
@@ -1304,7 +1304,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM:       if.else:
 ; IS__TUNIT_OPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__TUNIT_OPM:       entry1:
-; IS__TUNIT_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR25]]
+; IS__TUNIT_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR24]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__TUNIT_OPM:       if.then3:
@@ -1312,7 +1312,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_OPM:       if.else4:
 ; IS__TUNIT_OPM-NEXT:    br label [[ENTRY2]]
 ; IS__TUNIT_OPM:       entry2:
-; IS__TUNIT_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR25]]
+; IS__TUNIT_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR24]]
 ; IS__TUNIT_OPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__TUNIT_OPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__TUNIT_OPM:       if.then7:
@@ -1324,9 +1324,9 @@ define void @non_loop_cycle(i32 %n) {
 ;
 ; IS__TUNIT_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__TUNIT_NPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
+; IS__TUNIT_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
 ; IS__TUNIT_NPM-NEXT:  entry:
-; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR27]]
+; IS__TUNIT_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR26]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__TUNIT_NPM:       if.then:
@@ -1334,7 +1334,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_NPM:       if.else:
 ; IS__TUNIT_NPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__TUNIT_NPM:       entry1:
-; IS__TUNIT_NPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR27]]
+; IS__TUNIT_NPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR26]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__TUNIT_NPM:       if.then3:
@@ -1342,7 +1342,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__TUNIT_NPM:       if.else4:
 ; IS__TUNIT_NPM-NEXT:    br label [[ENTRY2]]
 ; IS__TUNIT_NPM:       entry2:
-; IS__TUNIT_NPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR27]]
+; IS__TUNIT_NPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR26]]
 ; IS__TUNIT_NPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__TUNIT_NPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__TUNIT_NPM:       if.then7:
@@ -1354,9 +1354,9 @@ define void @non_loop_cycle(i32 %n) {
 ;
 ; IS__CGSCC_OPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_OPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
+; IS__CGSCC_OPM-SAME: (i32 [[N:%.*]]) #[[ATTR16]] {
 ; IS__CGSCC_OPM-NEXT:  entry:
-; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR30:[0-9]+]]
+; IS__CGSCC_OPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR29:[0-9]+]]
 ; IS__CGSCC_OPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
 ; IS__CGSCC_OPM-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; IS__CGSCC_OPM:       if.then:
@@ -1364,7 +1364,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__CGSCC_OPM:       if.else:
 ; IS__CGSCC_OPM-NEXT:    br label [[ENTRY2:%.*]]
 ; IS__CGSCC_OPM:       entry1:
-; IS__CGSCC_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR30]]
+; IS__CGSCC_OPM-NEXT:    [[CALL1:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR29]]
 ; IS__CGSCC_OPM-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[CALL1]], 5
 ; IS__CGSCC_OPM-NEXT:    br i1 [[CMP2]], label [[IF_THEN3:%.*]], label [[IF_ELSE4:%.*]]
 ; IS__CGSCC_OPM:       if.then3:
@@ -1372,7 +1372,7 @@ define void @non_loop_cycle(i32 %n) {
 ; IS__CGSCC_OPM:       if.else4:
 ; IS__CGSCC_OPM-NEXT:    br label [[ENTRY2]]
 ; IS__CGSCC_OPM:       entry2:
-; IS__CGSCC_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR30]]
+; IS__CGSCC_OPM-NEXT:    [[CALL5:%.*]] = call i32 @fact_loop(i32 [[N]]) #[[ATTR29]]
 ; IS__CGSCC_OPM-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[CALL5]], 5
 ; IS__CGSCC_OPM-NEXT:    br i1 [[CMP6]], label [[IF_THEN7:%.*]], label [[IF_ELSE8:%.*]]
 ; IS__CGSCC_OPM:       if.then7:
@@ -1384,7 +1384,7 @@ define void @non_loop_cycle(i32 %n) {
 ;
 ; IS__CGSCC_NPM: Function Attrs: nofree norecurse nosync nounwind readnone
 ; IS__CGSCC_NPM-LABEL: define {{[^@]+}}@non_loop_cycle
-; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR18]] {
+; IS__CGSCC_NPM-SAME: (i32 [[N:%.*]]) #[[ATTR17]] {
 ; IS__CGSCC_NPM-NEXT:  entry:
 ; IS__CGSCC_NPM-NEXT:    [[CALL:%.*]] = call i32 @fact_loop(i32 [[N]])
 ; IS__CGSCC_NPM-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 5
@@ -1458,13 +1458,13 @@ declare void @readonly_mustprogress() readonly mustprogress
 define void @willreturn_mustprogress_caller_1() mustprogress {
 ; IS________OPM: Function Attrs: mustprogress
 ; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
-; IS________OPM-SAME: () #[[ATTR20:[0-9]+]] {
+; IS________OPM-SAME: () #[[ATTR19:[0-9]+]] {
 ; IS________OPM-NEXT:    call void @unknown()
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: mustprogress
 ; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_1
-; IS________NPM-SAME: () #[[ATTR22:[0-9]+]] {
+; IS________NPM-SAME: () #[[ATTR21:[0-9]+]] {
 ; IS________NPM-NEXT:    call void @unknown()
 ; IS________NPM-NEXT:    ret void
 ;
@@ -1474,14 +1474,14 @@ define void @willreturn_mustprogress_caller_1() mustprogress {
 define void @willreturn_mustprogress_caller_2() mustprogress {
 ; IS________OPM: Function Attrs: mustprogress readonly willreturn
 ; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
-; IS________OPM-SAME: () #[[ATTR22:[0-9]+]] {
-; IS________OPM-NEXT:    call void @readonly() #[[ATTR18:[0-9]+]]
+; IS________OPM-SAME: () #[[ATTR21:[0-9]+]] {
+; IS________OPM-NEXT:    call void @readonly() #[[ATTR17:[0-9]+]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: mustprogress readonly willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_2
-; IS________NPM-SAME: () #[[ATTR24:[0-9]+]] {
-; IS________NPM-NEXT:    call void @readonly() #[[ATTR20:[0-9]+]]
+; IS________NPM-SAME: () #[[ATTR23:[0-9]+]] {
+; IS________NPM-NEXT:    call void @readonly() #[[ATTR19:[0-9]+]]
 ; IS________NPM-NEXT:    ret void
 ;
   call void @readonly()
@@ -1490,13 +1490,13 @@ define void @willreturn_mustprogress_caller_2() mustprogress {
 define void @willreturn_mustprogress_caller_3() mustprogress {
 ; IS________OPM: Function Attrs: mustprogress nosync readnone willreturn
 ; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
-; IS________OPM-SAME: () #[[ATTR23:[0-9]+]] {
+; IS________OPM-SAME: () #[[ATTR22:[0-9]+]] {
 ; IS________OPM-NEXT:    call void @readnone()
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: mustprogress nosync readnone willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_caller_3
-; IS________NPM-SAME: () #[[ATTR25:[0-9]+]] {
+; IS________NPM-SAME: () #[[ATTR24:[0-9]+]] {
 ; IS________NPM-NEXT:    call void @readnone()
 ; IS________NPM-NEXT:    ret void
 ;
@@ -1514,14 +1514,14 @@ define void @willreturn_mustprogress_callee_1() {
 define void @willreturn_mustprogress_callee_2() {
 ; IS________OPM: Function Attrs: readonly willreturn
 ; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
-; IS________OPM-SAME: () #[[ATTR24:[0-9]+]] {
-; IS________OPM-NEXT:    call void @readonly_mustprogress() #[[ATTR24]]
+; IS________OPM-SAME: () #[[ATTR23:[0-9]+]] {
+; IS________OPM-NEXT:    call void @readonly_mustprogress() #[[ATTR23]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: readonly willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_2
-; IS________NPM-SAME: () #[[ATTR26:[0-9]+]] {
-; IS________NPM-NEXT:    call void @readonly_mustprogress() #[[ATTR26]]
+; IS________NPM-SAME: () #[[ATTR25:[0-9]+]] {
+; IS________NPM-NEXT:    call void @readonly_mustprogress() #[[ATTR25]]
 ; IS________NPM-NEXT:    ret void
 ;
   call void @readonly_mustprogress()
@@ -1538,14 +1538,14 @@ define void @willreturn_mustprogress_callee_3() {
 define void @willreturn_mustprogress_callee_4() {
 ; IS________OPM: Function Attrs: readonly willreturn
 ; IS________OPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
-; IS________OPM-SAME: () #[[ATTR24]] {
-; IS________OPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR24]]
+; IS________OPM-SAME: () #[[ATTR23]] {
+; IS________OPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR23]]
 ; IS________OPM-NEXT:    ret void
 ;
 ; IS________NPM: Function Attrs: readonly willreturn
 ; IS________NPM-LABEL: define {{[^@]+}}@willreturn_mustprogress_callee_4
-; IS________NPM-SAME: () #[[ATTR26]] {
-; IS________NPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR26]]
+; IS________NPM-SAME: () #[[ATTR25]] {
+; IS________NPM-NEXT:    call void @willreturn_mustprogress_callee_2() #[[ATTR25]]
 ; IS________NPM-NEXT:    ret void
 ;
   call void @willreturn_mustprogress_callee_2()
@@ -1563,28 +1563,27 @@ attributes #1 = { uwtable noinline }
 ; IS__TUNIT_OPM: attributes #[[ATTR5]] = { noreturn }
 ; IS__TUNIT_OPM: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
 ; IS__TUNIT_OPM: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR8:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR9]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR10:[0-9]+]] = { norecurse willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR11]] = { noinline nounwind willreturn uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR12:[0-9]+]] = { noinline willreturn uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR13]] = { nounwind willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR14]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR15]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; IS__TUNIT_OPM: attributes #[[ATTR16:[0-9]+]] = { noreturn nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR17]] = { nofree norecurse nosync nounwind readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR18]] = { readonly }
-; IS__TUNIT_OPM: attributes #[[ATTR19:[0-9]+]] = { readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR20]] = { mustprogress }
-; IS__TUNIT_OPM: attributes #[[ATTR21:[0-9]+]] = { mustprogress readonly }
-; IS__TUNIT_OPM: attributes #[[ATTR22]] = { mustprogress readonly willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR23]] = { mustprogress nosync readnone willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR24]] = { readonly willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR25]] = { nofree nosync nounwind readnone }
-; IS__TUNIT_OPM: attributes #[[ATTR26]] = { nofree nosync nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR27]] = { readnone willreturn }
-; IS__TUNIT_OPM: attributes #[[ATTR28]] = { nounwind }
-; IS__TUNIT_OPM: attributes #[[ATTR29]] = { willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR9:[0-9]+]] = { norecurse willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR10]] = { noinline nounwind willreturn uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR11:[0-9]+]] = { noinline willreturn uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR12]] = { nounwind willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR13]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR14]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
+; IS__TUNIT_OPM: attributes #[[ATTR15:[0-9]+]] = { noreturn nounwind }
+; IS__TUNIT_OPM: attributes #[[ATTR16]] = { nofree norecurse nosync nounwind readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR17]] = { readonly }
+; IS__TUNIT_OPM: attributes #[[ATTR18:[0-9]+]] = { readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR19]] = { mustprogress }
+; IS__TUNIT_OPM: attributes #[[ATTR20:[0-9]+]] = { mustprogress readonly }
+; IS__TUNIT_OPM: attributes #[[ATTR21]] = { mustprogress readonly willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR22]] = { mustprogress nosync readnone willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR23]] = { readonly willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR24]] = { nofree nosync nounwind readnone }
+; IS__TUNIT_OPM: attributes #[[ATTR25]] = { nofree nosync nounwind }
+; IS__TUNIT_OPM: attributes #[[ATTR26]] = { readnone willreturn }
+; IS__TUNIT_OPM: attributes #[[ATTR27]] = { nounwind }
+; IS__TUNIT_OPM: attributes #[[ATTR28]] = { willreturn }
 ;.
 ; IS________NPM: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone willreturn uwtable }
 ; IS________NPM: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
@@ -1594,30 +1593,29 @@ attributes #1 = { uwtable noinline }
 ; IS________NPM: attributes #[[ATTR5]] = { noreturn }
 ; IS________NPM: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
 ; IS________NPM: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; IS________NPM: attributes #[[ATTR8:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS________NPM: attributes #[[ATTR9]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
-; IS________NPM: attributes #[[ATTR10:[0-9]+]] = { norecurse willreturn }
-; IS________NPM: attributes #[[ATTR11]] = { noinline nounwind willreturn uwtable }
-; IS________NPM: attributes #[[ATTR12:[0-9]+]] = { noinline willreturn uwtable }
-; IS________NPM: attributes #[[ATTR13]] = { nounwind willreturn }
-; IS________NPM: attributes #[[ATTR14]] = { argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable }
-; IS________NPM: attributes #[[ATTR15]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
-; IS________NPM: attributes #[[ATTR16]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; IS________NPM: attributes #[[ATTR17:[0-9]+]] = { noreturn nounwind }
-; IS________NPM: attributes #[[ATTR18]] = { nofree norecurse nosync nounwind readnone }
-; IS________NPM: attributes #[[ATTR19]] = { nofree norecurse nosync nounwind readnone willreturn }
-; IS________NPM: attributes #[[ATTR20]] = { readonly }
-; IS________NPM: attributes #[[ATTR21:[0-9]+]] = { readnone }
-; IS________NPM: attributes #[[ATTR22]] = { mustprogress }
-; IS________NPM: attributes #[[ATTR23:[0-9]+]] = { mustprogress readonly }
-; IS________NPM: attributes #[[ATTR24]] = { mustprogress readonly willreturn }
-; IS________NPM: attributes #[[ATTR25]] = { mustprogress nosync readnone willreturn }
-; IS________NPM: attributes #[[ATTR26]] = { readonly willreturn }
-; IS________NPM: attributes #[[ATTR27]] = { nofree nosync nounwind readnone }
-; IS________NPM: attributes #[[ATTR28]] = { nofree nosync nounwind }
-; IS________NPM: attributes #[[ATTR29]] = { readnone willreturn }
-; IS________NPM: attributes #[[ATTR30]] = { nounwind }
-; IS________NPM: attributes #[[ATTR31]] = { willreturn }
+; IS________NPM: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; IS________NPM: attributes #[[ATTR9:[0-9]+]] = { norecurse willreturn }
+; IS________NPM: attributes #[[ATTR10]] = { noinline nounwind willreturn uwtable }
+; IS________NPM: attributes #[[ATTR11:[0-9]+]] = { noinline willreturn uwtable }
+; IS________NPM: attributes #[[ATTR12]] = { nounwind willreturn }
+; IS________NPM: attributes #[[ATTR13]] = { argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable }
+; IS________NPM: attributes #[[ATTR14]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
+; IS________NPM: attributes #[[ATTR15]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
+; IS________NPM: attributes #[[ATTR16:[0-9]+]] = { noreturn nounwind }
+; IS________NPM: attributes #[[ATTR17]] = { nofree norecurse nosync nounwind readnone }
+; IS________NPM: attributes #[[ATTR18]] = { nofree norecurse nosync nounwind readnone willreturn }
+; IS________NPM: attributes #[[ATTR19]] = { readonly }
+; IS________NPM: attributes #[[ATTR20:[0-9]+]] = { readnone }
+; IS________NPM: attributes #[[ATTR21]] = { mustprogress }
+; IS________NPM: attributes #[[ATTR22:[0-9]+]] = { mustprogress readonly }
+; IS________NPM: attributes #[[ATTR23]] = { mustprogress readonly willreturn }
+; IS________NPM: attributes #[[ATTR24]] = { mustprogress nosync readnone willreturn }
+; IS________NPM: attributes #[[ATTR25]] = { readonly willreturn }
+; IS________NPM: attributes #[[ATTR26]] = { nofree nosync nounwind readnone }
+; IS________NPM: attributes #[[ATTR27]] = { nofree nosync nounwind }
+; IS________NPM: attributes #[[ATTR28]] = { readnone willreturn }
+; IS________NPM: attributes #[[ATTR29]] = { nounwind }
+; IS________NPM: attributes #[[ATTR30]] = { willreturn }
 ;.
 ; IS__CGSCC_OPM: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind readnone willreturn uwtable }
 ; IS__CGSCC_OPM: attributes #[[ATTR1]] = { nofree noinline nosync nounwind readnone uwtable }
@@ -1627,27 +1625,26 @@ attributes #1 = { uwtable noinline }
 ; IS__CGSCC_OPM: attributes #[[ATTR5]] = { noreturn }
 ; IS__CGSCC_OPM: attributes #[[ATTR6]] = { noinline noreturn nounwind uwtable }
 ; IS__CGSCC_OPM: attributes #[[ATTR7]] = { noinline nounwind uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR8:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR9]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR10:[0-9]+]] = { norecurse willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR11]] = { noinline nounwind willreturn uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR12:[0-9]+]] = { noinline willreturn uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR13]] = { nounwind willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR14]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR15]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; IS__CGSCC_OPM: attributes #[[ATTR16:[0-9]+]] = { noreturn nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR17]] = { nofree norecurse nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR18]] = { readonly }
-; IS__CGSCC_OPM: attributes #[[ATTR19:[0-9]+]] = { readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR20]] = { mustprogress }
-; IS__CGSCC_OPM: attributes #[[ATTR21:[0-9]+]] = { mustprogress readonly }
-; IS__CGSCC_OPM: attributes #[[ATTR22]] = { mustprogress readonly willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR23]] = { mustprogress nosync readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR24]] = { readonly willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR25]] = { nofree nosync nounwind readnone }
-; IS__CGSCC_OPM: attributes #[[ATTR26]] = { nofree nosync nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR27]] = { readnone willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR28]] = { nounwind }
-; IS__CGSCC_OPM: attributes #[[ATTR29]] = { willreturn }
-; IS__CGSCC_OPM: attributes #[[ATTR30]] = { nounwind readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR8:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR9:[0-9]+]] = { norecurse willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR10]] = { noinline nounwind willreturn uwtable }
+; IS__CGSCC_OPM: attributes #[[ATTR11:[0-9]+]] = { noinline willreturn uwtable }
+; IS__CGSCC_OPM: attributes #[[ATTR12]] = { nounwind willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR13]] = { argmemonly nofree noinline norecurse nosync nounwind readonly uwtable }
+; IS__CGSCC_OPM: attributes #[[ATTR14]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
+; IS__CGSCC_OPM: attributes #[[ATTR15:[0-9]+]] = { noreturn nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR16]] = { nofree norecurse nosync nounwind readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR17]] = { readonly }
+; IS__CGSCC_OPM: attributes #[[ATTR18:[0-9]+]] = { readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR19]] = { mustprogress }
+; IS__CGSCC_OPM: attributes #[[ATTR20:[0-9]+]] = { mustprogress readonly }
+; IS__CGSCC_OPM: attributes #[[ATTR21]] = { mustprogress readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR22]] = { mustprogress nosync readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR23]] = { readonly willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR24]] = { nofree nosync nounwind readnone }
+; IS__CGSCC_OPM: attributes #[[ATTR25]] = { nofree nosync nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR26]] = { readnone willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR27]] = { nounwind }
+; IS__CGSCC_OPM: attributes #[[ATTR28]] = { willreturn }
+; IS__CGSCC_OPM: attributes #[[ATTR29]] = { nounwind readnone }
 ;.
