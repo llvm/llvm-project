@@ -919,3 +919,16 @@ define i128 @narrow_bswap_overshift2(i96 %x) {
   %s = lshr i128 %b, 61
   ret i128 %s
 }
+
+define i32 @not_narrow_bswap(i24 %x) {
+; CHECK-LABEL: @not_narrow_bswap(
+; CHECK-NEXT:    [[Z:%.*]] = zext i24 [[X:%.*]] to i32
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.bswap.i32(i32 [[Z]])
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i32 [[B]], 8
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = zext i24 %x to i32
+  %b = call i32 @llvm.bswap.i32(i32 %z)
+  %r = lshr i32 %b, 8
+  ret i32 %r
+}
