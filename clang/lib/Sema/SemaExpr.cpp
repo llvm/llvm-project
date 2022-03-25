@@ -10069,9 +10069,11 @@ static bool tryVectorConvertAndSplat(Sema &S, ExprResult *scalar,
 static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
   const auto *VecTy = E->getType()->getAs<VectorType>();
   assert(VecTy && "Expression E must be a vector");
-  QualType NewVecTy = S.Context.getVectorType(ElementType,
-                                              VecTy->getNumElements(),
-                                              VecTy->getVectorKind());
+  QualType NewVecTy =
+      VecTy->isExtVectorType()
+          ? S.Context.getExtVectorType(ElementType, VecTy->getNumElements())
+          : S.Context.getVectorType(ElementType, VecTy->getNumElements(),
+                                    VecTy->getVectorKind());
 
   // Look through the implicit cast. Return the subexpression if its type is
   // NewVecTy.
