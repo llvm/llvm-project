@@ -11,7 +11,8 @@ set(LLVM_BLAKE3_FILES
 # version using C intrinsics. The assembly versions are generally
 # preferred. They perform better, they perform more consistently across
 # different compilers, and they build more quickly."
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
+# FIXME: Figure out what is wrong with the builders when using the assembly files.
+if (FALSE)#CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
   if (MSVC)
     list(APPEND LLVM_BLAKE3_FILES
       BLAKE3/blake3_sse2_x86-64_windows_msvc.asm
@@ -36,7 +37,7 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$")
   endif()
 endif()
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm|aarch)")
   list(APPEND LLVM_BLAKE3_FILES
     BLAKE3/blake3_neon.c
   )
