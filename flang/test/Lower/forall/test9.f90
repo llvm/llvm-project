@@ -20,10 +20,16 @@ end subroutine test9
 ! CHECK:         %[[VAL_3:.*]] = fir.alloca i32 {adapt.valuebyref, bindc_name = "i"}
 ! CHECK:         %[[VAL_4:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
-! CHECK:         %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
+! CHECK:         %[[VAL_6A:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
+! CHECK:         %[[C0:.*]] = arith.constant 0 : index
+! CHECK:         %[[CMP:.*]] = arith.cmpi sgt, %[[VAL_6A]], %[[C0]] : index
+! CHECK:         %[[VAL_6:.*]] = arith.select %[[CMP]], %[[VAL_6A]], %[[C0]] : index
 ! CHECK:         %[[VAL_7:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
 ! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> i64
-! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i64) -> index
+! CHECK:         %[[VAL_9A:.*]] = fir.convert %[[VAL_8]] : (i64) -> index
+! CHECK:         %[[C0_2:.*]] = arith.constant 0 : index
+! CHECK:         %[[CMP_2:.*]] = arith.cmpi sgt, %[[VAL_9A]], %[[C0_2]] : index
+! CHECK:         %[[VAL_9:.*]] = arith.select %[[CMP_2]], %[[VAL_9A]], %[[C0_2]] : index
 ! CHECK:         %[[VAL_10:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> index
 ! CHECK:         %[[VAL_12:.*]] = fir.load %[[VAL_2]] : !fir.ref<i32>
