@@ -1,15 +1,28 @@
 static_library("BLAKE3") {
   output_name = "LLVMSupportBlake3"
-  sources = [
-    "blake3.c",
-    "blake3_dispatch.c",
-    "blake3_portable.c",
-  ]
+  sources = [ "blake3.c", "blake3_dispatch.c", "blake3_portable.c" ]
   defines = [
    "BLAKE3_NO_AVX512",
    "BLAKE3_NO_AVX2",
    "BLAKE3_NO_SSE41",
    "BLAKE3_NO_SSE2",
    "BLAKE3_USE_NEON=0",
+  ]
+}
+
+source_set("hack") {
+  sources = [
+    "BLAKE3/blake3.c",
+    "BLAKE3/blake3_avx2_x86-64_unix.S",
+    "BLAKE3/blake3_avx2_x86-64_windows_gnu.S",
+    "BLAKE3/blake3_avx512_x86-64_unix.S",
+    "BLAKE3/blake3_avx512_x86-64_windows_gnu.S",
+    "BLAKE3/blake3_dispatch.c",
+    "BLAKE3/blake3_neon.c",
+    "BLAKE3/blake3_portable.c",
+    "BLAKE3/blake3_sse2_x86-64_unix.S",
+    "BLAKE3/blake3_sse2_x86-64_windows_gnu.S",
+    "BLAKE3/blake3_sse41_x86-64_unix.S",
+    "BLAKE3/blake3_sse41_x86-64_windows_gnu.S",
   ]
 }
