@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVMPDBUTIL_FORMAT_UTIL_H
-#define LLVM_TOOLS_LLVMPDBUTIL_FORMAT_UTIL_H
+#ifndef LLVM_DEBUGINFO_PDB_NATIVE_FORMATUTIL_H
+#define LLVM_DEBUGINFO_PDB_NATIVE_FORMATUTIL_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
@@ -136,6 +136,6 @@ fmtle(support::detail::packed_endian_specific_integral<T, support::little,
           Value) {
   return detail::EndianAdapter<T>(std::move(Value));
 }
-}
+} // namespace pdb
 } // namespace llvm
 #endif
