@@ -11,6 +11,7 @@ add_llvm_unittest(ObjectTests
   ELFTest.cpp
   MinidumpTest.cpp
   ObjectFileTest.cpp
+  OffloadingTest.cpp
   SymbolSizeTest.cpp
   SymbolicFileTest.cpp
   XCOFFObjectFileTest.cpp
