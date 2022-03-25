@@ -52261,16 +52261,18 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDValue CarryIn = N->getOperand(2);
+  auto *LHSC = dyn_cast<ConstantSDNode>(LHS);
+  auto *RHSC = dyn_cast<ConstantSDNode>(RHS);
 
   // Canonicalize constant to RHS.
-  if (isa<ConstantSDNode>(LHS) && !isa<ConstantSDNode>(RHS))
+  if (LHSC && !RHSC)
     return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), RHS, LHS,
                        CarryIn);
 
   // If the LHS and RHS of the ADC node are zero, then it can't overflow and
   // the result is either zero or one (depending on the input carry bit).
   // Strength reduce this down to a "set on carry" aka SETCC_CARRY&1.
-  if (X86::isZeroNode(LHS) && X86::isZeroNode(RHS) &&
+  if (LHSC && RHSC && LHSC->isZero() && RHSC->isZero() &&
       // We don't have a good way to replace an EFLAGS use, so only do this when
       // dead right now.
       SDValue(N, 1).use_empty()) {
@@ -52293,7 +52295,7 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
 
   // Fold ADC(ADD(X,Y),0,Carry) -> ADC(X,Y,Carry)
   // iff the flag result is dead.
-  if (LHS.getOpcode() == ISD::ADD && isNullConstant(RHS) &&
+  if (LHS.getOpcode() == ISD::ADD && RHSC && RHSC->isZero() &&
       !N->hasAnyUseOfValue(1))
     return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), LHS.getOperand(0),
                        LHS.getOperand(1), CarryIn);
