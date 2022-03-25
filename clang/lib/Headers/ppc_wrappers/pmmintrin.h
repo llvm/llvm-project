@@ -111,17 +111,21 @@ _mm_hsub_pd (__m128d __X, __m128d __Y)
 			    vec_mergel ((__v2df) __X, (__v2df)__Y));
 }
 
+#ifdef _ARCH_PWR8
 extern __inline __m128 __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_movehdup_ps (__m128 __X)
 {
   return (__m128)vec_mergeo ((__v4su)__X, (__v4su)__X);
 }
+#endif
 
+#ifdef _ARCH_PWR8
 extern __inline __m128 __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_moveldup_ps (__m128 __X)
 {
   return (__m128)vec_mergee ((__v4su)__X, (__v4su)__X);
 }
+#endif
 
 extern __inline __m128d __attribute__((__gnu_inline__, __always_inline__, __artificial__))
 _mm_loaddup_pd (double const *__P)
