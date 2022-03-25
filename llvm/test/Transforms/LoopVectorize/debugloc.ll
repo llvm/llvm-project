@@ -7,19 +7,23 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: for.body.lr.ph
 ; CHECK:   min.iters.check = icmp ult i64 {{.*}}, 2, !dbg !{{[0-9]+}}
 ; CHECK: vector.body
-; CHECK:   index {{.*}}, !dbg ![[LOC:[0-9]+]]
-; CHECK:   getelementptr inbounds i32, i32* %a, {{.*}}, !dbg ![[LOC]]
-; CHECK:   load <2 x i32>, <2 x i32>* {{.*}}, !dbg ![[LOC]]
-; CHECK:   add <2 x i32> {{.*}}, !dbg ![[LOC]]
-; CHECK:   add nuw i64 %index, 2, !dbg ![[LOC]]
-; CHECK:   icmp eq i64 %index.next, %n.vec, !dbg ![[LOC]]
+; CHECK:   index {{.*}}, !dbg ![[LOC1:[0-9]+]]
+; CHECK:   getelementptr inbounds i32, i32* %a, {{.*}}, !dbg ![[LOC2:[0-9]+]]
+; CHECK:   getelementptr inbounds i32, i32* %b, {{.*}}, !dbg ![[LOC1]]
+; CHECK:   load <2 x i32>, <2 x i32>* {{.*}}, !dbg ![[LOC1]]
+; CHECK:   add <2 x i32> {{.*}}, !dbg ![[LOC1]]
+; CHECK:   add nuw i64 %index, 2, !dbg ![[LOC1]]
+; CHECK:   icmp eq i64 %index.next, %n.vec, !dbg ![[LOC1]]
 ; CHECK: middle.block
 ; CHECK:   call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %{{.*}}), !dbg ![[BR_LOC:[0-9]+]]
 ; CHECK: for.body
 ; CHECK: br i1{{.*}}, label %for.body,{{.*}}, !dbg ![[BR_LOC]],
+; CHECK: ![[LOC2]] = !DILocation(line: 3
 ; CHECK: ![[BR_LOC]] = !DILocation(line: 5,
+; CHECK: ![[LOC1]] = !DILocation(line: 6
 
-define i32 @f(i32* nocapture %a, i32 %size) #0 !dbg !4 {
+
+define i32 @f(i32* nocapture %a, i32* %b, i32 %size) !dbg !4 {
 entry:
   call void @llvm.dbg.value(metadata i32* %a, metadata !13, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 %size, metadata !14, metadata !DIExpression()), !dbg !19
@@ -33,10 +37,13 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
-  %sum.05 = phi i32 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv, !dbg !22
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !22
-  %add = add i32 %0, %sum.05, !dbg !22
+  %sum = phi i32 [ 0, %for.body.lr.ph ], [ %sum.next, %for.body ]
+  %arrayidx.1 = getelementptr inbounds i32, i32* %a, i64 %indvars.iv, !dbg !19
+  %arrayidx.2 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv, !dbg !22
+  %l.1 = load i32, i32* %arrayidx.1, align 4, !dbg !22
+  %l.2 = load i32, i32* %arrayidx.2, align 4, !dbg !22
+  %add.1 = add i32 %l.1, %l.2
+  %sum.next = add i32 %add.1, %sum, !dbg !22
   %indvars.iv.next = add i64 %indvars.iv, 1, !dbg !22
   call void @llvm.dbg.value(metadata !{null}, metadata !16, metadata !DIExpression()), !dbg !22
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !22
@@ -44,7 +51,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   br i1 %exitcond, label %for.body, label %for.cond.for.end_crit_edge, !dbg !21
 
 for.cond.for.end_crit_edge:                       ; preds = %for.body
-  %add.lcssa = phi i32 [ %add, %for.body ]
+  %add.lcssa = phi i32 [ %sum.next, %for.body ]
   call void @llvm.dbg.value(metadata i32 %add.lcssa, metadata !15, metadata !DIExpression()), !dbg !22
   br label %for.end, !dbg !21
 
@@ -53,14 +60,9 @@ for.end:                                          ; preds = %entry, %for.cond.fo
   ret i32 %sum.0.lcssa, !dbg !26
 }
 
-; Function Attrs: nounwind readnone
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
-; Function Attrs: nounwind readnone
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind readonly ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "unsafe-fp-math"="true" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!18, !27}
