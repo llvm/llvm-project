@@ -15,6 +15,7 @@ add_entrypoint_library(
     libc.src.stdlib.malloc
     libc.src.stdlib.calloc
     libc.src.stdlib.realloc
+    libc.src.stdlib.aligned_alloc
     libc.src.stdlib.free
 )
 
