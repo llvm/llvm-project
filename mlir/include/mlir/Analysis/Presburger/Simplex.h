@@ -664,6 +664,23 @@ private:
   void reduceBasis(Matrix &basis, unsigned level);
 };
 
+/// Takes a snapshot of the simplex state on construction and rolls back to the
+/// snapshot on destruction.
+///
+/// Useful for performing operations in a "transient context", all changes from
+/// which get rolled back on scope exit.
+class SimplexRollbackScopeExit {
+public:
+  SimplexRollbackScopeExit(Simplex &simplex) : simplex(simplex) {
+    snapshot = simplex.getSnapshot();
+  };
+  ~SimplexRollbackScopeExit() { simplex.rollback(snapshot); }
+
+private:
+  SimplexBase &simplex;
+  unsigned snapshot;
+};
+
 } // namespace presburger
 } // namespace mlir
 
