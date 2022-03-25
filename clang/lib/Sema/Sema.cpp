@@ -929,7 +929,7 @@ void Sema::LoadExternalWeakUndeclaredIdentifiers() {
   SmallVector<std::pair<IdentifierInfo *, WeakInfo>, 4> WeakIDs;
   ExternalSource->ReadWeakUndeclaredIdentifiers(WeakIDs);
   for (auto &WeakID : WeakIDs)
-    WeakUndeclaredIdentifiers.insert(WeakID);
+    (void)WeakUndeclaredIdentifiers[WeakID.first].insert(WeakID.second);
 }
 
 
@@ -1180,19 +1180,21 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   // Check for #pragma weak identifiers that were never declared
   LoadExternalWeakUndeclaredIdentifiers();
-  for (auto WeakID : WeakUndeclaredIdentifiers) {
-    if (WeakID.second.getUsed())
+  for (const auto &WeakIDs : WeakUndeclaredIdentifiers) {
+    if (WeakIDs.second.empty())
       continue;
 
-    Decl *PrevDecl = LookupSingleName(TUScope, WeakID.first, SourceLocation(),
+    Decl *PrevDecl = LookupSingleName(TUScope, WeakIDs.first, SourceLocation(),
                                       LookupOrdinaryName);
     if (PrevDecl != nullptr &&
         !(isa<FunctionDecl>(PrevDecl) || isa<VarDecl>(PrevDecl)))
-      Diag(WeakID.second.getLocation(), diag::warn_attribute_wrong_decl_type)
-          << "'weak'" << ExpectedVariableOrFunction;
+      for (const auto &WI : WeakIDs.second)
+        Diag(WI.getLocation(), diag::warn_attribute_wrong_decl_type)
+            << "'weak'" << ExpectedVariableOrFunction;
     else
-      Diag(WeakID.second.getLocation(), diag::warn_weak_identifier_undeclared)
-          << WeakID.first;
+      for (const auto &WI : WeakIDs.second)
+        Diag(WI.getLocation(), diag::warn_weak_identifier_undeclared)
+            << WeakIDs.first;
   }
 
   if (LangOpts.CPlusPlus11 &&

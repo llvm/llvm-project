@@ -17,6 +17,10 @@
 // CHECK-DAG: @mix2 = weak{{.*}} alias void (), void ()* @__mix2
 // CHECK-DAG: @a1 = weak{{.*}} alias void (), void ()* @__a1
 // CHECK-DAG: @xxx = weak{{.*}} alias void (), void ()* @__xxx
+// CHECK-DAG: @undecfunc_alias1 = weak{{.*}} alias void (), void ()* @undecfunc
+// CHECK-DAG: @undecfunc_alias2 = weak{{.*}} alias void (), void ()* @undecfunc
+// CHECK-DAG: @undecfunc_alias3 = weak{{.*}} alias void (), void ()* @undecfunc
+// CHECK-DAG: @undecfunc_alias4 = weak{{.*}} alias void (), void ()* @undecfunc
 
 
 
@@ -135,6 +139,15 @@ void __a1(void) {}
 #pragma weak xxx = __xxx
 __attribute((pure,noinline,const)) void __xxx(void) { }
 // CHECK: void @__xxx() [[RN:#[0-9]+]]
+
+///////////// PR28611: Try multiple aliases of same undeclared symbol or alias
+#pragma weak undecfunc_alias1 = undecfunc
+#pragma weak undecfunc_alias1 = undecfunc // Try specifying same alias/target pair a second time.
+#pragma weak undecfunc_alias3 = undecfunc_alias2 // expected-warning {{alias will always resolve to undecfunc}}
+#pragma weak undecfunc_alias4 = undecfunc_alias2 // expected-warning {{alias will always resolve to undecfunc}}
+#pragma weak undecfunc_alias2 = undecfunc
+void undecfunc_alias2(void);
+void undecfunc(void) { }
 
 ///////////// PR10878: Make sure we can call a weak alias
 void SHA512Pad(void *context) {}
