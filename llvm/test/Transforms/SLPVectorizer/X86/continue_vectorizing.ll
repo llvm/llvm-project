@@ -9,13 +9,13 @@ define void @test1(double* %a, double* %b, double* %c, double* %d) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[B]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[C:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[C]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[A]] to <4 x i32>*

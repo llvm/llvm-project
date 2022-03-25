@@ -12,12 +12,12 @@ define i32 @non-ordered-stores(i32* noalias nocapture %in, i32* noalias nocaptur
 ; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, i32* [[IN_ADDR]], i64 3
 ; CHECK-NEXT:    [[LOAD_4:%.*]] = load i32, i32* [[GEP_3]], align 4
 ; CHECK-NEXT:    [[INN_ADDR:%.*]] = getelementptr inbounds i32, i32* [[INN:%.*]], i64 0
-; CHECK-NEXT:    [[LOAD_5:%.*]] = load i32, i32* [[INN_ADDR]], align 4
 ; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 1
-; CHECK-NEXT:    [[LOAD_6:%.*]] = load i32, i32* [[GEP_4]], align 4
 ; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 2
+; CHECK-NEXT:    [[LOAD_5:%.*]] = load i32, i32* [[INN_ADDR]], align 4
 ; CHECK-NEXT:    [[LOAD_7:%.*]] = load i32, i32* [[GEP_5]], align 4
 ; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i32, i32* [[INN_ADDR]], i64 3
+; CHECK-NEXT:    [[LOAD_6:%.*]] = load i32, i32* [[GEP_4]], align 4
 ; CHECK-NEXT:    [[LOAD_8:%.*]] = load i32, i32* [[GEP_6]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[LOAD_1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[LOAD_3]], i32 1
