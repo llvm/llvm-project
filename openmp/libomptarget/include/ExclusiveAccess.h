@@ -28,7 +28,7 @@ template <typename Ty> struct ProtectedObj {
   /// Get an exclusive access Accessor object. \p DoNotGetAccess allows to
   /// create an accessor that is not owning anything based on a boolean
   /// condition.
-  AccessorTy &&getExclusiveAccessor(bool DoNotGetAccess = false);
+  AccessorTy getExclusiveAccessor(bool DoNotGetAccess = false);
 
 private:
   Ty Obj;
@@ -91,10 +91,10 @@ private:
 };
 
 template <typename Ty>
-Accessor<Ty> &&ProtectedObj<Ty>::getExclusiveAccessor(bool DoNotGetAccess) {
+Accessor<Ty> ProtectedObj<Ty>::getExclusiveAccessor(bool DoNotGetAccess) {
   if (DoNotGetAccess)
-    return std::move(Accessor<Ty>());
-  return std::move(Accessor<Ty>(*this));
+    return Accessor<Ty>();
+  return Accessor<Ty>(*this);
 }
 
 #endif
