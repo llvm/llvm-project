@@ -1752,6 +1752,14 @@ def LLVM_masked_compressstore
 /// Create a call to vscale intrinsic.
 def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
+/// Create a call to stepvector intrinsic.
+def LLVM_StepVectorOp
+    : LLVM_IntrOp<"experimental.stepvector", [0], [], [NoSideEffect], 1> {
+  let arguments = (ins);
+  let results = (outs LLVM_Type:$res);
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
 // Atomic operations.
 //
 

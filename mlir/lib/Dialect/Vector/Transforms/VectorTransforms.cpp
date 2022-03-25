@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
@@ -599,6 +601,13 @@ public:
           DenseIntElementsAttr::get(
               VectorType::get(ArrayRef<int64_t>{}, rewriter.getI1Type()),
               ArrayRef<bool>{value}));
+      return success();
+    }
+
+    // Scalable constant masks can only be lowered for the "none set" case.
+    if (dstType.cast<VectorType>().isScalable()) {
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          op, DenseElementsAttr::get(dstType, false));
       return success();
     }
 
@@ -2161,27 +2170,6 @@ struct BubbleUpBitCastForStridedSliceInsert
   }
 };
 
-static Value createCastToIndexLike(PatternRewriter &rewriter, Location loc,
-                                   Type targetType, Value value) {
-  if (targetType == value.getType())
-    return value;
-
-  bool targetIsIndex = targetType.isIndex();
-  bool valueIsIndex = value.getType().isIndex();
-  if (targetIsIndex ^ valueIsIndex)
-    return rewriter.create<arith::IndexCastOp>(loc, targetType, value);
-
-  auto targetIntegerType = targetType.dyn_cast<IntegerType>();
-  auto valueIntegerType = value.getType().dyn_cast<IntegerType>();
-  assert(targetIntegerType && valueIntegerType &&
-         "unexpected cast between types other than integers and index");
-  assert(targetIntegerType.getSignedness() == valueIntegerType.getSignedness());
-
-  if (targetIntegerType.getWidth() > valueIntegerType.getWidth())
-    return rewriter.create<arith::ExtSIOp>(loc, targetIntegerType, value);
-  return rewriter.create<arith::TruncIOp>(loc, targetIntegerType, value);
-}
-
 // Helper that returns a vector comparison that constructs a mask:
 //     mask = [0,1,..,n-1] + [o,o,..,o] < [b,b,..,b]
 //
@@ -2217,12 +2205,12 @@ static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
   Value indices = rewriter.create<arith::ConstantOp>(loc, indicesAttr);
   // Add in an offset if requested.
   if (off) {
-    Value o = createCastToIndexLike(rewriter, loc, idxType, *off);
+    Value o = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, *off);
     Value ov = rewriter.create<vector::SplatOp>(loc, indices.getType(), o);
     indices = rewriter.create<arith::AddIOp>(loc, ov, indices);
   }
   // Construct the vector comparison.
-  Value bound = createCastToIndexLike(rewriter, loc, idxType, b);
+  Value bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType, b);
   Value bounds =
       rewriter.create<vector::SplatOp>(loc, indices.getType(), bound);
   return rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt, indices,
@@ -2292,6 +2280,8 @@ public:
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
     auto dstType = op.getType();
+    if (dstType.cast<VectorType>().isScalable())
+      return failure();
     int64_t rank = dstType.getRank();
     if (rank > 1)
       return failure();
