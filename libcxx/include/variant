@@ -562,7 +562,7 @@ private:
   inline _LIBCPP_INLINE_VISIBILITY
   static constexpr auto __make_fdiagonal_impl() {
     return __make_dispatch<_Fp, _Vs...>(
-        index_sequence<((void)__identity<_Vs>{}, _Ip)...>{});
+        index_sequence<((void)__type_identity<_Vs>{}, _Ip)...>{});
   }
 
   template <class _Fp, class... _Vs, size_t... _Is>
@@ -1202,12 +1202,12 @@ private:
 
 struct __no_narrowing_check {
   template <class _Dest, class _Source>
-  using _Apply = __identity<_Dest>;
+  using _Apply = __type_identity<_Dest>;
 };
 
 struct __narrowing_check {
   template <class _Dest>
-  static auto __test_impl(_Dest (&&)[1]) -> __identity<_Dest>;
+  static auto __test_impl(_Dest (&&)[1]) -> __type_identity<_Dest>;
   template <class _Dest, class _Source>
   using _Apply _LIBCPP_NODEBUG = decltype(__test_impl<_Dest>({declval<_Source>()}));
 };
@@ -1233,7 +1233,7 @@ template <class _Tp, size_t>
 struct __overload_bool  {
   template <class _Up, class _Ap = __uncvref_t<_Up>>
   auto operator()(bool, _Up&&) const
-      -> enable_if_t<is_same_v<_Ap, bool>, __identity<_Tp>>;
+      -> enable_if_t<is_same_v<_Ap, bool>, __type_identity<_Tp>>;
 };
 
 template <size_t _Idx>
