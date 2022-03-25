@@ -69,6 +69,9 @@ Bug Fixes
   like ``auto&`` or ``auto**`` were added. These constraints are now checked.
   This fixes  `Issue 53911 <https://github.com/llvm/llvm-project/issues/53911>`_
   and  `Issue 54443 <https://github.com/llvm/llvm-project/issues/54443>`_.
+- Previously invalid member variables with template parameters would crash clang.
+  Now fixed by setting identifiers for them.
+  This fixes `Issue 28475 (PR28101) <https://github.com/llvm/llvm-project/issues/28475>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
