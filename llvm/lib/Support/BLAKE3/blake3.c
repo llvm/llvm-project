@@ -571,6 +571,10 @@ void llvm_blake3_hasher_update(blake3_hasher *self, const void *input,
 void llvm_blake3_hasher_finalize(const blake3_hasher *self, uint8_t *out,
                             size_t out_len) {
   llvm_blake3_hasher_finalize_seek(self, 0, out, out_len);
+#if LLVM_MEMORY_SANITIZER_BUILD
+  // Avoid false positives due to uninstrumented assembly code.
+  __msan_unpoison(out, out_len);
+#endif
 }
 
 void llvm_blake3_hasher_finalize_seek(const blake3_hasher *self, uint64_t seek,
