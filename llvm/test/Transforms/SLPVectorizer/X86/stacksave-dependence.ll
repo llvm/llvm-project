@@ -263,6 +263,42 @@ define void @stacksave5(i8** %a, i8** %b, i8** %c) {
   ret void
 }
 
+; Reordering the second alloca above the stackrestore while
+; leaving the write to it below would introduce a write-after-free
+; bug.
+define void @stackrestore1(i8** %a, i8** %b, i8** %c) {
+; CHECK-LABEL: @stackrestore1(
+; CHECK-NEXT:    [[STACK:%.*]] = call i8* @llvm.stacksave()
+; CHECK-NEXT:    [[V1:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 0, i8* [[V1]], align 1
+; CHECK-NEXT:    call void @llvm.stackrestore(i8* [[STACK]])
+; CHECK-NEXT:    [[V2:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    store i8 0, i8* [[V2]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i8*> poison, i8* [[V1]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i8*> [[TMP1]], i8* [[V2]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <2 x i8*> [[TMP2]], <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[B2:%.*]] = getelementptr i8*, i8** [[B:%.*]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8** [[B]] to <2 x i8*>*
+; CHECK-NEXT:    store <2 x i8*> [[TMP3]], <2 x i8*>* [[TMP4]], align 8
+; CHECK-NEXT:    ret void
+;
+
+  %stack = call i8* @llvm.stacksave()
+  %v1 = alloca i8
+  store i8 0, i8* %v1
+  call void @llvm.stackrestore(i8* %stack)
+  %v2 = alloca i8
+  store i8 0, i8* %v2
+
+  %add1 = getelementptr i8, i8* %v1, i32 1
+  %add2 = getelementptr i8, i8* %v2, i32 1
+
+  store i8* %add1, i8** %b
+  %b2 = getelementptr i8*, i8** %b, i32 1
+  store i8* %add2, i8** %b2
+  ret void
+}
+
 declare void @use(i8* inalloca(i8))
 declare i8* @llvm.stacksave()
 declare void @llvm.stackrestore(i8*)
