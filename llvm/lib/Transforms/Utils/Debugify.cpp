@@ -266,7 +266,7 @@ bool llvm::stripDebugifyMetadata(Module &M) {
   SmallVector<MDNode *, 4> Flags(NMD->operands());
   NMD->clearOperands();
   for (MDNode *Flag : Flags) {
-    MDString *Key = dyn_cast_or_null<MDString>(Flag->getOperand(1));
+    auto *Key = cast<MDString>(Flag->getOperand(1));
     if (Key->getString() == "Debug Info Version") {
       Changed = true;
       continue;
