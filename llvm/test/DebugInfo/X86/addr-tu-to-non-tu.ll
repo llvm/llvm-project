@@ -40,14 +40,14 @@
 ; CHECK:   DW_AT_name ("t3")
 ; CHECK:   DW_TAG_member
 ; CHECK:     DW_AT_type {{.*}} "t2<&foo>"
-; CHECK: DW_TAG_namespace
-; CHECK: [[T1:0x[0-9a-f]*]]:  DW_TAG_structure_type
-; CHECK:     DW_AT_name    ("t1")
 ; CHECK: DW_TAG_structure_type
 ; CHECK:   DW_AT_name ("t2<&foo>")
 ; CHECK:   DW_TAG_member
 ; CHECK:     DW_AT_name    ("v1")
-; CHECK:     DW_AT_type    ([[T1]] "(anonymous namespace)::t1")
+; CHECK:     DW_AT_type    ([[T1:0x[0-9a-f]*]] "(anonymous namespace)::t1")
+; CHECK: DW_TAG_namespace
+; CHECK: [[T1]]:  DW_TAG_structure_type
+; CHECK:     DW_AT_name    ("t1")
 
 ; CHECK: .debug_types contents:
 

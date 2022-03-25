@@ -665,19 +665,6 @@ public:
   void addDwarfTypeUnitType(DwarfCompileUnit &CU, StringRef Identifier,
                             DIE &Die, const DICompositeType *CTy);
 
-  class NonTypeUnitContext {
-    DwarfDebug *DD;
-    decltype(DwarfDebug::TypeUnitsUnderConstruction) TypeUnitsUnderConstruction;
-    bool AddrPoolUsed;
-    friend class DwarfDebug;
-    NonTypeUnitContext(DwarfDebug *DD);
-  public:
-    NonTypeUnitContext(NonTypeUnitContext&&) = default;
-    ~NonTypeUnitContext();
-  };
-
-  NonTypeUnitContext enterNonTypeUnitContext();
-
   /// Add a label so that arange data can be generated for it.
   void addArangeLabel(SymbolCU SCU) { ArangeLabels.push_back(SCU); }
 
