@@ -134,6 +134,7 @@ def main():
     produce(test.joinpath('libcxx/min_max_macros.compile.pass.cpp'), variables)
     produce(test.joinpath('libcxx/nasty_macros.compile.pass.cpp'), variables)
     produce(test.joinpath('libcxx/no_assert_include.compile.pass.cpp'), variables)
+    produce(test.joinpath('libcxx/private_headers.verify.cpp'), variables)
 
 
 if __name__ == '__main__':
