@@ -2764,6 +2764,7 @@ private:
       ScheduleEnd = nullptr;
       FirstLoadStoreInRegion = nullptr;
       LastLoadStoreInRegion = nullptr;
+      RegionHasStackSave = false;
 
       // Reduce the maximum schedule region size by the size of the
       // previous scheduling run.
@@ -3031,6 +3032,11 @@ private:
     /// The last memory accessing instruction in the scheduling region
     /// (can be null).
     ScheduleData *LastLoadStoreInRegion = nullptr;
+
+    /// Is there an llvm.stacksave or llvm.stackrestore in the scheduling
+    /// region?  Used to optimize the dependence calculation for the
+    /// common case where there isn't.
+    bool RegionHasStackSave = false;
 
     /// The current size of the scheduling region.
     int ScheduleRegionSize = 0;
@@ -8016,6 +8022,10 @@ void BoUpSLP::BlockScheduling::initScheduleData(Instruction *FromI,
       }
       CurrentLoadStore = SD;
     }
+
+    if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
+        match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+      RegionHasStackSave = true;
   }
   if (NextLoadStore) {
     if (CurrentLoadStore)
@@ -8099,40 +8109,42 @@ void BoUpSLP::BlockScheduling::calculateDependencies(ScheduleData *SD,
         }
       }
 
-      // If we have an inalloc alloca instruction, it needs to be scheduled
-      // after any preceeding stacksave.  We also need to prevent any alloca
-      // from reordering above a preceeding stackrestore.
-      if (match(BundleMember->Inst, m_Intrinsic<Intrinsic::stacksave>()) ||
-          match(BundleMember->Inst, m_Intrinsic<Intrinsic::stackrestore>())) {
-        for (Instruction *I = BundleMember->Inst->getNextNode();
-             I != ScheduleEnd; I = I->getNextNode()) {
-          if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
-              match(I, m_Intrinsic<Intrinsic::stackrestore>()))
-            // Any allocas past here must be control dependent on I, and I
-            // must be memory dependend on BundleMember->Inst.
-            break;
+      if (RegionHasStackSave) {
+        // If we have an inalloc alloca instruction, it needs to be scheduled
+        // after any preceeding stacksave.  We also need to prevent any alloca
+        // from reordering above a preceeding stackrestore.
+        if (match(BundleMember->Inst, m_Intrinsic<Intrinsic::stacksave>()) ||
+            match(BundleMember->Inst, m_Intrinsic<Intrinsic::stackrestore>())) {
+          for (Instruction *I = BundleMember->Inst->getNextNode();
+               I != ScheduleEnd; I = I->getNextNode()) {
+            if (match(I, m_Intrinsic<Intrinsic::stacksave>()) ||
+                match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+              // Any allocas past here must be control dependent on I, and I
+              // must be memory dependend on BundleMember->Inst.
+              break;
 
-          if (!isa<AllocaInst>(I))
-            continue;
+            if (!isa<AllocaInst>(I))
+              continue;
 
-          // Add the dependency
-          makeControlDependent(I);
+            // Add the dependency
+            makeControlDependent(I);
+          }
         }
-      }
 
-      // In addition to the cases handle just above, we need to prevent
-      // allocas from moving below a stacksave.  The stackrestore case
-      // is currently thought to be conservatism.
-      if (isa<AllocaInst>(BundleMember->Inst)) {
-        for (Instruction *I = BundleMember->Inst->getNextNode();
-             I != ScheduleEnd; I = I->getNextNode()) {
-          if (!match(I, m_Intrinsic<Intrinsic::stacksave>()) &&
-              !match(I, m_Intrinsic<Intrinsic::stackrestore>()))
-            continue;
+        // In addition to the cases handle just above, we need to prevent
+        // allocas from moving below a stacksave.  The stackrestore case
+        // is currently thought to be conservatism.
+        if (isa<AllocaInst>(BundleMember->Inst)) {
+          for (Instruction *I = BundleMember->Inst->getNextNode();
+               I != ScheduleEnd; I = I->getNextNode()) {
+            if (!match(I, m_Intrinsic<Intrinsic::stacksave>()) &&
+                !match(I, m_Intrinsic<Intrinsic::stackrestore>()))
+              continue;
 
-          // Add the dependency
-          makeControlDependent(I);
-          break;
+            // Add the dependency
+            makeControlDependent(I);
+            break;
+          }
         }
       }
 
