@@ -343,6 +343,11 @@ bool getVOP3IsSingle(unsigned Opc) {
   return Info ? Info->IsSingle : false;
 }
 
+bool getMAIIsDGEMM(unsigned Opc) {
+  const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
+  return Info ? Info->is_dgemm : false;
+}
+
 bool getMAIIsGFX940XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
   return Info ? Info->is_gfx940_xdl : false;

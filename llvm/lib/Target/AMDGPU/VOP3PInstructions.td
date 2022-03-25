@@ -487,6 +487,7 @@ let isAsCheapAsAMove = 1, isReMaterializable = 1 in {
 class MAIInst<string OpName, VOPProfile P, SDPatternOperator node>
   : VOP3InstBase<OpName, P, node> {
   Instruction Opcode = !cast<Instruction>(NAME);
+  bit is_dgemm = 0;
   bit is_gfx940_xdl = 0;
 }
 
@@ -559,8 +560,10 @@ let Predicates = [isGFX90APlus] in {
   defm V_MFMA_F32_16X16X16BF16_1K : MAIInst<"v_mfma_f32_16x16x16bf16_1k", "F32_V4I16_X4",   int_amdgcn_mfma_f32_16x16x16bf16_1k>;
   }
 
+  let is_dgemm = 1 in {
   defm V_MFMA_F64_16X16X4F64      : MAIInst<"v_mfma_f64_16x16x4f64",      "F64_16X16X4F64", int_amdgcn_mfma_f64_16x16x4f64>;
   defm V_MFMA_F64_4X4X4F64        : MAIInst<"v_mfma_f64_4x4x4f64",        "F64_4X4X4F64",   int_amdgcn_mfma_f64_4x4x4f64>;
+  }
 } // End Predicates = [isGFX90APlus]
 
 let Predicates = [isGFX940Plus], is_gfx940_xdl = 1 in {
@@ -590,7 +593,7 @@ def MAIInstInfoTable : GenericTable {
   let FilterClass = "MAIInst";
   let CppTypeName = "MAIInstInfo";
   let Fields = [
-    "Opcode", "is_gfx940_xdl"
+    "Opcode", "is_dgemm", "is_gfx940_xdl"
   ];
 
   let PrimaryKey = ["Opcode"];

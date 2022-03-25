@@ -116,12 +116,7 @@ static bool isSMovRel(unsigned Opcode) {
 }
 
 static bool isDGEMM(unsigned Opcode) {
-  return Opcode == AMDGPU::V_MFMA_F64_4X4X4F64_e64 ||
-         Opcode == AMDGPU::V_MFMA_F64_4X4X4F64_vgprcd_e64 ||
-         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_e64 ||
-         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_vgprcd_e64 ||
-         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_mac_e64 ||
-         Opcode == AMDGPU::V_MFMA_F64_16X16X4F64_mac_vgprcd_e64;
+  return AMDGPU::getMAIIsDGEMM(Opcode);
 }
 
 static bool isXDL(const GCNSubtarget &ST, const MachineInstr &MI) {
