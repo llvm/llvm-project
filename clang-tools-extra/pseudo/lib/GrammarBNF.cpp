@@ -9,9 +9,11 @@
 #include "clang-pseudo/Grammar.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <memory>
+#include <utility>
 
 namespace clang {
 namespace pseudo {
@@ -87,21 +89,73 @@ public:
     }
     assert(T->Rules.size() < (1 << RuleBits) &&
            "Too many rules to fit in RuleID bits!");
-    llvm::sort(T->Rules, [](const Rule &Left, const Rule &Right) {
-      // Sorted by the Target.
-      return std::tie(Left.Target, Left.Size) <
-             std::tie(Right.Target, Right.Size);
-    });
-    RuleID RulePos = 0;
+    const auto &SymbolOrder = getTopologicalOrder(T.get());
+    llvm::stable_sort(
+        T->Rules, [&SymbolOrder](const Rule &Left, const Rule &Right) {
+          // Sorted by the topological order of the nonterminal Target.
+          return SymbolOrder[Left.Target] < SymbolOrder[Right.Target];
+        });
     for (SymbolID SID = 0; SID < T->Nonterminals.size(); ++SID) {
-      RuleID Start = RulePos;
-      while (RulePos < T->Rules.size() && T->Rules[RulePos].Target == SID)
-        ++RulePos;
-      T->Nonterminals[SID].RuleRange = {Start, RulePos};
+      auto StartIt = llvm::partition_point(T->Rules, [&](const Rule &R) {
+        return SymbolOrder[R.Target] < SymbolOrder[SID];
+      });
+      RuleID Start = StartIt - T->Rules.begin();
+      RuleID End = Start;
+      while (End < T->Rules.size() && T->Rules[End].Target == SID)
+        ++End;
+      T->Nonterminals[SID].RuleRange = {Start, End};
     }
     auto G = std::make_unique<Grammar>(std::move(T));
     diagnoseGrammar(*G);
     return G;
+  }
+
+  // Gets topological order for nonterminal symbols.
+  //
+  // The topological order is defined as: if a *single* nonterminal A produces
+  // (or transitively) a nonterminal B (that said, there is a production rule
+  // B := A), then A is less than B.
+  //
+  // It returns the sort key for each symbol, the array is indexed by SymbolID.
+  std::vector<unsigned> getTopologicalOrder(GrammarTable *T) {
+    std::vector<std::pair<SymbolID, SymbolID>> Dependencies;
+    for (const auto &Rule : T->Rules) {
+      // if A := B, A depends on B.
+      if (Rule.Size == 1 && pseudo::isNonterminal(Rule.Sequence[0]))
+        Dependencies.push_back({Rule.Target, Rule.Sequence[0]});
+    }
+    llvm::sort(Dependencies);
+    std::vector<SymbolID> Order;
+    // Each nonterminal state flows: NotVisited -> Visiting -> Visited.
+    enum State {
+      NotVisited,
+      Visiting,
+      Visited,
+    };
+    std::vector<State> VisitStates(T->Nonterminals.size(), NotVisited);
+    std::function<void(SymbolID)> DFS = [&](SymbolID SID) -> void {
+      if (VisitStates[SID] == Visited)
+        return;
+      if (VisitStates[SID] == Visiting) {
+        Diagnostics.push_back(
+            llvm::formatv("The grammar contains a cycle involving symbol {0}",
+                          T->Nonterminals[SID].Name));
+        return;
+      }
+      VisitStates[SID] = Visiting;
+      for (auto It = llvm::lower_bound(Dependencies,
+                                       std::pair<SymbolID, SymbolID>{SID, 0});
+           It != Dependencies.end() && It->first == SID; ++It)
+        DFS(It->second);
+      VisitStates[SID] = Visited;
+      Order.push_back(SID);
+    };
+    for (SymbolID ID = 0; ID != T->Nonterminals.size(); ++ID)
+      DFS(ID);
+    std::vector<unsigned> Result(T->Nonterminals.size(), 0);
+    for (size_t I = 0; I < Order.size(); ++I)
+      Result[Order[I]] = I;
+    return Result;
   }
 
 private:
