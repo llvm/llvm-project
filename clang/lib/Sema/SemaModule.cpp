@@ -206,7 +206,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment)
     GlobalModuleFragment = ModuleScopes.back().Module;
 
-  assert((!getLangOpts().CPlusPlusModules ||
+  assert((!getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS ||
           SeenGMF == (bool)GlobalModuleFragment) &&
          "mismatched global module state");
 
