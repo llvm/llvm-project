@@ -277,6 +277,9 @@ def : InstRW<[Write16PassMAI,  MIMFMARead], (instregex "^V_MFMA_.32_32X32X[124][
 def : InstRW<[Write4PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_4X4X")>;
 def : InstRW<[Write8PassDGEMM, MIMFMARead], (instregex "^V_MFMA_.64_16X16X")>;
 
+def : InstRW<[Write4PassMAI,   MIMFMARead], (instregex "^V_SMFMAC_.32_16X16X")>;
+def : InstRW<[Write8PassMAI,   MIMFMARead], (instregex "^V_SMFMAC_.32_32X32X")>;
+
 } // End SchedModel = SIDPGFX940FullSpeedModel
 
 let SchedModel = GFX10SpeedModel in {

@@ -11661,6 +11661,19 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
         // so no use checks are needed.
         MRI.setRegClass(Op.getReg(), NewRC);
       }
+
+      // Resolve the rest of AV operands to AGPRs.
+      if (auto *Src2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2)) {
+        if (Src2->isReg() && Src2->getReg().isVirtual()) {
+          auto *RC = TRI->getRegClassForReg(MRI, Src2->getReg());
+          if (TRI->isVectorSuperClass(RC)) {
+            auto *NewRC = TRI->getEquivalentAGPRClass(RC);
+            MRI.setRegClass(Src2->getReg(), NewRC);
+            if (Src2->isTied())
+              MRI.setRegClass(MI.getOperand(0).getReg(), NewRC);
+          }
+        }
+      }
     }
 
     return;
