@@ -50,37 +50,37 @@ extern __inline unsigned long long
 extern __inline unsigned long long
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _pdep_u64(unsigned long long __X, unsigned long long __M) {
-  unsigned long result = 0x0UL;
-  const unsigned long mask = 0x8000000000000000UL;
-  unsigned long m = __M;
-  unsigned long c, t;
-  unsigned long p;
+  unsigned long __result = 0x0UL;
+  const unsigned long __mask = 0x8000000000000000UL;
+  unsigned long __m = __M;
+  unsigned long __c, __t;
+  unsigned long __p;
 
   /* The pop-count of the mask gives the number of the bits from
    source to process.  This is also needed to shift bits from the
    source into the correct position for the result.  */
-  p = 64 - __builtin_popcountl(__M);
+  __p = 64 - __builtin_popcountl(__M);
 
   /* The loop is for the number of '1' bits in the mask and clearing
    each mask bit as it is processed.  */
-  while (m != 0) {
-    c = __builtin_clzl(m);
-    t = __X << (p - c);
-    m ^= (mask >> c);
-    result |= (t & (mask >> c));
-    p++;
+  while (__m != 0) {
+    __c = __builtin_clzl(__m);
+    __t = __X << (__p - __c);
+    __m ^= (__mask >> __c);
+    __result |= (__t & (__mask >> __c));
+    __p++;
   }
-  return (result);
+  return __result;
 }
 
 extern __inline unsigned long long
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _pext_u64(unsigned long long __X, unsigned long long __M) {
-  unsigned long p = 0x4040404040404040UL; // initial bit permute control
-  const unsigned long mask = 0x8000000000000000UL;
-  unsigned long m = __M;
-  unsigned long c;
-  unsigned long result;
+  unsigned long __p = 0x4040404040404040UL; // initial bit permute control
+  const unsigned long __mask = 0x8000000000000000UL;
+  unsigned long __m = __M;
+  unsigned long __c;
+  unsigned long __result;
 
   /* if the mask is constant and selects 8 bits or less we can use
    the Power8 Bit permute instruction.  */
@@ -88,30 +88,31 @@ extern __inline unsigned long long
     /* Also if the pext mask is constant, then the popcount is
      constant, we can evaluate the following loop at compile
      time and use a constant bit permute vector.  */
-    for (long i = 0; i < __builtin_popcountl(__M); i++) {
-      c = __builtin_clzl(m);
-      p = (p << 8) | c;
-      m ^= (mask >> c);
+    long __i;
+    for (__i = 0; __i < __builtin_popcountl(__M); __i++) {
+      __c = __builtin_clzl(__m);
+      __p = (__p << 8) | __c;
+      __m ^= (__mask >> __c);
     }
-    result = __builtin_bpermd(p, __X);
+    __result = __builtin_bpermd(__p, __X);
   } else {
-    p = 64 - __builtin_popcountl(__M);
-    result = 0;
+    __p = 64 - __builtin_popcountl(__M);
+    __result = 0;
     /* We could a use a for loop here, but that combined with
      -funroll-loops can expand to a lot of code.  The while
      loop avoids unrolling and the compiler commons the xor
      from clearing the mask bit with the (m != 0) test.  The
      result is a more compact loop setup and body.  */
-    while (m != 0) {
-      unsigned long t;
-      c = __builtin_clzl(m);
-      t = (__X & (mask >> c)) >> (p - c);
-      m ^= (mask >> c);
-      result |= (t);
-      p++;
+    while (__m != 0) {
+      unsigned long __t;
+      __c = __builtin_clzl(__m);
+      __t = (__X & (__mask >> __c)) >> (__p - __c);
+      __m ^= (__mask >> __c);
+      __result |= (__t);
+      __p++;
     }
   }
-  return (result);
+  return __result;
 }
 
 /* these 32-bit implementations depend on 64-bit pdep/pext
