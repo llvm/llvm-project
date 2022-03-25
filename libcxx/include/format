@@ -117,6 +117,7 @@ namespace std {
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 // Make sure all feature-test macros are available.
 #include <version>
 // Enable the contents of the header only when libc++ was built with LIBCXX_ENABLE_INCOMPLETE_FEATURES.

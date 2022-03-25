@@ -186,6 +186,7 @@ template<class Callable, class ...Args>
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__mutex_base>
 #include <__threading_support>

@@ -9,6 +9,7 @@
 
 #ifndef _LIBCPP_EXPERIMENTAL_MAP
 #define _LIBCPP_EXPERIMENTAL_MAP
+
 /*
     experimental/map synopsis
 
@@ -33,6 +34,7 @@ namespace pmr {
 
  */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <experimental/__config>
 #include <experimental/memory_resource>
 #include <map>

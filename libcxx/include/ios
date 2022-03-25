@@ -210,6 +210,7 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__ios/fpos.h>
 #include <__locale>

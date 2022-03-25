@@ -361,7 +361,7 @@ template <class R, class Alloc> struct uses_allocator<packaged_task<R>, Alloc>;
 
 */
 
-#include <__assert>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__chrono/duration.h>
 #include <__chrono/time_point.h>

@@ -169,7 +169,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/remove.h>
 #include <__algorithm/remove_if.h>
 #include <__algorithm/unwrap_iter.h>
-#include <__assert>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__split_buffer>

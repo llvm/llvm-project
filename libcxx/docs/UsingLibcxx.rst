@@ -169,7 +169,7 @@ and ``operator delete``. For example:
 .. code-block:: cpp
 
   // In HelloWorldHandler.cpp
-  #include <__assert> // must include <__assert> before defining the handler
+  #include <version> // must include any libc++ header before defining the handler (C compatibility headers excluded)
 
   void std::__libcpp_assertion_handler(char const* file, int line, char const* expression, char const* message) {
     std::printf("Assertion %s failed at %s:%d, more info: %s", expression, file, line, message);

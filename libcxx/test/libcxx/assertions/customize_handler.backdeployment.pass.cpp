@@ -14,7 +14,6 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED
 
-#include <__assert>
 #include <cassert>
 
 bool handler_called = false;

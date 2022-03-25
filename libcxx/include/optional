@@ -158,7 +158,7 @@ template<class T>
 
 */
 
-#include <__assert>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__concepts/invocable.h>
 #include <__config>

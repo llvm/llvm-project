@@ -42,6 +42,7 @@ template<class E> const E* end(initializer_list<E> il) noexcept; // constexpr in
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <cstddef>
 

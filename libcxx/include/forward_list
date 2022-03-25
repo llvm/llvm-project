@@ -182,6 +182,7 @@ template <class T, class Allocator, class Predicate>
 #include <__algorithm/comp.h>
 #include <__algorithm/lexicographical_compare.h>
 #include <__algorithm/min.h>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__utility/forward.h>
 #include <initializer_list>

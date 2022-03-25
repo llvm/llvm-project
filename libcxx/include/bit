@@ -61,7 +61,7 @@ namespace std {
 
 */
 
-#include <__assert>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__bit/bit_cast.h>
 #include <__bit/byteswap.h>
 #include <__bits> // __libcpp_clz

@@ -76,6 +76,7 @@ template <class E> void rethrow_if_nested(const E& e);
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
 #include <__memory/addressof.h>

@@ -11,7 +11,8 @@
 #define _LIBCPP_STRING_VIEW
 
 /*
-string_view synopsis
+
+    string_view synopsis
 
 namespace std {
 
@@ -196,7 +197,7 @@ namespace std {
 */
 
 #include <__algorithm/min.h>
-#include <__assert>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>

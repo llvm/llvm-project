@@ -9,6 +9,7 @@
 
 #ifndef _LIBCPP_EXPERIMENTAL_REGEX
 #define _LIBCPP_EXPERIMENTAL_REGEX
+
 /*
     experimental/regex synopsis
 
@@ -35,6 +36,7 @@ namespace pmr {
 
  */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <experimental/__config>
 #include <experimental/memory_resource>
 #include <experimental/string>
