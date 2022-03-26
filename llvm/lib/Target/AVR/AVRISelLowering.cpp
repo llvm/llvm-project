@@ -270,8 +270,6 @@ EVT AVRTargetLowering::getSetCCResultType(const DataLayout &DL, LLVMContext &,
 }
 
 SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
-  //: TODO: this function has to be completely rewritten to produce optimal
-  // code, for now it's producing very long but correct code.
   unsigned Opc8;
   const SDNode *N = Op.getNode();
   EVT VT = Op.getValueType();
@@ -372,6 +370,27 @@ SDValue AVRTargetLowering::LowerShifts(SDValue Op, SelectionDAG &DAG) const {
       ShiftAmount = 0;
     }
   } else if (VT.getSizeInBits() == 16) {
+    if (Op.getOpcode() == ISD::SRA)
+      // Special optimization for int16 arithmetic right shift.
+      switch (ShiftAmount) {
+      case 15:
+        Victim = DAG.getNode(AVRISD::ASRWN, dl, VT, Victim,
+                             DAG.getConstant(15, dl, VT));
+        ShiftAmount = 0;
+        break;
+      case 14:
+        Victim = DAG.getNode(AVRISD::ASRWN, dl, VT, Victim,
+                             DAG.getConstant(14, dl, VT));
+        ShiftAmount = 0;
+        break;
+      case 7:
+        Victim = DAG.getNode(AVRISD::ASRWN, dl, VT, Victim,
+                             DAG.getConstant(7, dl, VT));
+        ShiftAmount = 0;
+        break;
+      default:
+        break;
+      }
     if (4 <= ShiftAmount && ShiftAmount < 8)
       switch (Op.getOpcode()) {
       case ISD::SHL:
