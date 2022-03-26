@@ -272,8 +272,7 @@ static inline bool isNOREXRegClass(const Record *Op) {
 
 static inline bool isRegisterOperand(const Record *Rec) {
   return Rec->isSubClassOf("RegisterClass") ||
-         Rec->isSubClassOf("RegisterOperand") ||
-         Rec->isSubClassOf("PointerLikeRegClass");
+         Rec->isSubClassOf("RegisterOperand");
 }
 
 static inline bool isMemoryOperand(const Record *Rec) {
@@ -506,7 +505,10 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInstr,
     for (unsigned i = RegOutSize, e = RegInstr->Operands.size(); i < e; i++) {
       Record *RegOpRec = RegInstr->Operands[i].Rec;
       Record *MemOpRec = MemInstr->Operands[i].Rec;
-      if (isRegisterOperand(RegOpRec) && isMemoryOperand(MemOpRec)) {
+      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64, TAILJMPr64_REX
+      if ((isRegisterOperand(RegOpRec) ||
+           RegOpRec->isSubClassOf("PointerLikeRegClass")) &&
+          isMemoryOperand(MemOpRec)) {
         switch (i) {
         case 0:
           addEntryWithFlags(Table0, RegInstr, MemInstr, S, 0);
