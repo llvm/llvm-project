@@ -371,59 +371,38 @@ define void @loop3(i8* noalias nocapture noundef writeonly %dst, float* nocaptur
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_8: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
-; CHECK-NEXT:    mov w13, #1132396544
+; CHECK-NEXT:    adrp x12, .LCPI2_0
 ; CHECK-NEXT:    and x10, x11, #0x1fffffffc
+; CHECK-NEXT:    mov w13, #1132396544
+; CHECK-NEXT:    add x8, x10, x10, lsl #1
+; CHECK-NEXT:    ldr q0, [x12, :lo12:.LCPI2_0]
+; CHECK-NEXT:    add x9, x0, x8
 ; CHECK-NEXT:    mov x12, x10
-; CHECK-NEXT:    add x9, x10, x10, lsl #1
-; CHECK-NEXT:    dup v0.4s, w13
-; CHECK-NEXT:    add x8, x1, x9, lsl #2
-; CHECK-NEXT:    add x9, x0, x9
+; CHECK-NEXT:    add x8, x1, x8, lsl #2
+; CHECK-NEXT:    dup v1.4s, w13
 ; CHECK-NEXT:  .LBB2_9: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld3 { v1.4s, v2.4s, v3.4s }, [x1], #48
-; CHECK-NEXT:    fcmlt v4.4s, v1.4s, #0.0
-; CHECK-NEXT:    subs x12, x12, #4
-; CHECK-NEXT:    fmin v5.4s, v1.4s, v0.4s
-; CHECK-NEXT:    fmin v6.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fcmlt v7.4s, v3.4s, #0.0
-; CHECK-NEXT:    fmin v1.4s, v3.4s, v0.4s
-; CHECK-NEXT:    bic v4.16b, v5.16b, v4.16b
+; CHECK-NEXT:    ld3 { v2.4s, v3.4s, v4.4s }, [x1], #48
 ; CHECK-NEXT:    fcmlt v5.4s, v2.4s, #0.0
-; CHECK-NEXT:    fcvtzs v4.4s, v4.4s
-; CHECK-NEXT:    bic v1.16b, v1.16b, v7.16b
-; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NEXT:    bic v2.16b, v6.16b, v5.16b
-; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
-; CHECK-NEXT:    xtn v3.4h, v4.4s
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    umov w13, v3.h[0]
-; CHECK-NEXT:    xtn v2.4h, v2.4s
-; CHECK-NEXT:    umov w14, v2.h[0]
-; CHECK-NEXT:    fmov s4, w13
-; CHECK-NEXT:    umov w13, v1.h[0]
-; CHECK-NEXT:    mov v4.b[1], w14
-; CHECK-NEXT:    umov w14, v3.h[1]
-; CHECK-NEXT:    mov v4.b[2], w13
-; CHECK-NEXT:    umov w13, v2.h[1]
-; CHECK-NEXT:    mov v4.b[3], w14
-; CHECK-NEXT:    umov w14, v1.h[1]
-; CHECK-NEXT:    mov v4.b[4], w13
-; CHECK-NEXT:    umov w13, v3.h[2]
-; CHECK-NEXT:    mov v4.b[5], w14
-; CHECK-NEXT:    umov w14, v2.h[2]
-; CHECK-NEXT:    mov v4.b[6], w13
-; CHECK-NEXT:    umov w13, v1.h[2]
-; CHECK-NEXT:    mov v4.b[7], w14
-; CHECK-NEXT:    umov w14, v3.h[3]
-; CHECK-NEXT:    mov v4.b[8], w13
-; CHECK-NEXT:    umov w13, v2.h[3]
-; CHECK-NEXT:    mov v4.b[9], w14
-; CHECK-NEXT:    umov w14, v1.h[3]
-; CHECK-NEXT:    mov v4.b[10], w13
 ; CHECK-NEXT:    add x13, x0, #8
-; CHECK-NEXT:    mov v4.b[11], w14
-; CHECK-NEXT:    str d4, [x0], #12
-; CHECK-NEXT:    st1 { v4.s }[2], [x13]
+; CHECK-NEXT:    fmin v6.4s, v2.4s, v1.4s
+; CHECK-NEXT:    subs x12, x12, #4
+; CHECK-NEXT:    fcmlt v7.4s, v3.4s, #0.0
+; CHECK-NEXT:    fmin v16.4s, v3.4s, v1.4s
+; CHECK-NEXT:    fmin v2.4s, v4.4s, v1.4s
+; CHECK-NEXT:    bic v5.16b, v6.16b, v5.16b
+; CHECK-NEXT:    fcmlt v6.4s, v4.4s, #0.0
+; CHECK-NEXT:    bic v3.16b, v16.16b, v7.16b
+; CHECK-NEXT:    fcvtzs v4.4s, v5.4s
+; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
+; CHECK-NEXT:    bic v2.16b, v2.16b, v6.16b
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    xtn v4.4h, v4.4s
+; CHECK-NEXT:    xtn v5.4h, v3.4s
+; CHECK-NEXT:    xtn v6.4h, v2.4s
+; CHECK-NEXT:    tbl v2.16b, { v4.16b, v5.16b, v6.16b }, v0.16b
+; CHECK-NEXT:    str d2, [x0], #12
+; CHECK-NEXT:    st1 { v2.s }[2], [x13]
 ; CHECK-NEXT:    b.ne .LBB2_9
 ; CHECK-NEXT:  // %bb.10: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10
@@ -606,69 +585,40 @@ define void @loop4(i8* noalias nocapture noundef writeonly %dst, float* nocaptur
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_8: // %vector.ph
 ; CHECK-NEXT:    add x11, x8, #1
-; CHECK-NEXT:    mov w13, #1132396544
+; CHECK-NEXT:    adrp x12, .LCPI3_0
 ; CHECK-NEXT:    and x10, x11, #0x1fffffffc
-; CHECK-NEXT:    mov x12, x10
+; CHECK-NEXT:    mov w13, #1132396544
 ; CHECK-NEXT:    add x8, x1, x10, lsl #4
 ; CHECK-NEXT:    add x9, x0, x10, lsl #2
-; CHECK-NEXT:    dup v0.4s, w13
+; CHECK-NEXT:    ldr q0, [x12, :lo12:.LCPI3_0]
+; CHECK-NEXT:    mov x12, x10
+; CHECK-NEXT:    dup v1.4s, w13
 ; CHECK-NEXT:  .LBB3_9: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ld4 { v1.4s, v2.4s, v3.4s, v4.4s }, [x1], #64
-; CHECK-NEXT:    fcmlt v5.4s, v1.4s, #0.0
-; CHECK-NEXT:    subs x12, x12, #4
-; CHECK-NEXT:    fmin v6.4s, v1.4s, v0.4s
-; CHECK-NEXT:    fmin v7.4s, v2.4s, v0.4s
-; CHECK-NEXT:    fcmlt v16.4s, v3.4s, #0.0
-; CHECK-NEXT:    fmin v17.4s, v3.4s, v0.4s
-; CHECK-NEXT:    bic v5.16b, v6.16b, v5.16b
+; CHECK-NEXT:    ld4 { v2.4s, v3.4s, v4.4s, v5.4s }, [x1], #64
 ; CHECK-NEXT:    fcmlt v6.4s, v2.4s, #0.0
-; CHECK-NEXT:    fcvtzs v5.4s, v5.4s
-; CHECK-NEXT:    fmin v1.4s, v4.4s, v0.4s
+; CHECK-NEXT:    subs x12, x12, #4
+; CHECK-NEXT:    fmin v7.4s, v2.4s, v1.4s
+; CHECK-NEXT:    fcmlt v16.4s, v3.4s, #0.0
+; CHECK-NEXT:    fmin v17.4s, v3.4s, v1.4s
+; CHECK-NEXT:    fmin v18.4s, v4.4s, v1.4s
 ; CHECK-NEXT:    bic v6.16b, v7.16b, v6.16b
-; CHECK-NEXT:    fcvtzs v6.4s, v6.4s
-; CHECK-NEXT:    xtn v5.4h, v5.4s
-; CHECK-NEXT:    bic v7.16b, v17.16b, v16.16b
-; CHECK-NEXT:    fcmlt v16.4s, v4.4s, #0.0
-; CHECK-NEXT:    umov w13, v5.h[0]
-; CHECK-NEXT:    xtn v2.4h, v6.4s
-; CHECK-NEXT:    fcvtzs v3.4s, v7.4s
-; CHECK-NEXT:    umov w14, v2.h[0]
-; CHECK-NEXT:    bic v1.16b, v1.16b, v16.16b
-; CHECK-NEXT:    fmov s4, w13
-; CHECK-NEXT:    xtn v3.4h, v3.4s
-; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
-; CHECK-NEXT:    mov v4.b[1], w14
-; CHECK-NEXT:    umov w13, v3.h[0]
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    mov v4.b[2], w13
-; CHECK-NEXT:    umov w13, v1.h[0]
-; CHECK-NEXT:    mov v4.b[3], w13
-; CHECK-NEXT:    umov w13, v5.h[1]
-; CHECK-NEXT:    mov v4.b[4], w13
-; CHECK-NEXT:    umov w13, v2.h[1]
-; CHECK-NEXT:    mov v4.b[5], w13
-; CHECK-NEXT:    umov w13, v3.h[1]
-; CHECK-NEXT:    mov v4.b[6], w13
-; CHECK-NEXT:    umov w13, v1.h[1]
-; CHECK-NEXT:    mov v4.b[7], w13
-; CHECK-NEXT:    umov w13, v5.h[2]
-; CHECK-NEXT:    mov v4.b[8], w13
-; CHECK-NEXT:    umov w13, v2.h[2]
-; CHECK-NEXT:    mov v4.b[9], w13
-; CHECK-NEXT:    umov w13, v3.h[2]
-; CHECK-NEXT:    mov v4.b[10], w13
-; CHECK-NEXT:    umov w13, v1.h[2]
-; CHECK-NEXT:    mov v4.b[11], w13
-; CHECK-NEXT:    umov w13, v5.h[3]
-; CHECK-NEXT:    mov v4.b[12], w13
-; CHECK-NEXT:    umov w13, v2.h[3]
-; CHECK-NEXT:    mov v4.b[13], w13
-; CHECK-NEXT:    umov w13, v3.h[3]
-; CHECK-NEXT:    mov v4.b[14], w13
-; CHECK-NEXT:    umov w13, v1.h[3]
-; CHECK-NEXT:    mov v4.b[15], w13
-; CHECK-NEXT:    str q4, [x0], #16
+; CHECK-NEXT:    fcmlt v7.4s, v4.4s, #0.0
+; CHECK-NEXT:    bic v16.16b, v17.16b, v16.16b
+; CHECK-NEXT:    fcmlt v17.4s, v5.4s, #0.0
+; CHECK-NEXT:    fmin v2.4s, v5.4s, v1.4s
+; CHECK-NEXT:    fcvtzs v4.4s, v6.4s
+; CHECK-NEXT:    bic v3.16b, v18.16b, v7.16b
+; CHECK-NEXT:    fcvtzs v5.4s, v16.4s
+; CHECK-NEXT:    fcvtzs v3.4s, v3.4s
+; CHECK-NEXT:    bic v2.16b, v2.16b, v17.16b
+; CHECK-NEXT:    fcvtzs v2.4s, v2.4s
+; CHECK-NEXT:    xtn v16.4h, v4.4s
+; CHECK-NEXT:    xtn v17.4h, v5.4s
+; CHECK-NEXT:    xtn v18.4h, v3.4s
+; CHECK-NEXT:    xtn v19.4h, v2.4s
+; CHECK-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v0.16b
+; CHECK-NEXT:    str q2, [x0], #16
 ; CHECK-NEXT:    b.ne .LBB3_9
 ; CHECK-NEXT:  // %bb.10: // %middle.block
 ; CHECK-NEXT:    cmp x11, x10
