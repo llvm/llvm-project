@@ -25,6 +25,7 @@ using namespace mlir;
 using namespace mlir::cir;
 
 #include "mlir/Dialect/CIR/IR/CIROpsEnums.cpp.inc"
+#include "mlir/Dialect/CIR/IR/CIROpsStructs.cpp.inc"
 
 #include "mlir/Dialect/CIR/IR/CIROpsDialect.cpp.inc"
 
@@ -482,20 +483,17 @@ Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
-ParseResult parseSwitchOp(
-    OpAsmParser &parser,
-    llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regionsRegions,
-    mlir::SmallVectorImpl<::mlir::OpAsmParser::UnresolvedOperand>
-        &case_valsOperands,
-    mlir::SmallVectorImpl<::mlir::OpAsmParser::UnresolvedOperand>
-        &case_kindsOperands) {
+ParseResult
+parseSwitchOp(OpAsmParser &parser,
+              llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regions,
+              ::mlir::ArrayAttr &casesAttr) {
+
   return ::mlir::success();
 }
 
 void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
                    mlir::MutableArrayRef<::mlir::Region> regions,
-                   mlir::Operation::operand_range case_vals,
-                   mlir::Operation::operand_range case_kinds) {}
+                   ::mlir::ArrayAttr casesAttr) {}
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected

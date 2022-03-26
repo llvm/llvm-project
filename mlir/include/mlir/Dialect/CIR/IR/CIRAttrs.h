@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_CIR_IR_CIRATTRS_H_
 #define MLIR_DIALECT_CIR_IR_CIRATTRS_H_
 
+#include "mlir/Dialect/CIR/IR/CIROpsEnums.h"
 #include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"

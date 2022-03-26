@@ -514,25 +514,36 @@ def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
 // SwitchOp
 //===----------------------------------------------------------------------===//
 
-// TODO: use this once Variadic<...> supports CaseAttr and CaseOpKind...
-//
-// def CaseOpKind_DT : I32EnumAttrCase<"_default_", 1>;
-// def CaseOpKind_EQ : I32EnumAttrCase<"equal", 2>;
-//
-// def CaseOpKind : I32EnumAttr<
-//     "CaseOpKind",
-//     "case kind",
-//     [CaseOpKind_DT, CaseOpKind_EQ]> {
-//   let cppNamespace = "::mlir::cir";
-// }
-//
-// def CaseAttr : StructAttr<"CaseAttr", CIR_Dialect, [
-//   StructFieldAttr<"match", AnyInteger>,
-//   StructFieldAttr<"kind", CaseOpKind>
-// ]> {}
+// FIXME: even though printed/parsed names assume lowercase, we capitalize here
+// because "default" is a reserved keyword and can't show up in a enum.
+def CaseOpKind_DT : I32EnumAttrCase<"Default", 1>;
+def CaseOpKind_EQ : I32EnumAttrCase<"Equal", 2>;
+
+def CaseOpKind : I32EnumAttr<
+    "CaseOpKind",
+    "case kind",
+    [CaseOpKind_DT, CaseOpKind_EQ]> {
+  let cppNamespace = "::mlir::cir";
+}
+
+def CaseEltValueListAttr :
+  TypedArrayAttrBase<AnyAttr, "cir.switch case value condition"> {
+  let constBuilderCall = ?;
+}
+
+def CaseAttr : AttrDef<CIR_Dialect, "Case"> {
+  let parameters = (ins "ArrayAttr":$value, "CaseOpKindAttr":$kind);
+  let mnemonic = "case";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def CaseArrayAttr :
+  TypedArrayAttrBase<CaseAttr, "cir.switch case array attribute"> {
+  let constBuilderCall = ?;
+}
 
 def SwitchOp : CIR_Op<"switch",
-      [SameVariadicOperandSize, SameTypeOperands,
+      [SameVariadicOperandSize,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]> {
   let summary = "a switch operation";
@@ -549,11 +560,11 @@ def SwitchOp : CIR_Op<"switch",
 
     ```mlir
     cir.switch %b {
-      cir.case #equal, 20 {
+      case (#equal, 20) {
         ...
         cir.yield #break
       },
-      cir.case #default {
+      case (#default) {
         ...
         cir.yield #fallthrough
       },
@@ -561,20 +572,18 @@ def SwitchOp : CIR_Op<"switch",
     ```
   }];
 
-  // TODO: use CaseOpKind
   let arguments = (ins AnyInteger:$condition,
-                       Variadic<AnyInteger>:$case_vals,
-                       Variadic<AnyInteger>:$case_kinds);
+                       OptionalAttr<CaseArrayAttr>:$cases);
   let regions = (region VariadicRegion<SizedRegion<1>>:$regions);
 
   let hasVerifier = 0;
 
   let assemblyFormat = [{
-    `(` $condition `:` type($condition) `)` `{`
+    `(` $condition `:` type($condition) `)`
     custom<SwitchOp>(
-      $regions, $case_vals, $case_kinds
+      $regions, $cases
     )
-    `}` attr-dict
+    attr-dict
   }];
 }
 
