@@ -59,21 +59,8 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
         // Skip CodeGenInstructions that are not real standalone instructions
         RI.Form == X86Local::PrefixByte || RI.Form == X86Local::Pseudo)
       continue;
-    // Flatten an instruction assembly string.
-    std::string AsmString = I->FlattenAsmStringVariants(I->AsmString, Variant);
-    StringRef Mnemonic(AsmString);
-    // Extract a mnemonic assuming it's separated by \t
-    Mnemonic = Mnemonic.take_until([](char C) { return C == '\t'; });
-
-    // Special case: CMOVCC, JCC, SETCC have "${cond}" in mnemonic.
-    // Replace it with "CC" in-place.
-    size_t CondPos = Mnemonic.find("${cond}");
-    if (CondPos != StringRef::npos)
-      Mnemonic = AsmString.replace(CondPos, StringRef::npos, "CC");
-
-    // It's intentional that we put a std::string to the map (StringRef::upper
-    // returns a string) as AsmString is deallocated at the end of the iteration
-    MnemonicToCGInstrMap[Mnemonic.upper()].push_back(I);
+    std::string Mnemonic = X86Disassembler::getMnemonic(I, Variant);
+    MnemonicToCGInstrMap[Mnemonic].push_back(I);
   }
 
   OS << "#ifdef GET_X86_MNEMONIC_TABLES_H\n";
