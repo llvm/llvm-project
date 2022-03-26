@@ -344,9 +344,7 @@ public:
         RegRec->getValueAsBit("hasNoTrackPrefix") !=
             MemRec->getValueAsBit("hasNoTrackPrefix") ||
         RegRec->getValueAsBit("EVEX_W1_VEX_W0") !=
-            MemRec->getValueAsBit("EVEX_W1_VEX_W0") ||
-        RegRec->getValueAsBit("isAsmParserOnly") !=
-            MemRec->getValueAsBit("isAsmParserOnly"))
+            MemRec->getValueAsBit("EVEX_W1_VEX_W0"))
       return false;
 
     // Make sure the sizes of the operands of both instructions suit each other.
@@ -556,10 +554,10 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
       Target.getInstructionsByEnumValue();
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
-    if (!Inst->TheDef->getNameInit() || !Inst->TheDef->isSubClassOf("X86Inst"))
-      continue;
-
     const Record *Rec = Inst->TheDef;
+    if (!Rec->getNameInit() || !Rec->isSubClassOf("X86Inst") ||
+        Rec->getValueAsBit("isAsmParserOnly"))
+      continue;
 
     // - Do not proceed if the instruction is marked as notMemoryFoldable.
     // - Instructions including RST register class operands are not relevant
