@@ -85,7 +85,7 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   Encoding = byteFromRec(Rec, "OpEncBits");
   OpSize = byteFromRec(Rec, "OpSizeBits");
   AdSize = byteFromRec(Rec, "AdSizeBits");
-  HasREX_WPrefix = Rec->getValueAsBit("hasREX_WPrefix");
+  HasREX_W = Rec->getValueAsBit("hasREX_W");
   HasVEX_4V = Rec->getValueAsBit("hasVEX_4V");
   HasVEX_W = Rec->getValueAsBit("HasVEX_W");
   IgnoresVEX_W = Rec->getValueAsBit("IgnoresVEX_W");
@@ -290,10 +290,10 @@ InstructionContext RecognizableInstr::insnContext() const {
       errs() << "Instruction does not use a prefix: " << Name << "\n";
       llvm_unreachable("Invalid prefix");
     }
-  } else if (Is64Bit || HasREX_WPrefix || AdSize == X86Local::AdSize64) {
-    if (HasREX_WPrefix && (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD))
+  } else if (Is64Bit || HasREX_W || AdSize == X86Local::AdSize64) {
+    if (HasREX_W && (OpSize == X86Local::OpSize16 || OpPrefix == X86Local::PD))
       insnContext = IC_64BIT_REXW_OPSIZE;
-    else if (HasREX_WPrefix && AdSize == X86Local::AdSize32)
+    else if (HasREX_W && AdSize == X86Local::AdSize32)
       insnContext = IC_64BIT_REXW_ADSIZE;
     else if (OpSize == X86Local::OpSize16 && OpPrefix == X86Local::XD)
       insnContext = IC_64BIT_XD_OPSIZE;
@@ -307,15 +307,15 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_64BIT_OPSIZE;
     else if (AdSize == X86Local::AdSize32)
       insnContext = IC_64BIT_ADSIZE;
-    else if (HasREX_WPrefix && OpPrefix == X86Local::XS)
+    else if (HasREX_W && OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_REXW_XS;
-    else if (HasREX_WPrefix && OpPrefix == X86Local::XD)
+    else if (HasREX_W && OpPrefix == X86Local::XD)
       insnContext = IC_64BIT_REXW_XD;
     else if (OpPrefix == X86Local::XD)
       insnContext = IC_64BIT_XD;
     else if (OpPrefix == X86Local::XS)
       insnContext = IC_64BIT_XS;
-    else if (HasREX_WPrefix)
+    else if (HasREX_W)
       insnContext = IC_64BIT_REXW;
     else
       insnContext = IC_64BIT;
@@ -390,7 +390,7 @@ void RecognizableInstr::handleOperand(bool optional, unsigned &operandIndex,
   adjustOperandEncoding(encoding);
   Spec->operands[operandIndex].encoding = encoding;
   Spec->operands[operandIndex].type =
-      typeFromString(std::string(typeName), HasREX_WPrefix, OpSize);
+      typeFromString(std::string(typeName), HasREX_W, OpSize);
 
   ++operandIndex;
   ++physicalOperandIndex;
@@ -855,9 +855,9 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 
 #define TYPE(str, type) if (s == str) return type;
 OperandType RecognizableInstr::typeFromString(const std::string &s,
-                                              bool hasREX_WPrefix,
+                                              bool hasREX_W,
                                               uint8_t OpSize) {
-  if(hasREX_WPrefix) {
+  if(hasREX_W) {
     // For instructions with a REX_W prefix, a declared 32-bit register encoding
     // is special.
     TYPE("GR32",              TYPE_R32)
