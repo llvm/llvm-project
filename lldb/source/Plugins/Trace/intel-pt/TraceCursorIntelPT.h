@@ -24,7 +24,7 @@ public:
 
   virtual bool Next() override;
 
-  llvm::Error GetError() override;
+  const char *GetError() override;
 
   lldb::addr_t GetLoadAddress() override;
 
