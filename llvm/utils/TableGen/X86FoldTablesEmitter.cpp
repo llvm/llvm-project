@@ -330,13 +330,13 @@ public:
         RegRI.OpSize != MemRI.OpSize || RegRI.AdSize != MemRI.AdSize ||
         RegRI.HasREX_W != MemRI.HasREX_W ||
         RegRI.HasVEX_4V != MemRI.HasVEX_4V ||
-        RegRI.HasVEX_LPrefix != MemRI.HasVEX_LPrefix ||
+        RegRI.HasVEX_L != MemRI.HasVEX_L ||
         RegRI.HasVEX_W != MemRI.HasVEX_W ||
         RegRI.IgnoresVEX_L != MemRI.IgnoresVEX_L ||
         RegRI.IgnoresVEX_W != MemRI.IgnoresVEX_W ||
         RegRI.HasEVEX_K != MemRI.HasEVEX_K ||
         RegRI.HasEVEX_KZ != MemRI.HasEVEX_KZ ||
-        RegRI.HasEVEX_L2Prefix != MemRI.HasEVEX_L2Prefix ||
+        RegRI.HasEVEX_L2 != MemRI.HasEVEX_L2 ||
         RegRec->getValueAsBit("hasEVEX_RC") !=
             MemRec->getValueAsBit("hasEVEX_RC") ||
         RegRec->getValueAsBit("hasLockPrefix") !=

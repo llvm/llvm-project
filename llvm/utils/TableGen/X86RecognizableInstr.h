@@ -183,12 +183,12 @@ struct RecognizableInstrBase {
   bool HasVEX_W;
   /// The IgnoresVEX_W field from the record
   bool IgnoresVEX_W;
-  /// Inferred from the operands; indicates whether the L bit in the VEX prefix is set
-  bool HasVEX_LPrefix;
+  /// The hasVEX_L field from the record
+  bool HasVEX_L;
   /// The ignoreVEX_L field from the record
   bool IgnoresVEX_L;
   /// The hasEVEX_L2Prefix field from the record
-  bool HasEVEX_L2Prefix;
+  bool HasEVEX_L2;
   /// The hasEVEX_K field from the record
   bool HasEVEX_K;
   /// The hasEVEX_KZ field from the record

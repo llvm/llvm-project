@@ -122,7 +122,7 @@ public:
         // VEX/EVEX fields
         VEXRI.OpPrefix != EVEXRI.OpPrefix || VEXRI.OpMap != EVEXRI.OpMap ||
         VEXRI.HasVEX_4V != EVEXRI.HasVEX_4V ||
-        VEXRI.HasVEX_LPrefix != EVEXRI.HasVEX_LPrefix ||
+        VEXRI.HasVEX_L != EVEXRI.HasVEX_L ||
         // Match is allowed if either is VEX_WIG, or they match, or EVEX
         // is VEX_W1X and VEX is VEX_W0.
         (!(VEX_WIG || (!EVEX_WIG && EVEX_W == VEX_W) ||
@@ -217,7 +217,7 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
       VEXInsts[RI.Opcode].push_back(Inst);
     // Add relevant EVEX encoded instructions to EVEXInsts
     else if (RI.Encoding == X86Local::EVEX && !RI.HasEVEX_K && !RI.HasEVEX_B &&
-             !RI.HasEVEX_L2Prefix && !Def->getValueAsBit("notEVEX2VEXConvertible"))
+             !RI.HasEVEX_L2 && !Def->getValueAsBit("notEVEX2VEXConvertible"))
       EVEXInsts.push_back(Inst);
   }
 
