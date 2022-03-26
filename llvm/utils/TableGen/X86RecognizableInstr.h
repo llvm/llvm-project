@@ -158,14 +158,8 @@ namespace X86Disassembler {
 
 class DisassemblerTables;
 
-/// RecognizableInstr - Encapsulates all information required to decode a single
-///   instruction, as extracted from the LLVM instruction tables.  Has methods
-///   to interpret the information available in the LLVM tables, and to emit the
-///   instruction into DisassemblerTables.
-class RecognizableInstr {
-public:
-  /// The opcode of the instruction, as used in an MCInst
-  InstrUID UID;
+/// Extract common fields of a single X86 instruction from a CodeGenInstruction
+struct RecognizableInstrBase {
   /// The record from the .td files corresponding to this instruction
   const Record* Rec;
   /// The OpPrefix field from the record
@@ -228,6 +222,18 @@ public:
   /// memory operands expand to 5 operands in the MCInst
   const std::vector<CGIOperandList::OperandInfo>* Operands;
 
+  /// \param insn The CodeGenInstruction to extract information from.
+  RecognizableInstrBase(const CodeGenInstruction &insn);
+};
+
+/// RecognizableInstr - Encapsulates all information required to decode a single
+///   instruction, as extracted from the LLVM instruction tables.  Has methods
+///   to interpret the information available in the LLVM tables, and to emit the
+///   instruction into DisassemblerTables.
+class RecognizableInstr : public RecognizableInstrBase {
+public:
+  /// The opcode of the instruction, as used in an MCInst
+  InstrUID UID;
   /// The description of the instruction that is emitted into the instruction
   /// info table
   InstructionSpecifier* Spec;

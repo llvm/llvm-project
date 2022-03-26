@@ -13,7 +13,6 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -41,23 +40,17 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   // Hold all instructions grouped by mnemonic
   StringMap<SmallVector<const CodeGenInstruction *, 0>> MnemonicToCGInstrMap;
 
-  // Unused
-  X86Disassembler::DisassemblerTables Tables;
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
-  for (unsigned II = 0, IE = NumberedInstructions.size(); II != IE; ++II) {
-    const CodeGenInstruction *I = NumberedInstructions[II];
-    X86Disassembler::RecognizableInstr RI(Tables, *I, II);
-    Record *Def = I->TheDef;
-    if ( // Filter non-X86 instructions
-        !Def->isSubClassOf("X86Inst") ||
-        // Skip pseudo instructions as they may contain non-alnum characters in
-        // mnemonic
-        (RI.IsCodeGenOnly && !RI.ForceDisassemble) ||
-        // Non-parsable instruction defs contain prefix as part of AsmString
+  for (const CodeGenInstruction *I : NumberedInstructions) {
+    X86Disassembler::RecognizableInstrBase RI(*I);
+    const Record *Def = RI.Rec;
+    if (!RI.ShouldBeEmitted)
+      continue;
+    if ( // Non-parsable instruction defs contain prefix as part of AsmString
         Def->getValueAsString("AsmVariantName") == "NonParsable" ||
-        // Skip CodeGenInstructions that are not real standalone instructions
-        RI.Form == X86Local::PrefixByte || RI.Form == X86Local::Pseudo)
+        // Skip prefix byte
+        RI.Form == X86Local::PrefixByte)
       continue;
     std::string Mnemonic = X86Disassembler::getMnemonic(I, Variant);
     MnemonicToCGInstrMap[Mnemonic].push_back(I);

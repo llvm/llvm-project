@@ -212,20 +212,6 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
   return Value;
 }
 
-// Returns true if the two given BitsInits represent the same integer value
-static inline bool equalBitsInits(const BitsInit *B1, const BitsInit *B2) {
-  if (B1->getNumBits() != B2->getNumBits())
-    PrintFatalError("Comparing two BitsInits with different sizes!");
-
-  for (unsigned i = 0, e = B1->getNumBits(); i != e; ++i) {
-    BitInit *Bit1 = cast<BitInit>(B1->getBit(i));
-    BitInit *Bit2 = cast<BitInit>(B2->getBit(i));
-    if (Bit1->getValue() != Bit2->getValue())
-      return false;
-  }
-  return true;
-}
-
 // Return the size of the register operand
 static inline unsigned int getRegOperandSize(const Record *RegRec) {
   if (RegRec->isSubClassOf("RegisterOperand"))
@@ -323,53 +309,42 @@ public:
       : MemInst(Inst) {}
 
   bool operator()(const CodeGenInstruction *RegInst) {
-    Record *MemRec = MemInst->TheDef;
-    Record *RegRec = RegInst->TheDef;
+    X86Disassembler::RecognizableInstrBase RegRI(*RegInst);
+    X86Disassembler::RecognizableInstrBase MemRI(*MemInst);
+    const Record *RegRec = RegRI.Rec;
+    const Record *MemRec = MemRI.Rec;
+
+    // EVEX_B means different things for memory and register forms.
+    if (RegRI.HasEVEX_B != 0 || MemRI.HasEVEX_B != 0)
+      return false;
+
+    // Instruction's format - The register form's "Form" field should be
+    // the opposite of the memory form's "Form" field.
+    if (!areOppositeForms(RegRI.Form, MemRI.Form))
+      return false;
 
     // Return false if one (at least) of the encoding fields of both
     // instructions do not match.
-    if (RegRec->getValueAsDef("OpEnc") != MemRec->getValueAsDef("OpEnc") ||
-        !equalBitsInits(RegRec->getValueAsBitsInit("Opcode"),
-                        MemRec->getValueAsBitsInit("Opcode")) ||
-        // VEX/EVEX fields
-        RegRec->getValueAsDef("OpPrefix") !=
-            MemRec->getValueAsDef("OpPrefix") ||
-        RegRec->getValueAsDef("OpMap") != MemRec->getValueAsDef("OpMap") ||
-        RegRec->getValueAsDef("OpSize") != MemRec->getValueAsDef("OpSize") ||
-        RegRec->getValueAsDef("AdSize") != MemRec->getValueAsDef("AdSize") ||
-        RegRec->getValueAsBit("hasVEX_4V") !=
-            MemRec->getValueAsBit("hasVEX_4V") ||
-        RegRec->getValueAsBit("hasEVEX_K") !=
-            MemRec->getValueAsBit("hasEVEX_K") ||
-        RegRec->getValueAsBit("hasEVEX_Z") !=
-            MemRec->getValueAsBit("hasEVEX_Z") ||
-        // EVEX_B means different things for memory and register forms.
-        RegRec->getValueAsBit("hasEVEX_B") != 0 ||
-        MemRec->getValueAsBit("hasEVEX_B") != 0 ||
+    if (RegRI.Encoding != MemRI.Encoding || RegRI.Opcode != MemRI.Opcode ||
+        RegRI.OpPrefix != MemRI.OpPrefix || RegRI.OpMap != MemRI.OpMap ||
+        RegRI.OpSize != MemRI.OpSize || RegRI.AdSize != MemRI.AdSize ||
+        RegRI.HasREX_WPrefix != MemRI.HasREX_WPrefix ||
+        RegRI.HasVEX_4V != MemRI.HasVEX_4V ||
+        RegRI.HasVEX_LPrefix != MemRI.HasVEX_LPrefix ||
+        RegRI.HasVEX_W != MemRI.HasVEX_W ||
+        RegRI.IgnoresVEX_L != MemRI.IgnoresVEX_L ||
+        RegRI.IgnoresVEX_W != MemRI.IgnoresVEX_W ||
+        RegRI.HasEVEX_K != MemRI.HasEVEX_K ||
+        RegRI.HasEVEX_KZ != MemRI.HasEVEX_KZ ||
+        RegRI.HasEVEX_L2Prefix != MemRI.HasEVEX_L2Prefix ||
         RegRec->getValueAsBit("hasEVEX_RC") !=
             MemRec->getValueAsBit("hasEVEX_RC") ||
-        RegRec->getValueAsBit("hasREX_WPrefix") !=
-            MemRec->getValueAsBit("hasREX_WPrefix") ||
         RegRec->getValueAsBit("hasLockPrefix") !=
             MemRec->getValueAsBit("hasLockPrefix") ||
         RegRec->getValueAsBit("hasNoTrackPrefix") !=
             MemRec->getValueAsBit("hasNoTrackPrefix") ||
-        RegRec->getValueAsBit("hasVEX_L") !=
-            MemRec->getValueAsBit("hasVEX_L") ||
-        RegRec->getValueAsBit("hasEVEX_L2") !=
-            MemRec->getValueAsBit("hasEVEX_L2") ||
-        RegRec->getValueAsBit("ignoresVEX_L") !=
-            MemRec->getValueAsBit("ignoresVEX_L") ||
-        RegRec->getValueAsBit("HasVEX_W") !=
-            MemRec->getValueAsBit("HasVEX_W") ||
-        RegRec->getValueAsBit("IgnoresVEX_W") !=
-            MemRec->getValueAsBit("IgnoresVEX_W") ||
         RegRec->getValueAsBit("EVEX_W1_VEX_W0") !=
             MemRec->getValueAsBit("EVEX_W1_VEX_W0") ||
-        // Instruction's format - The register form's "Form" field should be
-        // the opposite of the memory form's "Form" field.
-        !areOppositeForms(RegRec->getValueAsBitsInit("FormBits"),
-                          MemRec->getValueAsBitsInit("FormBits")) ||
         RegRec->getValueAsBit("isAsmParserOnly") !=
             MemRec->getValueAsBit("isAsmParserOnly"))
       return false;
@@ -424,31 +399,24 @@ public:
 
 private:
   // Return true of the 2 given forms are the opposite of each other.
-  bool areOppositeForms(const BitsInit *RegFormBits,
-                        const BitsInit *MemFormBits) {
-    uint64_t MemFormNum = getValueFromBitsInit(MemFormBits);
-    uint64_t RegFormNum = getValueFromBitsInit(RegFormBits);
-
-    if ((MemFormNum == X86Local::MRM0m && RegFormNum == X86Local::MRM0r) ||
-        (MemFormNum == X86Local::MRM1m && RegFormNum == X86Local::MRM1r) ||
-        (MemFormNum == X86Local::MRM2m && RegFormNum == X86Local::MRM2r) ||
-        (MemFormNum == X86Local::MRM3m && RegFormNum == X86Local::MRM3r) ||
-        (MemFormNum == X86Local::MRM4m && RegFormNum == X86Local::MRM4r) ||
-        (MemFormNum == X86Local::MRM5m && RegFormNum == X86Local::MRM5r) ||
-        (MemFormNum == X86Local::MRM6m && RegFormNum == X86Local::MRM6r) ||
-        (MemFormNum == X86Local::MRM7m && RegFormNum == X86Local::MRM7r) ||
-        (MemFormNum == X86Local::MRMXm && RegFormNum == X86Local::MRMXr) ||
-        (MemFormNum == X86Local::MRMXmCC && RegFormNum == X86Local::MRMXrCC) ||
-        (MemFormNum == X86Local::MRMDestMem &&
-         RegFormNum == X86Local::MRMDestReg) ||
-        (MemFormNum == X86Local::MRMSrcMem &&
-         RegFormNum == X86Local::MRMSrcReg) ||
-        (MemFormNum == X86Local::MRMSrcMem4VOp3 &&
-         RegFormNum == X86Local::MRMSrcReg4VOp3) ||
-        (MemFormNum == X86Local::MRMSrcMemOp4 &&
-         RegFormNum == X86Local::MRMSrcRegOp4) ||
-        (MemFormNum == X86Local::MRMSrcMemCC &&
-         RegFormNum == X86Local::MRMSrcRegCC))
+  bool areOppositeForms(unsigned RegForm, unsigned MemForm) {
+    if ((MemForm == X86Local::MRM0m && RegForm == X86Local::MRM0r) ||
+        (MemForm == X86Local::MRM1m && RegForm == X86Local::MRM1r) ||
+        (MemForm == X86Local::MRM2m && RegForm == X86Local::MRM2r) ||
+        (MemForm == X86Local::MRM3m && RegForm == X86Local::MRM3r) ||
+        (MemForm == X86Local::MRM4m && RegForm == X86Local::MRM4r) ||
+        (MemForm == X86Local::MRM5m && RegForm == X86Local::MRM5r) ||
+        (MemForm == X86Local::MRM6m && RegForm == X86Local::MRM6r) ||
+        (MemForm == X86Local::MRM7m && RegForm == X86Local::MRM7r) ||
+        (MemForm == X86Local::MRMXm && RegForm == X86Local::MRMXr) ||
+        (MemForm == X86Local::MRMXmCC && RegForm == X86Local::MRMXrCC) ||
+        (MemForm == X86Local::MRMDestMem && RegForm == X86Local::MRMDestReg) ||
+        (MemForm == X86Local::MRMSrcMem && RegForm == X86Local::MRMSrcReg) ||
+        (MemForm == X86Local::MRMSrcMem4VOp3 &&
+         RegForm == X86Local::MRMSrcReg4VOp3) ||
+        (MemForm == X86Local::MRMSrcMemOp4 &&
+         RegForm == X86Local::MRMSrcRegOp4) ||
+        (MemForm == X86Local::MRMSrcMemCC && RegForm == X86Local::MRMSrcRegCC))
       return true;
 
     return false;
