@@ -30,6 +30,7 @@ using namespace mlir;
 // Defined in the test directory, no public header.
 namespace mlir {
 void registerConvertToTargetEnvPass();
+void registerCloneTestPasses();
 void registerPassManagerTestPass();
 void registerPrintSpirvAvailabilityPass();
 void registerShapeFunctionTestPasses();
@@ -119,6 +120,7 @@ void registerTestTransformDialectExtension(DialectRegistry &);
 
 #ifdef MLIR_INCLUDE_TESTS
 void registerTestPasses() {
+  registerCloneTestPasses();
   registerConvertToTargetEnvPass();
   registerPassManagerTestPass();
   registerPrintSpirvAvailabilityPass();
