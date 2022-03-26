@@ -12,6 +12,8 @@
 
 #include "mlir/Dialect/CIR/IR/CIRAttrs.h"
 #include "mlir/Dialect/CIR/IR/CIRDialect.h"
+#include "mlir/Dialect/CIR/IR/CIROpsEnums.h"
+#include "mlir/Dialect/CIR/IR/CIRTypes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
