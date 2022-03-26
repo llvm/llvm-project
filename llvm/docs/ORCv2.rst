@@ -854,13 +854,11 @@ example, to expose an allowed set of symbols from the main process:
     // and contained in the list.
     CompileLayer.add(JD, loadModule(...));
 
-As an aside, it's worth pointing out that references to process or library
-symbols could simply be hardcoded into your IR or object files using the
-symbols' raw addresses. Symbolic resolution using the JIT symbol tables should
-usually be preferred though: Both methods require you to resolve the process
-symbol addresses, but symbolic resolution via the JIT symbol tables keeps the
-IR and objects readable and reusable in subsequent JIT sessions. Hardcoded
-addresses are difficult to read, and usually only good for one session.
+References to process or library symbols could also be hardcoded into your IR
+or object files using the symbols' raw addresses, however symbolic resolution
+using the JIT symbol tables should be preferred: it keeps the IR and objects
+readable and reusable in subsequent JIT sessions. Hardcoded addresses are
+difficult to read, and usually only good for one session.
 
 Roadmap
 =======
