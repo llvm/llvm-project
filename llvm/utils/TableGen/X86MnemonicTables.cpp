@@ -13,7 +13,6 @@
 
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "X86DisassemblerTables.h"
 #include "X86RecognizableInstr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -41,39 +40,23 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   // Hold all instructions grouped by mnemonic
   StringMap<SmallVector<const CodeGenInstruction *, 0>> MnemonicToCGInstrMap;
 
-  // Unused
-  X86Disassembler::DisassemblerTables Tables;
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
-  for (unsigned II = 0, IE = NumberedInstructions.size(); II != IE; ++II) {
-    const CodeGenInstruction *I = NumberedInstructions[II];
-    X86Disassembler::RecognizableInstr RI(Tables, *I, II);
-    Record *Def = I->TheDef;
-    if ( // Filter non-X86 instructions
-        !Def->isSubClassOf("X86Inst") ||
-        // Skip pseudo instructions as they may contain non-alnum characters in
-        // mnemonic
-        (RI.IsCodeGenOnly && !RI.ForceDisassemble) ||
-        // Non-parsable instruction defs contain prefix as part of AsmString
-        Def->getValueAsString("AsmVariantName") == "NonParsable" ||
-        // Skip CodeGenInstructions that are not real standalone instructions
-        RI.Form == X86Local::PrefixByte || RI.Form == X86Local::Pseudo)
+  for (const CodeGenInstruction *I : NumberedInstructions) {
+    const Record *Def = I->TheDef;
+    // Filter non-X86 instructions.
+    if (!Def->isSubClassOf("X86Inst"))
       continue;
-    // Flatten an instruction assembly string.
-    std::string AsmString = I->FlattenAsmStringVariants(I->AsmString, Variant);
-    StringRef Mnemonic(AsmString);
-    // Extract a mnemonic assuming it's separated by \t
-    Mnemonic = Mnemonic.take_until([](char C) { return C == '\t'; });
-
-    // Special case: CMOVCC, JCC, SETCC have "${cond}" in mnemonic.
-    // Replace it with "CC" in-place.
-    size_t CondPos = Mnemonic.find("${cond}");
-    if (CondPos != StringRef::npos)
-      Mnemonic = AsmString.replace(CondPos, StringRef::npos, "CC");
-
-    // It's intentional that we put a std::string to the map (StringRef::upper
-    // returns a string) as AsmString is deallocated at the end of the iteration
-    MnemonicToCGInstrMap[Mnemonic.upper()].push_back(I);
+    X86Disassembler::RecognizableInstrBase RI(*I);
+    if (!RI.shouldBeEmitted())
+      continue;
+    if ( // Non-parsable instruction defs contain prefix as part of AsmString
+        Def->getValueAsString("AsmVariantName") == "NonParsable" ||
+        // Skip prefix byte
+        RI.Form == X86Local::PrefixByte)
+      continue;
+    std::string Mnemonic = X86Disassembler::getMnemonic(I, Variant);
+    MnemonicToCGInstrMap[Mnemonic].push_back(I);
   }
 
   OS << "#ifdef GET_X86_MNEMONIC_TABLES_H\n";

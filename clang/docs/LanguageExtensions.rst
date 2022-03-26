@@ -2294,7 +2294,8 @@ invariant that is defined to be true.
 The boolean argument to this function is defined to be true. The optimizer may
 analyze the form of the expression provided as the argument and deduce from
 that information used to optimize the program. If the condition is violated
-during execution, the behavior is undefined. The argument itself is 
+during execution, the behavior is undefined. The argument itself is never
+evaluated, so any side effects of the expression will be discarded.
 
 Query for this feature with ``__has_builtin(__builtin_assume)``.
 

@@ -775,22 +775,17 @@ all modules on the same context:
 
 .. _ProcessAndLibrarySymbols:
 
-How to Add Process and Library Symbols to the JITDylibs
-=======================================================
+How to Add Process and Library Symbols to JITDylibs
+===================================================
 
-JIT'd code typically needs access to symbols in the host program or in
-supporting libraries. References to process symbols can be "baked in" to code
-as it is compiled by turning external references into pre-resolved integer
-constants, however this ties the JIT'd code to the current process's virtual
-memory layout (meaning that it can not be cached between runs) and makes
-debugging lower level program representations difficult (as all external
-references are opaque integer values). A bettor solution is to maintain symbolic
-external references and let the jit-linker bind them for you at runtime. To
-allow the JIT linker to find these external definitions their addresses must
-be added to a JITDylib that the JIT'd definitions link against.
+JIT'd code may need to access symbols in the host program or in supporting
+libraries. The best way to enable this is to reflect these symbols into your
+JITDylibs so that they appear the same as any other symbol defined within the
+execution session (i.e. they are findable via `ExecutionSession::lookup`, and
+so visible to the JIT linker during linking).
 
-Adding definitions for external symbols could be done using the absoluteSymbols
-function:
+One way to reflect external symbols is to add them manually using the
+absoluteSymbols function:
 
   .. code-block:: c++
 
@@ -805,25 +800,26 @@ function:
         { Mangle("gets"), pointerToJITTargetAddress(&getS)}
       }));
 
-Manually adding absolute symbols for a large or changing interface is cumbersome
-however, so ORC provides an alternative to generate new definitions on demand:
-*definition generators*. If a definition generator is attached to a JITDylib,
-then any unsuccessful lookup on that JITDylib will fall back to calling the
-definition generator, and the definition generator may choose to generate a new
-definition for the missing symbols. Of particular use here is the
-``DynamicLibrarySearchGenerator`` utility. This can be used to reflect the whole
-exported symbol set of the process or a specific dynamic library, or a subset
-of either of these determined by a predicate.
+Using absoluteSymbols is reasonable if the set of symbols to be reflected is
+small and fixed. On the other hand, if the set of symbols is large or variable
+it may make more sense to have the definitions added for you on demand by a
+*definition generator*.A definition generator is an object that can be attached
+to a JITDylib, receiving a callback whenever a lookup within that JITDylib fails
+to find one or more symbols. The definition generator is given a chance to
+produce a definition of the missing symbol(s) before the lookup proceeds.
 
-For example, to load the whole interface of a runtime library:
+ORC provides the ``DynamicLibrarySearchGenerator`` utility for reflecting symbols
+from the process (or a specific dynamic library) for you. For example, to reflect
+the whole interface of a runtime library:
 
   .. code-block:: c++
 
     const DataLayout &DL = getDataLayout();
     auto &JD = ES.createJITDylib("main");
 
-    if (auto DLSGOrErr = DynamicLibrarySearchGenerator::Load("/path/to/lib"
-                                                             DL.getGlobalPrefix()))
+    if (auto DLSGOrErr =
+        DynamicLibrarySearchGenerator::Load("/path/to/lib"
+                                            DL.getGlobalPrefix()))
       JD.addGenerator(std::move(*DLSGOrErr);
     else
       return DLSGOrErr.takeError();
@@ -832,7 +828,9 @@ For example, to load the whole interface of a runtime library:
     // at '/path/to/lib'.
     CompileLayer.add(JD, loadModule(...));
 
-Or, to expose an allowed set of symbols from the main process:
+The ``DynamicLibrarySearchGenerator`` utility can also be constructed with a
+filter function to restrict the set of symbols that may be reflected. For
+example, to expose an allowed set of symbols from the main process:
 
   .. code-block:: c++
 
@@ -855,6 +853,12 @@ Or, to expose an allowed set of symbols from the main process:
     // IR added to JD can now link against any symbols exported by the process
     // and contained in the list.
     CompileLayer.add(JD, loadModule(...));
+
+References to process or library symbols could also be hardcoded into your IR
+or object files using the symbols' raw addresses, however symbolic resolution
+using the JIT symbol tables should be preferred: it keeps the IR and objects
+readable and reusable in subsequent JIT sessions. Hardcoded addresses are
+difficult to read, and usually only good for one session.
 
 Roadmap
 =======

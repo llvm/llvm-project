@@ -527,6 +527,9 @@ public:
            Kind == ModulePartitionImplementation;
   }
 
+  /// Is this module a header unit.
+  bool isHeaderUnit() const { return Kind == ModuleHeaderUnit; }
+
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {
     if (isModulePartition()) {
