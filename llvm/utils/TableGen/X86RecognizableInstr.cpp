@@ -75,13 +75,9 @@ static uint8_t byteFromRec(const Record* rec, StringRef name) {
   return byteFromBitsInit(*bits);
 }
 
-RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn)
-    : Rec(insn.TheDef),
-      ShouldBeEmitted(Rec->isSubClassOf("X86Inst") &&
-                      !Rec->getValueAsBit("isAsmParserOnly")) {
-  if (!ShouldBeEmitted)
-    return;
-
+RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
+  const Record *Rec = insn.TheDef;
+  assert(Rec->isSubClassOf("X86Inst") && "Not a X86 Instruction");
   OpPrefix = byteFromRec(Rec, "OpPrefixBits");
   OpMap = byteFromRec(Rec, "OpMapBits");
   Opcode = byteFromRec(Rec, "Opcode");
@@ -99,23 +95,26 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn)
   HasEVEX_KZ = Rec->getValueAsBit("hasEVEX_Z");
   HasEVEX_B = Rec->getValueAsBit("hasEVEX_B");
   IsCodeGenOnly = Rec->getValueAsBit("isCodeGenOnly");
+  IsAsmParserOnly = Rec->getValueAsBit("isAsmParserOnly");
   ForceDisassemble = Rec->getValueAsBit("ForceDisassemble");
   CD8_Scale = byteFromRec(Rec, "CD8_Scale");
   HasVEX_LPrefix = Rec->getValueAsBit("hasVEX_L");
 
   EncodeRC = HasEVEX_B &&
              (Form == X86Local::MRMDestReg || Form == X86Local::MRMSrcReg);
+}
 
-  if (Form == X86Local::Pseudo || (IsCodeGenOnly && !ForceDisassemble))
-    ShouldBeEmitted = false;
+bool RecognizableInstrBase::shouldBeEmitted() const {
+  return Form != X86Local::Pseudo && (!IsCodeGenOnly || ForceDisassemble) &&
+         !IsAsmParserOnly;
 }
 
 RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
                                      const CodeGenInstruction &insn,
                                      InstrUID uid)
-    : RecognizableInstrBase(insn), Name(Rec->getName().str()), Is32Bit(false),
-      Is64Bit(false), Operands(&insn.Operands.OperandList), UID(uid),
-      Spec(&tables.specForUID(uid)) {
+    : RecognizableInstrBase(insn), Rec(insn.TheDef), Name(Rec->getName().str()),
+      Is32Bit(false), Is64Bit(false), Operands(&insn.Operands.OperandList),
+      UID(uid), Spec(&tables.specForUID(uid)) {
   // Check for 64-bit inst which does not require REX
   // FIXME: Is there some better way to check for In64BitMode?
   std::vector<Record *> Predicates = Rec->getValueAsListOfDefs("Predicates");
@@ -134,14 +133,15 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
 
 void RecognizableInstr::processInstr(DisassemblerTables &tables,
                                      const CodeGenInstruction &insn,
-                                     InstrUID uid)
-{
+                                     InstrUID uid) {
+  if (!insn.TheDef->isSubClassOf("X86Inst"))
+    return;
   RecognizableInstr recogInstr(tables, insn, uid);
 
-  if (recogInstr.shouldBeEmitted()) {
-    recogInstr.emitInstructionSpecifier();
-    recogInstr.emitDecodePath(tables);
-  }
+  if (!recogInstr.shouldBeEmitted())
+    return;
+  recogInstr.emitInstructionSpecifier();
+  recogInstr.emitDecodePath(tables);
 }
 
 #define EVEX_KB(n) (HasEVEX_KZ && HasEVEX_B ? n##_KZ_B : \

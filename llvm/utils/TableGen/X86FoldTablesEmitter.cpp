@@ -311,8 +311,8 @@ public:
   bool operator()(const CodeGenInstruction *RegInst) {
     X86Disassembler::RecognizableInstrBase RegRI(*RegInst);
     X86Disassembler::RecognizableInstrBase MemRI(*MemInst);
-    const Record *RegRec = RegRI.Rec;
-    const Record *MemRec = MemRI.Rec;
+    const Record *RegRec = RegInst->TheDef;
+    const Record *MemRec = MemInst->TheDef;
 
     // EVEX_B means different things for memory and register forms.
     if (RegRI.HasEVEX_B != 0 || MemRI.HasEVEX_B != 0)

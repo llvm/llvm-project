@@ -43,9 +43,12 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
       Target.getInstructionsByEnumValue();
   for (const CodeGenInstruction *I : NumberedInstructions) {
+    const Record *Def = I->TheDef;
+    // Filter non-X86 instructions.
+    if (!Def->isSubClassOf("X86Inst"))
+      continue;
     X86Disassembler::RecognizableInstrBase RI(*I);
-    const Record *Def = RI.Rec;
-    if (!RI.ShouldBeEmitted)
+    if (!RI.shouldBeEmitted())
       continue;
     if ( // Non-parsable instruction defs contain prefix as part of AsmString
         Def->getValueAsString("AsmVariantName") == "NonParsable" ||

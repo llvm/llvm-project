@@ -51,6 +51,8 @@ def XABORT : Ii8<0xc6, MRM_F8, (outs), (ins i8imm:$imm),
 // HLE prefixes
 let SchedRW = [WriteSystem] in {
 
+// XACQUIRE and XRELEASE reuse REPNE and REP respectively.
+// For now, just prefer the REP versions.
 let isAsmParserOnly = 1 in {
 def XACQUIRE_PREFIX : I<0xF2, PrefixByte, (outs), (ins), "xacquire", []>;
 def XRELEASE_PREFIX : I<0xF3, PrefixByte, (outs), (ins), "xrelease", []>;
