@@ -26,9 +26,8 @@ S A;
 // CHECK: @__omp_rtl_assume_threads_oversubscription = weak_odr hidden addrspace(1) constant i32 0
 // CHECK: @__omp_rtl_assume_no_thread_state = weak_odr hidden addrspace(1) constant i32 0
 // CHECK: @A = addrspace(1) global %struct.S zeroinitializer, align 4
-// CHECK: @llvm.used = appending addrspace(1) global [2 x i8*] [i8* bitcast (void ()* @__omp_offloading_{{.*}}_ctor to i8*), i8* bitcast (void ()* @__omp_offloading_{{.*}}_dtor to i8*)], section "llvm.metadata"
 //.
-// CHECK-LABEL: define {{[^@]+}}@__omp_offloading_{{.*}}_ctor
+// CHECK-LABEL: define {{[^@]+}}@__omp_offloading__fd02_613a0d56_A_l19_ctor
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN1SC1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) addrspacecast ([[STRUCT_S:%.*]] addrspace(1)* @A to %struct.S*)) #[[ATTR3:[0-9]+]]
@@ -46,7 +45,7 @@ S A;
 // CHECK-NEXT:    ret void
 //
 //
-// CHECK-LABEL: define {{[^@]+}}@__omp_offloading_{{.*}}_dtor
+// CHECK-LABEL: define {{[^@]+}}@__omp_offloading__fd02_613a0d56_A_l19_dtor
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN1SD1Ev(%struct.S* noundef nonnull align 4 dereferenceable(4) addrspacecast ([[STRUCT_S:%.*]] addrspace(1)* @A to %struct.S*)) #[[ATTR4:[0-9]+]]
@@ -87,19 +86,19 @@ S A;
 // CHECK-NEXT:    ret void
 //
 //.
-// CHECK: attributes #0 = { convergent
-// CHECK: attributes #1 = { convergent
-// CHECK: attributes #2 = { convergent
-// CHECK: attributes #3 = { convergent
-// CHECK: attributes #4 = { convergent
+// CHECK: attributes #0 = { nounwind "kernel" "min-legal-vector-width"="0" }
+// CHECK: attributes #1 = { convergent noinline nounwind optnone "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #2 = { convergent "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// CHECK: attributes #3 = { convergent }
+// CHECK: attributes #4 = { convergent nounwind }
 //.
-// CHECK-DAG: !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_ctor", i32 19, i32 1}
-// CHECK-DAG: !{i32 0, {{.*}}, !"__omp_offloading_{{.*}}_dtor", i32 19, i32 2}
-// CHECK-DAG: !{i32 1, !"A", i32 0, i32 0}
-// CHECK-DAG: !{void ()* @__omp_offloading_{{.*}}_ctor, !"kernel", i32 1}
-// CHECK-DAG: !{void ()* @__omp_offloading_{{.*}}_dtor, !"kernel", i32 1}
-// CHECK-DAG: !{i32 1, !"wchar_size", i32 4}
-// CHECK-DAG: !{i32 7, !"openmp", i32 50}
-// CHECK-DAG: !{i32 7, !"openmp-device", i32 50}
-// CHECK-DAG: !{!"clang version
+// CHECK: !0 = !{i32 0, i32 64770, i32 1631194454, !"__omp_offloading__fd02_613a0d56_A_l19_ctor", i32 19, i32 1}
+// CHECK: !1 = !{i32 0, i32 64770, i32 1631194454, !"__omp_offloading__fd02_613a0d56_A_l19_dtor", i32 19, i32 2}
+// CHECK: !2 = !{i32 1, !"A", i32 0, i32 0}
+// CHECK: !3 = !{void ()* @__omp_offloading__fd02_613a0d56_A_l19_ctor, !"kernel", i32 1}
+// CHECK: !4 = !{void ()* @__omp_offloading__fd02_613a0d56_A_l19_dtor, !"kernel", i32 1}
+// CHECK: !5 = !{i32 1, !"wchar_size", i32 4}
+// CHECK: !6 = !{i32 7, !"openmp", i32 50}
+// CHECK: !7 = !{i32 7, !"openmp-device", i32 50}
+// CHECK: !8 = !{!"clang version 15.0.0"}
 //.
