@@ -562,13 +562,15 @@ bool InstrProfiling::run(
   if (NeedsRuntimeHook)
     MadeChange = emitRuntimeHook();
 
-  // Improve compile time by avoiding linear scans when there is no work.
   GlobalVariable *CoverageNamesVar =
       M.getNamedGlobal(getCoverageUnusedNamesVarName());
-  if (!containsProfilingIntrinsics(M)) {
-    if (!CoverageNamesVar || !NeedsRuntimeHook) {
-      return MadeChange;
-    }
+  // Improve compile time by avoiding linear scans when there is no work.
+  // When coverage is enabled on code that is eliminated by the front-end,
+  // e.g. unused functions with internal linkage, and the target does not
+  // require pulling in profile runtime, there is no need to do further work.
+  if (!containsProfilingIntrinsics(M) &&
+      (!CoverageNamesVar || !NeedsRuntimeHook)) {
+    return MadeChange;
   }
 
   // We did not know how many value sites there would be inside
