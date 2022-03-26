@@ -76,7 +76,9 @@ static uint8_t byteFromRec(const Record* rec, StringRef name) {
 }
 
 RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn)
-    : Rec(insn.TheDef), ShouldBeEmitted(Rec->isSubClassOf("X86Inst")) {
+    : Rec(insn.TheDef),
+      ShouldBeEmitted(Rec->isSubClassOf("X86Inst") &&
+                      !Rec->getValueAsBit("isAsmParserOnly")) {
   if (!ShouldBeEmitted)
     return;
 
@@ -134,10 +136,6 @@ void RecognizableInstr::processInstr(DisassemblerTables &tables,
                                      const CodeGenInstruction &insn,
                                      InstrUID uid)
 {
-  // Ignore "asm parser only" instructions.
-  if (insn.TheDef->getValueAsBit("isAsmParserOnly"))
-    return;
-
   RecognizableInstr recogInstr(tables, insn, uid);
 
   if (recogInstr.shouldBeEmitted()) {
