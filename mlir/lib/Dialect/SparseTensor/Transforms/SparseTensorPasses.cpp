@@ -40,6 +40,7 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
     vectorization = static_cast<int32_t>(options.vectorizationStrategy);
     vectorLength = options.vectorLength;
     enableSIMDIndex32 = options.enableSIMDIndex32;
+    enableVLAVectorization = options.enableVLAVectorization;
   }
 
   void runOnOperation() override {
@@ -49,7 +50,7 @@ struct SparsificationPass : public SparsificationBase<SparsificationPass> {
     SparsificationOptions options(
         sparseParallelizationStrategy(parallelization),
         sparseVectorizationStrategy(vectorization), vectorLength,
-        enableSIMDIndex32);
+        enableSIMDIndex32, enableVLAVectorization);
     // Apply rewriting.
     populateSparsificationPatterns(patterns, options);
     vector::populateVectorToVectorCanonicalizationPatterns(patterns);

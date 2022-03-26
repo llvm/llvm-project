@@ -281,7 +281,7 @@ uint32_t g15(StructS *S, StructS3 *S3, uint64_t count) {
 // NEW-PATH-DAG: [[TYPE_short:!.*]] = !{[[TYPE_char]], i64 2, !"short"}
 // NEW-PATH-DAG: [[TYPE_int:!.*]] = !{[[TYPE_char]], i64 4, !"int"}
 // NEW-PATH-DAG: [[TAG_i32:!.*]] = !{[[TYPE_int]], [[TYPE_int]], i64 0, i64 4}
-// NEW-PATH-DAG: [[TYPE_A:!.*]] = !{[[TYPE_char]], i64 16, !"_ZTS7StructA", [[TYPE_short]], i64 0, i64 2, [[TYPE_int]], i64 4, i64 4, !12, i64 8, i64 2, [[TYPE_int]], i64 12, i64 4}
+// NEW-PATH-DAG: [[TYPE_A:!.*]] = !{[[TYPE_char]], i64 16, !"_ZTS7StructA", [[TYPE_short]], i64 0, i64 2, [[TYPE_int]], i64 4, i64 4, [[TYPE_short]], i64 8, i64 2, [[TYPE_int]], i64 12, i64 4}
 // NEW-PATH-DAG: [[TAG_A_f16]] = !{[[TYPE_A]], [[TYPE_short]], i64 0, i64 2}
 // NEW-PATH-DAG: [[TAG_A_f32]] = !{[[TYPE_A]], [[TYPE_int]], i64 4, i64 4}
 // NEW-PATH-DAG: [[TYPE_B:!.*]] = !{[[TYPE_char]], i64 24, !"_ZTS7StructB", [[TYPE_short]], i64 0, i64 2, [[TYPE_A]], i64 4, i64 16, [[TYPE_int]], i64 20, i64 4}

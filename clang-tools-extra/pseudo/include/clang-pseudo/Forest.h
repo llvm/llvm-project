@@ -17,6 +17,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef CLANG_PSEUDO_FOREST_H
+#define CLANG_PSEUDO_FOREST_H
+
 #include "clang-pseudo/Grammar.h"
 #include "clang-pseudo/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -176,3 +179,5 @@ private:
 
 } // namespace pseudo
 } // namespace clang
+
+#endif // CLANG_PSEUDO_FOREST_H

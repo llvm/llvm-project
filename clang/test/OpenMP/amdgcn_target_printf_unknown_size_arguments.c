@@ -11,7 +11,7 @@ extern int printf(const char *, ...);
 // CHECK-DAG: [[CMA_PRINTF_ARG_TY:%[a-zA-Z0-9_.]+]] = type { i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 // CHECK-DAG: [[CMA_ARG_STR:@[a-zA-Z0-9_.]+]] = private unnamed_addr addrspace(4) constant [9 x i8] c"%s %d %s\00", align 1
 // CHECK-DAG: [[CMA_ARG_STR_1:@[a-zA-Z0-9_.]+]] = private unnamed_addr addrspace(4) constant [8 x i8] c"testing\00", align 1
-// CHECK-DAG: define weak amdgpu_kernel void @__omp_offloading{{.+}}CheckMultipleArgs{{.+}}
+// CHECK-DAG: define weak_odr amdgpu_kernel void @__omp_offloading{{.+}}CheckMultipleArgs{{.+}}
 int CheckMultipleArgs(int a) {
   char *test = "testing";
   char *t;

@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -S | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-profile.prof -pass-remarks=sample-profile -pass-remarks-output=%t.opt.yaml -sample-profile-use-profi=0 -S | FileCheck %s
 ; RUN: FileCheck %s -check-prefix=YAML < %t.opt.yaml
 
 define dso_local i32 @foo(i32 %x, void (i32)* %f) #0 !dbg !4 {

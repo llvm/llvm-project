@@ -204,7 +204,7 @@ void IoChecker::Enter(const parser::FileUnitNumber &) {
 void IoChecker::Enter(const parser::Format &spec) {
   SetSpecifier(IoSpecKind::Fmt);
   flags_.set(Flag::FmtOrNml);
-  std::visit(
+  common::visit(
       common::visitors{
           [&](const parser::Label &) { flags_.set(Flag::LabelFmt); },
           [&](const parser::Star &) { flags_.set(Flag::StarFmt); },

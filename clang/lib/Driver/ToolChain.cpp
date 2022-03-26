@@ -1006,6 +1006,8 @@ void ToolChain::AddFortranStdlibLibArgs(const ArgList &Args,
     useOpenMP = true;
   }
 
+  CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + D.Dir + "/../lib"));
+
   if (staticFlangLibs) {
     CmdArgs.push_back("-Bstatic");
   }

@@ -103,6 +103,9 @@ Tristate IsDefinedAssignment(
   if (!lhsType || !rhsType) {
     return Tristate::No; // error or rhs is untyped
   }
+  if (lhsType->IsUnlimitedPolymorphic() || rhsType->IsUnlimitedPolymorphic()) {
+    return Tristate::No;
+  }
   TypeCategory lhsCat{lhsType->category()};
   TypeCategory rhsCat{rhsType->category()};
   if (rhsRank > 0 && lhsRank != rhsRank) {
@@ -423,7 +426,7 @@ const evaluate::Assignment *GetAssignment(
 }
 
 const Symbol *FindInterface(const Symbol &symbol) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
             return details.interface().symbol();
@@ -435,7 +438,7 @@ const Symbol *FindInterface(const Symbol &symbol) {
 }
 
 const Symbol *FindSubprogram(const Symbol &symbol) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const ProcEntityDetails &details) -> const Symbol * {
             if (const Symbol * interface{details.interface().symbol()}) {
@@ -913,7 +916,7 @@ public:
     return false;
   }
   bool operator()(const parser::Statement<parser::ActionStmt> &stmt) {
-    return std::visit(*this, stmt.statement.u);
+    return common::visit(*this, stmt.statement.u);
   }
 
 private:
@@ -924,14 +927,14 @@ private:
 };
 
 bool IsImageControlStmt(const parser::ExecutableConstruct &construct) {
-  return std::visit(ImageControlStmtHelper{}, construct.u);
+  return common::visit(ImageControlStmtHelper{}, construct.u);
 }
 
 std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
     const parser::ExecutableConstruct &construct) {
   if (const auto *actionStmt{
           std::get_if<parser::Statement<parser::ActionStmt>>(&construct.u)}) {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const common::Indirection<parser::AllocateStmt> &)
                 -> std::optional<parser::MessageFixedText> {
@@ -959,7 +962,7 @@ std::optional<parser::MessageFixedText> GetImageControlStmtCoarrayMsg(
 
 parser::CharBlock GetImageControlStmtLocation(
     const parser::ExecutableConstruct &executableConstruct) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const common::Indirection<parser::ChangeTeamConstruct>
                   &construct) {
@@ -1428,7 +1431,7 @@ bool InCommonBlock(const Symbol &symbol) {
 
 const std::optional<parser::Name> &MaybeGetNodeName(
     const ConstructNode &construct) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const parser::BlockConstruct *blockConstruct)
               -> const std::optional<parser::Name> & {

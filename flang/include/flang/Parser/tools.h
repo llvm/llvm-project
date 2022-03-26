@@ -62,7 +62,7 @@ struct UnwrapperHelper {
 
   template <typename A, typename... Bs>
   static const A *Unwrap(const std::variant<Bs...> &x) {
-    return std::visit([](const auto &y) { return Unwrap<A>(y); }, x);
+    return common::visit([](const auto &y) { return Unwrap<A>(y); }, x);
   }
 
   template <typename A, typename B>

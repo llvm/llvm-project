@@ -135,14 +135,11 @@ class CrashLogScriptedThread(ScriptedThread):
 
         self.backing_thread = crashlog_thread
         self.idx = self.backing_thread.index
+        self.tid = self.backing_thread.id
+        self.name = self.backing_thread.name
+        self.queue = self.backing_thread.queue
         self.has_crashed = (self.scripted_process.crashed_thread_idx == self.idx)
         self.create_stackframes()
-
-    def get_thread_id(self) -> int:
-        return self.idx
-
-    def get_name(self) -> str:
-        return CrashLogScriptedThread.__name__ + ".thread-" + str(self.idx)
 
     def get_state(self):
         if not self.has_crashed:

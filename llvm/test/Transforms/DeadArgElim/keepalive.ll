@@ -79,5 +79,5 @@ define i32 @caller3() {
   ret i32 %v
 }
 
-; CHECK: attributes #0 = { nofree nosync nounwind willreturn }
+; CHECK: attributes #0 = { nocallback nofree nosync nounwind willreturn }
 ; CHECK: attributes #1 = { nounwind }
