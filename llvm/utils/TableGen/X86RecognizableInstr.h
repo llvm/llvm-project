@@ -221,10 +221,10 @@ class RecognizableInstr : public RecognizableInstrBase {
 private:
   /// The instruction name as listed in the tables
   std::string Name;
-  // Whether the instruction has the predicate "In64BitMode"
-  bool Is64Bit;
   // Whether the instruction has the predicate "In32BitMode"
   bool Is32Bit;
+  // Whether the instruction has the predicate "In64BitMode"
+  bool Is64Bit;
   /// The operands of the instruction, as listed in the CodeGenInstruction.
   /// They are not one-to-one with operands listed in the MCInst; for example,
   /// memory operands expand to 5 operands in the MCInst
