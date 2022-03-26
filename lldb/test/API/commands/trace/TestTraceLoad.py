@@ -38,7 +38,8 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
 thread #1: tid = 3842849
   Raw trace size: 4 KiB
   Total number of instructions: 21
-  Total approximate memory usage: 5.38 KiB'''])
+  Total approximate memory usage: 5.31 KiB
+  Average memory usage per instruction: 259 bytes'''])
 
     def testLoadInvalidTraces(self):
         src_dir = self.getSourceDir()

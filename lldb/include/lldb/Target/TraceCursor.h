@@ -170,9 +170,9 @@ public:
   /// the trace.
   ///
   /// \return
-  ///     \b llvm::Error::success if the cursor is not pointing to an error in
-  ///     the trace. Otherwise return an \a llvm::Error describing the issue.
-  virtual llvm::Error GetError() = 0;
+  ///     \b nullptr if the cursor is not pointing to an error in
+  ///     the trace. Otherwise return the actual error message.
+  virtual const char *GetError() = 0;
 
   /// \return
   ///     The load address of the instruction the cursor is pointing at. If the
