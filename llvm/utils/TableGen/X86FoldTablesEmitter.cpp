@@ -328,7 +328,7 @@ public:
     if (RegRI.Encoding != MemRI.Encoding || RegRI.Opcode != MemRI.Opcode ||
         RegRI.OpPrefix != MemRI.OpPrefix || RegRI.OpMap != MemRI.OpMap ||
         RegRI.OpSize != MemRI.OpSize || RegRI.AdSize != MemRI.AdSize ||
-        RegRI.HasREX_WPrefix != MemRI.HasREX_WPrefix ||
+        RegRI.HasREX_W != MemRI.HasREX_W ||
         RegRI.HasVEX_4V != MemRI.HasVEX_4V ||
         RegRI.HasVEX_LPrefix != MemRI.HasVEX_LPrefix ||
         RegRI.HasVEX_W != MemRI.HasVEX_W ||

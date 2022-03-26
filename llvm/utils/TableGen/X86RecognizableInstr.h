@@ -175,8 +175,8 @@ struct RecognizableInstrBase {
   uint8_t OpSize;
   /// The AdSize field from the record
   uint8_t AdSize;
-  /// The hasREX_WPrefix field from the record
-  bool HasREX_WPrefix;
+  /// The hasREX_W field from the record
+  bool HasREX_W;
   /// The hasVEX_4V field from the record
   bool HasVEX_4V;
   /// The HasVEX_WPrefix field from the record
@@ -247,7 +247,7 @@ private:
   ///
   /// @param s              - The string, as extracted by calling Rec->getName()
   ///                         on a CodeGenInstruction::OperandInfo.
-  /// @param hasREX_WPrefix - Indicates whether the instruction has a REX.W
+  /// @param hasREX_W - Indicates whether the instruction has a REX.W
   ///                         prefix.  If it does, 32-bit register operands stay
   ///                         32-bit regardless of the operand size.
   /// @param OpSize           Indicates the operand size of the instruction.
@@ -255,7 +255,7 @@ private:
   ///                         register sizes keep their size.
   /// @return               - The operand's type.
   static OperandType typeFromString(const std::string& s,
-                                    bool hasREX_WPrefix, uint8_t OpSize);
+                                    bool hasREX_W, uint8_t OpSize);
 
   /// immediateEncodingFromString - Translates an immediate encoding from the
   ///   string provided in the LLVM tables to an OperandEncoding for use in
