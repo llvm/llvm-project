@@ -116,7 +116,7 @@ public:
     bool EVEX_W = EVEXRI.HasVEX_W;
     bool VEX_WIG  = VEXRI.IgnoresVEX_W;
     bool EVEX_WIG  = EVEXRI.IgnoresVEX_W;
-    bool EVEX_W1_VEX_W0 = EVEXRI.Rec->getValueAsBit("EVEX_W1_VEX_W0");
+    bool EVEX_W1_VEX_W0 = EVEXInst->TheDef->getValueAsBit("EVEX_W1_VEX_W0");
 
     if (VEXRI.IsCodeGenOnly != EVEXRI.IsCodeGenOnly ||
         // VEX/EVEX fields
@@ -205,11 +205,11 @@ void X86EVEX2VEXTablesEmitter::run(raw_ostream &OS) {
       Target.getInstructionsByEnumValue();
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
-    X86Disassembler::RecognizableInstrBase RI(*Inst);
-    const Record *Def = RI.Rec;
+    const Record *Def = Inst->TheDef;
     // Filter non-X86 instructions.
     if (!Def->isSubClassOf("X86Inst"))
       continue;
+    X86Disassembler::RecognizableInstrBase RI(*Inst);
 
     // Add VEX encoded instructions to one of VEXInsts vectors according to
     // it's opcode.
