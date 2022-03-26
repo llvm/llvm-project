@@ -1943,7 +1943,7 @@ let Constraints = "$src = $rd", Defs = [SREG] in {
                                   : $src)),
                          (implicit SREG)]>;
 
-  def ASRWNRd : Pseudo<(outs DLDREGS
+  def ASRWNRd : Pseudo<(outs DREGS
                         : $rd),
                        (ins DREGS
                         : $src, imm16
