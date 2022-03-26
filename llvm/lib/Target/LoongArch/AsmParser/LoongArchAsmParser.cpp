@@ -24,8 +24,6 @@ using namespace llvm;
 #define DEBUG_TYPE "loongarch-asm-parser"
 
 namespace {
-struct LoongArchOperand;
-
 class LoongArchAsmParser : public MCTargetAsmParser {
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
 
@@ -82,8 +80,7 @@ public:
   }
 };
 
-/// LoongArchOperand - Instances of this class represent a parsed LoongArch
-/// machine instruction.
+// Instances of this class represent a parsed LoongArch machine instruction.
 class LoongArchOperand : public MCParsedAsmOperand {
   enum class KindTy {
     Token,
