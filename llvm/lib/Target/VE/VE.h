@@ -27,7 +27,6 @@ class MCInst;
 class MachineInstr;
 
 FunctionPass *createVEISelDag(VETargetMachine &TM);
-FunctionPass *createVEPromoteToI1Pass();
 FunctionPass *createLVLGenPass();
 
 void LowerVEMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
