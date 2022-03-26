@@ -931,6 +931,10 @@ public:
   /// The resulting type might still be qualified if it's sugar for an array
   /// type.  To strip qualifiers even from within a sugared array type, use
   /// ASTContext::getUnqualifiedArrayType.
+  ///
+  /// Note: In C, the _Atomic qualifier is special (see C2x 6.2.5p29 for
+  /// details), and it is not stripped by this function. Use
+  /// getAtomicUnqualifiedType() to strip qualifiers including _Atomic.
   inline QualType getUnqualifiedType() const;
 
   /// Retrieve the unqualified variant of the given type, removing as little

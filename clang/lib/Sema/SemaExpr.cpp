@@ -13637,15 +13637,15 @@ QualType Sema::CheckAssignmentOperands(Expr *LHSExpr, ExprResult &RHS,
     }
   }
 
-  // C99 6.5.16p3: The type of an assignment expression is the type of the
-  // left operand unless the left operand has qualified type, in which case
-  // it is the unqualified version of the type of the left operand.
-  // C99 6.5.16.1p2: In simple assignment, the value of the right operand
-  // is converted to the type of the assignment expression (above).
+  // C11 6.5.16p3: The type of an assignment expression is the type of the
+  // left operand would have after lvalue conversion.
+  // C11 6.3.2.1p2: ...this is called lvalue conversion. If the lvalue has
+  // qualified type, the value has the unqualified version of the type of the
+  // lvalue; additionally, if the lvalue has atomic type, the value has the
+  // non-atomic version of the type of the lvalue.
   // C++ 5.17p1: the type of the assignment expression is that of its left
   // operand.
-  return (getLangOpts().CPlusPlus
-          ? LHSType : LHSType.getUnqualifiedType());
+  return getLangOpts().CPlusPlus ? LHSType : LHSType.getAtomicUnqualifiedType();
 }
 
 // Only ignore explicit casts to void.
