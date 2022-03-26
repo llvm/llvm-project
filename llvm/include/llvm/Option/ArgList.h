@@ -305,7 +305,7 @@ public:
   /// the negation is present, and \p Default if none of the options are
   /// given. If multiple options are present, the last one wins.
   bool hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
-               bool Default = true) const;
+               bool Default) const;
 
   /// Render only the last argument match \p Id0, if present.
   template<typename ...OptSpecifiers>
