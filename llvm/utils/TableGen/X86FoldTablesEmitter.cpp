@@ -555,8 +555,7 @@ void X86FoldTablesEmitter::run(formatted_raw_ostream &OS) {
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     const Record *Rec = Inst->TheDef;
-    if (!Rec->getNameInit() || !Rec->isSubClassOf("X86Inst") ||
-        Rec->getValueAsBit("isAsmParserOnly"))
+    if (!Rec->isSubClassOf("X86Inst") || Rec->getValueAsBit("isAsmParserOnly"))
       continue;
 
     // - Do not proceed if the instruction is marked as notMemoryFoldable.
