@@ -100,7 +100,7 @@ static const unsigned GPRDecoderTable[] = {
 
 static DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                            uint64_t /*Address*/,
-                                           const void * /*Decoder*/) {
+                                           const MCDisassembler * /*Decoder*/) {
   if (RegNo > 11)
     return MCDisassembler::Fail;
 
@@ -113,9 +113,9 @@ static const unsigned GPR32DecoderTable[] = {
     BPF::W0,  BPF::W1,  BPF::W2,  BPF::W3,  BPF::W4,  BPF::W5,
     BPF::W6,  BPF::W7,  BPF::W8,  BPF::W9,  BPF::W10, BPF::W11};
 
-static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
-                                             uint64_t /*Address*/,
-                                             const void * /*Decoder*/) {
+static DecodeStatus
+DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t /*Address*/,
+                         const MCDisassembler * /*Decoder*/) {
   if (RegNo > 11)
     return MCDisassembler::Fail;
 
@@ -125,7 +125,8 @@ static DecodeStatus DecodeGPR32RegisterClass(MCInst &Inst, unsigned RegNo,
 }
 
 static DecodeStatus decodeMemoryOpValue(MCInst &Inst, unsigned Insn,
-                                        uint64_t Address, const void *Decoder) {
+                                        uint64_t Address,
+                                        const MCDisassembler *Decoder) {
   unsigned Register = (Insn >> 16) & 0xf;
   if (Register > 11)
     return MCDisassembler::Fail;
@@ -221,4 +222,4 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 }
 
 typedef DecodeStatus (*DecodeFunc)(MCInst &MI, unsigned insn, uint64_t Address,
-                                   const void *Decoder);
+                                   const MCDisassembler *Decoder);
