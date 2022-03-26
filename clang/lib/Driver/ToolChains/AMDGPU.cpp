@@ -947,7 +947,7 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                                             options::OPT_fno_fast_math, false);
   bool CorrectSqrt = DriverArgs.hasFlag(
       options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
-      options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt);
+      options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
   bool Wave64 = isWave64(DriverArgs, Kind);
 
   return RocmInstallation.getCommonBitcodeLibs(
