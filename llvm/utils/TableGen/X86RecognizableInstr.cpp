@@ -75,14 +75,9 @@ static uint8_t byteFromRec(const Record* rec, StringRef name) {
   return byteFromBitsInit(*bits);
 }
 
-RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
-                                     const CodeGenInstruction &insn,
-                                     InstrUID uid) {
-  UID = uid;
-
+RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   Rec = insn.TheDef;
   Name = std::string(Rec->getName());
-  Spec = &tables.specForUID(UID);
 
   if (!Rec->isSubClassOf("X86Inst")) {
     ShouldBeEmitted = false;
@@ -142,6 +137,14 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
   }
 
   ShouldBeEmitted = true;
+}
+
+RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
+                                     const CodeGenInstruction &insn,
+                                     InstrUID uid)
+    : RecognizableInstrBase(insn) {
+  UID = uid;
+  Spec = &tables.specForUID(UID);
 }
 
 void RecognizableInstr::processInstr(DisassemblerTables &tables,
