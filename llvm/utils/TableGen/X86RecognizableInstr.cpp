@@ -75,56 +75,46 @@ static uint8_t byteFromRec(const Record* rec, StringRef name) {
   return byteFromBitsInit(*bits);
 }
 
-RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
-  Rec = insn.TheDef;
-  if (!Rec->isSubClassOf("X86Inst")) {
-    ShouldBeEmitted = false;
+RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn)
+    : Rec(insn.TheDef), ShouldBeEmitted(Rec->isSubClassOf("X86Inst")) {
+  if (!ShouldBeEmitted)
     return;
-  }
 
   OpPrefix = byteFromRec(Rec, "OpPrefixBits");
-  OpMap    = byteFromRec(Rec, "OpMapBits");
-  Opcode   = byteFromRec(Rec, "Opcode");
-  Form     = byteFromRec(Rec, "FormBits");
+  OpMap = byteFromRec(Rec, "OpMapBits");
+  Opcode = byteFromRec(Rec, "Opcode");
+  Form = byteFromRec(Rec, "FormBits");
   Encoding = byteFromRec(Rec, "OpEncBits");
-
-  OpSize             = byteFromRec(Rec, "OpSizeBits");
-  AdSize             = byteFromRec(Rec, "AdSizeBits");
-  HasREX_WPrefix     = Rec->getValueAsBit("hasREX_WPrefix");
-  HasVEX_4V          = Rec->getValueAsBit("hasVEX_4V");
-  HasVEX_W           = Rec->getValueAsBit("HasVEX_W");
-  IgnoresVEX_W       = Rec->getValueAsBit("IgnoresVEX_W");
-  IgnoresVEX_L       = Rec->getValueAsBit("ignoresVEX_L");
-  HasEVEX_L2Prefix   = Rec->getValueAsBit("hasEVEX_L2");
-  HasEVEX_K          = Rec->getValueAsBit("hasEVEX_K");
-  HasEVEX_KZ         = Rec->getValueAsBit("hasEVEX_Z");
-  HasEVEX_B          = Rec->getValueAsBit("hasEVEX_B");
-  IsCodeGenOnly      = Rec->getValueAsBit("isCodeGenOnly");
-  ForceDisassemble   = Rec->getValueAsBit("ForceDisassemble");
-  CD8_Scale          = byteFromRec(Rec, "CD8_Scale");
-
-  HasVEX_LPrefix   = Rec->getValueAsBit("hasVEX_L");
+  OpSize = byteFromRec(Rec, "OpSizeBits");
+  AdSize = byteFromRec(Rec, "AdSizeBits");
+  HasREX_WPrefix = Rec->getValueAsBit("hasREX_WPrefix");
+  HasVEX_4V = Rec->getValueAsBit("hasVEX_4V");
+  HasVEX_W = Rec->getValueAsBit("HasVEX_W");
+  IgnoresVEX_W = Rec->getValueAsBit("IgnoresVEX_W");
+  IgnoresVEX_L = Rec->getValueAsBit("ignoresVEX_L");
+  HasEVEX_L2Prefix = Rec->getValueAsBit("hasEVEX_L2");
+  HasEVEX_K = Rec->getValueAsBit("hasEVEX_K");
+  HasEVEX_KZ = Rec->getValueAsBit("hasEVEX_Z");
+  HasEVEX_B = Rec->getValueAsBit("hasEVEX_B");
+  IsCodeGenOnly = Rec->getValueAsBit("isCodeGenOnly");
+  ForceDisassemble = Rec->getValueAsBit("ForceDisassemble");
+  CD8_Scale = byteFromRec(Rec, "CD8_Scale");
+  HasVEX_LPrefix = Rec->getValueAsBit("hasVEX_L");
 
   EncodeRC = HasEVEX_B &&
              (Form == X86Local::MRMDestReg || Form == X86Local::MRMSrcReg);
 
-  if (Form == X86Local::Pseudo || (IsCodeGenOnly && !ForceDisassemble)) {
+  if (Form == X86Local::Pseudo || (IsCodeGenOnly && !ForceDisassemble))
     ShouldBeEmitted = false;
-    return;
-  }
-
-  ShouldBeEmitted = true;
 }
 
 RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
                                      const CodeGenInstruction &insn,
                                      InstrUID uid)
-    : RecognizableInstrBase(insn) {
-  Name = std::string(Rec->getName());
-  Operands = &insn.Operands.OperandList;
+    : RecognizableInstrBase(insn), Name(Rec->getName().str()), Is32Bit(false),
+      Is64Bit(false), Operands(&insn.Operands.OperandList), UID(uid),
+      Spec(&tables.specForUID(uid)) {
   // Check for 64-bit inst which does not require REX
-  Is32Bit = false;
-  Is64Bit = false;
   // FIXME: Is there some better way to check for In64BitMode?
   std::vector<Record *> Predicates = Rec->getValueAsListOfDefs("Predicates");
   for (unsigned i = 0, e = Predicates.size(); i != e; ++i) {
@@ -138,8 +128,6 @@ RecognizableInstr::RecognizableInstr(DisassemblerTables &tables,
       break;
     }
   }
-  UID = uid;
-  Spec = &tables.specForUID(UID);
 }
 
 void RecognizableInstr::processInstr(DisassemblerTables &tables,
