@@ -6,5 +6,5 @@ Number,Name,Assignee,Patch,Status,First released version
 `P2216 <https://wg21.link/P2216>`_,"std::format improvements",Mark de Wever,,|In Progress|,
 `P2418 <https://wg21.link/P2418>`__,"Add support for ``std::generator``-like types to ``std::format``",Mark de Wever,,|In Progress|,
 
-`P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting",,,|Not Started|,
-`P2372 <https://wg21.link/P2372>`__,"Fixing locale handling in chrono formatters",,,|Not Started|,
+`P1361 <https://wg21.link/P1361>`_,"Integration of chrono with text formatting",Mark de Wever,,|In Progress|,
+`P2372 <https://wg21.link/P2372>`__,"Fixing locale handling in chrono formatters",Mark de Wever,,|In Progress|,
