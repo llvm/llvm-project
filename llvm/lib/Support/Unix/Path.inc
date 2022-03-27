@@ -950,7 +950,15 @@ ErrorOr<basic_file_status> directory_entry::status() const {
   return s;
 }
 
-#if !defined(F_GETPATH)
+//
+// FreeBSD optionally provides /proc/self/fd, but it is incompatible with
+// Linux. The thing to use is realpath.
+//
+#if !defined(__FreeBSD__)
+#define TRY_PROC_SELF_FD
+#endif
+
+#if !defined(F_GETPATH) && defined(TRY_PROC_SELF_FD)
 static bool hasProcSelfFD() {
   // If we have a /proc filesystem mounted, we can quickly establish the
   // real name of the file with readlink
@@ -1137,6 +1145,7 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
     RealPath->append(Buffer, Buffer + strlen(Buffer));
 #else
   char Buffer[PATH_MAX];
+#if defined(TRY_PROC_SELF_FD)
   if (hasProcSelfFD()) {
     char ProcPath[64];
     snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", ResultFD);
@@ -1144,13 +1153,16 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
     if (CharCount > 0)
       RealPath->append(Buffer, Buffer + CharCount);
   } else {
+#endif
     SmallString<128> Storage;
     StringRef P = Name.toNullTerminatedStringRef(Storage);
 
     // Use ::realpath to get the real path name
     if (::realpath(P.begin(), Buffer) != nullptr)
       RealPath->append(Buffer, Buffer + strlen(Buffer));
+#if defined(TRY_PROC_SELF_FD)
   }
+#endif
 #endif
   return std::error_code();
 }
