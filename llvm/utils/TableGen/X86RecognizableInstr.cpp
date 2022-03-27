@@ -38,6 +38,55 @@ std::string X86Disassembler::getMnemonic(const CodeGenInstruction *I, unsigned V
     return Mnemonic.upper();
 }
 
+bool X86Disassembler::isRegisterOperand(const Record *Rec) {
+  return Rec->isSubClassOf("RegisterClass") ||
+         Rec->isSubClassOf("RegisterOperand");
+}
+
+bool X86Disassembler::isMemoryOperand(const Record *Rec) {
+  return Rec->isSubClassOf("Operand") &&
+         Rec->getValueAsString("OperandType") == "OPERAND_MEMORY";
+}
+
+bool X86Disassembler::isImmediateOperand(const Record *Rec) {
+  return Rec->isSubClassOf("Operand") &&
+         Rec->getValueAsString("OperandType") == "OPERAND_IMMEDIATE";
+}
+
+unsigned X86Disassembler::getRegOperandSize(const Record *RegRec) {
+  if (RegRec->isSubClassOf("RegisterClass"))
+    return RegRec->getValueAsInt("Alignment");
+  if (RegRec->isSubClassOf("RegisterOperand"))
+    return RegRec->getValueAsDef("RegClass")->getValueAsInt("Alignment");
+
+  llvm_unreachable("Register operand's size not known!");
+}
+
+unsigned X86Disassembler::getMemOperandSize(const Record *MemRec) {
+  if (MemRec->isSubClassOf("Operand")) {
+    StringRef Name =
+        MemRec->getValueAsDef("ParserMatchClass")->getValueAsString("Name");
+    if (Name == "Mem8")
+      return 8;
+    if (Name == "Mem16")
+      return 16;
+    if (Name == "Mem32")
+      return 32;
+    if (Name == "Mem64")
+      return 64;
+    if (Name == "Mem80")
+      return 80;
+    if (Name == "Mem128")
+      return 128;
+    if (Name == "Mem256")
+      return 256;
+    if (Name == "Mem512")
+      return 512;
+  }
+
+  llvm_unreachable("Memory operand's size not known!");
+}
+
 /// byteFromBitsInit - Extracts a value at most 8 bits in width from a BitsInit.
 ///   Useful for switch statements and the like.
 ///
