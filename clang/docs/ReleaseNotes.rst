@@ -82,13 +82,14 @@ Bug Fixes
   alias, target) identifier instead of only processing one such ``#pragma weak``
   per identifier.
   Fixes `Issue 28985 <https://github.com/llvm/llvm-project/issues/28985>`_.
-
+- Assignment expressions in C11 and later mode now properly strip the _Atomic
+  qualifier when determining the type of the assignment expression. Fixes
+  `Issue 48742 <https://github.com/llvm/llvm-project/issues/48742>`_.
 - Unevaluated lambdas in dependant contexts no longer result in clang crashing.
-  This fixes Issues `50376 < https://github.com/llvm/llvm-project/issues/50376>`_,
-  `54296 < https://github.com/llvm/llvm-project/issues/54296>`_,
-  `51414 < https://github.com/llvm/llvm-project/issues/51414>`_,
-  `51416 < https://github.com/llvm/llvm-project/issues/51416>`_,
-  and `51641 < https://github.com/llvm/llvm-project/issues/51641>`_.
+  This fixes Issues `50376 <https://github.com/llvm/llvm-project/issues/50376>`_,
+  `51414 <https://github.com/llvm/llvm-project/issues/51414>`_,
+  `51416 <https://github.com/llvm/llvm-project/issues/51416>`_,
+  and `51641 <https://github.com/llvm/llvm-project/issues/51641>`_.
 
 
 Improvements to Clang's diagnostics

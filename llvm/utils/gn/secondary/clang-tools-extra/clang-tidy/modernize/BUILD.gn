@@ -20,7 +20,6 @@ static_library("modernize") {
     "DeprecatedIosBaseAliasesCheck.cpp",
     "LoopConvertCheck.cpp",
     "LoopConvertUtils.cpp",
-    "MacroToEnumCheck.cpp",
     "MakeSharedCheck.cpp",
     "MakeSmartPtrCheck.cpp",
     "MakeUniqueCheck.cpp",

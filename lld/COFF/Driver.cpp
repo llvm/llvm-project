@@ -1507,7 +1507,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   // Handle /demangle
-  config->demangle = args.hasFlag(OPT_demangle, OPT_demangle_no);
+  config->demangle = args.hasFlag(OPT_demangle, OPT_demangle_no, true);
 
   // Handle /debugtype
   config->debugTypes = parseDebugTypes(args);

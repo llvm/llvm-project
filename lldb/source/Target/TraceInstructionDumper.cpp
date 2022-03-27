@@ -250,14 +250,14 @@ void TraceInstructionDumper::DumpInstructions(Stream &s, size_t count) {
       break;
     }
 
-    if (Error err = m_cursor_up->GetError()) {
+    if (const char *err = m_cursor_up->GetError()) {
       if (!m_cursor_up->IsForwards() && !was_prev_instruction_an_error)
         printMissingInstructionsMessage();
 
       was_prev_instruction_an_error = true;
 
       printInstructionIndex();
-      s << toString(std::move(err));
+      s << err;
     } else {
       if (m_cursor_up->IsForwards() && was_prev_instruction_an_error)
         printMissingInstructionsMessage();

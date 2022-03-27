@@ -1158,12 +1158,14 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
 }
 
 void AsmPrinter::emitPseudoProbe(const MachineInstr &MI) {
-  auto GUID = MI.getOperand(0).getImm();
-  auto Index = MI.getOperand(1).getImm();
-  auto Type = MI.getOperand(2).getImm();
-  auto Attr = MI.getOperand(3).getImm();
-  DILocation *DebugLoc = MI.getDebugLoc();
-  PP->emitPseudoProbe(GUID, Index, Type, Attr, DebugLoc);
+  if (PP) {
+    auto GUID = MI.getOperand(0).getImm();
+    auto Index = MI.getOperand(1).getImm();
+    auto Type = MI.getOperand(2).getImm();
+    auto Attr = MI.getOperand(3).getImm();
+    DILocation *DebugLoc = MI.getDebugLoc();
+    PP->emitPseudoProbe(GUID, Index, Type, Attr, DebugLoc);
+  }
 }
 
 void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {

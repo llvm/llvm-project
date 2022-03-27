@@ -21,7 +21,7 @@ characteristics::TypeAndShape Fold(
 std::optional<Constant<SubscriptInteger>> GetConstantSubscript(
     FoldingContext &context, Subscript &ss, const NamedEntity &base, int dim) {
   ss = FoldOperation(context, std::move(ss));
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](IndirectSubscriptIntegerExpr &expr)
               -> std::optional<Constant<SubscriptInteger>> {
@@ -119,16 +119,16 @@ Triplet FoldOperation(FoldingContext &context, Triplet &&triplet) {
 }
 
 Subscript FoldOperation(FoldingContext &context, Subscript &&subscript) {
-  return std::visit(common::visitors{
-                        [&](IndirectSubscriptIntegerExpr &&expr) {
-                          expr.value() = Fold(context, std::move(expr.value()));
-                          return Subscript(std::move(expr));
-                        },
-                        [&](Triplet &&triplet) {
-                          return Subscript(
-                              FoldOperation(context, std::move(triplet)));
-                        },
-                    },
+  return common::visit(
+      common::visitors{
+          [&](IndirectSubscriptIntegerExpr &&expr) {
+            expr.value() = Fold(context, std::move(expr.value()));
+            return Subscript(std::move(expr));
+          },
+          [&](Triplet &&triplet) {
+            return Subscript(FoldOperation(context, std::move(triplet)));
+          },
+      },
       std::move(subscript.u));
 }
 
@@ -162,12 +162,13 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
 }
 
 DataRef FoldOperation(FoldingContext &context, DataRef &&dataRef) {
-  return std::visit(common::visitors{
-                        [&](SymbolRef symbol) { return DataRef{*symbol}; },
-                        [&](auto &&x) {
-                          return DataRef{FoldOperation(context, std::move(x))};
-                        },
-                    },
+  return common::visit(common::visitors{
+                           [&](SymbolRef symbol) { return DataRef{*symbol}; },
+                           [&](auto &&x) {
+                             return DataRef{
+                                 FoldOperation(context, std::move(x))};
+                           },
+                       },
       std::move(dataRef.u));
 }
 

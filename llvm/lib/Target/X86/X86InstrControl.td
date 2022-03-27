@@ -147,7 +147,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
   // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
   // These are switched from TAILJMPr/m64_REX in MCInstLower.
-  let isCodeGenOnly = 1, hasREX_WPrefix = 1 in {
+  let isCodeGenOnly = 1, hasREX_W = 1 in {
     def JMP64r_REX : I<0xFF, MRM4r, (outs), (ins GR64:$dst),
                        "rex64 jmp{q}\t{*}$dst", []>, Sched<[WriteJump]>;
     let mayLoad = 1 in
@@ -384,7 +384,7 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                            []>, Sched<[WriteJumpLd]>;
 
   // Win64 wants indirect jumps leaving the function to have a REX_W prefix.
-  let hasREX_WPrefix = 1 in {
+  let hasREX_W = 1 in {
     def TAILJMPr64_REX : PseudoI<(outs), (ins ptr_rc_tailcall:$dst),
                                  []>, Sched<[WriteJump]>;
 

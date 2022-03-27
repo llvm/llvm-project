@@ -47,7 +47,7 @@ static bool shouldSkipSanitizeOption(const ToolChain &TC,
     return false;
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize))
+                          options::OPT_fno_gpu_sanitize, true))
     return true;
 
   auto &Diags = TC.getDriver().getDiags();
@@ -162,7 +162,8 @@ HIPAMDToolChain::HIPAMDToolChain(const Driver &D, const llvm::Triple &Triple,
   getProgramPaths().push_back(getDriver().Dir);
 
   // Diagnose unsupported sanitizer options only once.
-  if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize))
+  if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                    true))
     return;
   for (auto A : Args.filtered(options::OPT_fsanitize_EQ)) {
     SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
@@ -332,7 +333,7 @@ HIPAMDToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
 
     // If --hip-device-lib is not set, add the default bitcode libraries.
     if (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                           options::OPT_fno_gpu_sanitize) &&
+                           options::OPT_fno_gpu_sanitize, true) &&
         getSanitizerArgs(DriverArgs).needsAsanRt()) {
       auto AsanRTL = RocmInstallation.getAsanRTLPath();
       if (AsanRTL.empty()) {

@@ -11,7 +11,6 @@ add_clang_library(clangTidyModernizeModule
   DeprecatedIosBaseAliasesCheck.cpp
   LoopConvertCheck.cpp
   LoopConvertUtils.cpp
-  MacroToEnumCheck.cpp
   MakeSharedCheck.cpp
   MakeSmartPtrCheck.cpp
   MakeUniqueCheck.cpp

@@ -32,7 +32,7 @@ CommonStmt::CommonStmt(std::optional<Name> &&name,
 
 // R901 designator
 bool Designator::EndsInBareName() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const DataRef &dr) {
             return std::holds_alternative<Name>(dr.u) ||
@@ -120,11 +120,11 @@ template <typename T> T WithSource(CharBlock source, T &&x) {
 }
 
 static Expr ActualArgToExpr(ActualArgSpec &arg) {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](common::Indirection<Expr> &y) { return std::move(y.value()); },
           [&](common::Indirection<Variable> &y) {
-            return std::visit(
+            return common::visit(
                 common::visitors{
                     [&](common::Indirection<Designator> &z) {
                       return WithSource(
@@ -147,7 +147,7 @@ Designator FunctionReference::ConvertToArrayElementRef() {
   for (auto &arg : std::get<std::list<ActualArgSpec>>(v.t)) {
     args.emplace_back(ActualArgToExpr(arg));
   }
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const Name &name) {
             return WithSource(
@@ -231,7 +231,7 @@ Statement<ActionStmt> StmtFunctionStmt::ConvertToAssignment() {
 }
 
 CharBlock Variable::GetSource() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [&](const common::Indirection<Designator> &des) {
             return des.value().source;
