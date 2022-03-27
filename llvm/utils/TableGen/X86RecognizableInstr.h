@@ -354,6 +354,11 @@ public:
 };
 
 std::string getMnemonic(const CodeGenInstruction *I, unsigned Variant);
+bool isRegisterOperand(const Record *Rec);
+bool isMemoryOperand(const Record *Rec);
+bool isImmediateOperand(const Record *Rec);
+unsigned getRegOperandSize(const Record *RegRec);
+unsigned getMemOperandSize(const Record *MemRec);
 } // namespace X86Disassembler
 
 } // namespace llvm

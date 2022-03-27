@@ -18,6 +18,7 @@
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
+using namespace X86Disassembler;
 
 namespace {
 
@@ -212,42 +213,6 @@ static inline uint64_t getValueFromBitsInit(const BitsInit *B) {
   return Value;
 }
 
-// Return the size of the register operand
-static inline unsigned int getRegOperandSize(const Record *RegRec) {
-  if (RegRec->isSubClassOf("RegisterOperand"))
-    RegRec = RegRec->getValueAsDef("RegClass");
-  if (RegRec->isSubClassOf("RegisterClass"))
-    return RegRec->getValueAsListOfDefs("RegTypes")[0]->getValueAsInt("Size");
-
-  llvm_unreachable("Register operand's size not known!");
-}
-
-// Return the size of the memory operand
-static inline unsigned getMemOperandSize(const Record *MemRec) {
-  if (MemRec->isSubClassOf("Operand")) {
-    StringRef Name =
-        MemRec->getValueAsDef("ParserMatchClass")->getValueAsString("Name");
-    if (Name == "Mem8")
-      return 8;
-    if (Name == "Mem16")
-      return 16;
-    if (Name == "Mem32")
-      return 32;
-    if (Name == "Mem64")
-      return 64;
-    if (Name == "Mem80")
-      return 80;
-    if (Name == "Mem128")
-      return 128;
-    if (Name == "Mem256")
-      return 256;
-    if (Name == "Mem512")
-      return 512;
-  }
-
-  llvm_unreachable("Memory operand's size not known!");
-}
-
 // Return true if the instruction defined as a register flavor.
 static inline bool hasRegisterFormat(const Record *Inst) {
   const BitsInit *FormBits = Inst->getValueAsBitsInit("FormBits");
@@ -268,21 +233,6 @@ static inline bool hasMemoryFormat(const Record *Inst) {
 
 static inline bool isNOREXRegClass(const Record *Op) {
   return Op->getName().contains("_NOREX");
-}
-
-static inline bool isRegisterOperand(const Record *Rec) {
-  return Rec->isSubClassOf("RegisterClass") ||
-         Rec->isSubClassOf("RegisterOperand");
-}
-
-static inline bool isMemoryOperand(const Record *Rec) {
-  return Rec->isSubClassOf("Operand") &&
-         Rec->getValueAsString("OperandType") == "OPERAND_MEMORY";
-}
-
-static inline bool isImmediateOperand(const Record *Rec) {
-  return Rec->isSubClassOf("Operand") &&
-         Rec->getValueAsString("OperandType") == "OPERAND_IMMEDIATE";
 }
 
 // Get the alternative instruction pointed by "FoldGenRegForm" field.
