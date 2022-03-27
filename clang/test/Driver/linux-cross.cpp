@@ -220,4 +220,4 @@
 // RELOCATABLE:      "-L
 // RELOCATABLE-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10"
 // RELOCATABLE-NOT:  "-l
-// RELOCATABLE-NOT:  crt{{[^.]+}}.o
+// RELOCATABLE-NOT:  crt{{[^./]+}}.o
