@@ -92,6 +92,11 @@ TEST(LlvmLibcExpm1fTest, Borderline) {
   ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
                                  __llvm_libc::expm1f(x), 0.5);
   EXPECT_MATH_ERRNO(0);
+
+  x = float(FPBits(0x3e35bec5U));
+  ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Expm1, x,
+                                 __llvm_libc::expm1f(x), 0.5);
+  EXPECT_MATH_ERRNO(0);
 }
 
 TEST(LlvmLibcExpm1fTest, InFloatRange) {
