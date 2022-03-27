@@ -5,6 +5,38 @@
 ; LD1B
 ;
 
+define <vscale x 16 x i32> @masked_ld1b_i8_sext_i32(<vscale x 16 x i8> *%base, <vscale x 16 x i1> %mask) {
+; CHECK-LABEL: masked_ld1b_i8_sext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    sunpklo z1.h, z0.b
+; CHECK-NEXT:    sunpkhi z3.h, z0.b
+; CHECK-NEXT:    sunpklo z0.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    sunpklo z2.s, z3.h
+; CHECK-NEXT:    sunpkhi z3.s, z3.h
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0nxv16i8(<vscale x 16 x i8>* %base, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %res = sext <vscale x 16 x i8> %wide.masked.load to <vscale x 16 x i32>
+  ret <vscale x 16 x i32> %res
+}
+
+define <vscale x 16 x i32> @masked_ld1b_i8_zext_i32(<vscale x 16 x i8> *%base, <vscale x 16 x i1> %mask) {
+; CHECK-LABEL: masked_ld1b_i8_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    uunpkhi z3.h, z0.b
+; CHECK-NEXT:    uunpklo z0.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    uunpklo z2.s, z3.h
+; CHECK-NEXT:    uunpkhi z3.s, z3.h
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0nxv16i8(<vscale x 16 x i8>* %base, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
+  %res = zext <vscale x 16 x i8> %wide.masked.load to <vscale x 16 x i32>
+  ret <vscale x 16 x i32> %res
+}
+
 define <vscale x 16 x i64> @masked_ld1b_i8_sext(<vscale x 16 x i8> *%base, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_ld1b_i8_sext:
 ; CHECK:       // %bb.0:

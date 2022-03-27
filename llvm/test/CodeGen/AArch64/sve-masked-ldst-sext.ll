@@ -73,16 +73,13 @@ define <vscale x 2 x i64> @masked_sload_passthru(<vscale x 2 x i32> *%a, <vscale
 ; Return type requires splitting
 define <vscale x 16 x i32> @masked_sload_nxv16i8(<vscale x 16 x i8>* %a, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_sload_nxv16i8:
-; CHECK:         punpklo p1.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    punpklo p2.h, p1.b
-; CHECK-NEXT:    punpkhi p1.h, p1.b
-; CHECK-NEXT:    ld1sb { z0.s }, p2/z, [x0]
-; CHECK-NEXT:    punpklo p2.h, p0.b
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    ld1sb { z1.s }, p1/z, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1sb { z2.s }, p2/z, [x0, #2, mul vl]
-; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x0, #3, mul vl]
+; CHECK:    ld1b { z0.b }, p0/z, [x0]
+; CHECK-NEXT:    sunpklo z1.h, z0.b
+; CHECK-NEXT:    sunpkhi z3.h, z0.b
+; CHECK-NEXT:    sunpklo z0.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    sunpklo z2.s, z3.h
+; CHECK-NEXT:    sunpkhi z3.s, z3.h
 ; CHECK-NEXT:    ret
   %load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8(<vscale x 16 x i8>* %a, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
   %ext = sext <vscale x 16 x i8> %load to <vscale x 16 x i32>
@@ -92,14 +89,13 @@ define <vscale x 16 x i32> @masked_sload_nxv16i8(<vscale x 16 x i8>* %a, <vscale
 ; Masked load requires promotion
 define <vscale x 4 x double> @masked_sload_4i8_4f32(<vscale x 4 x i8>* noalias %in, <vscale x 4 x i1> %mask) {
 ; CHECK-LABEL: masked_sload_4i8_4f32:
-; CHECK:       punpkhi p2.h, p0.b
-; CHECK-NEXT:  punpklo p0.h, p0.b
-; CHECK-NEXT:  ld1sb { z1.d }, p2/z, [x0, #1, mul vl]
-; CHECK-NEXT:  ld1sb { z0.d }, p0/z, [x0]
-; CHECK-NEXT:  ptrue p1.d
-; CHECK-NEXT:  scvtf z0.d, p1/m, z0.d
-; CHECK-NEXT:  scvtf z1.d, p1/m, z1.d
-; CHECK-NEXT:  ret
+; CHECK:    ld1sb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    sunpkhi z1.d, z0.s
+; CHECK-NEXT:    sunpklo z0.d, z0.s
+; CHECK-NEXT:    scvtf z0.d, p1/m, z0.d
+; CHECK-NEXT:    scvtf z1.d, p1/m, z1.d
+; CHECK-NEXT:    ret
   %wide.load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8(<vscale x 4 x i8>* %in, i32 2, <vscale x 4 x i1> %mask, <vscale x 4 x i8> undef)
   %sext = sext <vscale x 4 x i8> %wide.load to <vscale x 4 x i64>
   %res = sitofp <vscale x 4 x i64> %sext to <vscale x 4 x double>

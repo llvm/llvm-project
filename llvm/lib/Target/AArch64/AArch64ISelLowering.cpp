@@ -1231,11 +1231,25 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    // SVE supports unpklo/hi instructions to reduce the number of loads.
-    for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}) {
-      setLoadExtAction(Op, MVT::nxv16i64, MVT::nxv16i8, Expand);
-      setLoadExtAction(Op, MVT::nxv8i64, MVT::nxv8i16, Expand);
-      setLoadExtAction(Op, MVT::nxv4i64, MVT::nxv4i32, Expand);
+    // Firstly, exclude all scalable vector extending loads/truncating stores.
+    for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
+      for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
+        // TODO: truncating stores should also be exclude
+        setLoadExtAction(ISD::SEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::ZEXTLOAD, VT, InnerVT, Expand);
+        setLoadExtAction(ISD::EXTLOAD, VT, InnerVT, Expand);
+      }
+    }
+
+    // Then, selectively enable those which we directly support.
+    for (auto Op : {ISD::ZEXTLOAD, ISD::SEXTLOAD, ISD::EXTLOAD}) {
+      setLoadExtAction(Op, MVT::nxv2i64, MVT::nxv2i8, Legal);
+      setLoadExtAction(Op, MVT::nxv2i64, MVT::nxv2i16, Legal);
+      setLoadExtAction(Op, MVT::nxv2i64, MVT::nxv2i32, Legal);
+      setLoadExtAction(Op, MVT::nxv4i32, MVT::nxv4i8, Legal);
+      setLoadExtAction(Op, MVT::nxv2i32, MVT::nxv2i16, Legal);
+      setLoadExtAction(Op, MVT::nxv4i32, MVT::nxv4i16, Legal);
+      setLoadExtAction(Op, MVT::nxv8i16, MVT::nxv8i8, Legal);
     }
 
     // SVE supports truncating stores of 64 and 128-bit vectors
