@@ -122,6 +122,9 @@ Changes in existing checks
 - Fixed a false positive in :doc:`misc-redundant-expression <clang-tidy/checks/misc-redundant-expression>`
   involving overloaded comparison operators.
 
+- Fixed a crash in :doc:`bugprone-sizeof-expression <clang-tidy/checks/bugprone-sizeof-expression>` when
+  `sizeof(...)` is compared agains a `__int128_t`.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
