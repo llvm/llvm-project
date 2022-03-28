@@ -9,37 +9,39 @@ template <unsigned>
 struct Printer;
 
 namespace std {
-namespace experimental {
-struct source_location {
-private:
-  unsigned int __m_line = 0;
-  unsigned int __m_col = 0;
-  const char *__m_file = nullptr;
-  const char *__m_func = nullptr;
+class source_location {
+  struct __impl;
+
 public:
-  static constexpr source_location current(
-      const char *__file = __builtin_FILE(),
-      const char *__func = __builtin_FUNCTION(),
-      unsigned int __line = __builtin_LINE(),
-      unsigned int __col = __builtin_COLUMN()) noexcept {
+  static constexpr source_location current(const __impl *__p = __builtin_source_location()) noexcept {
     source_location __loc;
-    __loc.__m_line = __line;
-    __loc.__m_col = __col;
-    __loc.__m_file = __file;
-    __loc.__m_func = __func;
+    __loc.__m_impl = __p;
     return __loc;
   }
   constexpr source_location() = default;
   constexpr source_location(source_location const &) = default;
-  constexpr unsigned int line() const noexcept { return __m_line; }
-  constexpr unsigned int column() const noexcept { return __m_col; }
-  constexpr const char *file() const noexcept { return __m_file; }
-  constexpr const char *function() const noexcept { return __m_func; }
+  constexpr unsigned int line() const noexcept { return __m_impl ? __m_impl->_M_line : 0; }
+  constexpr unsigned int column() const noexcept { return __m_impl ? __m_impl->_M_column : 0; }
+  constexpr const char *file() const noexcept { return __m_impl ? __m_impl->_M_file_name : ""; }
+  constexpr const char *function() const noexcept { return __m_impl ? __m_impl->_M_function_name : ""; }
+
+private:
+  // Note: The type name "std::source_location::__impl", and its constituent
+  // field-names are required by __builtin_source_location().
+  struct __impl {
+    const char *_M_file_name;
+    const char *_M_function_name;
+    unsigned _M_line;
+    unsigned _M_column;
+  };
+  const __impl *__m_impl = nullptr;
+
+public:
+  using public_impl_alias = __impl;
 };
-} // namespace experimental
 } // namespace std
 
-using SL = std::experimental::source_location;
+using SL = std::source_location;
 
 #include "Inputs/source-location-file.h"
 namespace SLF = source_location_file;
@@ -75,12 +77,14 @@ static_assert(is_same<decltype(__builtin_LINE()), unsigned>);
 static_assert(is_same<decltype(__builtin_COLUMN()), unsigned>);
 static_assert(is_same<decltype(__builtin_FILE()), const char *>);
 static_assert(is_same<decltype(__builtin_FUNCTION()), const char *>);
+static_assert(is_same<decltype(__builtin_source_location()), const std::source_location::public_impl_alias *>);
 
 // test noexcept
 static_assert(noexcept(__builtin_LINE()));
 static_assert(noexcept(__builtin_COLUMN()));
 static_assert(noexcept(__builtin_FILE()));
 static_assert(noexcept(__builtin_FUNCTION()));
+static_assert(noexcept(__builtin_source_location()));
 
 //===----------------------------------------------------------------------===//
 //                            __builtin_LINE()
@@ -354,7 +358,7 @@ static_assert(test_function());
 
 template <class T, class U = SL>
 constexpr Pair<U, U> test_func_template(T, U u = U::current()) {
-  static_assert(is_equal(__func__, U::current().function()));
+  static_assert(is_equal(__PRETTY_FUNCTION__, U::current().function()));
   return {u, U::current()};
 }
 template <class T>
@@ -376,10 +380,11 @@ struct TestCtor {
 void ctor_tests() {
   constexpr TestCtor<> Default;
   constexpr TestCtor<> Template{42};
-  static_assert(!is_equal(Default.info.function(), __func__));
-  static_assert(is_equal(Default.info.function(), "TestCtor"));
-  static_assert(is_equal(Template.info.function(), "TestCtor"));
-  static_assert(is_equal(Template.ctor_info.function(), __func__));
+  static const char *XYZZY = Template.info.function();
+  static_assert(is_equal(Default.info.function(), "test_func::TestCtor<>::TestCtor() [T = std::source_location]"));
+  static_assert(is_equal(Default.ctor_info.function(), ""));
+  static_assert(is_equal(Template.info.function(), "test_func::TestCtor<>::TestCtor(int, U) [T = std::source_location, U = std::source_location]"));
+  static_assert(is_equal(Template.ctor_info.function(), __PRETTY_FUNCTION__));
 }
 
 constexpr SL global_sl = SL::current();
@@ -521,7 +526,7 @@ constexpr bool test_in_func() {
   static_assert(is_equal(b.a.info.file(), "test_func_passed.cpp"));
   static_assert(is_equal(b.a.func, "test_in_func"));
   static_assert(is_equal(b.a.func2, "test_in_func"));
-  static_assert(is_equal(b.a.info.function(), "test_in_func"));
+  static_assert(is_equal(b.a.info.function(), "bool test_out_of_line_init::test_in_func()"));
   return true;
 }
 static_assert(test_in_func());
