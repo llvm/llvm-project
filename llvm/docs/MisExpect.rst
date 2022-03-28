@@ -62,7 +62,7 @@ Sampling. MisExpect Diagnostics are compatible with all Profiling formats.
 +----------------+--------------------------------------------------------------------------------------+
 | Profile Type   | Description                                                                          |
 +================+======================================================================================+
-| Frontend       | Profiling instrumentation added during compilation by the frontend, i.e. ``clang``    |
+| Frontend       | Profiling instrumentation added during compilation by the frontend, i.e. ``clang``   |
 +----------------+--------------------------------------------------------------------------------------+
 | IR             | Profiling instrumentation added during by the LLVM backend                           |
 +----------------+--------------------------------------------------------------------------------------+
