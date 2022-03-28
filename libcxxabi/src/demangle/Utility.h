@@ -75,6 +75,8 @@ public:
   OutputBuffer(const OutputBuffer &) = delete;
   OutputBuffer &operator=(const OutputBuffer &) = delete;
 
+  operator StringView() const { return StringView(Buffer, CurrentPosition); }
+
   void reset(char *Buffer_, size_t BufferCapacity_) {
     CurrentPosition = 0;
     Buffer = Buffer_;

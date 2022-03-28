@@ -321,11 +321,14 @@ private:
 /// parameter.
 class RegionRange
     : public llvm::detail::indexed_accessor_range_base<
-          RegionRange, PointerUnion<Region *, const std::unique_ptr<Region> *>,
+          RegionRange,
+          PointerUnion<Region *, const std::unique_ptr<Region> *, Region **>,
           Region *, Region *, Region *> {
-  /// The type representing the owner of this range. This is either a list of
-  /// values, operands, or results.
-  using OwnerT = PointerUnion<Region *, const std::unique_ptr<Region> *>;
+  /// The type representing the owner of this range. This is either an owning
+  /// list of regions, a list of region unique pointers, or a list of region
+  /// pointers.
+  using OwnerT =
+      PointerUnion<Region *, const std::unique_ptr<Region> *, Region **>;
 
 public:
   using RangeBaseT::RangeBaseT;
@@ -339,6 +342,7 @@ public:
       : RegionRange(ArrayRef<std::unique_ptr<Region>>(std::forward<Arg>(arg))) {
   }
   RegionRange(ArrayRef<std::unique_ptr<Region>> regions);
+  RegionRange(ArrayRef<Region *> regions);
 
 private:
   /// See `llvm::detail::indexed_accessor_range_base` for details.

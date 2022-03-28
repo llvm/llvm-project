@@ -794,7 +794,6 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
                                               msgpack::ArrayDocNode Args) {
   auto &Func = MF.getFunction();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
 
   unsigned HiddenArgNumBytes = ST.getImplicitArgNumBytes(Func);
   if (!HiddenArgNumBytes)
@@ -823,7 +822,7 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const MachineFunction &MF,
     if (M->getNamedMetadata("llvm.printf.fmts"))
       emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_printf_buffer", Offset,
                     Args);
-    else if (MFI.hasHostcallPtr()) {
+    else if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr")) {
       // The printf runtime binding pass should have ensured that hostcall and
       // printf are not used in the same module.
       assert(!M->getNamedMetadata("llvm.printf.fmts"));
@@ -1019,7 +1018,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   } else
     Offset += 8; // Skipped.
 
-  if (MFI.hasHostcallPtr()) {
+  if (!Func.hasFnAttribute("amdgpu-no-hostcall-ptr")) {
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_hostcall_buffer", Offset,
                   Args);
   } else
@@ -1028,7 +1027,7 @@ void MetadataStreamerV5::emitHiddenKernelArgs(const MachineFunction &MF,
   emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_multigrid_sync_arg", Offset,
                 Args);
 
-  if (MFI.hasHeapPtr())
+  if (!Func.hasFnAttribute("amdgpu-no-heap-ptr"))
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_heap_v1", Offset, Args);
   else
     Offset += 8; // Skipped.

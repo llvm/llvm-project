@@ -1,3 +1,4 @@
+// Test the default control-flow sink pass.
 // RUN: mlir-opt -control-flow-sink %s | FileCheck %s
 
 // Test that operations can be sunk.
