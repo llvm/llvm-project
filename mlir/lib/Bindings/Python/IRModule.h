@@ -575,6 +575,9 @@ public:
   /// parent context's live operations map, and sets the valid bit false.
   void erase();
 
+  /// Clones this operation.
+  pybind11::object clone(const pybind11::object &ip);
+
 private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
   static PyOperationRef createInstance(PyMlirContextRef contextRef,

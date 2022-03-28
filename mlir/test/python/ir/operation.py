@@ -767,6 +767,26 @@ def testOperationErase():
       Operation.create("custom.op2")
 
 
+# CHECK-LABEL: TEST: testOperationClone
+@run
+def testOperationClone():
+  ctx = Context()
+  ctx.allow_unregistered_dialects = True
+  with Location.unknown(ctx):
+    m = Module.create()
+    with InsertionPoint(m.body):
+      op = Operation.create("custom.op1")
+
+      # CHECK: "custom.op1"
+      print(m)
+
+      clone = op.operation.clone()
+      op.operation.erase()
+
+      # CHECK: "custom.op1"
+      print(m)
+
+
 # CHECK-LABEL: TEST: testOperationLoc
 @run
 def testOperationLoc():
