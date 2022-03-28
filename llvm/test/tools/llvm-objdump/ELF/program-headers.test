@@ -278,12 +278,13 @@ ProgramHeaders:
 ## Check we report an error / warning when we are unable to read program headers.
 ## Case A: the e_phentsize field is invalid.
 # RUN: yaml2obj --docnum=2 -DPHENTSIZE=1 %s -o %t.phdr.err
-# RUN: not llvm-objdump --private-headers %t.phdr.err 2>&1 | \
+# RUN: llvm-objdump --private-headers %t.phdr.err 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.phdr.err --check-prefix=PHENTSIZE
 
 # PHENTSIZE:      Program Header:
 # PHENTSIZE-NEXT: warning: '[[FILE]]': unable to read program headers: invalid e_phentsize: 1
-# PHENTSIZE-NEXT: error: '[[FILE]]': invalid e_phentsize: 1
+# PHENTSIZE-NEXT: warning: '[[FILE]]': invalid e_phentsize: 1
+# PHENTSIZE-EMPTY:
 
 --- !ELF
 FileHeader:
@@ -309,16 +310,16 @@ ProgramHeaders:
 
 ## Check we report a warning / error when e_phoff goes 1 byte past the end of the file.
 # RUN: yaml2obj --docnum=2 -DPHOFF=0x161 %s -o %t.phdr.err2
-# RUN: not llvm-objdump --private-headers %t.phdr.err2 2>&1 | \
+# RUN: llvm-objdump --private-headers %t.phdr.err2 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.phdr.err2 --check-prefix=PHOFF -DOFF=0x161
 
 # PHOFF:      Program Header:
 # PHOFF-NEXT: warning: '[[FILE]]': unable to read program headers: program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
-# PHOFF-NEXT: error: '[[FILE]]': program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
-
+# PHOFF-NEXT: warning: '[[FILE]]': program headers are longer than binary of size 408: e_phoff = [[OFF]], e_phnum = 1, e_phentsize = 56
+# PHOFF-EMPTY:
 
 ## Check we report a warning / error when the value of e_phoff is so large that
 ## e_phoff + e_phnum * e_phentsize > UINT64_MAX.
 # RUN: yaml2obj --docnum=2 -DPHOFF=0xffffffffffffffff %s -o %t.phdr.err3
-# RUN: not llvm-objdump --private-headers %t.phdr.err3 2>&1 | \
+# RUN: llvm-objdump --private-headers %t.phdr.err3 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t.phdr.err3 --check-prefix=PHOFF -DOFF=0xffffffffffffffff
