@@ -105,6 +105,7 @@ protected:
   bool GFX940Insts;
   bool GFX10Insts;
   bool GFX11Insts;
+  bool GFX12Insts;
   bool GFX10_3Insts;
   bool GFX7GFX8GFX9Insts;
   bool SGPRInitBug;

@@ -267,3 +267,12 @@ def : ProcessorModel<"gfx1103", GFX11SpeedModel,
 def : ProcessorModel<"gfx1150", GFX11SpeedModel,
   FeatureISAVersion11_0_2.Features
 >;
+
+//===----------------------------------------------------------------------===//
+// GCN GFX12.
+//===----------------------------------------------------------------------===//
+
+// TODO-GFX12: Implement GFX12SpeedModel.
+def : ProcessorModel<"gfx1200", GFX11SpeedModel,
+  FeatureISAVersion12.Features
+>;

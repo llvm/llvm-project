@@ -331,6 +331,12 @@ def FeatureGFX11Insts : SubtargetFeature<"gfx11-insts",
   "Additional instructions for GFX11+"
 >;
 
+def FeatureGFX12Insts : SubtargetFeature<"gfx12-insts",
+  "GFX12Insts",
+  "true",
+  "Additional instructions for GFX12+"
+>;
+
 def FeatureGFX10_3Insts : SubtargetFeature<"gfx10-3-insts",
   "GFX10_3Insts",
   "true",
@@ -920,6 +926,25 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
   ]
 >;
 
+def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
+  "gfx12",
+  [FeatureFP64, FeatureLocalMemorySize65536, FeatureMIMG_R128,
+   FeatureFlatAddressSpace, Feature16BitInsts,
+   FeatureInv2PiInlineImm, FeatureApertureRegs,
+   FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
+   FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
+   FeatureGFX11Insts, FeatureGFX12Insts, FeatureVOP3P, FeatureVOPD,
+   FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
+   FeatureAddNoCarryInsts, FeatureFmaMixInsts,
+   FeatureNoSdstCMPX, FeatureVscnt,
+   FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
+   FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
+   FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
+  ]
+>;
+
 class FeatureSet<list<SubtargetFeature> Features_> {
   list<SubtargetFeature> Features = Features_;
 }
@@ -1288,6 +1313,25 @@ def FeatureISAVersion11_0 : FeatureSet<
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [])>;
+
+def FeatureISAVersion12 : FeatureSet<
+  [FeatureGFX12,
+   FeatureLDSBankCount32,
+   FeatureDLInsts,
+   FeatureDot5Insts,
+   FeatureDot7Insts,
+   FeatureDot8Insts,
+   FeatureNSAEncoding,
+   FeatureNSAMaxSize5,
+   FeatureWavefrontSize32,
+   FeatureShaderCyclesRegister,
+   FeatureArchitectedFlatScratch,
+   FeatureAtomicFaddRtnInsts,
+   FeatureAtomicFaddNoRtnInsts,
+   FeatureImageInsts,
+   FeaturePackedTID,
+   FeatureVcmpxPermlaneHazard,
+   FeatureBackOffBarrier]>;
 
 //===----------------------------------------------------------------------===//
 

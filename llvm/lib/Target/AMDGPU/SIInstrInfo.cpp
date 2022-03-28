@@ -7935,6 +7935,9 @@ static SIEncodingFamily subtargetEncodingFamily(const GCNSubtarget &ST) {
     return SIEncodingFamily::GFX10;
   case AMDGPUSubtarget::GFX11:
     return SIEncodingFamily::GFX11;
+  case AMDGPUSubtarget::GFX12:
+    // TODO-GFX12: Implement SIEncodingFamily::GFX12.
+    return SIEncodingFamily::GFX11;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
