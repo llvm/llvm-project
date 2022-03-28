@@ -982,9 +982,21 @@ void VPlan::execute(VPTransformState *State) {
   for (VPRecipeBase &R : Header->phis()) {
     // Skip phi-like recipes that generate their backedege values themselves.
     // TODO: Model their backedge values explicitly.
-    if (isa<VPWidenIntOrFpInductionRecipe>(&R) || isa<VPWidenPHIRecipe>(&R) ||
-        isa<VPWidenPointerInductionRecipe>(&R))
+    if (isa<VPWidenPHIRecipe>(&R) || isa<VPWidenPointerInductionRecipe>(&R))
       continue;
+
+    // Set the correct incoming block for backedge values and move induction to
+    // latch.
+    if (auto *IndR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+      auto *Phi = cast<PHINode>(State->get(IndR, 0));
+      Phi->setIncomingBlock(1, VectorLatchBB);
+
+      // Move the last step to the end of the latch block. This ensures
+      // consistent placement of all induction updates.
+      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
+      Inc->moveBefore(VectorLatchBB->getTerminator()->getPrevNode());
+      continue;
+    }
 
     auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
     // For  canonical IV, first-order recurrences and in-order reduction phis,
