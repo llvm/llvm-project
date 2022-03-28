@@ -1,6 +1,6 @@
 // A basic clang -cc1 command-line, and simple environment check.
 
-// RUN: %clang %s -### --target=riscv32 \
+// RUN: %clang %s -### -no-canonical-prefixes --target=riscv32 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=CC1 %s
 // CC1: clang{{.*}} "-cc1" "-triple" "riscv32"
