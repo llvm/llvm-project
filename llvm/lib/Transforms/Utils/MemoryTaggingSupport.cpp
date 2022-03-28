@@ -12,7 +12,10 @@
 
 #include "llvm/Transforms/Utils/MemoryTaggingSupport.h"
 
+#include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 namespace llvm {
 namespace memtag {

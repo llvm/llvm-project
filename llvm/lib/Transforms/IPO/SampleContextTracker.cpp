@@ -14,7 +14,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/IR/Instructions.h"
+#include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include <map>
 #include <queue>

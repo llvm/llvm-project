@@ -49,6 +49,8 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 
+#include <deque>
+
 namespace llvm {
 
 class AAResults;
