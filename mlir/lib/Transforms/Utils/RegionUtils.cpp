@@ -533,7 +533,7 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
 
         if (!isValidSuccessorArg(leaderBlock, lhsOperand) ||
             !isValidSuccessorArg(mergeBlock, rhsOperand))
-          return mlir::failure();
+          return failure();
 
         mismatchedOperands.emplace_back(opI, operand);
         continue;

@@ -541,7 +541,7 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
                   Operand immoperand, SDPatternOperator immoperator,
                   Operand imm8operand, SDPatternOperator imm8operator,
                   bit hasOddOpcode, OperandSize opSize,
-                  bit hasREX_WPrefix> {
+                  bit hasREX_W> {
   /// VT - This is the value type itself.
   ValueType VT = vt;
 
@@ -596,9 +596,9 @@ class X86TypeInfo<ValueType vt, string instrsuffix, RegisterClass regclass,
   /// to Opsize16. i32 sets this to OpSize32.
   OperandSize OpSize = opSize;
 
-  /// HasREX_WPrefix - This bit is set to true if the instruction should have
+  /// HasREX_W - This bit is set to true if the instruction should have
   /// the 0x40 REX prefix.  This is set for i64 types.
-  bit HasREX_WPrefix = hasREX_WPrefix;
+  bit HasREX_W = hasREX_W;
 }
 
 def invalid_node : SDNode<"<<invalid_node>>", SDTIntLeaf,[],"<<invalid_node>>">;
@@ -634,7 +634,7 @@ class ITy<bits<8> opcode, Format f, X86TypeInfo typeinfo, dag outs, dag ins,
 
   // Infer instruction prefixes from type info.
   let OpSize = typeinfo.OpSize;
-  let hasREX_WPrefix  = typeinfo.HasREX_WPrefix;
+  let hasREX_W  = typeinfo.HasREX_W;
 }
 
 // BinOpRR - Instructions like "add reg, reg, reg".

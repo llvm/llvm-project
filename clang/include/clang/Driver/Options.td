@@ -1873,6 +1873,8 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
   PreprocessorOutputOpts<"RewriteIncludes">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>;
 
+defm directives_only : OptInCC1FFlag<"directives-only", "">;
+
 defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
   CodeGenOpts<"NullPointerIsValid">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Do not treat usage of null pointers as undefined behavior">,
@@ -4203,7 +4205,7 @@ def _serialize_diags : Separate<["-", "--"], "serialize-diagnostics">, Flags<[No
   HelpText<"Serialize compiler diagnostics to a file">;
 // We give --version different semantics from -version.
 def _version : Flag<["--"], "version">,
-  Flags<[CoreOption, CC1Option, FC1Option, FlangOption]>,
+  Flags<[CoreOption, FC1Option, FlangOption]>,
   HelpText<"Print version information">;
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;
@@ -5640,6 +5642,8 @@ def emit_module_interface : Flag<["-"], "emit-module-interface">,
   HelpText<"Generate pre-compiled module file from a C++ module interface">;
 def emit_header_module : Flag<["-"], "emit-header-module">,
   HelpText<"Generate pre-compiled module file from a set of header files">;
+def emit_header_unit : Flag<["-"], "emit-header-unit">,
+  HelpText<"Generate C++20 header units from header files">;
 def emit_pch : Flag<["-"], "emit-pch">,
   HelpText<"Generate pre-compiled header file">;
 def emit_llvm_bc : Flag<["-"], "emit-llvm-bc">,

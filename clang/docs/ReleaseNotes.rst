@@ -82,6 +82,15 @@ Bug Fixes
   alias, target) identifier instead of only processing one such ``#pragma weak``
   per identifier.
   Fixes `Issue 28985 <https://github.com/llvm/llvm-project/issues/28985>`_.
+- Assignment expressions in C11 and later mode now properly strip the _Atomic
+  qualifier when determining the type of the assignment expression. Fixes
+  `Issue 48742 <https://github.com/llvm/llvm-project/issues/48742>`_.
+- Unevaluated lambdas in dependant contexts no longer result in clang crashing.
+  This fixes Issues `50376 <https://github.com/llvm/llvm-project/issues/50376>`_,
+  `51414 <https://github.com/llvm/llvm-project/issues/51414>`_,
+  `51416 <https://github.com/llvm/llvm-project/issues/51416>`_,
+  and `51641 <https://github.com/llvm/llvm-project/issues/51641>`_.
+
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -93,13 +102,15 @@ Improvements to Clang's diagnostics
   extension definitions of an inline namespace and therefore points its note
   at the original definition. This fixes `Issue 50794 (PR51452)
   <https://github.com/llvm/llvm-project/issues/50794>`_.
+- ``-Wunused-but-set-variable`` now also warns if the variable is only used
+  by unary operators.
 
 Non-comprehensive list of changes in this release
+-------------------------------------------------
 - The builtin function __builtin_dump_struct would crash clang when the target 
   struct have bitfield. Now it fixed, and __builtin_dump_struct support dump
   the bitwidth of bitfields.
   This fixes `Issue 54462 <https://github.com/llvm/llvm-project/issues/54462>`_.
--------------------------------------------------
 
 New Compiler Flags
 ------------------

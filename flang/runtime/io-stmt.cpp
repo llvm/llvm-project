@@ -232,6 +232,14 @@ void OpenStatementState::CompleteOperation() {
       position_.reset();
     }
   }
+  if (status_) { // 12.5.6.10
+    if ((*status_ == OpenStatus::New || *status_ == OpenStatus::Replace) &&
+        !path_.get()) {
+      SignalError("FILE= required on OPEN with STATUS='NEW' or 'REPLACE'");
+    } else if (*status_ == OpenStatus::Scratch && path_.get()) {
+      SignalError("FILE= may not appear on OPEN with STATUS='SCRATCH'");
+    }
+  }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
     unit().OpenUnit(status_, action_, position_.value_or(Position::AsIs),

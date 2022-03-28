@@ -23,8 +23,6 @@ namespace llvm {
 class LoongArchSubtarget;
 
 class LoongArchInstrInfo : public LoongArchGenInstrInfo {
-  const LoongArchSubtarget &STI;
-
 public:
   explicit LoongArchInstrInfo(LoongArchSubtarget &STI);
 };

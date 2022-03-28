@@ -1561,6 +1561,7 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
   case Module::ModulePartitionImplementation:
     return M;
 
+  case Module::ModuleHeaderUnit:
   case Module::GlobalModuleFragment: {
     // External linkage declarations in the global module have no owning module
     // for linkage purposes. But internal linkage declarations in the global
@@ -1576,7 +1577,8 @@ Module *Decl::getOwningModuleForLinkage(bool IgnoreLinkage) const {
       InternalLinkage = !ND->hasExternalFormalLinkage();
     else
       InternalLinkage = isInAnonymousNamespace();
-    return InternalLinkage ? M->Parent : nullptr;
+    return InternalLinkage ? M->Kind == Module::ModuleHeaderUnit ? M : M->Parent
+                           : nullptr;
   }
 
   case Module::PrivateModuleFragment:

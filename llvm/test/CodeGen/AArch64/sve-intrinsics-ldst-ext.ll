@@ -2,8 +2,36 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -asm-verbose=1 < %s | FileCheck %s
 
 ;
-; LD1B
+; LD1SB/LD1B
 ;
+
+define <vscale x 16 x i32> @ld1b_i8_sext_i32(<vscale x 16 x i8> *%base) {
+; CHECK-LABEL: ld1b_i8_sext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ret
+  %wide.load = load <vscale x 16 x i8>, <vscale x 16 x i8>* %base
+  %res = sext <vscale x 16 x i8> %wide.load to <vscale x 16 x i32>
+  ret <vscale x 16 x i32> %res
+}
+
+define <vscale x 16 x i32> @ld1b_i8_zext_i32(<vscale x 16 x i8> *%base) {
+; CHECK-LABEL: ld1b_i8_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    ld1b { z2.s }, p0/z, [x0, #2, mul vl]
+; CHECK-NEXT:    ld1b { z3.s }, p0/z, [x0, #3, mul vl]
+; CHECK-NEXT:    ret
+  %wide.load = load <vscale x 16 x i8>, <vscale x 16 x i8>* %base
+  %res = zext <vscale x 16 x i8> %wide.load to <vscale x 16 x i32>
+  ret <vscale x 16 x i32> %res
+}
 
 define <vscale x 16 x i64> @ld1b_i8_sext(<vscale x 16 x i8> *%base) {
 ; CHECK-LABEL: ld1b_i8_sext:

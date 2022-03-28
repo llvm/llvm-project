@@ -46,7 +46,8 @@ namespace ISD {
     unsigned IsHvaStart : 1;   ///< HVA structure start
     unsigned IsSecArgPass : 1; ///< Second argument
     unsigned MemAlign : 4;     ///< Log 2 of alignment when arg is passed in memory
-                               ///< (including byval/byref)
+                               ///< (including byval/byref). The max alignment is
+                               ///< verified in IR verification.
     unsigned OrigAlign : 5;    ///< Log 2 of original alignment
     unsigned IsInConsecutiveRegsLast : 1;
     unsigned IsInConsecutiveRegs : 1;

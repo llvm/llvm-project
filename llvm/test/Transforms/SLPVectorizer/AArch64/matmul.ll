@@ -17,58 +17,58 @@ define void @wrap_mul4(double* nocapture %Out, [2 x double]* nocapture readonly 
 ; CHECK-NEXT:    [[TEMP2:%.*]] = load double, double* [[ARRAYIDX5_I]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 0
 ; CHECK-NEXT:    [[ARRAYIDX13_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 1
+; CHECK-NEXT:    [[ARRAYIDX18_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 1
+; CHECK-NEXT:    [[ARRAYIDX25_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 2
+; CHECK-NEXT:    [[ARRAYIDX30_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 2
+; CHECK-NEXT:    [[ARRAYIDX37_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 3
+; CHECK-NEXT:    [[ARRAYIDX42_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 3
+; CHECK-NEXT:    [[ARRAYIDX47_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 1, i64 0
+; CHECK-NEXT:    [[TEMP10:%.*]] = load double, double* [[ARRAYIDX47_I]], align 8
+; CHECK-NEXT:    [[ARRAYIDX52_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 1, i64 1
+; CHECK-NEXT:    [[TEMP11:%.*]] = load double, double* [[ARRAYIDX52_I]], align 8
+; CHECK-NEXT:    [[RES_I_SROA_4_0_OUT2_I_SROA_IDX2:%.*]] = getelementptr inbounds double, double* [[OUT:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[ARRAYIDX3_I]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TEMP]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[TEMP]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP4]], [[TMP2]]
-; CHECK-NEXT:    [[ARRAYIDX18_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX7_I]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[TEMP2]], i32 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[TEMP2]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    [[ARRAYIDX25_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 2
-; CHECK-NEXT:    [[ARRAYIDX30_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 2
-; CHECK-NEXT:    [[ARRAYIDX37_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 3
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[ARRAYIDX25_I]] to <2 x double>*
-; CHECK-NEXT:    [[TMP13:%.*]] = load <2 x double>, <2 x double>* [[TMP12]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = fmul <2 x double> [[TMP4]], [[TMP13]]
-; CHECK-NEXT:    [[ARRAYIDX42_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 3
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast double* [[ARRAYIDX30_I]] to <2 x double>*
-; CHECK-NEXT:    [[TMP16:%.*]] = load <2 x double>, <2 x double>* [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP17:%.*]] = fmul <2 x double> [[TMP9]], [[TMP16]]
-; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[TMP14]], [[TMP17]]
-; CHECK-NEXT:    [[ARRAYIDX47_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 1, i64 0
-; CHECK-NEXT:    [[TEMP10:%.*]] = load double, double* [[ARRAYIDX47_I]], align 8
-; CHECK-NEXT:    [[ARRAYIDX52_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 1, i64 1
-; CHECK-NEXT:    [[TEMP11:%.*]] = load double, double* [[ARRAYIDX52_I]], align 8
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> poison, double [[TEMP10]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x double> [[TMP19]], double [[TEMP10]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = fmul <2 x double> [[TMP2]], [[TMP20]]
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> poison, double [[TEMP11]], i32 0
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <2 x double> [[TMP22]], double [[TEMP11]], i32 1
-; CHECK-NEXT:    [[TMP24:%.*]] = fmul <2 x double> [[TMP7]], [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = fadd <2 x double> [[TMP21]], [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = fmul <2 x double> [[TMP13]], [[TMP20]]
-; CHECK-NEXT:    [[TMP27:%.*]] = fmul <2 x double> [[TMP16]], [[TMP23]]
-; CHECK-NEXT:    [[TMP28:%.*]] = fadd <2 x double> [[TMP26]], [[TMP27]]
-; CHECK-NEXT:    [[RES_I_SROA_4_0_OUT2_I_SROA_IDX2:%.*]] = getelementptr inbounds double, double* [[OUT:%.*]], i64 1
-; CHECK-NEXT:    [[TMP29:%.*]] = bitcast double* [[OUT]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP29]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[OUT]] to <2 x double>*
 ; CHECK-NEXT:    [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 2
 ; CHECK-NEXT:    [[RES_I_SROA_6_0_OUT2_I_SROA_IDX6:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 3
-; CHECK-NEXT:    [[TMP30:%.*]] = bitcast double* [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP18]], <2 x double>* [[TMP30]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = bitcast double* [[ARRAYIDX25_I]] to <2 x double>*
+; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x double>, <2 x double>* [[TMP13]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = fmul <2 x double> [[TMP4]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast double* [[ARRAYIDX30_I]] to <2 x double>*
+; CHECK-NEXT:    [[TMP17:%.*]] = load <2 x double>, <2 x double>* [[TMP16]], align 8
+; CHECK-NEXT:    [[TMP18:%.*]] = fmul <2 x double> [[TMP9]], [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = fadd <2 x double> [[TMP15]], [[TMP18]]
+; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP12]], align 8
+; CHECK-NEXT:    [[TMP20:%.*]] = bitcast double* [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP19]], <2 x double>* [[TMP20]], align 8
 ; CHECK-NEXT:    [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 4
 ; CHECK-NEXT:    [[RES_I_SROA_8_0_OUT2_I_SROA_IDX10:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 5
-; CHECK-NEXT:    [[TMP31:%.*]] = bitcast double* [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP25]], <2 x double>* [[TMP31]], align 8
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x double> poison, double [[TEMP10]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> [[TMP21]], double [[TEMP10]], i32 1
+; CHECK-NEXT:    [[TMP23:%.*]] = fmul <2 x double> [[TMP2]], [[TMP22]]
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x double> poison, double [[TEMP11]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x double> [[TMP24]], double [[TEMP11]], i32 1
+; CHECK-NEXT:    [[TMP26:%.*]] = fmul <2 x double> [[TMP7]], [[TMP25]]
+; CHECK-NEXT:    [[TMP27:%.*]] = fadd <2 x double> [[TMP23]], [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = bitcast double* [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP27]], <2 x double>* [[TMP28]], align 8
 ; CHECK-NEXT:    [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 6
 ; CHECK-NEXT:    [[RES_I_SROA_10_0_OUT2_I_SROA_IDX14:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 7
+; CHECK-NEXT:    [[TMP29:%.*]] = fmul <2 x double> [[TMP14]], [[TMP22]]
+; CHECK-NEXT:    [[TMP30:%.*]] = fmul <2 x double> [[TMP17]], [[TMP25]]
+; CHECK-NEXT:    [[TMP31:%.*]] = fadd <2 x double> [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = bitcast double* [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP28]], <2 x double>* [[TMP32]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP31]], <2 x double>* [[TMP32]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %arrayidx1.i = getelementptr inbounds [2 x double], [2 x double]* %A, i64 0, i64 0

@@ -298,14 +298,14 @@ public:
   /// true if the option is present, false if the negation is present, and
   /// \p Default if neither option is given. If both the option and its
   /// negation are present, the last one wins.
-  bool hasFlag(OptSpecifier Pos, OptSpecifier Neg, bool Default=true) const;
+  bool hasFlag(OptSpecifier Pos, OptSpecifier Neg, bool Default) const;
 
   /// hasFlag - Given an option \p Pos, an alias \p PosAlias and its negative
   /// form \p Neg, return true if the option or its alias is present, false if
   /// the negation is present, and \p Default if none of the options are
   /// given. If multiple options are present, the last one wins.
   bool hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
-               bool Default = true) const;
+               bool Default) const;
 
   /// Render only the last argument match \p Id0, if present.
   template<typename ...OptSpecifiers>

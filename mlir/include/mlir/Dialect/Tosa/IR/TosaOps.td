@@ -1120,14 +1120,16 @@ def Tosa_SelectOp : Tosa_Op<"select", [
   }];
 
   let arguments = (ins
-    I1Tensor:$input1,
-    Tosa_Tensor:$input2,
-    Tosa_Tensor:$input3
+    I1Tensor:$pred,
+    Tosa_Tensor:$on_true,
+    Tosa_Tensor:$on_false
   );
 
   let results = (outs
     Tosa_Tensor:$output
   );
+  let hasCanonicalizeMethod = 1;
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

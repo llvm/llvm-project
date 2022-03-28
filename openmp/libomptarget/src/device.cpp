@@ -17,6 +17,7 @@
 
 #include <cassert>
 #include <climits>
+#include <cstdint>
 #include <cstdio>
 #include <string>
 
@@ -49,8 +50,8 @@ int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
 
 DeviceTy::DeviceTy(RTLInfoTy *RTL)
     : DeviceID(-1), RTL(RTL), RTLDeviceID(-1), IsInit(false), InitFlag(),
-      HasPendingGlobals(false), HostDataToTargetMap(), PendingCtorsDtors(),
-      ShadowPtrMap(), DataMapMtx(), PendingGlobalsMtx(), ShadowMtx() {}
+      HasPendingGlobals(false), PendingCtorsDtors(), ShadowPtrMap(),
+      PendingGlobalsMtx(), ShadowMtx() {}
 
 DeviceTy::~DeviceTy() {
   if (DeviceID == -1 || !(getInfoLevel() & OMP_INFOTYPE_DUMP_TABLE))
@@ -61,14 +62,15 @@ DeviceTy::~DeviceTy() {
 }
 
 int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
-  std::lock_guard<decltype(DataMapMtx)> LG(DataMapMtx);
+  HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
 
   // Check if entry exists
-  auto search = HostDataToTargetMap.find(HstPtrBeginTy{(uintptr_t)HstPtrBegin});
-  if (search != HostDataToTargetMap.end()) {
+  auto It = HDTTMap->find(HstPtrBegin);
+  if (It != HDTTMap->end()) {
+    HostDataToTargetTy &HDTT = *It->HDTT;
     // Mapping already exists
-    bool isValid = search->HstPtrEnd == (uintptr_t)HstPtrBegin + Size &&
-                   search->TgtPtrBegin == (uintptr_t)TgtPtrBegin;
+    bool isValid = HDTT.HstPtrEnd == (uintptr_t)HstPtrBegin + Size &&
+                   HDTT.TgtPtrBegin == (uintptr_t)TgtPtrBegin;
     if (isValid) {
       DP("Attempt to re-associate the same device ptr+offset with the same "
          "host ptr, nothing to do\n");
@@ -82,15 +84,15 @@ int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
 
   // Mapping does not exist, allocate it with refCount=INF
   const HostDataToTargetTy &newEntry =
-      *HostDataToTargetMap
-           .emplace(
+      *HDTTMap
+           ->emplace(new HostDataToTargetTy(
                /*HstPtrBase=*/(uintptr_t)HstPtrBegin,
                /*HstPtrBegin=*/(uintptr_t)HstPtrBegin,
                /*HstPtrEnd=*/(uintptr_t)HstPtrBegin + Size,
                /*TgtPtrBegin=*/(uintptr_t)TgtPtrBegin,
                /*UseHoldRefCount=*/false, /*Name=*/nullptr,
-               /*IsRefCountINF=*/true)
-           .first;
+               /*IsRefCountINF=*/true))
+           .first->HDTT;
   DP("Creating new map entry: HstBase=" DPxMOD ", HstBegin=" DPxMOD
      ", HstEnd=" DPxMOD ", TgtBegin=" DPxMOD ", DynRefCount=%s, "
      "HoldRefCount=%s\n",
@@ -103,23 +105,25 @@ int DeviceTy::associatePtr(void *HstPtrBegin, void *TgtPtrBegin, int64_t Size) {
 }
 
 int DeviceTy::disassociatePtr(void *HstPtrBegin) {
-  std::lock_guard<decltype(DataMapMtx)> LG(DataMapMtx);
+  HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
 
-  auto search = HostDataToTargetMap.find(HstPtrBeginTy{(uintptr_t)HstPtrBegin});
-  if (search != HostDataToTargetMap.end()) {
+  auto It = HDTTMap->find(HstPtrBegin);
+  if (It != HDTTMap->end()) {
+    HostDataToTargetTy &HDTT = *It->HDTT;
     // Mapping exists
-    if (search->getHoldRefCount()) {
+    if (HDTT.getHoldRefCount()) {
       // This is based on OpenACC 3.1, sec 3.2.33 "acc_unmap_data", L3656-3657:
       // "It is an error to call acc_unmap_data if the structured reference
       // count for the pointer is not zero."
       REPORT("Trying to disassociate a pointer with a non-zero hold reference "
              "count\n");
-    } else if (search->isDynRefCountInf()) {
+    } else if (HDTT.isDynRefCountInf()) {
       DP("Association found, removing it\n");
-      void *Event = search->getEvent();
+      void *Event = HDTT.getEvent();
+      delete &HDTT;
       if (Event)
         destroyEvent(Event);
-      HostDataToTargetMap.erase(search);
+      HDTTMap->erase(It);
       return OFFLOAD_SUCCESS;
     } else {
       REPORT("Trying to disassociate a pointer which was not mapped via "
@@ -133,20 +137,22 @@ int DeviceTy::disassociatePtr(void *HstPtrBegin) {
   return OFFLOAD_FAIL;
 }
 
-LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
+LookupResult DeviceTy::lookupMapping(HDTTMapAccessorTy &HDTTMap,
+                                     void *HstPtrBegin, int64_t Size) {
+
   uintptr_t hp = (uintptr_t)HstPtrBegin;
   LookupResult lr;
 
   DP("Looking up mapping(HstPtrBegin=" DPxMOD ", Size=%" PRId64 ")...\n",
      DPxPTR(hp), Size);
 
-  if (HostDataToTargetMap.empty())
+  if (HDTTMap->empty())
     return lr;
 
-  auto upper = HostDataToTargetMap.upper_bound(hp);
+  auto upper = HDTTMap->upper_bound(hp);
   // check the left bin
-  if (upper != HostDataToTargetMap.begin()) {
-    lr.Entry = std::prev(upper);
+  if (upper != HDTTMap->begin()) {
+    lr.Entry = std::prev(upper)->HDTT;
     auto &HT = *lr.Entry;
     // Is it contained?
     lr.Flags.IsContained = hp >= HT.HstPtrBegin && hp < HT.HstPtrEnd &&
@@ -157,8 +163,8 @@ LookupResult DeviceTy::lookupMapping(void *HstPtrBegin, int64_t Size) {
 
   // check the right bin
   if (!(lr.Flags.IsContained || lr.Flags.ExtendsAfter) &&
-      upper != HostDataToTargetMap.end()) {
-    lr.Entry = upper;
+      upper != HDTTMap->end()) {
+    lr.Entry = upper->HDTT;
     auto &HT = *lr.Entry;
     // Does it extend into an already mapped region?
     lr.Flags.ExtendsBefore =
@@ -184,14 +190,14 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     map_var_info_t HstPtrName, bool HasFlagTo, bool HasFlagAlways,
     bool IsImplicit, bool UpdateRefCount, bool HasCloseModifier,
     bool HasPresentModifier, bool HasHoldModifier, AsyncInfoTy &AsyncInfo) {
+  HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
+
   void *TargetPointer = nullptr;
   bool IsHostPtr = false;
   bool IsNew = false;
 
-  DataMapMtx.lock();
-
-  LookupResult LR = lookupMapping(HstPtrBegin, Size);
-  auto Entry = LR.Entry;
+  LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
+  auto *Entry = LR.Entry;
 
   // Check if the pointer is contained.
   // If a variable is mapped to the device manually by the user - which would
@@ -260,11 +266,12 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     // If it is not contained and Size > 0, we should create a new entry for it.
     IsNew = true;
     uintptr_t Ptr = (uintptr_t)allocData(Size, HstPtrBegin);
-    Entry = HostDataToTargetMap
-                .emplace((uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
-                         (uintptr_t)HstPtrBegin + Size, Ptr, HasHoldModifier,
-                         HstPtrName)
-                .first;
+    Entry = HDTTMap
+                ->emplace(new HostDataToTargetTy(
+                    (uintptr_t)HstPtrBase, (uintptr_t)HstPtrBegin,
+                    (uintptr_t)HstPtrBegin + Size, Ptr, HasHoldModifier,
+                    HstPtrName))
+                .first->HDTT;
     INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
          "Creating new map entry with "
          "HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", Size=%ld, "
@@ -282,7 +289,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     // thread that could issue data movement will get the right result.
     std::lock_guard<decltype(*Entry)> LG(*Entry);
     // Release the mapping table lock right after the entry is locked.
-    DataMapMtx.unlock();
+    HDTTMap.destroy();
 
     DP("Moving %" PRId64 " bytes (hst:" DPxMOD ") -> (tgt:" DPxMOD ")\n", Size,
        DPxPTR(HstPtrBegin), DPxPTR(TargetPointer));
@@ -296,16 +303,15 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       TargetPointer = nullptr;
     } else if (Entry->addEventIfNecessary(*this, AsyncInfo) != OFFLOAD_SUCCESS)
       return {{false /* IsNewEntry */, false /* IsHostPointer */},
-              {} /* MapTableEntry */,
+              nullptr /* Entry */,
               nullptr /* TargetPointer */};
   } else {
     // Release the mapping table lock directly.
-    DataMapMtx.unlock();
+    HDTTMap.destroy();
     // If not a host pointer and no present modifier, we need to wait for the
     // event if it exists.
     // Note: Entry might be nullptr because of zero length array section.
-    if (Entry != HostDataToTargetListTy::iterator() && !IsHostPtr &&
-        !HasPresentModifier) {
+    if (Entry && !IsHostPtr && !HasPresentModifier) {
       std::lock_guard<decltype(*Entry)> LG(*Entry);
       void *Event = Entry->getEvent();
       if (Event) {
@@ -315,7 +321,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
           // case of any data race.
           REPORT("Failed to wait for event " DPxMOD ".\n", DPxPTR(Event));
           return {{false /* IsNewEntry */, false /* IsHostPointer */},
-                  {} /* MapTableEntry */,
+                  nullptr /* Entry */,
                   nullptr /* TargetPointer */};
         }
       }
@@ -332,12 +338,13 @@ TargetPointerResultTy
 DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
                          bool UpdateRefCount, bool UseHoldRefCount,
                          bool &IsHostPtr, bool MustContain, bool ForceDelete) {
+  HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
+
   void *TargetPointer = NULL;
   bool IsNew = false;
   IsHostPtr = false;
   IsLast = false;
-  std::lock_guard<decltype(DataMapMtx)> LG(DataMapMtx);
-  LookupResult lr = lookupMapping(HstPtrBegin, Size);
+  LookupResult lr = lookupMapping(HDTTMap, HstPtrBegin, Size);
 
   if (lr.Flags.IsContained ||
       (!MustContain && (lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter))) {
@@ -391,10 +398,10 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
 }
 
 // Return the target pointer begin (where the data will be moved).
-// Lock-free version called when loading global symbols from the fat binary.
-void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
+void *DeviceTy::getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
+                               int64_t Size) {
   uintptr_t hp = (uintptr_t)HstPtrBegin;
-  LookupResult lr = lookupMapping(HstPtrBegin, Size);
+  LookupResult lr = lookupMapping(HDTTMap, HstPtrBegin, Size);
   if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
     auto &HT = *lr.Entry;
     uintptr_t tp = HT.TgtPtrBegin + (hp - HT.HstPtrBegin);
@@ -406,11 +413,11 @@ void *DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size) {
 
 int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
                             bool HasHoldModifier) {
-  std::lock_guard<decltype(DataMapMtx)> LG(DataMapMtx);
+  HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
 
   // Check if the pointer is contained in any sub-nodes.
   int Ret = OFFLOAD_SUCCESS;
-  LookupResult lr = lookupMapping(HstPtrBegin, Size);
+  LookupResult lr = lookupMapping(HDTTMap, HstPtrBegin, Size);
   if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
     auto &HT = *lr.Entry;
     if (HT.decRefCount(HasHoldModifier) == 0) {
@@ -424,7 +431,8 @@ int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
            (HT.HstPtrName) ? getNameFromMapping(HT.HstPtrName).c_str()
                            : "unknown");
       void *Event = lr.Entry->getEvent();
-      HostDataToTargetMap.erase(lr.Entry);
+      HDTTMap->erase(lr.Entry);
+      delete lr.Entry;
       if (Event && destroyEvent(Event) != OFFLOAD_SUCCESS) {
         REPORT("Failed to destroy event " DPxMOD "\n", DPxPTR(Event));
         Ret = OFFLOAD_FAIL;
@@ -492,7 +500,8 @@ int32_t DeviceTy::deleteData(void *TgtPtrBegin) {
 int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                              AsyncInfoTy &AsyncInfo) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    LookupResult LR = lookupMapping(HstPtrBegin, Size);
+    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
+    LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
     auto *HT = &*LR.Entry;
 
     INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceID,
@@ -514,7 +523,8 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
 int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                                int64_t Size, AsyncInfoTy &AsyncInfo) {
   if (getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER) {
-    LookupResult LR = lookupMapping(HstPtrBegin, Size);
+    HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
+    LookupResult LR = lookupMapping(HDTTMap, HstPtrBegin, Size);
     auto *HT = &*LR.Entry;
     INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceID,
          "Copying data from device to host, TgtPtr=" DPxMOD ", HstPtr=" DPxMOD

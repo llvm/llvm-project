@@ -12,9 +12,9 @@ define void @test_sideeffect(float* %p) {
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
 ; CHECK-NEXT:    call void @llvm.sideeffect()
+; CHECK-NEXT:    call void @llvm.sideeffect()
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.sideeffect()
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[P0]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
@@ -45,9 +45,9 @@ define void @test_inaccessiblememonly(float* %p) {
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @foo() #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; CHECK-NEXT:    call void @foo() #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[P0]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP2]], <4 x float>* [[TMP3]], align 4
 ; CHECK-NEXT:    ret void

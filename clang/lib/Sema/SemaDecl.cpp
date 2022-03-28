@@ -14233,6 +14233,11 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
   if (FD->isDeleted())
     return false;
 
+  // Don't warn on implicitly local functions (such as having local-typed
+  // parameters).
+  if (!FD->isExternallyVisible())
+    return false;
+
   for (const FunctionDecl *Prev = FD->getPreviousDecl();
        Prev; Prev = Prev->getPreviousDecl()) {
     // Ignore any declarations that occur in function or method

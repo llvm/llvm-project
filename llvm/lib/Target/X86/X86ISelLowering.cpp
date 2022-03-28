@@ -108,9 +108,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                                      const X86Subtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
   bool UseX87 = !Subtarget.useSoftFloat() && Subtarget.hasX87();
-  X86ScalarSSEf64 = Subtarget.hasSSE2();
-  X86ScalarSSEf32 = Subtarget.hasSSE1();
-  X86ScalarSSEf16 = Subtarget.hasFP16();
   MVT PtrVT = MVT::getIntegerVT(TM.getPointerSizeInBits(0));
 
   // Set up the TargetLowering object.
@@ -314,7 +311,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
 
   // TODO: when we have SSE, these could be more efficient, by using movd/movq.
-  if (!X86ScalarSSEf64) {
+  if (!Subtarget.hasSSE2()) {
     setOperationAction(ISD::BITCAST        , MVT::f32  , Expand);
     setOperationAction(ISD::BITCAST        , MVT::i32  , Expand);
     if (Subtarget.is64Bit()) {
@@ -555,7 +552,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::GC_TRANSITION_START, MVT::Other, Custom);
   setOperationAction(ISD::GC_TRANSITION_END, MVT::Other, Custom);
 
-  if (!Subtarget.useSoftFloat() && X86ScalarSSEf64) {
+  if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
     // f32 and f64 use SSE.
     // Set up the FP register classes.
     addRegisterClass(MVT::f32, Subtarget.hasAVX512() ? &X86::FR32XRegClass
@@ -593,7 +590,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FGETSIGN, MVT::i64, Custom);
     setOperationAction(ISD::FGETSIGN, MVT::i32, Custom);
 
-  } else if (!Subtarget.useSoftFloat() && X86ScalarSSEf32 &&
+  } else if (!Subtarget.useSoftFloat() && Subtarget.hasSSE1() &&
              (UseX87 || Is64Bit)) {
     // Use SSE for f32, x87 for f64.
     // Set up the FP register classes.
@@ -2572,9 +2569,9 @@ EVT X86TargetLowering::getOptimalMemOpType(
 
 bool X86TargetLowering::isSafeMemOpType(MVT VT) const {
   if (VT == MVT::f32)
-    return X86ScalarSSEf32;
+    return Subtarget.hasSSE1();
   if (VT == MVT::f64)
-    return X86ScalarSSEf64;
+    return Subtarget.hasSSE2();
   return true;
 }
 
@@ -5667,6 +5664,24 @@ bool X86TargetLowering::isCheapToSpeculateCttz() const {
 bool X86TargetLowering::isCheapToSpeculateCtlz() const {
   // Speculate ctlz only if we can directly use LZCNT.
   return Subtarget.hasLZCNT();
+}
+
+bool X86TargetLowering::hasBitPreservingFPLogic(EVT VT) const {
+  return VT == MVT::f32 || VT == MVT::f64 || VT.isVector() ||
+         (VT == MVT::f16 && Subtarget.hasFP16());
+}
+
+bool X86TargetLowering::ShouldShrinkFPConstant(EVT VT) const {
+  // Don't shrink FP constpool if SSE2 is available since cvtss2sd is more
+  // expensive than a straight movsd. On the other hand, it's important to
+  // shrink long double fp constant since fldt is very slow.
+  return !Subtarget.hasSSE2() || VT == MVT::f80;
+}
+
+bool X86TargetLowering::isScalarFPTypeInSSEReg(EVT VT) const {
+  return (VT == MVT::f64 && Subtarget.hasSSE2()) ||
+         (VT == MVT::f32 && Subtarget.hasSSE1()) ||
+         (VT == MVT::f16 && Subtarget.hasFP16());
 }
 
 bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
@@ -21196,9 +21211,10 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
 
   // The transform for i64->f64 isn't correct for 0 when rounding to negative
   // infinity. It produces -0.0, so disable under strictfp.
-  if (SrcVT == MVT::i64 && DstVT == MVT::f64 && X86ScalarSSEf64 && !IsStrict)
+  if (SrcVT == MVT::i64 && DstVT == MVT::f64 && Subtarget.hasSSE2() &&
+      !IsStrict)
     return LowerUINT_TO_FP_i64(Op, DAG, Subtarget);
-  if (SrcVT == MVT::i32 && X86ScalarSSEf64 && DstVT != MVT::f80)
+  if (SrcVT == MVT::i32 && Subtarget.hasSSE2() && DstVT != MVT::f80)
     return LowerUINT_TO_FP_i32(Op, DAG, Subtarget);
   if (Subtarget.is64Bit() && SrcVT == MVT::i64 &&
       (DstVT == MVT::f32 || DstVT == MVT::f64))
@@ -52261,11 +52277,18 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   SDValue CarryIn = N->getOperand(2);
+  auto *LHSC = dyn_cast<ConstantSDNode>(LHS);
+  auto *RHSC = dyn_cast<ConstantSDNode>(RHS);
+
+  // Canonicalize constant to RHS.
+  if (LHSC && !RHSC)
+    return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), RHS, LHS,
+                       CarryIn);
 
   // If the LHS and RHS of the ADC node are zero, then it can't overflow and
   // the result is either zero or one (depending on the input carry bit).
   // Strength reduce this down to a "set on carry" aka SETCC_CARRY&1.
-  if (X86::isZeroNode(LHS) && X86::isZeroNode(RHS) &&
+  if (LHSC && RHSC && LHSC->isZero() && RHSC->isZero() &&
       // We don't have a good way to replace an EFLAGS use, so only do this when
       // dead right now.
       SDValue(N, 1).use_empty()) {
@@ -52288,7 +52311,7 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
 
   // Fold ADC(ADD(X,Y),0,Carry) -> ADC(X,Y,Carry)
   // iff the flag result is dead.
-  if (LHS.getOpcode() == ISD::ADD && isNullConstant(RHS) &&
+  if (LHS.getOpcode() == ISD::ADD && RHSC && RHSC->isZero() &&
       !N->hasAnyUseOfValue(1))
     return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), LHS.getOperand(0),
                        LHS.getOperand(1), CarryIn);
@@ -52902,6 +52925,14 @@ static SDValue combineAdd(SDNode *N, SelectionDAG &DAG,
       SDValue SExt = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Op1.getOperand(0));
       return DAG.getNode(ISD::SUB, DL, VT, Op0, SExt);
     }
+  }
+
+  // Fold ADD(ADC(Y,0,W),X) -> ADC(X,Y,W)
+  if (Op0.getOpcode() == X86ISD::ADC && Op0->hasOneUse() &&
+      X86::isZeroNode(Op0.getOperand(1))) {
+    assert(!Op0->hasAnyUseOfValue(1) && "Overflow bit in use");
+    return DAG.getNode(X86ISD::ADC, SDLoc(Op0), Op0->getVTList(), Op1,
+                       Op0.getOperand(0), Op0.getOperand(2));
   }
 
   return combineAddOrSubToADCOrSBB(N, DAG);

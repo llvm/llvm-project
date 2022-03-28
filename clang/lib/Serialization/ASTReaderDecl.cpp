@@ -1801,7 +1801,7 @@ void ASTDeclReader::ReadCXXDefinitionData(
     using Capture = LambdaCapture;
 
     auto &Lambda = static_cast<CXXRecordDecl::LambdaDefinitionData &>(Data);
-    Lambda.Dependent = Record.readInt();
+    Lambda.DependencyKind = Record.readInt();
     Lambda.IsGenericLambda = Record.readInt();
     Lambda.CaptureDefault = Record.readInt();
     Lambda.NumCaptures = Record.readInt();
@@ -1917,8 +1917,8 @@ void ASTDeclReader::ReadCXXRecordDefinition(CXXRecordDecl *D, bool Update) {
   // allocate the appropriate DefinitionData structure.
   bool IsLambda = Record.readInt();
   if (IsLambda)
-    DD = new (C) CXXRecordDecl::LambdaDefinitionData(D, nullptr, false, false,
-                                                     LCD_None);
+    DD = new (C) CXXRecordDecl::LambdaDefinitionData(
+        D, nullptr, CXXRecordDecl::LDK_Unknown, false, LCD_None);
   else
     DD = new (C) struct CXXRecordDecl::DefinitionData(D);
 
