@@ -3,6 +3,7 @@
 
 declare void @use(i1)
 declare i1 @gen_i1()
+declare <2 x i1> @gen_v2i1()
 
 ; Should not be converted to "and", which has different poison semantics.
 define i1 @logical_and(i1 %a, i1 %b) {
@@ -452,9 +453,9 @@ define i1 @demorgan_select_infloop2(i1 %L) {
 
 define i1 @and_or1(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @and_or1(
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[NOTA]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i1 [[A]], i1 [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %nota = xor i1 %a, true
@@ -465,9 +466,9 @@ define i1 @and_or1(i1 %a, i1 %b, i1 %c) {
 
 define i1 @and_or2(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @and_or2(
-; CHECK-NEXT:    [[NOTC:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[NOTC]], [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i1 [[A:%.*]], i1 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notc = xor i1 %c, true
@@ -478,9 +479,8 @@ define i1 @and_or2(i1 %a, i1 %b, i1 %c) {
 
 define i1 @and_or1_bundef(i1 %a, i1 noundef %b, i1 %c) {
 ; CHECK-LABEL: @and_or1_bundef(
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[NOTA]], [[C:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i1 [[A]], i1 [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[C:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %nota = xor i1 %a, true
@@ -491,9 +491,8 @@ define i1 @and_or1_bundef(i1 %a, i1 noundef %b, i1 %c) {
 
 define i1 @and_or2_aundef(i1 noundef %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @and_or2_aundef(
-; CHECK-NEXT:    [[NOTC:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[COND:%.*]] = and i1 [[NOTC]], [[B:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i1 [[A:%.*]], i1 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[C:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %notc = xor i1 %c, true
@@ -535,14 +534,29 @@ define i1 @no_and_or2_aundef(i1 noundef %a, i1 %b, i1 %c) {
 define i1 @and_or1_op1not(i1 %a, i1 %b) {
 ; CHECK-LABEL: @and_or1_op1not(
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @gen_i1()
-; CHECK-NEXT:    [[NOTA:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[COND:%.*]] = or i1 [[C]], [[NOTA]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND]], i1 [[A]], i1 [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[C]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[A:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %c = call i1 @gen_i1()
   %nota = xor i1 %a, true
   %cond = or i1 %c, %nota
+  %r = select i1 %cond, i1 %a, i1 %b
+  ret i1 %r
+}
+
+define i1 @and_or2_op1not(i1 %a, i1 %c) {
+; CHECK-LABEL: @and_or2_op1not(
+; CHECK-NEXT:    [[B:%.*]] = call i1 @gen_i1()
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or i1 [[TMP1]], [[C:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[B]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %b = call i1 @gen_i1()
+  %notc = xor i1 %c, true
+  %cond = and i1 %b, %notc
   %r = select i1 %cond, i1 %a, i1 %b
   ret i1 %r
 }
@@ -571,4 +585,19 @@ define i1 @neg_and_or2(i1 %a, i1 %b, i1 %c, i1 %d) {
   %cond = and i1 %notc, %b
   %r = select i1 %cond, i1 %a, i1 %d
   ret i1 %r
+}
+
+define <2 x i1> @and_or1_op1not_vec(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @and_or1_op1not_vec(
+; CHECK-NEXT:    [[C:%.*]] = call <2 x i1> @gen_v2i1()
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i1> [[C]], [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[TMP2]], [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %c = call <2 x i1> @gen_v2i1()
+  %nota = xor <2 x i1> %a, <i1 true, i1 true>
+  %cond = or <2 x i1> %c, %nota
+  %r = select <2 x i1> %cond, <2 x i1> %a, <2 x i1> %b
+  ret <2 x i1> %r
 }
