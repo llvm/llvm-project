@@ -1325,6 +1325,7 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     // can update it.
     return true;
   case ELF::STB_GLOBAL:
+  case ELF::STB_GNU_UNIQUE:
     // Global ELF symbols can be preempted by the dynamic linker. The relocation
     // has to point to the symbol for a reason analogous to the STB_WEAK case.
     return true;
