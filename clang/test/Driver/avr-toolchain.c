@@ -35,11 +35,3 @@
 // RUN: %clang %s -### -target avr --sysroot %S/Inputs/basic_avr_tree 2>&1 -nostdinc | FileCheck --check-prefix=NOSTDINC %s
 // RUN: %clang %s -### -target avr --sysroot %S/Inputs/basic_avr_tree 2>&1 -nostdlibinc | FileCheck --check-prefix=NOSTDINC %s
 // NOSTDINC-NOT: "-internal-isystem" {{".*avr/include"}}
-
-// RUN: %clang -### --target=avr %s 2>&1 | FileCheck --check-prefix=WARN_STDLIB %s
-// RUN: %clang -### --target=avr -mmcu=atmega328 %s 2>&1 | FileCheck --check-prefix=NOWARN_STDLIB %s
-// RUN: %clang -### --target=avr -c %s 2>&1 | FileCheck --check-prefix=NOWARN_STDLIB %s
-
-// WARN_STDLIB: warning: no target microcontroller specified on command line, cannot link standard libraries, please pass -mmcu=<mcu name>
-// WARN_STDLIB: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked
-// NOWARN_STDLIB-NOT: warning:
