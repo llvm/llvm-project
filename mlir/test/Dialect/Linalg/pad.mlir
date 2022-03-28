@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=MATMUL
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad pack-paddings=1,1 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad pack-paddings=1,0 run-enable-pass=false" -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL-MATMUL
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad pack-paddings=1,1,0 pad-inputs-only run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=INPUTS-ONLY
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32,0.:f32 pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=MATMUL
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad padding-values=0.:f32,1.:f32 pack-paddings=1,1 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad padding-values=0.:f32,0.:f32 pack-paddings=1,0 run-enable-pass=false" -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32,0.:f32 pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL-MATMUL
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32 pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=INPUTS-ONLY
 
 // MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 12, 7)>
 // MATMUL-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 7)>
@@ -18,6 +18,7 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
                                          %arg1: tensor<12x25xf32>,
                                          %arg2: tensor<24x25xf32>,
                                          %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<24x25xf32> {
+  //  MATMUL-DAG: %[[CST:.*]] = arith.constant 0.
   //  MATMUL-DAG: %[[C0:.*]] = arith.constant 0 : index
 
   //      MATMUL:   %[[TS2:.*]] = affine.min #[[MAP0]]()[%[[IV2]]]
@@ -35,6 +36,7 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
   //      MATMUL:   %[[T3:.*]] = tensor.pad %[[T0]] nofold
   // MATMUL-SAME:                  [%[[C0]], %[[C0]]]
   // MATMUL-SAME:                  [%[[C0]], %[[V0]]
+  //      MATMUL:   tensor.yield %[[CST]]
   //      MATMUL:   %[[T4:.*]] = tensor.pad %[[T1]] nofold
 
   // Check the statically sized matmul output with fully divisible sizes is not padded.
@@ -62,6 +64,7 @@ func.func @static_sizes_input_divisible(%arg0: tensor<24x12xf32>,
                                         %arg1: tensor<12x25xf32>,
                                         %arg2: tensor<24x25xf32>,
                                         %iv0 : index, %iv1 : index, %iv2 : index) ->  tensor<24x25xf32> {
+  //  MATMUL-DAG: %[[CST:.*]] = arith.constant 0.
   //  MATMUL-DAG: %[[C0:.*]] = arith.constant 0 : index
 
   %3 = tensor.extract_slice %arg0[%iv0, %iv2] [4, 6] [1, 1] : tensor<24x12xf32> to tensor<4x6xf32>
@@ -78,6 +81,7 @@ func.func @static_sizes_input_divisible(%arg0: tensor<24x12xf32>,
   //      MATMUL:   %[[T1:.*]] = tensor.pad %[[T0]] low
   // MATMUL-SAME:                  [%[[C0]], %[[C0]]]
   // MATMUL-SAME:                  [%[[C0]], %[[V0]]
+  //      MATMUL:   tensor.yield %[[CST]]
 
   //      MATMUL:   %[[T2:.*]] = linalg.matmul
   // MATMUL-SAME:                  outs(%[[T1]] : tensor<4x7xf32>)
@@ -485,12 +489,14 @@ func.func @dynamic_input_padding_only(%arg0: tensor<24x12xf32>,
 // FILL-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<1x64x1x64xf32>
 func.func @rank_reducing(%arg0: tensor<1x64x1x64xf32>,
                          %iv0 : index) -> tensor<1x?x?xf32> {
+  //      FILL:  %[[CST:.*]] = arith.constant 1.
   %cst = arith.constant 0.0 : f32
   %size = affine.min #map0()[%iv0]
   %0 = tensor.extract_slice %arg0[0, 0, 0, 0] [1, %size, 1, %size] [1, 1, 1, 1] : tensor<1x64x1x64xf32> to tensor<1x?x?xf32>
 
   // Check the fill is padded despite the rank-reducing slice operation.
   //      FILL:  %[[T0:.*]] = tensor.pad
+  //      FILL:  tensor.yield %[[CST]]
   //      FILL:  %[[T1:.*]] = linalg.fill ins(%{{.*}}{{.*}}outs(%[[T0]]
   // FILL-SAME:    tensor<1x64x64xf32>
   //      FILL:  = tensor.extract_slice %[[T1]]

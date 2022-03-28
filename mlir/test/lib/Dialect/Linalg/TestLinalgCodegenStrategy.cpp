@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Parser/Parser.h"
 #include "mlir/Pass/Pass.h"
 
 #include "llvm/ADT/SetVector.h"
@@ -96,23 +97,21 @@ struct TestLinalgCodegenStrategy
       llvm::cl::init(false)};
   Option<bool> pad{*this, "pad", llvm::cl::desc("Pad the operands."),
                    llvm::cl::init(false)};
-  Option<bool> padInputsOnly{
-      *this, "pad-inputs-only",
-      llvm::cl::desc("Only pad input operands when test-pad-pattern"),
-      llvm::cl::init(false)};
+  ListOption<std::string> paddingValues{
+      *this, "padding-values",
+      llvm::cl::desc("Operand padding values parsed by the attribute parser."),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<int64_t> packPaddings{
-      *this, "pack-paddings",
-      llvm::cl::desc("Operand packing flags when test-pad-pattern."),
+      *this, "pack-paddings", llvm::cl::desc("Operand packing flags."),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<int64_t> hoistPaddings{
-      *this, "hoist-paddings",
-      llvm::cl::desc("Operand hoisting depths when test-pad-pattern."),
+      *this, "hoist-paddings", llvm::cl::desc("Operand hoisting depths."),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<std::string> transposePaddings{
       *this, "transpose-paddings",
       llvm::cl::desc(
-          "Transpose paddings when test-pad-pattern. Specify a "
-          "operand dimension interchange using the following format:\n"
+          "Transpose paddings. Specify a operand dimension interchange "
+          "using the following format:\n"
           "-transpose-paddings=1:0:2,0:1,0:1\n"
           "It defines the interchange [1, 0, 2] for operand one and "
           "the interchange [0, 1] (no transpose) for the remaining operands."
@@ -226,14 +225,6 @@ void TestLinalgCodegenStrategy::runStrategy(
 }
 } // namespace
 
-// For now, just assume it is the zero of type.
-// In the future, it should be the zero of type + op.
-static Value getNeutralOfLinalgOp(OpBuilder &b, OpOperand &op) {
-  auto t = getElementTypeOrSelf(op.get());
-  return b.create<arith::ConstantOp>(op.getOwner()->getLoc(), t,
-                                     b.getZeroAttr(t));
-}
-
 /// Apply transformations specified as patterns.
 void TestLinalgCodegenStrategy::runOnOperation() {
   if (!anchorFuncOpName.empty() && anchorFuncOpName != getOperation().getName())
@@ -256,43 +247,31 @@ void TestLinalgCodegenStrategy::runOnOperation() {
     registerTilingOptions =
         registerTilingOptions.setTileSizes(registerTileSizes);
 
-  LinalgPaddingOptions paddingOptions;
-  auto packFunc = [&](OpOperand &opOperand) {
-    return opOperand.getOperandNumber() < packPaddings.size()
-               ? packPaddings[opOperand.getOperandNumber()]
-               : false;
-  };
-  auto hoistingFunc = [&](OpOperand &opOperand) {
-    return opOperand.getOperandNumber() < hoistPaddings.size()
-               ? hoistPaddings[opOperand.getOperandNumber()]
-               : 0;
-  };
-  auto transposeFunc = [&](OpOperand &opOperand) {
-    SmallVector<int64_t> transposeVector = {};
-    if (opOperand.getOperandNumber() >= transposePaddings.size())
-      return transposeVector;
-    SmallVector<StringRef> elems;
-    StringRef(transposePaddings[opOperand.getOperandNumber()])
-        .split(elems, ':');
-    for (StringRef elem : elems)
-      transposeVector.push_back(std::stoi(elem.str()));
-    return transposeVector;
-  };
-  paddingOptions.setPaddingValueComputationFunction(getNeutralOfLinalgOp);
-  paddingOptions.setPaddingNoFoldComputationFunction(packFunc);
-  paddingOptions.setPaddingHoistComputationFunction(hoistingFunc);
-  paddingOptions.setPaddingTransposeComputationFunction(transposeFunc);
-
-  // Compute input padding values only an return failure for output operands.
-  if (padInputsOnly) {
-    paddingOptions.setPaddingValueComputationFunction(
-        [](OpBuilder &b, OpOperand &op) -> FailureOr<Value> {
-          auto linalgOp = dyn_cast<LinalgOp>(op.getOwner());
-          if (linalgOp && linalgOp.isInputTensor(&op))
-            return getNeutralOfLinalgOp(b, op);
-          return failure();
-        });
+  // Parse the padding values.
+  SmallVector<Attribute> paddingValueAttributes;
+  for (const std::string &paddingValue : paddingValues) {
+    paddingValueAttributes.push_back(
+        parseAttribute(paddingValue, &getContext()));
   }
+
+  // Parse the transpose vectors.
+  SmallVector<SmallVector<int64_t>> transposePaddingVectors;
+  for (const std::string &transposePadding : transposePaddings) {
+    SmallVector<int64_t> transposeVector = {};
+    SmallVector<StringRef> tokens;
+    StringRef(transposePadding).split(tokens, ':');
+    for (StringRef token : tokens)
+      transposeVector.push_back(std::stoi(token.str()));
+    transposePaddingVectors.push_back(transposeVector);
+  }
+
+  LinalgPaddingOptions paddingOptions;
+  paddingOptions.setPaddingValues(paddingValueAttributes);
+  paddingOptions.setPackPaddings(
+      SmallVector<bool>{packPaddings.begin(), packPaddings.end()});
+  paddingOptions.setHoistPaddings(
+      SmallVector<int64_t>{hoistPaddings.begin(), hoistPaddings.end()});
+  paddingOptions.setTransposePaddings(transposePaddingVectors);
 
   vector::VectorContractLowering vectorContractLowering =
       llvm::StringSwitch<vector::VectorContractLowering>(
