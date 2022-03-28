@@ -432,6 +432,7 @@ KEYWORD(__builtin_FILE              , KEYALL)
 KEYWORD(__builtin_FUNCTION          , KEYALL)
 KEYWORD(__builtin_LINE              , KEYALL)
 KEYWORD(__builtin_COLUMN            , KEYALL)
+KEYWORD(__builtin_source_location   , KEYCXX)
 
 // __builtin_types_compatible_p is a GNU C extension that we handle like a C++
 // type trait.

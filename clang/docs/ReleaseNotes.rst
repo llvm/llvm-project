@@ -193,6 +193,8 @@ C++20 Feature Support
   it is called through a template instantiation. This fixes
   `Issue 54578 <https://github.com/llvm/llvm-project/issues/54578>`_.
 
+- Implemented `__builtin_source_location()` which enables library support for std::source_location.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
