@@ -169,6 +169,7 @@ StringRef getLanguageName(const LangOptions &LangOpts) {
   case Language::CUDA:
   case Language::RenderScript:
   case Language::HIP:
+  case Language::HLSL:
 
   // Languages that the frontend cannot parse and compile
   case Language::Unknown:

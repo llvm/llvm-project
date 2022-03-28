@@ -251,6 +251,9 @@ LANGOPT(OpenMPNoThreadState  , 1, 0, "Assume that no thread in a parallel region
 LANGOPT(OpenMPOffloadMandatory  , 1, 0, "Assert that offloading is mandatory and do not create a host fallback.")
 LANGOPT(RenderScript      , 1, 0, "RenderScript")
 
+LANGOPT(HLSL, 1, 0, "HLSL")
+ENUM_LANGOPT(HLSLVersion, HLSLLangStd, 16, HLSL_Unset, "HLSL Version")
+
 LANGOPT(CUDAIsDevice      , 1, 0, "compiling for CUDA device")
 LANGOPT(CUDAAllowVariadicFunctions, 1, 0, "allowing variadic functions in CUDA device code")
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, "treating unattributed constexpr functions as __host__ __device__")

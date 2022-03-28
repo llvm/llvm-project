@@ -1888,3 +1888,17 @@ VersionTuple Triple::getCanonicalVersionForOS(OSType OSKind,
     return Version;
   }
 }
+
+// HLSL triple environment orders are relied on in the front end
+static_assert(Triple::Vertex - Triple::Pixel == 1,
+              "incorrect HLSL stage order");
+static_assert(Triple::Geometry - Triple::Pixel == 2,
+              "incorrect HLSL stage order");
+static_assert(Triple::Hull - Triple::Pixel == 3,
+              "incorrect HLSL stage order");
+static_assert(Triple::Domain - Triple::Pixel == 4,
+              "incorrect HLSL stage order");
+static_assert(Triple::Compute - Triple::Pixel == 5,
+              "incorrect HLSL stage order");
+static_assert(Triple::Library - Triple::Pixel == 6,
+              "incorrect HLSL stage order");
