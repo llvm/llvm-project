@@ -27,6 +27,7 @@
 
 #include "mlir/Dialect/OpenMP/OpenMPOpsDialect.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
+#include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
 
 using namespace mlir;
@@ -56,19 +57,6 @@ void OpenMPDialect::initialize() {
   LLVM::LLVMPointerType::attachInterface<
       PointerLikeModel<LLVM::LLVMPointerType>>(*getContext());
   MemRefType::attachInterface<PointerLikeModel<MemRefType>>(*getContext());
-}
-
-//===----------------------------------------------------------------------===//
-// ParallelOp
-//===----------------------------------------------------------------------===//
-
-void ParallelOp::build(OpBuilder &builder, OperationState &state,
-                       ArrayRef<NamedAttribute> attributes) {
-  ParallelOp::build(
-      builder, state, /*if_expr_var=*/nullptr, /*num_threads_var=*/nullptr,
-      /*allocate_vars=*/ValueRange(), /*allocators_vars=*/ValueRange(),
-      /*proc_bind_val=*/nullptr);
-  state.addAttributes(attributes);
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,13 +128,6 @@ static ParseResult parseClauseAttr(AsmParser &parser, ClauseAttr &attr) {
 template <typename ClauseAttr>
 void printClauseAttr(OpAsmPrinter &p, Operation *op, ClauseAttr attr) {
   p << stringifyEnum(attr.getValue());
-}
-
-LogicalResult ParallelOp::verify() {
-  if (allocate_vars().size() != allocators_vars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -470,6 +451,27 @@ static LogicalResult verifySynchronizationHint(Operation *op, uint64_t hint) {
 }
 
 //===----------------------------------------------------------------------===//
+// ParallelOp
+//===----------------------------------------------------------------------===//
+
+void ParallelOp::build(OpBuilder &builder, OperationState &state,
+                       ArrayRef<NamedAttribute> attributes) {
+  ParallelOp::build(
+      builder, state, /*if_expr_var=*/nullptr, /*num_threads_var=*/nullptr,
+      /*allocate_vars=*/ValueRange(), /*allocators_vars=*/ValueRange(),
+      /*reduction_vars=*/ValueRange(), /*reductions=*/nullptr,
+      /*proc_bind_val=*/nullptr);
+  state.addAttributes(attributes);
+}
+
+LogicalResult ParallelOp::verify() {
+  if (allocate_vars().size() != allocators_vars().size())
+    return emitError(
+        "expected equal sizes for allocate and allocator variables");
+  return verifyReductionVarList(*this, reductions(), reduction_vars());
+}
+
+//===----------------------------------------------------------------------===//
 // Verifier for SectionsOp
 //===----------------------------------------------------------------------===//
 
@@ -709,13 +711,17 @@ LogicalResult ReductionDeclareOp::verifyRegions() {
 }
 
 LogicalResult ReductionOp::verify() {
-  // TODO: generalize this to an op interface when there is more than one op
-  // that supports reductions.
-  auto container = (*this)->getParentOfType<WsLoopOp>();
-  for (unsigned i = 0, e = container.getNumReductionVars(); i < e; ++i)
-    if (container.reduction_vars()[i] == accumulator())
-      return success();
-
+  auto *op = (*this)->getParentWithTrait<ReductionClauseInterface::Trait>();
+  if (!op)
+    return emitOpError() << "must be used within an operation supporting "
+                            "reduction clause interface";
+  while (op) {
+    for (const auto &var :
+         cast<ReductionClauseInterface>(op).getReductionVars())
+      if (var == accumulator())
+        return success();
+    op = op->getParentWithTrait<ReductionClauseInterface::Trait>();
+  }
   return emitOpError() << "the accumulator is not used by the parent";
 }
 

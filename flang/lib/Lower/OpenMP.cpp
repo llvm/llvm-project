@@ -205,7 +205,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
     // Create and insert the operation.
     auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
         currentLocation, argTy, ifClauseOperand, numThreadsClauseOperand,
-        ValueRange(), ValueRange(),
+        /*allocate_vars=*/ValueRange(), /*allocators_vars=*/ValueRange(),
+        /*reduction_vars=*/ValueRange(), /*reductions=*/nullptr,
         procBindClauseOperand.dyn_cast_or_null<omp::ClauseProcBindKindAttr>());
     // Handle attribute based clauses.
     for (const auto &clause : parallelOpClauseList.v) {

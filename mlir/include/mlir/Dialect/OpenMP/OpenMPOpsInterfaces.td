@@ -31,4 +31,18 @@ def OutlineableOpenMPOpInterface : OpInterface<"OutlineableOpenMPOpInterface"> {
   ];
 }
 
+def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
+  let description = [{
+    OpenMP operations that support reduction clause have this interface.
+  }];
+
+  let cppNamespace = "::mlir::omp";
+
+  let methods = [
+    InterfaceMethod<
+      "Get reduction vars", "::mlir::Operation::operand_range",
+      "getReductionVars">,
+  ];
+}
+
 #endif // OpenMP_OPS_INTERFACES
