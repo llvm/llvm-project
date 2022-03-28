@@ -171,8 +171,12 @@ uint64_t objdump::getELFSectionLMA(const object::ELFSectionRef &Sec) {
 
 template <class ELFT>
 static void printDynamicSection(const ELFFile<ELFT> &Elf, StringRef Filename) {
-  ArrayRef<typename ELFT::Dyn> DynamicEntries =
-      unwrapOrError(Elf.dynamicEntries(), Filename);
+  auto DynamicEntriesOrErr = Elf.dynamicEntries();
+  if (!DynamicEntriesOrErr) {
+    reportWarning(toString(DynamicEntriesOrErr.takeError()), Filename);
+    return;
+  }
+  ArrayRef<typename ELFT::Dyn> DynamicEntries = *DynamicEntriesOrErr;
 
   // Find the maximum tag name length to format the value column properly.
   size_t MaxLen = 0;
