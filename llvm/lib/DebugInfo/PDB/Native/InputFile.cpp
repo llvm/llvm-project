@@ -31,8 +31,8 @@ using namespace llvm::codeview;
 using namespace llvm::object;
 using namespace llvm::pdb;
 
-InputFile::InputFile() {}
-InputFile::~InputFile() {}
+InputFile::InputFile() = default;
+InputFile::~InputFile() = default;
 
 Expected<ModuleDebugStreamRef>
 llvm::pdb::getModuleDebugStream(PDBFile &File, StringRef &ModuleName,
