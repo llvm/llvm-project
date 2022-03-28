@@ -66,26 +66,6 @@ TransformerImpl::convertToAtomicChanges(
   return Changes;
 }
 
-void NoMetadataImpl::onMatchImpl(const MatchFinder::MatchResult &Result) {
-  size_t I = transformer::detail::findSelectedCase(Result, Rule);
-  auto Transformations = Rule.Cases[I].Edits(Result);
-  if (!Transformations) {
-    Consumer(Transformations.takeError());
-    return;
-  }
-
-  if (Transformations->empty())
-    return;
-
-  auto Changes = convertToAtomicChanges(*Transformations, Result);
-  if (!Changes) {
-    Consumer(Changes.takeError());
-    return;
-  }
-
-  Consumer(llvm::MutableArrayRef<AtomicChange>(*Changes));
-}
-
 } // namespace detail
 
 void Transformer::registerMatchers(MatchFinder *MatchFinder) {

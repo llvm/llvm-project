@@ -21,7 +21,7 @@ namespace tooling {
 
 namespace detail {
 /// Implementation details of \c Transformer with type erasure around
-/// \c RewriteRule and \c RewriteRule<T> as well as the corresponding consumers.
+/// \c RewriteRule<T> as well as the corresponding consumers.
 class TransformerImpl {
 public:
   virtual ~TransformerImpl() = default;
@@ -43,33 +43,6 @@ private:
   onMatchImpl(const ast_matchers::MatchFinder::MatchResult &Result) = 0;
 };
 
-/// Implementation for when no metadata is generated as a part of the
-/// \c RewriteRule.
-class NoMetadataImpl final : public TransformerImpl {
-  transformer::RewriteRule Rule;
-  std::function<void(Expected<llvm::MutableArrayRef<AtomicChange>>)> Consumer;
-
-public:
-  explicit NoMetadataImpl(
-      transformer::RewriteRule R,
-      std::function<void(Expected<llvm::MutableArrayRef<AtomicChange>>)>
-          Consumer)
-      : Rule(std::move(R)), Consumer(std::move(Consumer)) {
-    assert(llvm::all_of(Rule.Cases,
-                        [](const transformer::RewriteRule::Case &Case) {
-                          return Case.Edits;
-                        }) &&
-           "edit generator must be provided for each rule");
-  }
-
-private:
-  void onMatchImpl(const ast_matchers::MatchFinder::MatchResult &Result) final;
-  std::vector<ast_matchers::internal::DynTypedMatcher>
-  buildMatchers() const final {
-    return transformer::detail::buildMatchers(Rule);
-  }
-};
-
 // FIXME: Use std::type_identity or backport when available.
 template <class T> struct type_identity {
   using type = T;
@@ -81,8 +54,6 @@ template <typename T> struct TransformerResult {
   T Metadata;
 };
 
-// Specialization provided only to avoid SFINAE on the Transformer
-// constructor; not intended for use.
 template <> struct TransformerResult<void> {
   llvm::MutableArrayRef<AtomicChange> Changes;
 };
@@ -107,8 +78,14 @@ public:
   /// other.
   explicit Transformer(transformer::RewriteRuleWith<void> Rule,
                        ChangeSetConsumer Consumer)
-      : Impl(std::make_unique<detail::NoMetadataImpl>(std::move(Rule),
-                                                      std::move(Consumer))) {}
+      : Transformer(std::move(Rule),
+                    [Consumer = std::move(Consumer)](
+                        llvm::Expected<TransformerResult<void>> Result) {
+                      if (Result)
+                        Consumer(Result->Changes);
+                      else
+                        Consumer(Result.takeError());
+                    }) {}
 
   /// \param Consumer receives all rewrites and the associated metadata for a
   /// single match, or an error. Will always be called for each match, even if
@@ -135,6 +112,44 @@ private:
 };
 
 namespace detail {
+/// Asserts that all \c Metadata for the \c Rule is set.
+/// FIXME: Use constexpr-if in C++17.
+/// @{
+template <typename T>
+void assertMetadataSet(const transformer::RewriteRuleWith<T> &Rule) {
+  assert(llvm::all_of(Rule.Metadata,
+                      [](const typename transformer::Generator<T> &Metadata)
+                          -> bool { return !!Metadata; }) &&
+         "metadata generator must be provided for each rule");
+}
+template <>
+inline void assertMetadataSet(const transformer::RewriteRuleWith<void> &) {}
+/// @}
+
+/// Runs the metadata generator on \c Rule and stuffs it into \c Result.
+/// FIXME: Use constexpr-if in C++17.
+/// @{
+template <typename T>
+llvm::Error
+populateMetadata(const transformer::RewriteRuleWith<T> &Rule,
+                 size_t SelectedCase,
+                 const ast_matchers::MatchFinder::MatchResult &Match,
+                 TransformerResult<T> &Result) {
+  auto Metadata = Rule.Metadata[SelectedCase]->eval(Match);
+  if (!Metadata)
+    return Metadata.takeError();
+  Result.Metadata = std::move(*Metadata);
+  return llvm::Error::success();
+}
+template <>
+inline llvm::Error
+populateMetadata(const transformer::RewriteRuleWith<void> &, size_t,
+                 const ast_matchers::MatchFinder::MatchResult &Match,
+                 TransformerResult<void> &) {
+  return llvm::Error::success();
+}
+/// @}
+
 /// Implementation when metadata is generated as a part of the rewrite. This
 /// happens when we have a \c RewriteRuleWith<T>.
 template <typename T> class WithMetadataImpl final : public TransformerImpl {
@@ -150,10 +165,7 @@ public:
                         [](const transformer::RewriteRuleBase::Case &Case)
                             -> bool { return !!Case.Edits; }) &&
            "edit generator must be provided for each rule");
-    assert(llvm::all_of(Rule.Metadata,
-                        [](const typename transformer::Generator<T> &Metadata)
-                            -> bool { return !!Metadata; }) &&
-           "metadata generator must be provided for each rule");
+    assertMetadataSet(Rule);
   }
 
 private:
@@ -174,16 +186,19 @@ private:
         Consumer(C.takeError());
         return;
       }
-    }
-
-    auto Metadata = Rule.Metadata[I]->eval(Result);
-    if (!Metadata) {
-      Consumer(Metadata.takeError());
+    } else if (std::is_void<T>::value) {
+      // If we don't have metadata and we don't have any edits, skip.
       return;
     }
 
-    Consumer(TransformerResult<T>{llvm::MutableArrayRef<AtomicChange>(Changes),
-                                  std::move(*Metadata)});
+    TransformerResult<T> RewriteResult;
+    if (auto E = populateMetadata(Rule, I, Result, RewriteResult)) {
+      Consumer(std::move(E));
+      return;
+    }
+
+    RewriteResult.Changes = llvm::MutableArrayRef<AtomicChange>(Changes);
+    Consumer(std::move(RewriteResult));
   }
 
   std::vector<ast_matchers::internal::DynTypedMatcher>
