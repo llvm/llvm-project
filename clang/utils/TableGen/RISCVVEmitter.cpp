@@ -20,15 +20,211 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/RISCVVIntrinsicUtils.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include <numeric>
 
 using namespace llvm;
-using namespace llvm::RISCV;
+using BasicType = char;
+using VScaleVal = Optional<unsigned>;
 
 namespace {
+
+// Exponential LMUL
+struct LMULType {
+  int Log2LMUL;
+  LMULType(int Log2LMUL);
+  // Return the C/C++ string representation of LMUL
+  std::string str() const;
+  Optional<unsigned> getScale(unsigned ElementBitwidth) const;
+  void MulLog2LMUL(int Log2LMUL);
+  LMULType &operator*=(uint32_t RHS);
+};
+
+// This class is compact representation of a valid and invalid RVVType.
+class RVVType {
+  enum ScalarTypeKind : uint32_t {
+    Void,
+    Size_t,
+    Ptrdiff_t,
+    UnsignedLong,
+    SignedLong,
+    Boolean,
+    SignedInteger,
+    UnsignedInteger,
+    Float,
+    Invalid,
+  };
+  BasicType BT;
+  ScalarTypeKind ScalarType = Invalid;
+  LMULType LMUL;
+  bool IsPointer = false;
+  // IsConstant indices are "int", but have the constant expression.
+  bool IsImmediate = false;
+  // Const qualifier for pointer to const object or object of const type.
+  bool IsConstant = false;
+  unsigned ElementBitwidth = 0;
+  VScaleVal Scale = 0;
+  bool Valid;
+
+  std::string BuiltinStr;
+  std::string ClangBuiltinStr;
+  std::string Str;
+  std::string ShortStr;
+
+public:
+  RVVType() : RVVType(BasicType(), 0, StringRef()) {}
+  RVVType(BasicType BT, int Log2LMUL, StringRef prototype);
+
+  // Return the string representation of a type, which is an encoded string for
+  // passing to the BUILTIN() macro in Builtins.def.
+  const std::string &getBuiltinStr() const { return BuiltinStr; }
+
+  // Return the clang builtin type for RVV vector type which are used in the
+  // riscv_vector.h header file.
+  const std::string &getClangBuiltinStr() const { return ClangBuiltinStr; }
+
+  // Return the C/C++ string representation of a type for use in the
+  // riscv_vector.h header file.
+  const std::string &getTypeStr() const { return Str; }
+
+  // Return the short name of a type for C/C++ name suffix.
+  const std::string &getShortStr() {
+    // Not all types are used in short name, so compute the short name by
+    // demanded.
+    if (ShortStr.empty())
+      initShortStr();
+    return ShortStr;
+  }
+
+  bool isValid() const { return Valid; }
+  bool isScalar() const { return Scale.hasValue() && Scale.getValue() == 0; }
+  bool isVector() const { return Scale.hasValue() && Scale.getValue() != 0; }
+  bool isVector(unsigned Width) const {
+    return isVector() && ElementBitwidth == Width;
+  }
+  bool isFloat() const { return ScalarType == ScalarTypeKind::Float; }
+  bool isSignedInteger() const {
+    return ScalarType == ScalarTypeKind::SignedInteger;
+  }
+  bool isFloatVector(unsigned Width) const {
+    return isVector() && isFloat() && ElementBitwidth == Width;
+  }
+  bool isFloat(unsigned Width) const {
+    return isFloat() && ElementBitwidth == Width;
+  }
+
+private:
+  // Verify RVV vector type and set Valid.
+  bool verifyType() const;
+
+  // Creates a type based on basic types of TypeRange
+  void applyBasicType();
+
+  // Applies a prototype modifier to the current type. The result maybe an
+  // invalid type.
+  void applyModifier(StringRef prototype);
+
+  // Compute and record a string for legal type.
+  void initBuiltinStr();
+  // Compute and record a builtin RVV vector type string.
+  void initClangBuiltinStr();
+  // Compute and record a type string for used in the header.
+  void initTypeStr();
+  // Compute and record a short name of a type for C/C++ name suffix.
+  void initShortStr();
+};
+
+using RVVTypePtr = RVVType *;
+using RVVTypes = std::vector<RVVTypePtr>;
+using RISCVPredefinedMacroT = uint8_t;
+
+enum RISCVPredefinedMacro : RISCVPredefinedMacroT {
+  Basic = 0,
+  V = 1 << 1,
+  Zvfh = 1 << 2,
+  RV64 = 1 << 3,
+  VectorMaxELen64 = 1 << 4,
+  VectorMaxELenFp32 = 1 << 5,
+  VectorMaxELenFp64 = 1 << 6,
+};
+
+enum PolicyScheme : uint8_t {
+  SchemeNone,
+  HasPassthruOperand,
+  HasPolicyOperand,
+};
+
+// TODO refactor RVVIntrinsic class design after support all intrinsic
+// combination. This represents an instantiation of an intrinsic with a
+// particular type and prototype
+class RVVIntrinsic {
+
+private:
+  std::string BuiltinName; // Builtin name
+  std::string Name;        // C intrinsic name.
+  std::string MangledName;
+  std::string IRName;
+  bool IsMasked;
+  bool HasVL;
+  PolicyScheme Scheme;
+  bool HasUnMaskedOverloaded;
+  bool HasBuiltinAlias;
+  std::string ManualCodegen;
+  RVVTypePtr OutputType; // Builtin output type
+  RVVTypes InputTypes;   // Builtin input types
+  // The types we use to obtain the specific LLVM intrinsic. They are index of
+  // InputTypes. -1 means the return type.
+  std::vector<int64_t> IntrinsicTypes;
+  RISCVPredefinedMacroT RISCVPredefinedMacros = 0;
+  unsigned NF = 1;
+
+public:
+  RVVIntrinsic(StringRef Name, StringRef Suffix, StringRef MangledName,
+               StringRef MangledSuffix, StringRef IRName, bool IsMasked,
+               bool HasMaskedOffOperand, bool HasVL, PolicyScheme Scheme,
+               bool HasUnMaskedOverloaded, bool HasBuiltinAlias,
+               StringRef ManualCodegen, const RVVTypes &Types,
+               const std::vector<int64_t> &IntrinsicTypes,
+               const std::vector<StringRef> &RequiredFeatures, unsigned NF);
+  ~RVVIntrinsic() = default;
+
+  StringRef getBuiltinName() const { return BuiltinName; }
+  StringRef getName() const { return Name; }
+  StringRef getMangledName() const { return MangledName; }
+  bool hasVL() const { return HasVL; }
+  bool hasPolicy() const { return Scheme != SchemeNone; }
+  bool hasPassthruOperand() const { return Scheme == HasPassthruOperand; }
+  bool hasPolicyOperand() const { return Scheme == HasPolicyOperand; }
+  bool hasUnMaskedOverloaded() const { return HasUnMaskedOverloaded; }
+  bool hasBuiltinAlias() const { return HasBuiltinAlias; }
+  bool hasManualCodegen() const { return !ManualCodegen.empty(); }
+  bool isMasked() const { return IsMasked; }
+  StringRef getIRName() const { return IRName; }
+  StringRef getManualCodegen() const { return ManualCodegen; }
+  PolicyScheme getPolicyScheme() const { return Scheme; }
+  RISCVPredefinedMacroT getRISCVPredefinedMacros() const {
+    return RISCVPredefinedMacros;
+  }
+  unsigned getNF() const { return NF; }
+  const std::vector<int64_t> &getIntrinsicTypes() const {
+    return IntrinsicTypes;
+  }
+
+  // Return the type string for a BUILTIN() macro in Builtins.def.
+  std::string getBuiltinTypeStr() const;
+
+  // Emit the code block for switch body in EmitRISCVBuiltinExpr, it should
+  // init the RVVIntrinsic ID and IntrinsicTypes.
+  void emitCodeGenSwitchBody(raw_ostream &o) const;
+
+  // Emit the macros for mapping C/C++ intrinsic function to builtin functions.
+  void emitIntrinsicFuncDef(raw_ostream &o) const;
+
+  // Emit the mangled function definition.
+  void emitMangledFuncDef(raw_ostream &o) const;
+};
+
 class RVVEmitter {
 private:
   RecordKeeper &Records;
