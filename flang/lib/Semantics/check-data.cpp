@@ -129,7 +129,7 @@ public:
   bool operator()(const evaluate::Subscript &subs) {
     DataVarChecker subscriptChecker{context_, source_};
     subscriptChecker.RestrictPointer();
-    return common::visit(
+    return std::visit(
                common::visitors{
                    [&](const evaluate::IndirectSubscriptIntegerExpr &expr) {
                      return CheckSubscriptExpr(expr);
@@ -205,19 +205,18 @@ void DataChecker::Leave(const parser::DataIDoObject &object) {
 }
 
 void DataChecker::Leave(const parser::DataStmtObject &dataObject) {
-  common::visit(
-      common::visitors{
-          [](const parser::DataImpliedDo &) { // has own Enter()/Leave()
-          },
-          [&](const auto &var) {
-            auto expr{exprAnalyzer_.Analyze(var)};
-            if (!expr ||
-                !DataVarChecker{exprAnalyzer_.context(),
-                    parser::FindSourceLocation(dataObject)}(*expr)) {
-              currentSetHasFatalErrors_ = true;
-            }
-          },
-      },
+  std::visit(common::visitors{
+                 [](const parser::DataImpliedDo &) { // has own Enter()/Leave()
+                 },
+                 [&](const auto &var) {
+                   auto expr{exprAnalyzer_.Analyze(var)};
+                   if (!expr ||
+                       !DataVarChecker{exprAnalyzer_.context(),
+                           parser::FindSourceLocation(dataObject)}(*expr)) {
+                     currentSetHasFatalErrors_ = true;
+                   }
+                 },
+             },
       dataObject.u);
 }
 

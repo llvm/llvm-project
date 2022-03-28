@@ -232,7 +232,7 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
   }
   CHECK(IsValid(*range));
   const Origin &origin{MapToOrigin(range->start())};
-  common::visit(
+  std::visit(
       common::visitors{
           [&](const Inclusion &inc) {
             o << inc.source.path();
@@ -294,24 +294,23 @@ void AllSources::EmitMessage(llvm::raw_ostream &o,
 const SourceFile *AllSources::GetSourceFile(
     Provenance at, std::size_t *offset) const {
   const Origin &origin{MapToOrigin(at)};
-  return common::visit(common::visitors{
-                           [&](const Inclusion &inc) {
-                             if (offset) {
-                               *offset = origin.covers.MemberOffset(at);
-                             }
-                             return &inc.source;
-                           },
-                           [&](const Macro &) {
-                             return GetSourceFile(
-                                 origin.replaces.start(), offset);
-                           },
-                           [offset](const CompilerInsertion &) {
-                             if (offset) {
-                               *offset = 0;
-                             }
-                             return static_cast<const SourceFile *>(nullptr);
-                           },
-                       },
+  return std::visit(common::visitors{
+                        [&](const Inclusion &inc) {
+                          if (offset) {
+                            *offset = origin.covers.MemberOffset(at);
+                          }
+                          return &inc.source;
+                        },
+                        [&](const Macro &) {
+                          return GetSourceFile(origin.replaces.start(), offset);
+                        },
+                        [offset](const CompilerInsertion &) {
+                          if (offset) {
+                            *offset = 0;
+                          }
+                          return static_cast<const SourceFile *>(nullptr);
+                        },
+                    },
       origin.u);
 }
 
@@ -326,7 +325,7 @@ const char *AllSources::GetSource(ProvenanceRange range) const {
 std::optional<SourcePosition> AllSources::GetSourcePosition(
     Provenance prov) const {
   const Origin &origin{MapToOrigin(prov)};
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const Inclusion &inc) -> std::optional<SourcePosition> {
             std::size_t offset{origin.covers.MemberOffset(prov)};
@@ -401,7 +400,7 @@ AllSources::Origin::Origin(ProvenanceRange r, const std::string &text)
     : u{CompilerInsertion{text}}, covers{r} {}
 
 const char &AllSources::Origin::operator[](std::size_t n) const {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [n](const Inclusion &inc) -> const char & {
             return inc.source.content()[n];
@@ -512,23 +511,23 @@ llvm::raw_ostream &AllSources::Dump(llvm::raw_ostream &o) const {
     o << "   ";
     DumpRange(o, m.covers);
     o << " -> ";
-    common::visit(common::visitors{
-                      [&](const Inclusion &inc) {
-                        if (inc.isModule) {
-                          o << "module ";
-                        }
-                        o << "file " << inc.source.path();
-                      },
-                      [&](const Macro &mac) { o << "macro " << mac.expansion; },
-                      [&](const CompilerInsertion &ins) {
-                        o << "compiler '" << ins.text << '\'';
-                        if (ins.text.length() == 1) {
-                          int ch = ins.text[0];
-                          o << "(0x";
-                          o.write_hex(ch & 0xff) << ")";
-                        }
-                      },
-                  },
+    std::visit(common::visitors{
+                   [&](const Inclusion &inc) {
+                     if (inc.isModule) {
+                       o << "module ";
+                     }
+                     o << "file " << inc.source.path();
+                   },
+                   [&](const Macro &mac) { o << "macro " << mac.expansion; },
+                   [&](const CompilerInsertion &ins) {
+                     o << "compiler '" << ins.text << '\'';
+                     if (ins.text.length() == 1) {
+                       int ch = ins.text[0];
+                       o << "(0x";
+                       o.write_hex(ch & 0xff) << ")";
+                     }
+                   },
+               },
         m.u);
     if (IsValid(m.replaces)) {
       o << " replaces ";

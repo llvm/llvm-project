@@ -12,7 +12,6 @@
 #include "indirection.h"
 #include "reference-counted.h"
 #include "reference.h"
-#include "visit.h"
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -104,7 +103,7 @@ struct UnwrapperHelper {
 
   template <typename A, typename... Bs>
   static A *Unwrap(std::variant<Bs...> &u) {
-    return common::visit(
+    return std::visit(
         [](auto &x) -> A * {
           using Ty = std::decay_t<decltype(Unwrap<A>(x))>;
           if constexpr (!std::is_const_v<std::remove_pointer_t<Ty>> ||
@@ -118,7 +117,7 @@ struct UnwrapperHelper {
 
   template <typename A, typename... Bs>
   static auto Unwrap(const std::variant<Bs...> &u) -> std::add_const_t<A> * {
-    return common::visit(
+    return std::visit(
         [](const auto &x) -> std::add_const_t<A> * { return Unwrap<A>(x); }, u);
   }
 

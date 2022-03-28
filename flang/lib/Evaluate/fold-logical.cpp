@@ -91,7 +91,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
             }));
   } else if (name == "btest") {
     if (const auto *ix{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
-      return common::visit(
+      return std::visit(
           [&](const auto &x) {
             using IT = ResultType<decltype(x)>;
             return FoldElementalIntrinsic<T, IT, SameInt>(context,
@@ -212,7 +212,7 @@ Expr<LogicalResult> FoldOperation(
 
 Expr<LogicalResult> FoldOperation(
     FoldingContext &context, Relational<SomeType> &&relation) {
-  return common::visit(
+  return std::visit(
       [&](auto &&x) {
         return Expr<LogicalResult>{FoldOperation(context, std::move(x))};
       },

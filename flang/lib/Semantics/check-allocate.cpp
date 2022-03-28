@@ -128,10 +128,10 @@ static std::optional<AllocateCheckerInfo> CheckAllocateOptions(
   const parser::Expr *parserSourceExpr{nullptr};
   for (const parser::AllocOpt &allocOpt :
       std::get<std::list<parser::AllocOpt>>(allocateStmt.t)) {
-    common::visit(
+    std::visit(
         common::visitors{
             [&](const parser::StatOrErrmsg &statOrErr) {
-              common::visit(
+              std::visit(
                   common::visitors{
                       [&](const parser::StatVariable &) {
                         if (info.gotStat) { // C943

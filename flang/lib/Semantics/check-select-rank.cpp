@@ -60,7 +60,7 @@ void SelectRankConstructChecker::Leave(
         std::get<parser::Statement<parser::SelectRankCaseStmt>>(rankCase.t)};
     const auto &rank{
         std::get<parser::SelectRankCaseStmt::Rank>(rankCaseStmt.statement.t)};
-    common::visit(
+    std::visit(
         common::visitors{
             [&](const parser::Default &) { // C1153
               if (!defaultRankFound) {
@@ -123,7 +123,7 @@ void SelectRankConstructChecker::Leave(
 
 const SomeExpr *SelectRankConstructChecker::GetExprFromSelector(
     const parser::Selector &selector) {
-  return common::visit([](const auto &x) { return GetExpr(x); }, selector.u);
+  return std::visit([](const auto &x) { return GetExpr(x); }, selector.u);
 }
 
 } // namespace Fortran::semantics

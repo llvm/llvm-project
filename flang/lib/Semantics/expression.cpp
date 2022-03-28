@@ -288,7 +288,7 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
   if (subscripts.empty()) {
     return std::nullopt; // error recovery
   }
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](SymbolRef &&symbol) {
             return CompleteSubscripts(ArrayRef{symbol, std::move(subscripts)});
@@ -337,7 +337,7 @@ static void FixMisparsedSubstring(const parser::Designator &d) {
           if (!std::get<2>(triplet->t) /* no stride */ &&
               ++iter == arrElement.subscripts.end() /* one subscript */) {
             if (Symbol *
-                symbol{common::visit(
+                symbol{std::visit(
                     common::visitors{
                         [](parser::Name &n) { return n.symbol; },
                         [](common::Indirection<parser::StructureComponent>
@@ -397,7 +397,7 @@ int ExpressionAnalyzer::AnalyzeKindParam(
   if (!kindParam) {
     return defaultKind;
   }
-  return common::visit(
+  return std::visit(
       common::visitors{
           [](std::uint64_t k) { return static_cast<int>(k); },
           [&](const parser::Scalar<
@@ -841,7 +841,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
   if (MaybeExpr string{Analyze(std::get<parser::CharLiteralConstant>(x.t))}) {
     if (auto *charExpr{std::get_if<Expr<SomeCharacter>>(&string->u)}) {
       Expr<SubscriptInteger> length{
-          common::visit([](const auto &ckExpr) { return ckExpr.LEN().value(); },
+          std::visit([](const auto &ckExpr) { return ckExpr.LEN().value(); },
               charExpr->u)};
       if (!lower) {
         lower = Expr<SubscriptInteger>{1};
@@ -850,7 +850,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         upper = Expr<SubscriptInteger>{
             static_cast<std::int64_t>(ToInt64(length).value())};
       }
-      return common::visit(
+      return std::visit(
           [&](auto &&ckExpr) -> MaybeExpr {
             using Result = ResultType<decltype(ckExpr)>;
             auto *cp{std::get_if<Constant<Result>>(&ckExpr.u)};
@@ -904,7 +904,7 @@ std::optional<Expr<SubscriptInteger>> ExpressionAnalyzer::TripletPart(
 
 std::optional<Subscript> ExpressionAnalyzer::AnalyzeSectionSubscript(
     const parser::SectionSubscript &ss) {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::SubscriptTriplet &t) -> std::optional<Subscript> {
             const auto &lower{std::get<0>(t.t)};
@@ -983,7 +983,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayElement &ae) {
 // Type parameter inquiries apply to data references, but don't depend
 // on any trailing (co)subscripts.
 static NamedEntity IgnoreAnySubscripts(Designator<SomeDerived> &&designator) {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [](SymbolRef &&symbol) { return NamedEntity{symbol}; },
           [](Component &&component) {
@@ -1075,7 +1075,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::StructureComponent &sc) {
     if (kind == MiscKind::ComplexPartRe || kind == MiscKind::ComplexPartIm) {
       if (auto *zExpr{std::get_if<Expr<SomeComplex>>(&base->u)}) {
         if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(*zExpr))}) {
-          Expr<SomeReal> realExpr{common::visit(
+          Expr<SomeReal> realExpr{std::visit(
               [&](const auto &z) {
                 using PartType = typename ResultType<decltype(z)>::Part;
                 auto part{kind == MiscKind::ComplexPartRe
@@ -1150,7 +1150,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
     }
     for (const auto &imageSelSpec :
         std::get<std::list<parser::ImageSelectorSpec>>(x.imageSelector.t)) {
-      common::visit(
+      std::visit(
           common::visitors{
               [&](const auto &x) { Analyze(x.v); },
           },
@@ -1187,7 +1187,7 @@ ArrayConstructorValues<T> MakeSpecific(
     ArrayConstructorValues<SomeType> &&from) {
   ArrayConstructorValues<T> to;
   for (ArrayConstructorValue<SomeType> &x : from) {
-    common::visit(
+    std::visit(
         common::visitors{
             [&](common::CopyableIndirection<Expr<SomeType>> &&expr) {
               auto *typed{UnwrapExpr<Expr<T>>(expr.value())};
@@ -1336,7 +1336,7 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
   if (Expr<SomeCharacter> * charExpr{UnwrapExpr<Expr<SomeCharacter>>(*x)}) {
     CHECK(xType.category() == TypeCategory::Character);
     xType.length =
-        common::visit([](const auto &kc) { return kc.LEN(); }, charExpr->u);
+        std::visit([](const auto &kc) { return kc.LEN(); }, charExpr->u);
   }
   if (!type_) {
     // If there is no explicit type-spec in an array constructor, the type
@@ -1397,7 +1397,7 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
 }
 
 void ArrayConstructorContext::Add(const parser::AcValue &x) {
-  common::visit(
+  std::visit(
       common::visitors{
           [&](const parser::AcValue::Triplet &triplet) { Add(triplet); },
           [&](const common::Indirection<parser::Expr> &expr) {
@@ -1820,7 +1820,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
 
 static std::optional<parser::CharBlock> GetPassName(
     const semantics::Symbol &proc) {
-  return common::visit(
+  return std::visit(
       [](const auto &details) {
         if constexpr (std::is_base_of_v<semantics::WithPassArg,
                           std::decay_t<decltype(details)>>) {
@@ -1959,7 +1959,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
 static bool CheckCompatibleArgument(bool isElemental,
     const ActualArgument &actual, const characteristics::DummyArgument &dummy) {
   const auto *expr{actual.UnwrapExpr()};
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &x) {
             if (x.attrs.test(characteristics::DummyDataObject::Attr::Pointer) &&
@@ -2154,7 +2154,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(
     const parser::ProcedureDesignator &pd, ActualArguments &&arguments,
     bool isSubroutine, bool mightBeStructureConstructor)
     -> std::optional<CalleeAndArguments> {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::Name &name) {
             return GetCalleeAndArguments(name, std::move(arguments),
@@ -2306,7 +2306,7 @@ static const Symbol *AssumedTypePointerOrAllocatableDummy(const A &object) {
   // point it is is not guaranteed that it has been checked the object has
   // POINTER or ALLOCATABLE attribute, so do not assume nullptr can be directly
   // returned.
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::StructureComponent &x) {
             return AssumedTypeDummy(x.component);
@@ -2460,30 +2460,29 @@ const Assignment *ExpressionAnalyzer::Analyze(
           new GenericAssignmentWrapper{}, GenericAssignmentWrapper::Deleter);
     } else {
       Assignment assignment{std::move(*lhs), std::move(*rhs)};
-      common::visit(
-          common::visitors{
-              [&](const std::list<parser::BoundsRemapping> &list) {
-                Assignment::BoundsRemapping bounds;
-                for (const auto &elem : list) {
-                  auto lower{AsSubscript(Analyze(std::get<0>(elem.t)))};
-                  auto upper{AsSubscript(Analyze(std::get<1>(elem.t)))};
-                  if (lower && upper) {
-                    bounds.emplace_back(
-                        Fold(std::move(*lower)), Fold(std::move(*upper)));
-                  }
-                }
-                assignment.u = std::move(bounds);
-              },
-              [&](const std::list<parser::BoundsSpec> &list) {
-                Assignment::BoundsSpec bounds;
-                for (const auto &bound : list) {
-                  if (auto lower{AsSubscript(Analyze(bound.v))}) {
-                    bounds.emplace_back(Fold(std::move(*lower)));
-                  }
-                }
-                assignment.u = std::move(bounds);
-              },
-          },
+      std::visit(common::visitors{
+                     [&](const std::list<parser::BoundsRemapping> &list) {
+                       Assignment::BoundsRemapping bounds;
+                       for (const auto &elem : list) {
+                         auto lower{AsSubscript(Analyze(std::get<0>(elem.t)))};
+                         auto upper{AsSubscript(Analyze(std::get<1>(elem.t)))};
+                         if (lower && upper) {
+                           bounds.emplace_back(Fold(std::move(*lower)),
+                               Fold(std::move(*upper)));
+                         }
+                       }
+                       assignment.u = std::move(bounds);
+                     },
+                     [&](const std::list<parser::BoundsSpec> &list) {
+                       Assignment::BoundsSpec bounds;
+                       for (const auto &bound : list) {
+                         if (auto lower{AsSubscript(Analyze(bound.v))}) {
+                           bounds.emplace_back(Fold(std::move(*lower)));
+                         }
+                       }
+                       assignment.u = std::move(bounds);
+                     },
+                 },
           std::get<parser::PointerAssignmentStmt::Bounds>(x.t).u);
       x.typedAssignment.Reset(
           new GenericAssignmentWrapper{std::move(assignment)},
@@ -2693,7 +2692,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
   if (!analyzer.fatalErrors()) {
     if (analyzer.IsIntrinsicConcat()) {
       analyzer.CheckForNullPointer();
-      return common::visit(
+      return std::visit(
           [&](auto &&x, auto &&y) -> MaybeExpr {
             using T = ResultType<decltype(x)>;
             if constexpr (std::is_same_v<T, ResultType<decltype(y)>>) {
@@ -2877,12 +2876,12 @@ static void FixMisparsedFunctionReference(
     auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
     if (Symbol *
         origSymbol{
-            common::visit(common::visitors{
-                              [&](parser::Name &name) { return name.symbol; },
-                              [&](parser::ProcComponentRef &pcr) {
-                                return pcr.v.thing.component.symbol;
-                              },
-                          },
+            std::visit(common::visitors{
+                           [&](parser::Name &name) { return name.symbol; },
+                           [&](parser::ProcComponentRef &pcr) {
+                             return pcr.v.thing.component.symbol;
+                           },
+                       },
                 proc.u)}) {
       Symbol &symbol{origSymbol->GetUltimate()};
       if (symbol.has<semantics::ObjectEntityDetails>() ||
@@ -3026,7 +3025,7 @@ Expr<SubscriptInteger> ExpressionAnalyzer::AnalyzeKindSelector(
   if (!selector) {
     return Expr<SubscriptInteger>{defaultKind};
   }
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::ScalarIntConstantExpr &x) {
             if (MaybeExpr kind{Analyze(x)}) {
@@ -3216,7 +3215,7 @@ void ArgumentAnalyzer::Analyze(
   // be detected and represented (they're not expressions).
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
-  common::visit(
+  std::visit(
       common::visitors{
           [&](const common::Indirection<parser::Expr> &x) {
             actual = AnalyzeExpr(x.value());
