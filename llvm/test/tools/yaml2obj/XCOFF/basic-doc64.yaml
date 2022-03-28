@@ -42,6 +42,8 @@ Symbols:
 # CHECK64-NEXT:   OptionalHeaderSize: 0x0
 # CHECK64-NEXT:   Flags: 0x0
 # CHECK64-NEXT: }
+# CHECK64-NEXT: AuxiliaryHeader {
+# CHECK64-NEXT: }
 # CHECK64-NEXT: Sections [
 # CHECK64-NEXT:   Section {
 # CHECK64-NEXT:     Index: 1

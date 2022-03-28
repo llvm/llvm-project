@@ -116,7 +116,7 @@ struct XCOFFAuxiliaryHeader32 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {
   support::ubig16_t SecNumOfTBSS;
 };
 
-struct XCOFFAuxiliaryHeader64 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader32> {
+struct XCOFFAuxiliaryHeader64 : XCOFFAuxiliaryHeader<XCOFFAuxiliaryHeader64> {
   support::ubig16_t AuxMagic;
   support::ubig16_t Version;
   support::ubig32_t ReservedForDebugger;

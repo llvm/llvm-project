@@ -104,7 +104,7 @@ Sections:
 # CASE2-NEXT:   Text page size: 0x0
 # CASE2-NEXT:   Data page size: 0x0
 # CASE2-NEXT:   Stack page size: 0x0
-# CASE2-NEXT:   Flag: 0x0
+# CASE2-NEXT:   Flag: 0x80
 # CASE2-NEXT:   Alignment of thread-local storage: 0x0
 # CASE2-NEXT:   Size of .text section: 0x8
 # CASE2-NEXT:   Size of .data section: 0x8
@@ -185,7 +185,7 @@ AuxiliaryHeader:
 # CASE4-NEXT:   Text page size: 0x0
 # CASE4-NEXT:   Data page size: 0x0
 # CASE4-NEXT:   Stack page size: 0x0
-# CASE4-NEXT:   Flag: 0x0
+# CASE4-NEXT:   Flag: 0x80
 # CASE4-NEXT:   Alignment of thread-local storage: 0x0
 # CASE4-NEXT:   Size of .text section: 0x0
 # CASE4-NEXT:   Size of .data section: 0x0

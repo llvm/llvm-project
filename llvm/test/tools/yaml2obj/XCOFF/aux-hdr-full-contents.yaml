@@ -67,7 +67,7 @@
 # CHECK64-NEXT:   Data page size: 0x1
 # CHECK64-NEXT:   Stack page size: 0x1
 # CHECK64-NEXT:   Flag: 0x0
-# CHECK64-NEXT:   Alignment of thread-local storage: 0x0
+# CHECK64-NEXT:   Alignment of thread-local storage: 0x1
 # CHECK64-NEXT:   Size of .text section: 0x8
 # CHECK64-NEXT:   Size of .data section: 0x9
 # CHECK64-NEXT:   Size of .bss section: 0x10

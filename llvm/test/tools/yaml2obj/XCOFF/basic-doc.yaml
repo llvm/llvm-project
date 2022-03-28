@@ -46,6 +46,8 @@ Symbols:
 # CHECK-NEXT:   OptionalHeaderSize: 0x0
 # CHECK-NEXT:   Flags: 0x0
 # CHECK-NEXT: }
+# CHECK-NEXT: AuxiliaryHeader {
+# CHECK-NEXT: }
 # CHECK-NEXT: Sections [
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 1

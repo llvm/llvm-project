@@ -17,7 +17,6 @@
 #include "llvm/Support/ScopedPrinter.h"
 
 #include <ctime>
-#include <stddef.h>
 
 using namespace llvm;
 using namespace object;
@@ -40,6 +39,8 @@ public:
   void printStackMap() const override;
   void printNeededLibraries() override;
   void printStringTable() override;
+
+  ScopedPrinter &getScopedPrinter() const { return W; }
 
 private:
   template <typename T> void printSectionHeaders(ArrayRef<T> Sections);
@@ -113,6 +114,8 @@ void XCOFFDumper::printFileHeaders() {
 }
 
 void XCOFFDumper::printAuxiliaryHeader() {
+  DictScope DS(W, "AuxiliaryHeader");
+
   if (Obj.is64Bit())
     printAuxiliaryHeader(Obj.auxiliaryHeader64());
   else
@@ -736,6 +739,46 @@ void XCOFFDumper::printGenericSectionHeader(T &Sec) const {
   W.printNumber("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
 }
 
+enum PrintStyle { Hex, Number };
+template <typename T, typename V>
+static void printAuxMemberHelper(PrintStyle Style, const char *MemberName,
+                                 const T &Member, const V *AuxHeader,
+                                 uint16_t AuxSize, uint16_t &PartialFieldOffset,
+                                 const char *&PartialFieldName,
+                                 ScopedPrinter &W) {
+  ptrdiff_t Offset = reinterpret_cast<const char *>(&Member) -
+                     reinterpret_cast<const char *>(AuxHeader);
+  if (Offset + sizeof(Member) <= AuxSize)
+    Style == Hex ? W.printHex(MemberName, Member)
+                 : W.printNumber(MemberName, Member);
+  else if (Offset < AuxSize) {
+    PartialFieldOffset = Offset;
+    PartialFieldName = MemberName;
+  }
+}
+
+template <class T>
+void checkAndPrintAuxHeaderParseError(const char *PartialFieldName,
+                                      uint16_t PartialFieldOffset,
+                                      uint16_t AuxSize, T &AuxHeader,
+                                      XCOFFDumper *Dumper) {
+  if (PartialFieldOffset < AuxSize) {
+    Dumper->reportUniqueWarning(Twine("only partial field for ") +
+                                PartialFieldName + " at offset (" +
+                                Twine(PartialFieldOffset) + ")");
+    Dumper->getScopedPrinter().printBinary(
+        "Raw data", "",
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
+                              PartialFieldOffset,
+                          AuxSize - PartialFieldOffset));
+  } else if (sizeof(AuxHeader) < AuxSize)
+    Dumper->getScopedPrinter().printBinary(
+        "Extra raw data", "",
+        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
+                              sizeof(AuxHeader),
+                          AuxSize - sizeof(AuxHeader)));
+}
+
 void XCOFFDumper::printAuxiliaryHeader(
     const XCOFFAuxiliaryHeader32 *AuxHeader) {
   if (AuxHeader == nullptr)
@@ -744,44 +787,40 @@ void XCOFFDumper::printAuxiliaryHeader(
   uint16_t PartialFieldOffset = AuxSize;
   const char *PartialFieldName = nullptr;
 
-  DictScope DS(W, "AuxiliaryHeader");
+  auto PrintAuxMember = [&](PrintStyle Style, const char *MemberName,
+                            auto &Member) {
+    printAuxMemberHelper(Style, MemberName, Member, AuxHeader, AuxSize,
+                         PartialFieldOffset, PartialFieldName, W);
+  };
 
-#define PrintAuxMember32(H, S, T)                                              \
-  if (offsetof(XCOFFAuxiliaryHeader32, T) +                                    \
-          sizeof(XCOFFAuxiliaryHeader32::T) <=                                 \
-      AuxSize)                                                                 \
-    W.print##H(S, AuxHeader->T);                                               \
-  else if (offsetof(XCOFFAuxiliaryHeader32, T) < AuxSize) {                    \
-    PartialFieldOffset = offsetof(XCOFFAuxiliaryHeader32, T);                  \
-    PartialFieldName = S;                                                      \
-  }
-
-  PrintAuxMember32(Hex, "Magic", AuxMagic);
-  PrintAuxMember32(Hex, "Version", Version);
-  PrintAuxMember32(Hex, "Size of .text section", TextSize);
-  PrintAuxMember32(Hex, "Size of .data section", InitDataSize);
-  PrintAuxMember32(Hex, "Size of .bss section", BssDataSize);
-  PrintAuxMember32(Hex, "Entry point address", EntryPointAddr);
-  PrintAuxMember32(Hex, ".text section start address", TextStartAddr);
-  PrintAuxMember32(Hex, ".data section start address", DataStartAddr);
-  PrintAuxMember32(Hex, "TOC anchor address", TOCAnchorAddr);
-  PrintAuxMember32(Number, "Section number of entryPoint", SecNumOfEntryPoint);
-  PrintAuxMember32(Number, "Section number of .text", SecNumOfText);
-  PrintAuxMember32(Number, "Section number of .data", SecNumOfData);
-  PrintAuxMember32(Number, "Section number of TOC", SecNumOfTOC);
-  PrintAuxMember32(Number, "Section number of loader data", SecNumOfLoader);
-  PrintAuxMember32(Number, "Section number of .bss", SecNumOfBSS);
-  PrintAuxMember32(Hex, "Maxium alignment of .text", MaxAlignOfText);
-  PrintAuxMember32(Hex, "Maxium alignment of .data", MaxAlignOfData);
-  PrintAuxMember32(Hex, "Module type", ModuleType);
-  PrintAuxMember32(Hex, "CPU type of objects", CpuFlag);
-  PrintAuxMember32(Hex, "(Reserved)", CpuType);
-  PrintAuxMember32(Hex, "Maximum stack size", MaxStackSize);
-  PrintAuxMember32(Hex, "Maximum data size", MaxDataSize);
-  PrintAuxMember32(Hex, "Reserved for debugger", ReservedForDebugger);
-  PrintAuxMember32(Hex, "Text page size", TextPageSize);
-  PrintAuxMember32(Hex, "Data page size", DataPageSize);
-  PrintAuxMember32(Hex, "Stack page size", StackPageSize);
+  PrintAuxMember(Hex, "Magic", AuxHeader->AuxMagic);
+  PrintAuxMember(Hex, "Version", AuxHeader->Version);
+  PrintAuxMember(Hex, "Size of .text section", AuxHeader->TextSize);
+  PrintAuxMember(Hex, "Size of .data section", AuxHeader->InitDataSize);
+  PrintAuxMember(Hex, "Size of .bss section", AuxHeader->BssDataSize);
+  PrintAuxMember(Hex, "Entry point address", AuxHeader->EntryPointAddr);
+  PrintAuxMember(Hex, ".text section start address", AuxHeader->TextStartAddr);
+  PrintAuxMember(Hex, ".data section start address", AuxHeader->DataStartAddr);
+  PrintAuxMember(Hex, "TOC anchor address", AuxHeader->TOCAnchorAddr);
+  PrintAuxMember(Number, "Section number of entryPoint",
+                 AuxHeader->SecNumOfEntryPoint);
+  PrintAuxMember(Number, "Section number of .text", AuxHeader->SecNumOfText);
+  PrintAuxMember(Number, "Section number of .data", AuxHeader->SecNumOfData);
+  PrintAuxMember(Number, "Section number of TOC", AuxHeader->SecNumOfTOC);
+  PrintAuxMember(Number, "Section number of loader data",
+                 AuxHeader->SecNumOfLoader);
+  PrintAuxMember(Number, "Section number of .bss", AuxHeader->SecNumOfBSS);
+  PrintAuxMember(Hex, "Maxium alignment of .text", AuxHeader->MaxAlignOfText);
+  PrintAuxMember(Hex, "Maxium alignment of .data", AuxHeader->MaxAlignOfData);
+  PrintAuxMember(Hex, "Module type", AuxHeader->ModuleType);
+  PrintAuxMember(Hex, "CPU type of objects", AuxHeader->CpuFlag);
+  PrintAuxMember(Hex, "(Reserved)", AuxHeader->CpuType);
+  PrintAuxMember(Hex, "Maximum stack size", AuxHeader->MaxStackSize);
+  PrintAuxMember(Hex, "Maximum data size", AuxHeader->MaxDataSize);
+  PrintAuxMember(Hex, "Reserved for debugger", AuxHeader->ReservedForDebugger);
+  PrintAuxMember(Hex, "Text page size", AuxHeader->TextPageSize);
+  PrintAuxMember(Hex, "Data page size", AuxHeader->DataPageSize);
+  PrintAuxMember(Hex, "Stack page size", AuxHeader->StackPageSize);
   if (offsetof(XCOFFAuxiliaryHeader32, FlagAndTDataAlignment) +
           sizeof(XCOFFAuxiliaryHeader32::FlagAndTDataAlignment) <=
       AuxSize) {
@@ -790,35 +829,11 @@ void XCOFFDumper::printAuxiliaryHeader(
                AuxHeader->getTDataAlignment());
   }
 
-  PrintAuxMember32(Number, "Section number for .tdata", SecNumOfTData);
-  PrintAuxMember32(Number, "Section number for .tbss", SecNumOfTBSS);
+  PrintAuxMember(Number, "Section number for .tdata", AuxHeader->SecNumOfTData);
+  PrintAuxMember(Number, "Section number for .tbss", AuxHeader->SecNumOfTBSS);
 
-  // Deal with error.
-  if (PartialFieldOffset < AuxSize) {
-    std::string ErrInfo;
-    llvm::raw_string_ostream StringOS(ErrInfo);
-    StringOS << "Only partial field for " << PartialFieldName << " at offset ("
-             << PartialFieldOffset << ").";
-    StringOS.flush();
-    reportWarning(
-        make_error<GenericBinaryError>(ErrInfo, object_error::parse_failed),
-        "-");
-    W.printBinary(
-        "Raw data", "",
-        ArrayRef<uint8_t>((const uint8_t *)(AuxHeader) + PartialFieldOffset,
-                          AuxSize - PartialFieldOffset));
-  } else if (sizeof(XCOFFAuxiliaryHeader32) < AuxSize) {
-    reportWarning(make_error<GenericBinaryError>(
-                      "There are extra data beyond auxiliary header",
-                      object_error::parse_failed),
-                  "-");
-    W.printBinary("Extra raw data", "",
-                  ArrayRef<uint8_t>((const uint8_t *)(AuxHeader) +
-                                        sizeof(XCOFFAuxiliaryHeader32),
-                                    AuxSize - sizeof(XCOFFAuxiliaryHeader32)));
-  }
-
-#undef PrintAuxMember32
+  checkAndPrintAuxHeaderParseError(PartialFieldName, PartialFieldOffset,
+                                   AuxSize, *AuxHeader, this);
 }
 
 void XCOFFDumper::printAuxiliaryHeader(
@@ -829,38 +844,34 @@ void XCOFFDumper::printAuxiliaryHeader(
   uint16_t PartialFieldOffset = AuxSize;
   const char *PartialFieldName = nullptr;
 
-  DictScope DS(W, "AuxiliaryHeader");
+  auto PrintAuxMember = [&](PrintStyle Style, const char *MemberName,
+                            auto &Member) {
+    printAuxMemberHelper(Style, MemberName, Member, AuxHeader, AuxSize,
+                         PartialFieldOffset, PartialFieldName, W);
+  };
 
-#define PrintAuxMember64(H, S, T)                                              \
-  if (offsetof(XCOFFAuxiliaryHeader64, T) +                                    \
-          sizeof(XCOFFAuxiliaryHeader64::T) <=                                 \
-      AuxSize)                                                                 \
-    W.print##H(S, AuxHeader->T);                                               \
-  else if (offsetof(XCOFFAuxiliaryHeader64, T) < AuxSize) {                    \
-    PartialFieldOffset = offsetof(XCOFFAuxiliaryHeader64, T);                  \
-    PartialFieldName = S;                                                      \
-  }
-
-  PrintAuxMember64(Hex, "Magic", AuxMagic);
-  PrintAuxMember64(Hex, "Version", Version);
-  PrintAuxMember64(Hex, "Reserved for debugger", ReservedForDebugger);
-  PrintAuxMember64(Hex, ".text section start address", TextStartAddr);
-  PrintAuxMember64(Hex, ".data section start address", DataStartAddr);
-  PrintAuxMember64(Hex, "TOC anchor address", TOCAnchorAddr);
-  PrintAuxMember64(Number, "Section number of entryPoint", SecNumOfEntryPoint);
-  PrintAuxMember64(Number, "Section number of .text", SecNumOfText);
-  PrintAuxMember64(Number, "Section number of .data", SecNumOfData);
-  PrintAuxMember64(Number, "Section number of TOC", SecNumOfTOC);
-  PrintAuxMember64(Number, "Section number of loader data", SecNumOfLoader);
-  PrintAuxMember64(Number, "Section number of .bss", SecNumOfBSS);
-  PrintAuxMember64(Hex, "Maxium alignment of .text", MaxAlignOfText);
-  PrintAuxMember64(Hex, "Maxium alignment of .data", MaxAlignOfData);
-  PrintAuxMember64(Hex, "Module type", ModuleType);
-  PrintAuxMember64(Hex, "CPU type of objects", CpuFlag);
-  PrintAuxMember64(Hex, "(Reserved)", CpuType);
-  PrintAuxMember64(Hex, "Text page size", TextPageSize);
-  PrintAuxMember64(Hex, "Data page size", DataPageSize);
-  PrintAuxMember64(Hex, "Stack page size", StackPageSize);
+  PrintAuxMember(Hex, "Magic", AuxHeader->AuxMagic);
+  PrintAuxMember(Hex, "Version", AuxHeader->Version);
+  PrintAuxMember(Hex, "Reserved for debugger", AuxHeader->ReservedForDebugger);
+  PrintAuxMember(Hex, ".text section start address", AuxHeader->TextStartAddr);
+  PrintAuxMember(Hex, ".data section start address", AuxHeader->DataStartAddr);
+  PrintAuxMember(Hex, "TOC anchor address", AuxHeader->TOCAnchorAddr);
+  PrintAuxMember(Number, "Section number of entryPoint",
+                 AuxHeader->SecNumOfEntryPoint);
+  PrintAuxMember(Number, "Section number of .text", AuxHeader->SecNumOfText);
+  PrintAuxMember(Number, "Section number of .data", AuxHeader->SecNumOfData);
+  PrintAuxMember(Number, "Section number of TOC", AuxHeader->SecNumOfTOC);
+  PrintAuxMember(Number, "Section number of loader data",
+                 AuxHeader->SecNumOfLoader);
+  PrintAuxMember(Number, "Section number of .bss", AuxHeader->SecNumOfBSS);
+  PrintAuxMember(Hex, "Maxium alignment of .text", AuxHeader->MaxAlignOfText);
+  PrintAuxMember(Hex, "Maxium alignment of .data", AuxHeader->MaxAlignOfData);
+  PrintAuxMember(Hex, "Module type", AuxHeader->ModuleType);
+  PrintAuxMember(Hex, "CPU type of objects", AuxHeader->CpuFlag);
+  PrintAuxMember(Hex, "(Reserved)", AuxHeader->CpuType);
+  PrintAuxMember(Hex, "Text page size", AuxHeader->TextPageSize);
+  PrintAuxMember(Hex, "Data page size", AuxHeader->DataPageSize);
+  PrintAuxMember(Hex, "Stack page size", AuxHeader->StackPageSize);
   if (offsetof(XCOFFAuxiliaryHeader64, FlagAndTDataAlignment) +
           sizeof(XCOFFAuxiliaryHeader64::FlagAndTDataAlignment) <=
       AuxSize) {
@@ -868,42 +879,18 @@ void XCOFFDumper::printAuxiliaryHeader(
     W.printHex("Alignment of thread-local storage",
                AuxHeader->getTDataAlignment());
   }
-  PrintAuxMember64(Hex, "Size of .text section", TextSize);
-  PrintAuxMember64(Hex, "Size of .data section", InitDataSize);
-  PrintAuxMember64(Hex, "Size of .bss section", BssDataSize);
-  PrintAuxMember64(Hex, "Entry point address", EntryPointAddr);
-  PrintAuxMember64(Hex, "Maximum stack size", MaxStackSize);
-  PrintAuxMember64(Hex, "Maximum data size", MaxDataSize);
-  PrintAuxMember64(Number, "Section number for .tdata", SecNumOfTData);
-  PrintAuxMember64(Number, "Section number for .tbss", SecNumOfTBSS);
-  PrintAuxMember64(Hex, "Additional flags 64-bit XCOFF", XCOFF64Flag);
+  PrintAuxMember(Hex, "Size of .text section", AuxHeader->TextSize);
+  PrintAuxMember(Hex, "Size of .data section", AuxHeader->InitDataSize);
+  PrintAuxMember(Hex, "Size of .bss section", AuxHeader->BssDataSize);
+  PrintAuxMember(Hex, "Entry point address", AuxHeader->EntryPointAddr);
+  PrintAuxMember(Hex, "Maximum stack size", AuxHeader->MaxStackSize);
+  PrintAuxMember(Hex, "Maximum data size", AuxHeader->MaxDataSize);
+  PrintAuxMember(Number, "Section number for .tdata", AuxHeader->SecNumOfTData);
+  PrintAuxMember(Number, "Section number for .tbss", AuxHeader->SecNumOfTBSS);
+  PrintAuxMember(Hex, "Additional flags 64-bit XCOFF", AuxHeader->XCOFF64Flag);
 
-  if (PartialFieldOffset < AuxSize) {
-    std::string ErrInfo;
-    llvm::raw_string_ostream StringOS(ErrInfo);
-    StringOS << "Only partial field for " << PartialFieldName << " at offset ("
-             << PartialFieldOffset << ").";
-    StringOS.flush();
-    reportWarning(
-        make_error<GenericBinaryError>(ErrInfo, object_error::parse_failed),
-        "-");
-    ;
-    W.printBinary(
-        "Raw data", "",
-        ArrayRef<uint8_t>((const uint8_t *)(AuxHeader) + PartialFieldOffset,
-                          AuxSize - PartialFieldOffset));
-  } else if (sizeof(XCOFFAuxiliaryHeader64) < AuxSize) {
-    reportWarning(make_error<GenericBinaryError>(
-                      "There are extra data beyond auxiliary header",
-                      object_error::parse_failed),
-                  "-");
-    W.printBinary("Extra raw data", "",
-                  ArrayRef<uint8_t>((const uint8_t *)(AuxHeader) +
-                                        sizeof(XCOFFAuxiliaryHeader64),
-                                    AuxSize - sizeof(XCOFFAuxiliaryHeader64)));
-  }
-
-#undef PrintAuxMember64
+  checkAndPrintAuxHeaderParseError(PartialFieldName, PartialFieldOffset,
+                                   AuxSize, *AuxHeader, this);
 }
 
 template <typename T>
