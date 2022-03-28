@@ -52,4 +52,4 @@
 
 // Check that the linker driver doesn't warn about -mbranch-protection=standard
 // as an unused option.
-// LINKER-DRIVER-NOT: warning:
+// LINKER-DRIVER-NOT: warning: argument unused during compilation: '-mbranch-protection=standard'
