@@ -52,6 +52,57 @@ if.end:                                           ; preds = %entry
   ret void
 }
 
+define void @test.not.sge.ult(i8 %start, i8 %low, i8 %high) {
+; CHECK-LABEL: @test.not.sge.ult(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD_PTR_I:%.*]] = add i8 [[START:%.*]], 3
+; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[ADD_PTR_I]], [[HIGH:%.*]]
+; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret void
+; CHECK:       if.end:
+; CHECK-NEXT:    [[T_0:%.*]] = icmp slt i8 [[START]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[T_0]])
+; CHECK-NEXT:    [[START_1:%.*]] = add i8 [[START]], 1
+; CHECK-NEXT:    [[T_1:%.*]] = icmp slt i8 [[START_1]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[T_1]])
+; CHECK-NEXT:    [[START_2:%.*]] = add i8 [[START]], 2
+; CHECK-NEXT:    [[T_2:%.*]] = icmp slt i8 [[START_2]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[T_2]])
+; CHECK-NEXT:    [[START_3:%.*]] = add i8 [[START]], 3
+; CHECK-NEXT:    [[T_3:%.*]] = icmp slt i8 [[START_3]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[T_3]])
+; CHECK-NEXT:    [[START_4:%.*]] = add i8 [[START]], 4
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i8 [[START_4]], [[HIGH]]
+; CHECK-NEXT:    call void @use(i1 [[C_4]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add.ptr.i = add i8 %start, 3
+  %c.1 = icmp sge i8 %add.ptr.i, %high
+  br i1 %c.1, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  ret void
+
+if.end:                                           ; preds = %entry
+  %t.0 = icmp slt i8 %start, %high
+  call void @use(i1 %t.0)
+  %start.1 = add i8 %start, 1
+  %t.1 = icmp slt i8 %start.1, %high
+  call void @use(i1 %t.1)
+  %start.2 = add i8 %start, 2
+  %t.2 = icmp slt i8 %start.2, %high
+  call void @use(i1 %t.2)
+  %start.3 = add i8 %start, 3
+  %t.3 = icmp slt i8 %start.3, %high
+  call void @use(i1 %t.3)
+  %start.4 = add i8 %start, 4
+  %c.4 = icmp slt i8 %start.4, %high
+  call void @use(i1 %c.4)
+  ret void
+}
+
 define void @test.not.uge.ule(i8 %start, i8 %low, i8 %high) {
 ; CHECK-LABEL: @test.not.uge.ule(
 ; CHECK-NEXT:  entry:
