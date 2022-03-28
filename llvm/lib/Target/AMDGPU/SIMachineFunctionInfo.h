@@ -421,8 +421,6 @@ private:
   // Pointer to where the ABI inserts special kernel arguments separate from the
   // user arguments. This is an offset from the KernargSegmentPtr.
   bool ImplicitArgPtr : 1;
-  bool HostcallPtr : 1;
-  bool HeapPtr : 1;
 
   bool MayNeedAGPRs : 1;
 
@@ -696,14 +694,6 @@ public:
 
   bool hasImplicitArgPtr() const {
     return ImplicitArgPtr;
-  }
-
-  bool hasHostcallPtr() const {
-    return HostcallPtr;
-  }
-
-  bool hasHeapPtr () const {
-    return HeapPtr;
   }
 
   bool hasImplicitBufferPtr() const {
