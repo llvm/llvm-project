@@ -12,6 +12,7 @@ add_flang_unittest(FlangRuntimeTests
   Namelist.cpp
   Numeric.cpp
   NumericalFormatTest.cpp
+  Pointer.cpp
   Ragged.cpp
   Random.cpp
   Reduction.cpp

@@ -146,8 +146,8 @@ int Descriptor::Allocate() {
   return 0;
 }
 
-int Descriptor::Destroy(bool finalize) {
-  if (raw_.attribute == CFI_attribute_pointer) {
+int Descriptor::Destroy(bool finalize, bool destroyPointers) {
+  if (!destroyPointers && raw_.attribute == CFI_attribute_pointer) {
     return StatOk;
   } else {
     if (auto *addendum{Addendum()}) {
