@@ -448,7 +448,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
     return error(instrprof_error::bad_header);
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = createSymtab(*NewSymtab.get()))
+  if (Error E = createSymtab(*NewSymtab))
     return E;
 
   Symtab = std::move(NewSymtab);
@@ -1002,16 +1002,16 @@ Error IndexedInstrProfReader::readHeader() {
 }
 
 InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
-  if (Symtab.get())
-    return *Symtab.get();
+  if (Symtab)
+    return *Symtab;
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = Index->populateSymtab(*NewSymtab.get())) {
+  if (Error E = Index->populateSymtab(*NewSymtab)) {
     consumeError(error(InstrProfError::take(std::move(E))));
   }
 
   Symtab = std::move(NewSymtab);
-  return *Symtab.get();
+  return *Symtab;
 }
 
 Expected<InstrProfRecord>
