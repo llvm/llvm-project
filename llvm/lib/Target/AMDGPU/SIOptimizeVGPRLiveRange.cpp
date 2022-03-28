@@ -112,8 +112,10 @@ public:
                             SmallVectorImpl<Register> &CandidateRegs) const;
 
   void collectWaterfallCandidateRegisters(
-      MachineBasicBlock *Loop,
-      SmallSetVector<Register, 16> &CandidateRegs) const;
+      MachineBasicBlock *LoopHeader, MachineBasicBlock *LoopEnd,
+      SmallSetVector<Register, 16> &CandidateRegs,
+      SmallSetVector<MachineBasicBlock *, 2> &Blocks,
+      SmallVectorImpl<MachineInstr *> &Instructions) const;
 
   void findNonPHIUsesInBlock(Register Reg, MachineBasicBlock *MBB,
                              SmallVectorImpl<MachineInstr *> &Uses) const;
@@ -131,7 +133,10 @@ public:
                     MachineBasicBlock *Flow, MachineBasicBlock *Endif,
                     SmallSetVector<MachineBasicBlock *, 16> &ElseBlocks) const;
 
-  void optimizeWaterfallLiveRange(Register Reg, MachineBasicBlock *If) const;
+  void optimizeWaterfallLiveRange(
+      Register Reg, MachineBasicBlock *LoopHeader,
+      SmallSetVector<MachineBasicBlock *, 2> &LoopBlocks,
+      SmallVectorImpl<MachineInstr *> &Instructions) const;
 
   SIOptimizeVGPRLiveRange() : MachineFunctionPass(ID) {}
 
@@ -323,12 +328,30 @@ void SIOptimizeVGPRLiveRange::collectCandidateRegisters(
 /// Collect the registers used in the waterfall loop block that are defined
 /// before.
 void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
-    MachineBasicBlock *Loop,
-    SmallSetVector<Register, 16> &CandidateRegs) const {
+    MachineBasicBlock *LoopHeader, MachineBasicBlock *LoopEnd,
+    SmallSetVector<Register, 16> &CandidateRegs,
+    SmallSetVector<MachineBasicBlock *, 2> &Blocks,
+    SmallVectorImpl<MachineInstr *> &Instructions) const {
 
-  for (auto &MI : Loop->instrs()) {
-    if (MI.isDebugInstr())
-      continue;
+  // Collect loop instructions, potentially spanning multiple blocks
+  auto *MBB = LoopHeader;
+  for (;;) {
+    Blocks.insert(MBB);
+    for (auto &MI : *MBB) {
+      if (MI.isDebugInstr())
+        continue;
+      Instructions.push_back(&MI);
+    }
+    if (MBB == LoopEnd)
+      break;
+    assert(MBB->pred_size() == 1 ||
+           (MBB == LoopHeader && MBB->pred_size() == 2));
+    assert(MBB->succ_size() == 1);
+    MBB = *MBB->succ_begin();
+  }
+
+  for (auto *I : Instructions) {
+    auto &MI = *I;
 
     for (auto &MO : MI.operands()) {
       if (!MO.isReg() || !MO.getReg() || MO.isDef())
@@ -340,16 +363,17 @@ void SIOptimizeVGPRLiveRange::collectWaterfallCandidateRegisters(
         continue;
 
       if (MO.readsReg()) {
-        const MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
+        MachineBasicBlock *DefMBB = MRI->getVRegDef(MOReg)->getParent();
         // Make sure the value is defined before the LOOP block
-        if (DefMBB != Loop && !CandidateRegs.contains(MOReg)) {
+        if (!Blocks.contains(DefMBB) && !CandidateRegs.contains(MOReg)) {
           // If the variable is used after the loop, the register coalescer will
           // merge the newly created register and remove the phi node again.
           // Just do nothing in that case.
           LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(MOReg);
           bool IsUsed = false;
-          for (auto *Succ : Loop->successors()) {
-            if (Succ != Loop && OldVarInfo.isLiveIn(*Succ, MOReg, *MRI)) {
+          for (auto *Succ : LoopEnd->successors()) {
+            if (!Blocks.contains(Succ) &&
+                OldVarInfo.isLiveIn(*Succ, MOReg, *MRI)) {
               IsUsed = true;
               break;
             }
@@ -513,7 +537,9 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
 }
 
 void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
-    Register Reg, MachineBasicBlock *Loop) const {
+    Register Reg, MachineBasicBlock *LoopHeader,
+    SmallSetVector<MachineBasicBlock *, 2> &Blocks,
+    SmallVectorImpl<MachineInstr *> &Instructions) const {
   // Insert a new PHI, marking the value from the last loop iteration undef.
   LLVM_DEBUG(dbgs() << "Optimizing " << printReg(Reg, TRI) << '\n');
   const auto *RC = MRI->getRegClass(Reg);
@@ -525,15 +551,16 @@ void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
   for (auto &O : make_early_inc_range(MRI->use_operands(Reg))) {
     auto *UseMI = O.getParent();
     auto *UseBlock = UseMI->getParent();
-    // Replace uses in Loop block
-    if (UseBlock == Loop)
+    // Replace uses in Loop blocks
+    if (Blocks.contains(UseBlock))
       O.setReg(NewReg);
   }
 
-  MachineInstrBuilder PHI = BuildMI(*Loop, Loop->getFirstNonPHI(), DebugLoc(),
-                                    TII->get(TargetOpcode::PHI), NewReg);
-  for (auto *Pred : Loop->predecessors()) {
-    if (Pred == Loop)
+  MachineInstrBuilder PHI =
+      BuildMI(*LoopHeader, LoopHeader->getFirstNonPHI(), DebugLoc(),
+              TII->get(TargetOpcode::PHI), NewReg);
+  for (auto *Pred : LoopHeader->predecessors()) {
+    if (Blocks.contains(Pred))
       PHI.addReg(UndefReg, RegState::Undef).addMBB(Pred);
     else
       PHI.addReg(Reg).addMBB(Pred);
@@ -542,21 +569,36 @@ void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
   LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
   LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
 
-  // collectWaterfallCandidateRegisters only collects registers that are dead
-  // after the loop. So we know that the old reg is not live throughout the
-  // whole block anymore.
-  OldVarInfo.AliveBlocks.reset(Loop->getNumber());
-
-  // Mark the last use as kill
-  for (auto &MI : reverse(Loop->instrs())) {
-    if (MI.readsRegister(NewReg, TRI)) {
-      MI.addRegisterKilled(NewReg, TRI);
-      NewVarInfo.Kills.push_back(&MI);
+  // Find last use and mark as kill
+  MachineInstr *Kill = nullptr;
+  for (auto *MI : reverse(Instructions)) {
+    if (MI->readsRegister(NewReg, TRI)) {
+      MI->addRegisterKilled(NewReg, TRI);
+      NewVarInfo.Kills.push_back(MI);
+      Kill = MI;
       break;
     }
   }
-  assert(!NewVarInfo.Kills.empty() &&
-         "Failed to find last usage of register in loop");
+  assert(Kill && "Failed to find last usage of register in loop");
+
+  MachineBasicBlock *KillBlock = Kill->getParent();
+  bool PostKillBlock = false;
+  for (auto *Block : Blocks) {
+    auto BBNum = Block->getNumber();
+
+    // collectWaterfallCandidateRegisters only collects registers that are dead
+    // after the loop. So we know that the old reg is no longer live throughout
+    // the waterfall loop.
+    OldVarInfo.AliveBlocks.reset(BBNum);
+
+    // The new register is live up to (and including) the block that kills it.
+    PostKillBlock |= (Block == KillBlock);
+    if (PostKillBlock) {
+      NewVarInfo.AliveBlocks.reset(BBNum);
+    } else if (Block != LoopHeader) {
+      NewVarInfo.AliveBlocks.set(BBNum);
+    }
+  }
 }
 
 char SIOptimizeVGPRLiveRange::ID = 0;
@@ -620,15 +662,22 @@ bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
         for (auto Reg : CandidateRegs)
           optimizeLiveRange(Reg, &MBB, IfTarget, Endif, ElseBlocks);
       } else if (MI.getOpcode() == AMDGPU::SI_WATERFALL_LOOP) {
+        auto *LoopHeader = MI.getOperand(0).getMBB();
+        auto *LoopEnd = &MBB;
+
         LLVM_DEBUG(dbgs() << "Checking Waterfall loop: "
-                          << printMBBReference(MBB) << '\n');
+                          << printMBBReference(*LoopHeader) << '\n');
 
         SmallSetVector<Register, 16> CandidateRegs;
-        collectWaterfallCandidateRegisters(&MBB, CandidateRegs);
+        SmallVector<MachineInstr *, 16> Instructions;
+        SmallSetVector<MachineBasicBlock *, 2> Blocks;
+
+        collectWaterfallCandidateRegisters(LoopHeader, LoopEnd, CandidateRegs,
+                                           Blocks, Instructions);
         MadeChange |= !CandidateRegs.empty();
         // Now we are safe to optimize.
         for (auto Reg : CandidateRegs)
-          optimizeWaterfallLiveRange(Reg, &MBB);
+          optimizeWaterfallLiveRange(Reg, LoopHeader, Blocks, Instructions);
       }
     }
   }

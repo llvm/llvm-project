@@ -172,7 +172,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.2:
-  ; UNPACKED-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; UNPACKED-NEXT:   successors: %bb.3(0x80000000)
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]].sub0, implicit $exec
   ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY10]].sub1, implicit $exec
@@ -185,16 +185,20 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; UNPACKED-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
   ; UNPACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; UNPACKED-NEXT: {{  $}}
+  ; UNPACKED-NEXT: bb.3:
+  ; UNPACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
+  ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   BUFFER_STORE_FORMAT_D16_XYZW_gfx80_OFFEN_exact [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE4]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s16>), align 1, addrspace 4)
   ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT: bb.3:
-  ; UNPACKED-NEXT:   successors: %bb.4(0x80000000)
+  ; UNPACKED-NEXT: bb.4:
+  ; UNPACKED-NEXT:   successors: %bb.5(0x80000000)
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT: bb.4:
+  ; UNPACKED-NEXT: bb.5:
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ; PACKED-LABEL: name: raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_v4f16
   ; PACKED: bb.1 (%ir-block.0):
@@ -216,7 +220,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.2:
-  ; PACKED-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; PACKED-NEXT:   successors: %bb.3(0x80000000)
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]].sub0, implicit $exec
   ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY8]].sub1, implicit $exec
@@ -229,16 +233,20 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; PACKED-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
   ; PACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; PACKED-NEXT: {{  $}}
+  ; PACKED-NEXT: bb.3:
+  ; PACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
+  ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   BUFFER_STORE_FORMAT_D16_XYZW_OFFEN_exact [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE4]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s16>), align 1, addrspace 4)
   ; PACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; PACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT: bb.3:
-  ; PACKED-NEXT:   successors: %bb.4(0x80000000)
+  ; PACKED-NEXT: bb.4:
+  ; PACKED-NEXT:   successors: %bb.5(0x80000000)
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT: bb.4:
+  ; PACKED-NEXT: bb.5:
   ; PACKED-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
   ret void
@@ -469,7 +477,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT: bb.2:
-  ; UNPACKED-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; UNPACKED-NEXT:   successors: %bb.3(0x80000000)
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]].sub0, implicit $exec
   ; UNPACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY11]].sub1, implicit $exec
@@ -482,16 +490,20 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; UNPACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; UNPACKED-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
   ; UNPACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; UNPACKED-NEXT: {{  $}}
+  ; UNPACKED-NEXT: bb.3:
+  ; UNPACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
+  ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   BUFFER_STORE_FORMAT_D16_XYZW_gfx80_OFFEN_exact [[REG_SEQUENCE1]], %13, [[REG_SEQUENCE4]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s16>), align 1, addrspace 4)
   ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT: bb.3:
-  ; UNPACKED-NEXT:   successors: %bb.4(0x80000000)
+  ; UNPACKED-NEXT: bb.4:
+  ; UNPACKED-NEXT:   successors: %bb.5(0x80000000)
   ; UNPACKED-NEXT: {{  $}}
   ; UNPACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT: bb.4:
+  ; UNPACKED-NEXT: bb.5:
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ; PACKED-LABEL: name: raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffset__sgpr_soffset_v4f16_add_4096
   ; PACKED: bb.1 (%ir-block.0):
@@ -516,7 +528,7 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT: bb.2:
-  ; PACKED-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
+  ; PACKED-NEXT:   successors: %bb.3(0x80000000)
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]].sub0, implicit $exec
   ; PACKED-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[COPY9]].sub1, implicit $exec
@@ -529,16 +541,20 @@ define amdgpu_ps void @raw_buffer_store_format__vgpr_rsrc__vgpr_val__vgpr_voffse
   ; PACKED-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
   ; PACKED-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1, [[V_READFIRSTLANE_B32_2]], %subreg.sub2, [[V_READFIRSTLANE_B32_3]], %subreg.sub3
   ; PACKED-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+  ; PACKED-NEXT: {{  $}}
+  ; PACKED-NEXT: bb.3:
+  ; PACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
+  ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   BUFFER_STORE_FORMAT_D16_XYZW_OFFEN_exact [[REG_SEQUENCE1]], %13, [[REG_SEQUENCE4]], [[COPY7]], 0, 0, 0, 0, implicit $exec :: (dereferenceable store (<4 x s16>), align 1, addrspace 4)
   ; PACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; PACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT: bb.3:
-  ; PACKED-NEXT:   successors: %bb.4(0x80000000)
+  ; PACKED-NEXT: bb.4:
+  ; PACKED-NEXT:   successors: %bb.5(0x80000000)
   ; PACKED-NEXT: {{  $}}
   ; PACKED-NEXT:   $exec = S_MOV_B64_term [[S_MOV_B64_]]
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT: bb.4:
+  ; PACKED-NEXT: bb.5:
   ; PACKED-NEXT:   S_ENDPGM 0
   %voffset.add = add i32 %voffset, 4096
   call void @llvm.amdgcn.raw.buffer.store.format.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset.add, i32 %soffset, i32 0)
