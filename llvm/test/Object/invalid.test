@@ -671,9 +671,10 @@ Sections:
 
 ## Check the case when the e_phoff field is invalid.
 # RUN: yaml2obj --docnum=31 %s -o %t31
-# RUN: not llvm-objdump --private-headers %t31 2>&1 | FileCheck -DFILE=%t31 %s --check-prefix=INVALID-PHOFF
+# RUN: llvm-objdump --private-headers %t31 2>&1 | FileCheck -DFILE=%t31 %s --check-prefix=INVALID-PHOFF
 
-# INVALID-PHOFF: error: '[[FILE]]': program headers are longer than binary of size 280: e_phoff = 0xffffff, e_phnum = 0, e_phentsize = 0
+# INVALID-PHOFF: warning: '[[FILE]]': program headers are longer than binary of size 280: e_phoff = 0xffffff, e_phnum = 0, e_phentsize = 0
+# INVALID-PHOFF-EMPTY:
 
 --- !ELF
 FileHeader:
