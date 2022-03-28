@@ -116,6 +116,7 @@ static_library("Support") {
     "RISCVAttributeParser.cpp",
     "RISCVAttributes.cpp",
     "RISCVISAInfo.cpp",
+    "RISCVVIntrinsicUtils.cpp",
     "RWMutex.cpp",
     "RandomNumberGenerator.cpp",
     "Regex.cpp",
