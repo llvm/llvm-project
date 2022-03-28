@@ -412,10 +412,10 @@ loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
   return std::make_pair(std::move(Stream), Headers);
 }
 
-static std::vector<std::string> getSectionNames(PDBFile &File) {
+static Expected<std::vector<std::string>> getSectionNames(PDBFile &File) {
   auto ExpectedHeaders = loadSectionHeaders(File, DbgHeaderType::SectionHdr);
   if (!ExpectedHeaders)
-    return {};
+    return ExpectedHeaders.takeError();
 
   std::unique_ptr<MappedBlockStream> Stream;
   ArrayRef<object::coff_section> Headers;
@@ -485,7 +485,10 @@ Error DumpOutputStyle::dumpModules() {
       [&](uint32_t Modi, const SymbolGroup &Strings) -> Error {
         auto Desc = Modules.getModuleDescriptor(Modi);
         if (opts::dump::DumpSectionContribs) {
-          std::vector<std::string> Sections = getSectionNames(getPdb());
+          auto SectionsOrErr = getSectionNames(getPdb());
+          if (!SectionsOrErr)
+            return SectionsOrErr.takeError();
+          ArrayRef<std::string> Sections = *SectionsOrErr;
           dumpSectionContrib(P, Desc.getSectionContrib(), Sections, 0);
         }
         P.formatLine("Obj: `{0}`: ", Desc.getObjFileName());
@@ -1840,8 +1843,11 @@ Error DumpOutputStyle::dumpSectionContribs() {
     ArrayRef<std::string> Names;
   };
 
-  std::vector<std::string> Names = getSectionNames(getPdb());
-  Visitor V(P, makeArrayRef(Names));
+  auto NamesOrErr = getSectionNames(getPdb());
+  if (!NamesOrErr)
+    return NamesOrErr.takeError();
+  ArrayRef<std::string> Names = *NamesOrErr;
+  Visitor V(P, Names);
   Dbi.visitSectionContributions(V);
   return Error::success();
 }
