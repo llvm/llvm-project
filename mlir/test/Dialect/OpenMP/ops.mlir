@@ -59,7 +59,7 @@ func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : si32) 
   // CHECK: omp.parallel num_threads(%{{.*}} : si32) allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
     "omp.parallel"(%num_threads, %data_var, %data_var) ({
       omp.terminator
-    }) {operand_segment_sizes = dense<[0,1,1,1]>: vector<4xi32>} : (si32, memref<i32>, memref<i32>) -> ()
+    }) {operand_segment_sizes = dense<[0,1,1,1,0]> : vector<5xi32>} : (si32, memref<i32>, memref<i32>) -> ()
 
   // CHECK: omp.barrier
     omp.barrier
@@ -68,22 +68,22 @@ func @omp_parallel(%data_var : memref<i32>, %if_cond : i1, %num_threads : si32) 
   // CHECK: omp.parallel if(%{{.*}}) allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
     "omp.parallel"(%if_cond, %data_var, %data_var) ({
       omp.terminator
-    }) {operand_segment_sizes = dense<[1,0,1,1]> : vector<4xi32>} : (i1, memref<i32>, memref<i32>) -> ()
+    }) {operand_segment_sizes = dense<[1,0,1,1,0]> : vector<5xi32>} : (i1, memref<i32>, memref<i32>) -> ()
 
   // test without allocate
   // CHECK: omp.parallel if(%{{.*}}) num_threads(%{{.*}} : si32)
     "omp.parallel"(%if_cond, %num_threads) ({
       omp.terminator
-    }) {operand_segment_sizes = dense<[1,1,0,0]> : vector<4xi32>} : (i1, si32) -> ()
+    }) {operand_segment_sizes = dense<[1,1,0,0,0]> : vector<5xi32>} : (i1, si32) -> ()
 
     omp.terminator
-  }) {operand_segment_sizes = dense<[1,1,1,1]> : vector<4xi32>, proc_bind_val = #omp<"procbindkind spread">} : (i1, si32, memref<i32>, memref<i32>) -> ()
+  }) {operand_segment_sizes = dense<[1,1,1,1,0]> : vector<5xi32>, proc_bind_val = #omp<"procbindkind spread">} : (i1, si32, memref<i32>, memref<i32>) -> ()
 
   // test with multiple parameters for single variadic argument
   // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
   "omp.parallel" (%data_var, %data_var) ({
     omp.terminator
-  }) {operand_segment_sizes = dense<[0,0,1,1]> : vector<4xi32>} : (memref<i32>, memref<i32>) -> ()
+  }) {operand_segment_sizes = dense<[0,0,1,1,0]> : vector<5xi32>} : (memref<i32>, memref<i32>) -> ()
 
   return
 }
@@ -407,7 +407,8 @@ atomic {
   omp.yield
 }
 
-func @reduction(%lb : index, %ub : index, %step : index) {
+// CHECK-LABEL: func @wsloop_reduction
+func @wsloop_reduction(%lb : index, %ub : index, %step : index) {
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
   // CHECK: reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>)
@@ -417,6 +418,65 @@ func @reduction(%lb : index, %ub : index, %step : index) {
     // CHECK: omp.reduction %{{.+}}, %{{.+}}
     omp.reduction %1, %0 : !llvm.ptr<f32>
     omp.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @parallel_reduction
+func @parallel_reduction() {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: omp.parallel reduction(@add_f32 -> {{.+}} : !llvm.ptr<f32>)
+  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr<f32>) {
+    %1 = arith.constant 2.0 : f32
+    // CHECK: omp.reduction %{{.+}}, %{{.+}}
+    omp.reduction %1, %0 : !llvm.ptr<f32>
+    omp.terminator
+  }
+  return
+}
+
+// CHECK: func @parallel_wsloop_reduction
+func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: omp.parallel reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>) {
+  omp.parallel reduction(@add_f32 -> %0 : !llvm.ptr<f32>) {
+    // CHECK: omp.wsloop for (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}})
+    omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+      %1 = arith.constant 2.0 : f32
+      // CHECK: omp.reduction %{{.+}}, %{{.+}} : !llvm.ptr<f32>
+      omp.reduction %1, %0 : !llvm.ptr<f32>
+      // CHECK: omp.yield
+      omp.yield
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func @sections_reduction
+func @sections_reduction() {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: omp.sections reduction(@add_f32 -> {{.+}} : !llvm.ptr<f32>)
+  omp.sections reduction(@add_f32 -> %0 : !llvm.ptr<f32>) {
+    // CHECK: omp.section
+    omp.section {
+      %1 = arith.constant 2.0 : f32
+      // CHECK: omp.reduction %{{.+}}, %{{.+}}
+      omp.reduction %1, %0 : !llvm.ptr<f32>
+      omp.terminator
+    }
+    // CHECK: omp.section
+    omp.section {
+      %1 = arith.constant 3.0 : f32
+      // CHECK: omp.reduction %{{.+}}, %{{.+}}
+      omp.reduction %1, %0 : !llvm.ptr<f32>
+      omp.terminator
+    }
+    omp.terminator
   }
   return
 }
@@ -438,15 +498,71 @@ combiner {
 }
 // CHECK-NOT: atomic
 
-func @reduction2(%lb : index, %ub : index, %step : index) {
+// CHECK-LABEL: func @wsloop_reduction2
+func @wsloop_reduction2(%lb : index, %ub : index, %step : index) {
   %0 = memref.alloca() : memref<1xf32>
-  // CHECK: reduction
+  // CHECK: omp.wsloop reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
   omp.wsloop reduction(@add2_f32 -> %0 : memref<1xf32>)
   for (%iv) : index = (%lb) to (%ub) step (%step) {
     %1 = arith.constant 2.0 : f32
     // CHECK: omp.reduction
     omp.reduction %1, %0 : memref<1xf32>
     omp.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func @parallel_reduction2
+func @parallel_reduction2() {
+  %0 = memref.alloca() : memref<1xf32>
+  // CHECK: omp.parallel reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
+  omp.parallel reduction(@add2_f32 -> %0 : memref<1xf32>) {
+    %1 = arith.constant 2.0 : f32
+    // CHECK: omp.reduction
+    omp.reduction %1, %0 : memref<1xf32>
+    omp.terminator
+  }
+  return
+}
+
+// CHECK: func @parallel_wsloop_reduction2
+func @parallel_wsloop_reduction2(%lb : index, %ub : index, %step : index) {
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: omp.parallel reduction(@add2_f32 -> %{{.+}} : !llvm.ptr<f32>) {
+  omp.parallel reduction(@add2_f32 -> %0 : !llvm.ptr<f32>) {
+    // CHECK: omp.wsloop for (%{{.+}}) : index = (%{{.+}}) to (%{{.+}}) step (%{{.+}})
+    omp.wsloop for (%iv) : index = (%lb) to (%ub) step (%step) {
+      %1 = arith.constant 2.0 : f32
+      // CHECK: omp.reduction %{{.+}}, %{{.+}} : !llvm.ptr<f32>
+      omp.reduction %1, %0 : !llvm.ptr<f32>
+      // CHECK: omp.yield
+      omp.yield
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func @sections_reduction2
+func @sections_reduction2() {
+  %0 = memref.alloca() : memref<1xf32>
+  // CHECK: omp.sections reduction(@add2_f32 -> %{{.+}} : memref<1xf32>)
+  omp.sections reduction(@add2_f32 -> %0 : memref<1xf32>) {
+    omp.section {
+      %1 = arith.constant 2.0 : f32
+      // CHECK: omp.reduction
+      omp.reduction %1, %0 : memref<1xf32>
+      omp.terminator
+    }
+    omp.section {
+      %1 = arith.constant 2.0 : f32
+      // CHECK: omp.reduction
+      omp.reduction %1, %0 : memref<1xf32>
+      omp.terminator
+    }
+    omp.terminator
   }
   return
 }

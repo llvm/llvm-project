@@ -42,8 +42,8 @@
 
 using namespace llvm;
 
-AArch64RegisterBankInfo::AArch64RegisterBankInfo(const TargetRegisterInfo &TRI)
-    : AArch64GenRegisterBankInfo() {
+AArch64RegisterBankInfo::AArch64RegisterBankInfo(
+    const TargetRegisterInfo &TRI) {
   static llvm::once_flag InitializeRegisterBankFlag;
 
   static auto InitializeRegisterBankOnce = [&]() {
