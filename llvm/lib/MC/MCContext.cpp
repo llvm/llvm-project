@@ -917,9 +917,9 @@ void MCContext::finalizeDwarfSections(MCStreamer &MCOS) {
 }
 
 CodeViewContext &MCContext::getCVContext() {
-  if (!CVContext.get())
+  if (!CVContext)
     CVContext.reset(new CodeViewContext);
-  return *CVContext.get();
+  return *CVContext;
 }
 
 //===----------------------------------------------------------------------===//
