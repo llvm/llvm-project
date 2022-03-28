@@ -23,7 +23,7 @@ def Vector_Dialect : Dialect {
   let cppNamespace = "::mlir::vector";
   let hasConstantMaterializer = 1;
   let dependentDialects = ["arith::ArithmeticDialect"];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 // Base class for Vector dialect ops.

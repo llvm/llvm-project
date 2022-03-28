@@ -2136,26 +2136,11 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
   return true;
 }
 
-static QualType getDecayedSourceLocExprType(const ASTContext &Ctx,
-                                            SourceLocExpr::IdentKind Kind) {
-  switch (Kind) {
-  case SourceLocExpr::File:
-  case SourceLocExpr::Function: {
-    QualType ArrTy = Ctx.getStringLiteralArrayType(Ctx.CharTy, 0);
-    return Ctx.getPointerType(ArrTy->getAsArrayTypeUnsafe()->getElementType());
-  }
-  case SourceLocExpr::Line:
-  case SourceLocExpr::Column:
-    return Ctx.UnsignedIntTy;
-  }
-  llvm_unreachable("unhandled case");
-}
-
 SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, IdentKind Kind,
-                             SourceLocation BLoc, SourceLocation RParenLoc,
+                             QualType ResultTy, SourceLocation BLoc,
+                             SourceLocation RParenLoc,
                              DeclContext *ParentContext)
-    : Expr(SourceLocExprClass, getDecayedSourceLocExprType(Ctx, Kind),
-           VK_PRValue, OK_Ordinary),
+    : Expr(SourceLocExprClass, ResultTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext) {
   SourceLocExprBits.Kind = Kind;
   setDependence(ExprDependence::None);
@@ -2171,6 +2156,8 @@ StringRef SourceLocExpr::getBuiltinStr() const {
     return "__builtin_LINE";
   case Column:
     return "__builtin_COLUMN";
+  case SourceLocStruct:
+    return "__builtin_source_location";
   }
   llvm_unreachable("unexpected IdentKind!");
 }
@@ -2207,7 +2194,7 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
     return MakeStringLiteral(Path);
   }
   case SourceLocExpr::Function: {
-    const Decl *CurDecl = dyn_cast_or_null<Decl>(Context);
+    const auto *CurDecl = dyn_cast<Decl>(Context);
     return MakeStringLiteral(
         CurDecl ? PredefinedExpr::ComputeName(PredefinedExpr::Function, CurDecl)
                 : std::string(""));
@@ -2219,6 +2206,54 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
     IntVal = getIdentKind() == SourceLocExpr::Line ? PLoc.getLine()
                                                    : PLoc.getColumn();
     return APValue(IntVal);
+  }
+  case SourceLocExpr::SourceLocStruct: {
+    // Fill in a std::source_location::__impl structure, by creating an
+    // artificial file-scoped CompoundLiteralExpr, and returning a pointer to
+    // that.
+    const CXXRecordDecl *ImplDecl = getType()->getPointeeCXXRecordDecl();
+    assert(ImplDecl);
+
+    // Construct an APValue for the __impl struct, and get or create a Decl
+    // corresponding to that. Note that we've already verified that the shape of
+    // the ImplDecl type is as expected.
+
+    APValue Value(APValue::UninitStruct(), 0, 4);
+    for (FieldDecl *F : ImplDecl->fields()) {
+      StringRef Name = F->getName();
+      if (Name == "_M_file_name") {
+        SmallString<256> Path(PLoc.getFilename());
+        Ctx.getLangOpts().remapPathPrefix(Path);
+        Value.getStructField(F->getFieldIndex()) = MakeStringLiteral(Path);
+      } else if (Name == "_M_function_name") {
+        // Note: this emits the PrettyFunction name -- different than what
+        // __builtin_FUNCTION() above returns!
+        const auto *CurDecl = dyn_cast<Decl>(Context);
+        Value.getStructField(F->getFieldIndex()) = MakeStringLiteral(
+            CurDecl && !isa<TranslationUnitDecl>(CurDecl)
+                ? StringRef(PredefinedExpr::ComputeName(
+                      PredefinedExpr::PrettyFunction, CurDecl))
+                : "");
+      } else if (Name == "_M_line") {
+        QualType Ty = F->getType();
+        llvm::APSInt IntVal(Ctx.getIntWidth(Ty),
+                            Ty->hasUnsignedIntegerRepresentation());
+        IntVal = PLoc.getLine();
+        Value.getStructField(F->getFieldIndex()) = APValue(IntVal);
+      } else if (Name == "_M_column") {
+        QualType Ty = F->getType();
+        llvm::APSInt IntVal(Ctx.getIntWidth(Ty),
+                            Ty->hasUnsignedIntegerRepresentation());
+        IntVal = PLoc.getColumn();
+        Value.getStructField(F->getFieldIndex()) = APValue(IntVal);
+      }
+    }
+
+    UnnamedGlobalConstantDecl *GV =
+        Ctx.getUnnamedGlobalConstantDecl(getType()->getPointeeType(), Value);
+
+    return APValue(GV, CharUnits::Zero(), ArrayRef<APValue::LValuePathEntry>{},
+                   false);
   }
   }
   llvm_unreachable("unhandled case");

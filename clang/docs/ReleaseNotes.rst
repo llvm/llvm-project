@@ -105,6 +105,9 @@ Improvements to Clang's diagnostics
 - ``-Wunused-but-set-variable`` now also warns if the variable is only used
   by unary operators.
 
+- ``-Wmisexpect`` warns when the branch weights collected during profiling
+  conflict with those added by ``llvm.expect``.
+
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 - The builtin function __builtin_dump_struct would crash clang when the target 
@@ -192,6 +195,8 @@ C++20 Feature Support
 - No longer attempt to evaluate a consteval UDL function call at runtime when
   it is called through a template instantiation. This fixes
   `Issue 54578 <https://github.com/llvm/llvm-project/issues/54578>`_.
+
+- Implemented `__builtin_source_location()` which enables library support for std::source_location.
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

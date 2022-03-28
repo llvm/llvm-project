@@ -370,6 +370,7 @@ namespace clang {
     void VisitFieldDecl(FieldDecl *FD);
     void VisitMSPropertyDecl(MSPropertyDecl *FD);
     void VisitMSGuidDecl(MSGuidDecl *D);
+    void VisitUnnamedGlobalConstantDecl(UnnamedGlobalConstantDecl *D);
     void VisitTemplateParamObjectDecl(TemplateParamObjectDecl *D);
     void VisitIndirectFieldDecl(IndirectFieldDecl *FD);
     RedeclarableResult VisitVarDeclImpl(VarDecl *D);
@@ -1425,6 +1426,17 @@ void ASTDeclReader::VisitMSGuidDecl(MSGuidDecl *D) {
 
   // Add this GUID to the AST context's lookup structure, and merge if needed.
   if (MSGuidDecl *Existing = Reader.getContext().MSGuidDecls.GetOrInsertNode(D))
+    Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
+}
+
+void ASTDeclReader::VisitUnnamedGlobalConstantDecl(
+    UnnamedGlobalConstantDecl *D) {
+  VisitValueDecl(D);
+  D->Value = Record.readAPValue();
+
+  // Add this to the AST context's lookup structure, and merge if needed.
+  if (UnnamedGlobalConstantDecl *Existing =
+          Reader.getContext().UnnamedGlobalConstantDecls.GetOrInsertNode(D))
     Reader.getContext().setPrimaryMergedDecl(D, Existing->getCanonicalDecl());
 }
 
@@ -3708,6 +3720,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_MS_GUID:
     D = MSGuidDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_UNNAMED_GLOBAL_CONSTANT:
+    D = UnnamedGlobalConstantDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_TEMPLATE_PARAM_OBJECT:
     D = TemplateParamObjectDecl::CreateDeserialized(Context, ID);
