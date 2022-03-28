@@ -673,7 +673,7 @@ static bool includeInSymtab(const Symbol &b) {
       return true;
 
     if (auto *s = dyn_cast<MergeInputSection>(sec))
-      return s->getSectionPiece(d->value)->live;
+      return s->getSectionPiece(d->value).live;
     return sec->isLive();
   }
   return b.used || !config->gcSections;
