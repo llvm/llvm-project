@@ -25,8 +25,8 @@ PadOp mlir::tensor::createPadScalarOp(Type type, Value source, Value pad,
   auto padTensorOp =
       builder.create<PadOp>(loc, type, source, low, high, nofold);
   int rank = padTensorOp.getResultType().getRank();
-  SmallVector<Type, 4> blockArgTypes(rank, builder.getIndexType());
-  SmallVector<Location, 4> blockArgLocs(rank, loc);
+  SmallVector<Type> blockArgTypes(rank, builder.getIndexType());
+  SmallVector<Location> blockArgLocs(rank, loc);
   auto &region = padTensorOp.region();
   // `builder.createBlock` changes the insertion point within the block. Create
   // a guard to reset the insertion point of the builder after it is destroyed.
@@ -36,19 +36,22 @@ PadOp mlir::tensor::createPadScalarOp(Type type, Value source, Value pad,
   return padTensorOp;
 }
 
-PadOp mlir::tensor::createPadHighOp(Type type, Value source, Value pad,
-                                    bool nofold, Location loc, OpBuilder &b) {
-  SmallVector<OpFoldResult, 4> low, high;
-  auto rankedTensorType = type.cast<RankedTensorType>();
-  assert(rankedTensorType.hasStaticShape());
-  for (const auto &en : enumerate(rankedTensorType.getShape())) {
+PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
+                                    Value pad, bool nofold, Location loc,
+                                    OpBuilder &b) {
+  auto zero = b.createOrFold<arith::ConstantIndexOp>(loc, 0);
+  SmallVector<OpFoldResult> low(type.getRank(), zero);
+  SmallVector<OpFoldResult> high(type.getRank(), zero);
+  for (const auto &en : enumerate(type.getShape())) {
+    // Pad only the static dimensions of the result tensor type.
+    if (ShapedType::isDynamic(en.value()))
+      continue;
+    // Compute the padding width.
     AffineExpr d0;
     bindDims(b.getContext(), d0);
     auto dimOp = b.createOrFold<tensor::DimOp>(loc, source, en.index());
-    Value paddingWidth =
-        makeComposedAffineApply(b, loc, en.value() - d0, {dimOp});
-    high.push_back(paddingWidth);
-    low.push_back(b.createOrFold<arith::ConstantIndexOp>(loc, 0));
+    high[en.index()] =
+        makeComposedAffineApply(b, loc, en.value() - d0, {dimOp}).getResult();
   }
   return createPadScalarOp(type, source, pad, low, high, nofold, loc, b);
 }

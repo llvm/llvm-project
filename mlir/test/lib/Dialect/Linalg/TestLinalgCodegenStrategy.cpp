@@ -101,6 +101,10 @@ struct TestLinalgCodegenStrategy
       *this, "padding-values",
       llvm::cl::desc("Operand padding values parsed by the attribute parser."),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
+  ListOption<int64_t> paddingDimensions{
+      *this, "padding-dimensions",
+      llvm::cl::desc("Operation iterator dimensions to pad."),
+      llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
   ListOption<int64_t> packPaddings{
       *this, "pack-paddings", llvm::cl::desc("Operand packing flags."),
       llvm::cl::ZeroOrMore, llvm::cl::MiscFlags::CommaSeparated};
@@ -267,6 +271,8 @@ void TestLinalgCodegenStrategy::runOnOperation() {
 
   LinalgPaddingOptions paddingOptions;
   paddingOptions.setPaddingValues(paddingValueAttributes);
+  paddingOptions.setPaddingDimensions(
+      SmallVector<int64_t>{paddingDimensions.begin(), paddingDimensions.end()});
   paddingOptions.setPackPaddings(
       SmallVector<bool>{packPaddings.begin(), packPaddings.end()});
   paddingOptions.setHoistPaddings(

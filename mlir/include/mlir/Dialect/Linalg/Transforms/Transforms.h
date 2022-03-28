@@ -560,6 +560,12 @@ struct LinalgPaddingOptions {
     paddingValues.assign(pv.begin(), pv.end());
     return *this;
   }
+  /// A list of iterator dimensions to pad.
+  SmallVector<int64_t> paddingDimensions;
+  LinalgPaddingOptions &setPaddingDimensions(ArrayRef<int64_t> pd) {
+    paddingDimensions.assign(pd.begin(), pd.end());
+    return *this;
+  }
   /// A flag for every operand to mark the PadOp as nofold which enables packing
   /// for statically shaped operands.
   SmallVector<bool> packPaddings;
@@ -1217,13 +1223,15 @@ struct PadOpTransformationPattern : public OpRewritePattern<tensor::PadOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Pad the operands of `opToPad` to a static bounding box. Use `paddingValues`
-/// and `packPaddings` to set the padding value and the nofold attribute of the
-/// introduced tensor::PadOps, respectively. Update `paddedOp` to the cloned
-/// statically shaped operation and return the extracted dynamically shaped
-/// results. If padding fails, return failure.
+/// Pad the iterator dimensions `paddingDimensions` of all `opToPad` operands to
+/// a static bounding box. Use `paddingValues` and `packPaddings` to set padding
+/// value and nofold attribute of the created tensor::PadOps, respectively.
+/// Update `paddedOp` to the cloned operation with statically shaped
+/// `paddingDimensions` and return the extracted dynamically shaped results. If
+/// padding fails, return failure.
 FailureOr<SmallVector<Value>>
 rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
+                  ArrayRef<int64_t> paddingDimensions,
                   ArrayRef<Attribute> paddingValues,
                   ArrayRef<bool> packPaddings, LinalgOp &paddedOp);
 
