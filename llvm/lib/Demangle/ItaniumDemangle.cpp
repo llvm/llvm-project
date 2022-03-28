@@ -172,6 +172,10 @@ struct DumpVisitor {
       return printStr("TemplateParamKind::Template");
     }
   }
+  void print(llvm::itanium_demangle::Node::Prec) {
+    // Do nothing, the printing functions handle precedence with parentheses
+    // already.
+  }
 
   void newLine() {
     printStr("\n");

@@ -1782,7 +1782,9 @@ public:
       : Node(KBinaryExpr, Prec_), LHS(LHS_), InfixOperator(InfixOperator_),
         RHS(RHS_) {}
 
-  template<typename Fn> void match(Fn F) const { F(LHS, InfixOperator, RHS); }
+  template <typename Fn> void match(Fn F) const {
+    F(LHS, InfixOperator, RHS, getPrecedence());
+  }
 
   void printLeft(OutputBuffer &OB) const override {
     bool ParenAll = OB.isGtInsideTemplateArgs() && InfixOperator == ">";
