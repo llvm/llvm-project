@@ -493,6 +493,9 @@ class AffineLoadOpBase<string mnemonic, list<Trait> traits = []> :
     }
 
     static StringRef getMapAttrName() { return "map"; }
+
+    // TODO: Remove once prefixing is flipped.
+    operand_range getIndices() { return indices(); }
   }];
 }
 
@@ -856,6 +859,9 @@ class AffineStoreOpBase<string mnemonic, list<Trait> traits = []> :
     }
 
     static StringRef getMapAttrName() { return "map"; }
+
+    // TODO: Remove once prefixing is flipped.
+    operand_range getIndices() { return indices(); }
   }];
 }
 

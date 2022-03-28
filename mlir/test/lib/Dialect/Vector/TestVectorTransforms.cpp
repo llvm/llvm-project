@@ -86,7 +86,7 @@ private:
                                      dstVec.getShape().end());
     }
     if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
-      auto insert = writeOp.vector().getDefiningOp<InsertStridedSliceOp>();
+      auto insert = writeOp.getVector().getDefiningOp<InsertStridedSliceOp>();
       if (!insert)
         return llvm::None;
       ArrayRef<int64_t> shape = insert.getSourceVectorType().getShape();

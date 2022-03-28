@@ -96,7 +96,7 @@ void TransferOptimization::deadStoreOp(vector::TransferWriteOp write) {
                     << "\n");
   llvm::SmallVector<Operation *, 8> reads;
   Operation *firstOverwriteCandidate = nullptr;
-  for (auto *user : write.source().getUsers()) {
+  for (auto *user : write.getSource().getUsers()) {
     if (user == write.getOperation())
       continue;
     if (auto nextWrite = dyn_cast<vector::TransferWriteOp>(user)) {
@@ -163,7 +163,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
                     << "\n");
   SmallVector<Operation *, 8> blockingWrites;
   vector::TransferWriteOp lastwrite = nullptr;
-  for (Operation *user : read.source().getUsers()) {
+  for (Operation *user : read.getSource().getUsers()) {
     if (isa<vector::TransferReadOp>(user))
       continue;
     if (auto write = dyn_cast<vector::TransferWriteOp>(user)) {
@@ -207,7 +207,7 @@ void TransferOptimization::storeToLoadForwarding(vector::TransferReadOp read) {
 
   LLVM_DEBUG(DBGS() << "Forward value from " << *lastwrite.getOperation()
                     << " to: " << *read.getOperation() << "\n");
-  read.replaceAllUsesWith(lastwrite.vector());
+  read.replaceAllUsesWith(lastwrite.getVector());
   opToErase.push_back(read.getOperation());
 }
 
@@ -259,9 +259,9 @@ class TransferReadDropUnitDimsPattern
   LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
                                 PatternRewriter &rewriter) const override {
     auto loc = transferReadOp.getLoc();
-    Value vector = transferReadOp.vector();
+    Value vector = transferReadOp.getVector();
     VectorType vectorType = vector.getType().cast<VectorType>();
-    Value source = transferReadOp.source();
+    Value source = transferReadOp.getSource();
     MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
     // TODO: support tensor types.
     if (!sourceType || !sourceType.hasStaticShape())
@@ -271,7 +271,7 @@ class TransferReadDropUnitDimsPattern
     // TODO: generalize this pattern, relax the requirements here.
     if (transferReadOp.hasOutOfBoundsDim())
       return failure();
-    if (!transferReadOp.permutation_map().isMinorIdentity())
+    if (!transferReadOp.getPermutationMap().isMinorIdentity())
       return failure();
     int reducedRank = getReducedRank(sourceType.getShape());
     if (reducedRank == sourceType.getRank())
@@ -279,7 +279,7 @@ class TransferReadDropUnitDimsPattern
     if (reducedRank != vectorType.getRank())
       return failure(); // This pattern requires the vector shape to match the
                         // reduced source shape.
-    if (llvm::any_of(transferReadOp.indices(),
+    if (llvm::any_of(transferReadOp.getIndices(),
                      [](Value v) { return !isZero(v); }))
       return failure();
     Value reducedShapeSource =
@@ -302,9 +302,9 @@ class TransferWriteDropUnitDimsPattern
   LogicalResult matchAndRewrite(vector::TransferWriteOp transferWriteOp,
                                 PatternRewriter &rewriter) const override {
     auto loc = transferWriteOp.getLoc();
-    Value vector = transferWriteOp.vector();
+    Value vector = transferWriteOp.getVector();
     VectorType vectorType = vector.getType().cast<VectorType>();
-    Value source = transferWriteOp.source();
+    Value source = transferWriteOp.getSource();
     MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
     // TODO: support tensor type.
     if (!sourceType || !sourceType.hasStaticShape())
@@ -314,7 +314,7 @@ class TransferWriteDropUnitDimsPattern
     // TODO: generalize this pattern, relax the requirements here.
     if (transferWriteOp.hasOutOfBoundsDim())
       return failure();
-    if (!transferWriteOp.permutation_map().isMinorIdentity())
+    if (!transferWriteOp.getPermutationMap().isMinorIdentity())
       return failure();
     int reducedRank = getReducedRank(sourceType.getShape());
     if (reducedRank == sourceType.getRank())
@@ -322,7 +322,7 @@ class TransferWriteDropUnitDimsPattern
     if (reducedRank != vectorType.getRank())
       return failure(); // This pattern requires the vector shape to match the
                         // reduced source shape.
-    if (llvm::any_of(transferWriteOp.indices(),
+    if (llvm::any_of(transferWriteOp.getIndices(),
                      [](Value v) { return !isZero(v); }))
       return failure();
     Value reducedShapeSource =
@@ -366,9 +366,9 @@ class FlattenContiguousRowMajorTransferReadPattern
   LogicalResult matchAndRewrite(vector::TransferReadOp transferReadOp,
                                 PatternRewriter &rewriter) const override {
     auto loc = transferReadOp.getLoc();
-    Value vector = transferReadOp.vector();
+    Value vector = transferReadOp.getVector();
     VectorType vectorType = vector.getType().cast<VectorType>();
-    Value source = transferReadOp.source();
+    Value source = transferReadOp.getSource();
     MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
     // Contiguity check is valid on tensors only.
     if (!sourceType)
@@ -386,11 +386,11 @@ class FlattenContiguousRowMajorTransferReadPattern
     // TODO: generalize this pattern, relax the requirements here.
     if (transferReadOp.hasOutOfBoundsDim())
       return failure();
-    if (!transferReadOp.permutation_map().isMinorIdentity())
+    if (!transferReadOp.getPermutationMap().isMinorIdentity())
       return failure();
-    if (transferReadOp.mask())
+    if (transferReadOp.getMask())
       return failure();
-    if (llvm::any_of(transferReadOp.indices(),
+    if (llvm::any_of(transferReadOp.getIndices(),
                      [](Value v) { return !isZero(v); }))
       return failure();
     Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);
@@ -418,9 +418,9 @@ class FlattenContiguousRowMajorTransferWritePattern
   LogicalResult matchAndRewrite(vector::TransferWriteOp transferWriteOp,
                                 PatternRewriter &rewriter) const override {
     auto loc = transferWriteOp.getLoc();
-    Value vector = transferWriteOp.vector();
+    Value vector = transferWriteOp.getVector();
     VectorType vectorType = vector.getType().cast<VectorType>();
-    Value source = transferWriteOp.source();
+    Value source = transferWriteOp.getSource();
     MemRefType sourceType = source.getType().dyn_cast<MemRefType>();
     // Contiguity check is valid on tensors only.
     if (!sourceType)
@@ -438,11 +438,11 @@ class FlattenContiguousRowMajorTransferWritePattern
     // TODO: generalize this pattern, relax the requirements here.
     if (transferWriteOp.hasOutOfBoundsDim())
       return failure();
-    if (!transferWriteOp.permutation_map().isMinorIdentity())
+    if (!transferWriteOp.getPermutationMap().isMinorIdentity())
       return failure();
-    if (transferWriteOp.mask())
+    if (transferWriteOp.getMask())
       return failure();
-    if (llvm::any_of(transferWriteOp.indices(),
+    if (llvm::any_of(transferWriteOp.getIndices(),
                      [](Value v) { return !isZero(v); }))
       return failure();
     Value c0 = rewriter.create<arith::ConstantIndexOp>(loc, 0);

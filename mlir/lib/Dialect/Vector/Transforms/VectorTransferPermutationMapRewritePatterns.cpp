@@ -62,7 +62,7 @@ struct TransferReadPermutationLowering
       return failure();
 
     SmallVector<unsigned> permutation;
-    AffineMap map = op.permutation_map();
+    AffineMap map = op.getPermutationMap();
     if (map.getNumResults() == 0)
       return failure();
     if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
@@ -85,7 +85,7 @@ struct TransferReadPermutationLowering
 
     // Transpose mask operand.
     Value newMask;
-    if (op.mask()) {
+    if (op.getMask()) {
       // Remove unused dims from the permutation map. E.g.:
       // E.g.:  (d0, d1, d2, d3, d4, d5) -> (d5, 0, d3, 0, d2)
       // comp = (d0, d1, d2) -> (d2, 0, d1, 0 d0)
@@ -99,22 +99,23 @@ struct TransferReadPermutationLowering
           maskTransposeIndices.push_back(expr.getPosition());
       }
 
-      newMask = rewriter.create<vector::TransposeOp>(op.getLoc(), op.mask(),
+      newMask = rewriter.create<vector::TransposeOp>(op.getLoc(), op.getMask(),
                                                      maskTransposeIndices);
     }
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.in_bounds() ? transposeInBoundsAttr(
-                             rewriter, op.in_bounds().getValue(), permutation)
-                       : ArrayAttr();
+        op.getInBounds()
+            ? transposeInBoundsAttr(rewriter, op.getInBounds().getValue(),
+                                    permutation)
+            : ArrayAttr();
 
     // Generate new transfer_read operation.
     VectorType newReadType =
         VectorType::get(newVectorShape, op.getVectorType().getElementType());
     Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.source(), op.indices(),
-        AffineMapAttr::get(newMap), op.padding(), newMask, newInBoundsAttr);
+        op.getLoc(), newReadType, op.getSource(), op.getIndices(),
+        AffineMapAttr::get(newMap), op.getPadding(), newMask, newInBoundsAttr);
 
     // Transpose result of transfer_read.
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
@@ -151,7 +152,7 @@ struct TransferWritePermutationLowering
       return failure();
 
     SmallVector<unsigned> permutation;
-    AffineMap map = op.permutation_map();
+    AffineMap map = op.getPermutationMap();
     if (map.isMinorIdentity())
       return failure();
     if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
@@ -169,23 +170,24 @@ struct TransferWritePermutationLowering
                     });
 
     // Transpose mask operand.
-    Value newMask = op.mask() ? rewriter.create<vector::TransposeOp>(
-                                    op.getLoc(), op.mask(), indices)
-                              : Value();
+    Value newMask = op.getMask() ? rewriter.create<vector::TransposeOp>(
+                                       op.getLoc(), op.getMask(), indices)
+                                 : Value();
 
     // Transpose in_bounds attribute.
     ArrayAttr newInBoundsAttr =
-        op.in_bounds() ? transposeInBoundsAttr(
-                             rewriter, op.in_bounds().getValue(), permutation)
-                       : ArrayAttr();
+        op.getInBounds()
+            ? transposeInBoundsAttr(rewriter, op.getInBounds().getValue(),
+                                    permutation)
+            : ArrayAttr();
 
     // Generate new transfer_write operation.
-    Value newVec =
-        rewriter.create<vector::TransposeOp>(op.getLoc(), op.vector(), indices);
+    Value newVec = rewriter.create<vector::TransposeOp>(
+        op.getLoc(), op.getVector(), indices);
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        op, newVec, op.source(), op.indices(), AffineMapAttr::get(newMap),
+        op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
         newMask, newInBoundsAttr);
 
     return success();
@@ -209,7 +211,7 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     if (op.getTransferRank() == 0)
       return failure();
 
-    AffineMap map = op.permutation_map();
+    AffineMap map = op.getPermutationMap();
     unsigned numLeadingBroadcast = 0;
     for (auto expr : map.getResults()) {
       auto dimExpr = expr.dyn_cast<AffineConstantExpr>();
@@ -237,12 +239,12 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     if (reducedShapeRank == 0) {
       Value newRead;
       if (op.getShapedType().isa<TensorType>()) {
-        newRead = rewriter.create<tensor::ExtractOp>(op.getLoc(), op.source(),
-                                                     op.indices());
+        newRead = rewriter.create<tensor::ExtractOp>(
+            op.getLoc(), op.getSource(), op.getIndices());
       } else {
         newRead = rewriter.create<memref::LoadOp>(
-            op.getLoc(), originalVecType.getElementType(), op.source(),
-            op.indices());
+            op.getLoc(), originalVecType.getElementType(), op.getSource(),
+            op.getIndices());
       }
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
                                                        newRead);
@@ -256,13 +258,14 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
     VectorType newReadType =
         VectorType::get(newShape, originalVecType.getElementType());
     ArrayAttr newInBoundsAttr =
-        op.in_bounds()
+        op.getInBounds()
             ? rewriter.getArrayAttr(
-                  op.in_boundsAttr().getValue().take_back(reducedShapeRank))
+                  op.getInBoundsAttr().getValue().take_back(reducedShapeRank))
             : ArrayAttr();
     Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.source(), op.indices(),
-        AffineMapAttr::get(newMap), op.padding(), op.mask(), newInBoundsAttr);
+        op.getLoc(), newReadType, op.getSource(), op.getIndices(),
+        AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
+        newInBoundsAttr);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(op, originalVecType,
                                                      newRead);
     return success();
