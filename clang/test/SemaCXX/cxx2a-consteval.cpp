@@ -721,3 +721,27 @@ T<int> t; // expected-error {{call to consteval function 'NamespaceScopeConsteva
              expected-note {{subobject of type 'int' is not initialized}}
 
 } // namespace NamespaceScopeConsteval
+
+namespace Issue54578 {
+// We expect the user-defined literal to be resovled entirely at compile time
+// despite being instantiated through a template.
+inline consteval unsigned char operator""_UC(const unsigned long long n) {
+  return static_cast<unsigned char>(n);
+}
+
+inline constexpr char f1(const auto octet) {
+  return 4_UC;
+}
+
+template <typename Ty>
+inline constexpr char f2(const Ty octet) {
+  return 4_UC;
+}
+
+void test() {
+  static_assert(f1('a') == 4);
+  static_assert(f2('a') == 4);
+  constexpr int c = f1('a') + f2('a');
+  static_assert(c == 8);
+}
+}
