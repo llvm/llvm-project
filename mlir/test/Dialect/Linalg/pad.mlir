@@ -1,7 +1,8 @@
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32,0.:f32 pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=MATMUL
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad padding-values=0.:f32,1.:f32 pack-paddings=1,1 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad padding-values=0.:f32,0.:f32 pack-paddings=1,0 run-enable-pass=false" -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32,0.:f32 pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL-MATMUL
-// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32 pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=INPUTS-ONLY
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32,0.:f32 padding-dimensions=0,1,2 pack-paddings=1,1,0 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=MATMUL
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad padding-values=0.:f32,1.:f32 pack-paddings=0,1 padding-dimensions=0,1,2 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.fill pad padding-values=0.:f32,0.:f32 pack-paddings=0,1 padding-dimensions=0,1,2 run-enable-pass=false" -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32,0.:f32 padding-dimensions=0,1,2 pack-paddings=0,1 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=FILL-MATMUL
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32 pack-paddings=1,1,0 padding-dimensions=0,1,2 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=INPUTS-ONLY
+// RUN: mlir-opt %s -test-linalg-codegen-strategy="anchor-op=linalg.matmul pad padding-values=0.:f32,0.:f32,0.:f32 padding-dimensions=0,1 pack-paddings=1,1,1 run-enable-pass=false" -cse -split-input-file | FileCheck %s --check-prefix=PARTIAL
 
 // MATMUL-DAG: #[[MAP0:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 12, 7)>
 // MATMUL-DAG: #[[MAP1:[0-9a-z]+]] = affine_map<()[s0] -> (-s0 + 7)>
@@ -502,4 +503,35 @@ func.func @rank_reducing(%arg0: tensor<1x64x1x64xf32>,
   //      FILL:  = tensor.extract_slice %[[T1]]
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<1x?x?xf32>) -> tensor<1x?x?xf32>
   func.return %1 : tensor<1x?x?xf32>
+}
+
+// -----
+
+#map0 = affine_map<()[s0] -> (7, s0)>
+
+//      PARTIAL:  padding_the_output_dims_only
+func.func @padding_the_output_dims_only(%arg0: tensor<24x12xf32>,
+                                        %arg1: tensor<12x25xf32>,
+                                        %arg2: tensor<24x25xf32>,
+                                        %iv0 : index, %iv1 : index, %iv2 : index) -> tensor<24x25xf32> {
+  //  PARTIAL-DAG:  %[[C0:.*]] = arith.constant 0 : index
+  //  PARTIAL-DAG:  %[[TS:.*]] = affine.apply
+  %0 = affine.min #map0()[%iv2]
+
+  // Check only the output dimensions of the matmul are padded.
+  //      PARTIAL:  %[[T0:.*]] = tensor.pad
+  // PARTIAL-SAME:                 [%[[TS]], %[[C0]]
+  //      PARTIAL:  %[[T1:.*]] = tensor.pad
+  // PARTIAL-SAME:                 [%[[C0]], %[[TS]]
+  //      PARTIAL:  %[[T2:.*]] = tensor.pad
+  // PARTIAL-SAME:                 [%[[TS]], %[[TS]]
+  %1 = tensor.extract_slice %arg0[%iv0, %iv2] [%0, %0] [1, 1] : tensor<24x12xf32> to tensor<?x?xf32>
+  %2 = tensor.extract_slice %arg1[%iv2, %iv1] [%0, %0] [1, 1] : tensor<12x25xf32> to tensor<?x?xf32>
+  %3 = tensor.extract_slice %arg2[%iv0, %iv1] [%0, %0] [1, 1] : tensor<24x25xf32> to tensor<?x?xf32>
+
+  //      PARTIAL:  = linalg.matmul ins(%[[T0]], %[[T1]]
+  // PARTIAL-SAME:             outs(%[[T2]]
+  %4 = linalg.matmul ins(%1, %2 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%3 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %5 = tensor.insert_slice %4 into %arg2[%iv0, %iv1] [%0, %0] [1, 1] : tensor<?x?xf32> into tensor<24x25xf32>
+  func.return %5 : tensor<24x25xf32>
 }
