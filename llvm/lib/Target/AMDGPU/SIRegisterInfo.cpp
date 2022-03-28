@@ -1956,6 +1956,13 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                                RegScavenger *RS, SlotIndexes *Indexes,
                                LiveIntervals *LIS, bool OnlyToVGPR,
                                bool SpillToPhysVGPRLane) const {
+  if (MI->getOperand(0).isUndef()) {
+    if (Indexes)
+      Indexes->removeMachineInstrFromMaps(*MI);
+    MI->eraseFromParent();
+    return true;
+  }
+
   SGPRSpillBuilder SB(*this, *ST.getInstrInfo(), isWave32, MI, Index, RS);
 
   ArrayRef<SpilledReg> VGPRSpills =
@@ -2377,6 +2384,11 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_WWM_AV32_SAVE: {
       const MachineOperand *VData = TII->getNamedOperand(*MI,
                                                          AMDGPU::OpName::vdata);
+      if (VData->isUndef()) {
+        MI->eraseFromParent();
+        return true;
+      }
+
       assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
              MFI->getStackPtrOffsetReg());
 
