@@ -13036,7 +13036,8 @@ private:
   /// attempts to add itself into the container
   void CheckObjCCircularContainer(ObjCMessageExpr *Message);
 
-  void CheckTCBEnforcement(const CallExpr *TheCall, const FunctionDecl *Callee);
+  void CheckTCBEnforcement(const SourceLocation CallExprLoc,
+                           const NamedDecl *Callee);
 
   void AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE);
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,
