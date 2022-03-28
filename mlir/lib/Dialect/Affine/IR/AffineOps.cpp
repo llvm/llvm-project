@@ -1859,10 +1859,6 @@ bool AffineForOp::matchingBoundOperandList() {
 
 Region &AffineForOp::getLoopBody() { return region(); }
 
-bool AffineForOp::isDefinedOutsideOfLoop(Value value) {
-  return !region().isAncestor(value.getParentRegion());
-}
-
 Optional<Value> AffineForOp::getSingleInductionVar() {
   return getInductionVar();
 }
@@ -1877,12 +1873,6 @@ Optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
 Optional<OpFoldResult> AffineForOp::getSingleStep() {
   OpBuilder b(getContext());
   return OpFoldResult(b.getI64IntegerAttr(getStep()));
-}
-
-LogicalResult AffineForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (auto *op : ops)
-    op->moveBefore(*this);
-  return success();
 }
 
 /// Returns true if the provided value is the induction variable of a
@@ -3061,16 +3051,6 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 }
 
 Region &AffineParallelOp::getLoopBody() { return region(); }
-
-bool AffineParallelOp::isDefinedOutsideOfLoop(Value value) {
-  return !region().isAncestor(value.getParentRegion());
-}
-
-LogicalResult AffineParallelOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (Operation *op : ops)
-    op->moveBefore(*this);
-  return success();
-}
 
 unsigned AffineParallelOp::getNumDims() { return steps().size(); }
 

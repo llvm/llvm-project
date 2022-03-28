@@ -66,7 +66,7 @@ static bool canBeHoisted(Operation *op,
   return true;
 }
 
-LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
+void mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
   auto &loopBody = looplike.getLoopBody();
 
   // We use two collections here as we need to preserve the order for insertion
@@ -95,7 +95,6 @@ LogicalResult mlir::moveLoopInvariantCode(LoopLikeOpInterface looplike) {
 
   // For all instructions that we found to be invariant, move outside of the
   // loop.
-  LogicalResult result = looplike.moveOutOfLoop(opsToMove);
-  LLVM_DEBUG(looplike.print(llvm::dbgs() << "\n\nModified loop:\n"));
-  return result;
+  for (Operation *op : opsToMove)
+    looplike.moveOutOfLoop(op);
 }
