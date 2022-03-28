@@ -3317,24 +3317,20 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
     return MIB;
   }
 
-  // Handle WMMA.
   if (SIInstrInfo::isWMMA(MI)) {
-    const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
-    const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
     unsigned NewOpc = AMDGPU::mapWMMA2AddrTo3AddrOpcode(MI.getOpcode());
-    auto NewDest = MachineOperand::CreateReg(Src2->getReg(), true);
-    auto NewMI = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
-                     .setMIFlags(MI.getFlags());
+    MachineInstrBuilder MIB = BuildMI(MBB, MI, MI.getDebugLoc(), get(NewOpc))
+              .setMIFlags(MI.getFlags());
+    for (unsigned I = 0, E = MI.getDesc().getNumOperands(); I != E; ++I)
+      MIB->addOperand(MI.getOperand(I));
 
-    NewMI->addOperand(*Dst);
-    NewMI->addOperand(NewDest);
+    updateLiveVariables(LV, MI, *MIB);
+    if (LIS)
+      LIS->ReplaceMachineInstrInMaps(MI, *MIB);
 
-    for (unsigned I = 1, E = MI.getDesc().getNumOperands(); I != E; ++I)
-      NewMI->addOperand(MI.getOperand(I));
-
-    updateLiveVariables(LV, MI, *NewMI);
-    return NewMI;
+    return MIB;
   }
+
 
   // Handle MAC/FMAC.
   bool IsF16 = Opc == AMDGPU::V_MAC_F16_e32 || Opc == AMDGPU::V_MAC_F16_e64 ||
