@@ -964,4 +964,29 @@ TEST(STLExtrasTest, TypeAtIndex) {
       (std::is_same<double, llvm::TypeAtIndex<2, int, float, double>>::value));
 }
 
+enum Doggos {
+  Floofer,
+  Woofer,
+  SubWoofer,
+  Pupper,
+  Pupperino,
+  Longboi,
+};
+
+TEST(STLExtrasTest, IsContainedInitializerList) {
+  EXPECT_TRUE(is_contained({Woofer, SubWoofer}, Woofer));
+  EXPECT_TRUE(is_contained({Woofer, SubWoofer}, SubWoofer));
+  EXPECT_FALSE(is_contained({Woofer, SubWoofer}, Pupper));
+  EXPECT_FALSE(is_contained({}, Longboi));
+
+  static_assert(is_contained({Woofer, SubWoofer}, SubWoofer), "SubWoofer!");
+  static_assert(!is_contained({Woofer, SubWoofer}, Pupper), "Missing Pupper!");
+
+  EXPECT_TRUE(is_contained({1, 2, 3, 4}, 3));
+  EXPECT_FALSE(is_contained({1, 2, 3, 4}, 5));
+
+  static_assert(is_contained({1, 2, 3, 4}, 3), "It's there!");
+  static_assert(!is_contained({1, 2, 3, 4}, 5), "It's not there :(");
+}
+
 } // namespace
