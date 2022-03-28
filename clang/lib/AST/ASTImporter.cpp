@@ -3646,19 +3646,23 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
         // initializer of a FieldDecl might not had been instantiated in the
         // "To" context.  However, the "From" context might instantiated that,
         // thus we have to merge that.
+        // Note: `hasInClassInitializer()` is not the same as non-null
+        // `getInClassInitializer()` value.
         if (Expr *FromInitializer = D->getInClassInitializer()) {
-          // We don't have yet the initializer set.
-          if (FoundField->hasInClassInitializer() &&
-              !FoundField->getInClassInitializer()) {
-            if (ExpectedExpr ToInitializerOrErr = import(FromInitializer))
+          if (ExpectedExpr ToInitializerOrErr = import(FromInitializer)) {
+            // Import of the FromInitializer may result in the setting of
+            // InClassInitializer. If not, set it here.
+            assert(FoundField->hasInClassInitializer() &&
+                   "Field should have an in-class initializer if it has an "
+                   "expression for it.");
+            if (!FoundField->getInClassInitializer())
               FoundField->setInClassInitializer(*ToInitializerOrErr);
-            else {
-              // We can't return error here,
-              // since we already mapped D as imported.
-              // FIXME: warning message?
-              consumeError(ToInitializerOrErr.takeError());
-              return FoundField;
-            }
+          } else {
+            // We can't return error here,
+            // since we already mapped D as imported.
+            // FIXME: warning message?
+            consumeError(ToInitializerOrErr.takeError());
+            return FoundField;
           }
         }
         return FoundField;
@@ -8127,8 +8131,23 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   if (!UsedContextOrErr)
     return UsedContextOrErr.takeError();
 
-  return CXXDefaultInitExpr::Create(
-      Importer.getToContext(), *ToBeginLocOrErr, *ToFieldOrErr, *UsedContextOrErr);
+  FieldDecl *ToField = *ToFieldOrErr;
+  assert(ToField->hasInClassInitializer() &&
+         "Field should have in-class initializer if there is a default init "
+         "expression that uses it.");
+  if (!ToField->getInClassInitializer()) {
+    // The in-class initializer may be not yet set in "To" AST even if the
+    // field is already there. This must be set here to make construction of
+    // CXXDefaultInitExpr work.
+    auto ToInClassInitializerOrErr =
+        import(E->getField()->getInClassInitializer());
+    if (!ToInClassInitializerOrErr)
+      return ToInClassInitializerOrErr.takeError();
+    ToField->setInClassInitializer(*ToInClassInitializerOrErr);
+  }
+
+  return CXXDefaultInitExpr::Create(Importer.getToContext(), *ToBeginLocOrErr,
+                                    ToField, *UsedContextOrErr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {
