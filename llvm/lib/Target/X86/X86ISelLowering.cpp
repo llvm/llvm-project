@@ -18709,6 +18709,10 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
           DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
     return V;
 
+  if (SDValue Result = lowerShuffleAsLanePermuteAndPermute(
+          DL, MVT::v64i8, V1, V2, Mask, DAG, Subtarget))
+    return Result;
+
   if (SDValue Blend = lowerShuffleAsBlend(DL, MVT::v64i8, V1, V2, Mask,
                                           Zeroable, Subtarget, DAG))
     return Blend;
