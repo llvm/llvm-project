@@ -15,8 +15,6 @@
 #include <string>
 #include <vector>
 
-using namespace llvm;
-
 namespace llvm {
 namespace RISCV {
 
