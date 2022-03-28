@@ -19,13 +19,11 @@ namespace clang {
 namespace clangd {
 namespace {
 
-std::string afterTyped(llvm::StringRef CodeWithCursor,
-                           llvm::StringRef Typed) {
+std::string afterTyped(llvm::StringRef CodeWithCursor, llvm::StringRef Typed,
+                       clang::format::FormatStyle Style) {
   Annotations Code(CodeWithCursor);
   unsigned Cursor = llvm::cantFail(positionToOffset(Code.code(), Code.point()));
-  auto Changes =
-      formatIncremental(Code.code(), Cursor, Typed,
-                        format::getGoogleStyle(format::FormatStyle::LK_Cpp));
+  auto Changes = formatIncremental(Code.code(), Cursor, Typed, Style);
   tooling::Replacements Merged;
   for (const auto& R : Changes)
     if (llvm::Error E = Merged.add(R))
@@ -38,11 +36,15 @@ std::string afterTyped(llvm::StringRef CodeWithCursor,
 }
 
 // We can't pass raw strings directly to EXPECT_EQ because of gcc bugs.
-void expectAfterNewline(const char *Before, const char *After) {
-  EXPECT_EQ(After, afterTyped(Before, "\n")) << Before;
+void expectAfterNewline(const char *Before, const char *After,
+                        format::FormatStyle Style = format::getGoogleStyle(
+                            format::FormatStyle::LK_Cpp)) {
+  EXPECT_EQ(After, afterTyped(Before, "\n", Style)) << Before;
 }
-void expectAfter(const char *Typed, const char *Before, const char *After) {
-  EXPECT_EQ(After, afterTyped(Before, Typed)) << Before;
+void expectAfter(const char *Typed, const char *Before, const char *After,
+                 format::FormatStyle Style =
+                     format::getGoogleStyle(format::FormatStyle::LK_Cpp)) {
+  EXPECT_EQ(After, afterTyped(Before, Typed, Style)) << Before;
 }
 
 TEST(FormatIncremental, SplitComment) {
@@ -131,7 +133,7 @@ void foo() {
             ^
 }
 )cpp",
-   R"cpp(
+                     R"cpp(
 void foo() {
   if (x)
     return;  // All spelled tokens are accounted for.
@@ -139,6 +141,17 @@ void foo() {
   ^
 }
 )cpp");
+
+  // Handle tab character in leading indentation
+  format::FormatStyle TabStyle =
+      format::getGoogleStyle(format::FormatStyle::LK_Cpp);
+  TabStyle.UseTab = format::FormatStyle::UT_Always;
+  TabStyle.TabWidth = 4;
+  TabStyle.IndentWidth = 4;
+  // Do not use raw strings, otherwise '\t' will be interpreted literally.
+  expectAfterNewline("void foo() {\n\t// this comment was\n^split\n}\n",
+                     "void foo() {\n\t// this comment was\n\t// ^split\n}\n",
+                     TabStyle);
 }
 
 TEST(FormatIncremental, Indentation) {
