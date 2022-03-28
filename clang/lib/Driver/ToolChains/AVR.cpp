@@ -366,49 +366,19 @@ const StringRef PossibleAVRLibcLocations[] = {
 /// AVR Toolchain
 AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
                            const ArgList &Args)
-    : Generic_ELF(D, Triple, Args), LinkStdlib(false) {
+    : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
 
   // Only add default libraries if the user hasn't explicitly opted out.
   if (!Args.hasArg(options::OPT_nostdlib) &&
-      !Args.hasArg(options::OPT_nodefaultlibs) &&
-      !Args.hasArg(options::OPT_c /* does not apply when not linking */)) {
-    std::string CPU = getCPUName(D, Args, Triple);
-
-    if (CPU.empty()) {
-      // We cannot link any standard libraries without an MCU specified.
-      D.Diag(diag::warn_drv_avr_mcu_not_specified);
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
+    if (GCCInstallation.isValid()) {
+      GCCInstallPath = GCCInstallation.getInstallPath();
+      std::string GCCParentPath(GCCInstallation.getParentLibPath());
+      getProgramPaths().push_back(GCCParentPath + "/../bin");
     } else {
-      Optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
-      Optional<std::string> AVRLibcRoot = findAVRLibcInstallation();
-
-      if (!FamilyName.hasValue()) {
-        // We do not have an entry for this CPU in the family
-        // mapping table yet.
-        D.Diag(diag::warn_drv_avr_family_linking_stdlibs_not_implemented)
-            << CPU;
-      } else if (!GCCInstallation.isValid()) {
-        // No avr-gcc found and so no runtime linked.
-        D.Diag(diag::warn_drv_avr_gcc_not_found);
-      } else if (!AVRLibcRoot.hasValue()) {
-        // No avr-libc found and so no runtime linked.
-        D.Diag(diag::warn_drv_avr_libc_not_found);
-      } else { // We have enough information to link stdlibs
-        std::string GCCRoot(GCCInstallation.getInstallPath());
-        std::string GCCParentPath(GCCInstallation.getParentLibPath());
-        std::string LibcRoot = AVRLibcRoot.getValue();
-        std::string SubPath = GetMCUSubPath(CPU);
-
-        getProgramPaths().push_back(GCCParentPath + "/../bin");
-        getFilePaths().push_back(LibcRoot + std::string("/lib/") + SubPath);
-        getFilePaths().push_back(GCCRoot + std::string("/") + SubPath);
-
-        LinkStdlib = true;
-      }
+      D.Diag(diag::warn_drv_avr_gcc_not_found);
     }
-
-    if (!LinkStdlib)
-      D.Diag(diag::warn_drv_avr_stdlib_not_linked);
   }
 }
 
@@ -445,13 +415,14 @@ void AVRToolChain::addClangTargetOptions(
 }
 
 Tool *AVRToolChain::buildLinker() const {
-  return new tools::AVR::Linker(getTriple(), *this, LinkStdlib);
+  return new tools::AVR::Linker(getTriple(), *this);
 }
 
 void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs, const ArgList &Args,
                                const char *LinkingOutput) const {
+  const auto &TC = static_cast<const AVRToolChain &>(getToolChain());
   const Driver &D = getToolChain().getDriver();
 
   // Compute information about the target AVR.
@@ -472,6 +443,39 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Add library search paths before we specify libraries.
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
+
+  // Only add default libraries if the user hasn't explicitly opted out.
+  bool LinkStdlib = false;
+  if (!Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
+    if (CPU.empty()) {
+      // We cannot link any standard libraries without an MCU specified.
+      D.Diag(diag::warn_drv_avr_mcu_not_specified);
+    } else {
+      Optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
+      Optional<std::string> AVRLibcRoot = TC.findAVRLibcInstallation();
+
+      if (!FamilyName) {
+        // We do not have an entry for this CPU in the family
+        // mapping table yet.
+        D.Diag(diag::warn_drv_avr_family_linking_stdlibs_not_implemented)
+            << CPU;
+      } else if (!AVRLibcRoot) {
+        // No avr-libc found and so no runtime linked.
+        D.Diag(diag::warn_drv_avr_libc_not_found);
+      } else if (!TC.getGCCInstallPath().empty()) {
+        std::string SubPath = GetMCUSubPath(CPU);
+        CmdArgs.push_back(
+            Args.MakeArgString(Twine("-L") + *AVRLibcRoot + "/lib/" + SubPath));
+        CmdArgs.push_back(
+            Args.MakeArgString("-L" + TC.getGCCInstallPath() + "/" + SubPath));
+        LinkStdlib = true;
+      }
+    }
+
+    if (!LinkStdlib)
+      D.Diag(diag::warn_drv_avr_stdlib_not_linked);
+  }
 
   if (SectionAddressData.hasValue()) {
     std::string DataSectionArg = std::string("-Tdata=0x") +
