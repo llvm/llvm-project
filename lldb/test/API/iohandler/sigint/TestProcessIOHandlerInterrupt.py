@@ -13,6 +13,7 @@ class TestCase(PExpectTest):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
     def test(self):
         self.build(dictionary={"CXX_SOURCES":"cat.cpp"})
         self.launch(executable=self.getBuildArtifact())
