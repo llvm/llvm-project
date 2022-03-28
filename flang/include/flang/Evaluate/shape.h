@@ -167,7 +167,7 @@ private:
   template <typename T>
   MaybeExtentExpr GetArrayConstructorValueExtent(
       const ArrayConstructorValue<T> &value) const {
-    return common::visit(
+    return std::visit(
         common::visitors{
             [&](const Expr<T> &x) -> MaybeExtentExpr {
               if (auto xShape{

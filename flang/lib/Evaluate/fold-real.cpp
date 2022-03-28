@@ -133,7 +133,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "scale") {
     if (const auto *byExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])}) {
-      return common::visit(
+      return std::visit(
           [&](const auto &byVal) {
             using TBY = ResultType<decltype(byVal)>;
             return FoldElementalIntrinsic<T, T, TBY>(context,
