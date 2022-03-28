@@ -79,6 +79,10 @@ if (NOT LIBCXXABI_ENABLE_EXCEPTIONS)
   serialize_lit_param(enable_exceptions False)
 endif()
 
+if (LIBCXXABI_ENABLE_ASSERTIONS)
+  serialize_lit_param(enable_assertions True)
+endif()
+
 serialize_lit_param(enable_experimental False)
 
 if (LLVM_USE_SANITIZER)
