@@ -119,8 +119,9 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose) {
   s.Printf("  Total number of instructions: %zu\n", insn_len);
   s.Printf("  Total approximate memory usage: %0.2lf KiB\n",
            (double)mem_used / 1024);
-  s.Printf("  Average memory usage per instruction: %zu bytes\n",
-           mem_used / insn_len);
+  if (insn_len != 0)
+    s.Printf("  Average memory usage per instruction: %0.2lf bytes\n",
+             (double)mem_used / insn_len);
   return;
 }
 

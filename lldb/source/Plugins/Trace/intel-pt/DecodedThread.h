@@ -62,9 +62,6 @@ private:
 /// As mentioned, any gap is represented as an error in this class.
 class IntelPTInstruction {
 public:
-  IntelPTInstruction(const pt_insn &pt_insn, uint64_t timestamp)
-      : m_pt_insn(pt_insn), m_timestamp(timestamp), m_is_error(false) {}
-
   IntelPTInstruction(const pt_insn &pt_insn)
       : m_pt_insn(pt_insn), m_is_error(false) {}
 
@@ -85,13 +82,6 @@ public:
   /// Get the size in bytes of an instance of this class
   static size_t GetMemoryUsage();
 
-  /// Get the timestamp associated with the current instruction. The timestamp
-  /// is similar to what a rdtsc instruction would return.
-  ///
-  /// \return
-  ///     The timestamp or \b llvm::None if not available.
-  llvm::Optional<uint64_t> GetTimestampCounter() const;
-
   /// Get the \a lldb::TraceInstructionControlFlowType categories of the
   /// instruction.
   ///
@@ -111,9 +101,8 @@ private:
   const IntelPTInstruction &operator=(const IntelPTInstruction &other) = delete;
 
   // When adding new members to this class, make sure to update
-  // IntelPTInstruction::GetNonErrorMemoryUsage() if needed.
+  // IntelPTInstruction::GetMemoryUsage() if needed.
   pt_insn m_pt_insn;
-  llvm::Optional<uint64_t> m_timestamp;
   bool m_is_error;
 };
 
@@ -126,10 +115,59 @@ private:
 /// stopped at. See \a Trace::GetCursorPosition for more information.
 class DecodedThread : public std::enable_shared_from_this<DecodedThread> {
 public:
+  /// \class TscRange
+  /// Class that represents the trace range associated with a given TSC.
+  /// It provides efficient iteration to the previous or next TSC range in the
+  /// decoded trace.
+  ///
+  /// TSC timestamps are emitted by the decoder infrequently, which means
+  /// that each TSC covers a range of instruction indices, which can be used to
+  /// speed up TSC lookups.
+  class TscRange {
+  public:
+    /// Check if this TSC range includes the given instruction index.
+    bool InRange(size_t insn_index);
+
+    /// Get the next range chronologically.
+    llvm::Optional<TscRange> Next();
+
+    /// Get the previous range chronologically.
+    llvm::Optional<TscRange> Prev();
+
+    /// Get the TSC value.
+    size_t GetTsc() const;
+    /// Get the smallest instruction index that has this TSC.
+    size_t GetStartInstructionIndex() const;
+    /// Get the largest instruction index that has this TSC.
+    size_t GetEndInstructionIndex() const;
+
+  private:
+    friend class DecodedThread;
+
+    TscRange(std::map<size_t, uint64_t>::const_iterator it,
+             const DecodedThread &decoded_thread);
+
+    /// The iterator pointing to the beginning of the range.
+    std::map<size_t, uint64_t>::const_iterator m_it;
+    /// The largest instruction index that has this TSC.
+    size_t m_end_index;
+
+    const DecodedThread *m_decoded_thread;
+  };
+
   DecodedThread(lldb::ThreadSP thread_sp);
 
   /// Utility constructor that initializes the trace with a provided error.
   DecodedThread(lldb::ThreadSP thread_sp, llvm::Error &&err);
+
+  /// Append a successfully decoded instruction.
+  void AppendInstruction(const pt_insn &instruction);
+
+  /// Append a sucessfully decoded instruction with an associated TSC timestamp.
+  void AppendInstruction(const pt_insn &instruction, uint64_t tsc);
+
+  /// Append a decoding error (i.e. an instruction that failed to be decoded).
+  void AppendError(llvm::Error &&error);
 
   /// Get the instructions from the decoded trace. Some of them might indicate
   /// errors (i.e. gaps) in the trace. For an instruction error, you can access
@@ -140,20 +178,22 @@ public:
   ///   The instructions of the trace.
   llvm::ArrayRef<IntelPTInstruction> GetInstructions() const;
 
+  /// Construct the TSC range that covers the given instruction index.
+  /// This operation is O(logn) and should be used sparingly.
+  /// If the trace was collected with TSC support, all the instructions of
+  /// the trace will have associated TSCs. This means that this method will
+  /// only return \b llvm::None if there are no TSCs whatsoever in the trace.
+  llvm::Optional<TscRange> CalculateTscRange(size_t insn_index) const;
+
+  /// Check if an instruction given by its index is an error.
+  bool IsInstructionAnError(size_t insn_idx) const;
+
   /// Get the error associated with a given instruction index.
   ///
   /// \return
   ///   The error message of \b nullptr if the given index
   ///   points to a valid instruction.
-  const char *GetErrorByInstructionIndex(uint64_t ins_idx);
-
-  /// Append a successfully decoded instruction.
-  template <typename... Ts> void AppendInstruction(Ts... instruction_args) {
-    m_instructions.emplace_back(instruction_args...);
-  }
-
-  /// Append a decoding error (i.e. an instruction that failed to be decoded).
-  void AppendError(llvm::Error &&error);
+  const char *GetErrorByInstructionIndex(size_t ins_idx);
 
   /// Get a new cursor for the decoded thread.
   lldb::TraceCursorUP GetCursor();
@@ -177,8 +217,23 @@ private:
   /// When adding new members to this class, make sure
   /// to update \a CalculateApproximateMemoryUsage() accordingly.
   lldb::ThreadSP m_thread_sp;
+  /// The low level storage of all instruction addresses. Each instruction has
+  /// an index in this vector and it will be used in other parts of the code.
   std::vector<IntelPTInstruction> m_instructions;
+  /// This map contains the TSCs of the decoded instructions. It maps
+  /// `instruction index -> TSC`, where `instruction index` is the first index
+  /// at which the mapped TSC appears. We use this representation because TSCs
+  /// are sporadic and we can think of them as ranges. If TSCs are present in
+  /// the trace, all instructions will have an associated TSC, including the
+  /// first one. Otherwise, this map will be empty.
+  std::map<size_t, uint64_t> m_instruction_timestamps;
+  /// This is the chronologically last TSC that has been added.
+  llvm::Optional<uint64_t> m_last_tsc = llvm::None;
+  // This variables stores the messages of all the error instructions in the
+  // trace. It maps `instruction index -> error message`.
   llvm::DenseMap<uint64_t, std::string> m_errors;
+  /// The size in bytes of the raw buffer before decoding. It might be None if
+  /// the decoding failed.
   llvm::Optional<size_t> m_raw_trace_size;
 };
 
