@@ -8931,21 +8931,33 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
   return UseMask(NewMask);
 }
 
-static void computeGREV(APInt &Src, unsigned ShAmt) {
+static void computeGREVOrGORC(APInt &Src, unsigned ShAmt, bool IsGORC,
+                              bool ComputeZeros = false) {
+  static const uint64_t GREVMasks[] = {
+      0x5555555555555555ULL, 0x3333333333333333ULL, 0x0F0F0F0F0F0F0F0FULL,
+      0x00FF00FF00FF00FFULL, 0x0000FFFF0000FFFFULL, 0x00000000FFFFFFFFULL};
+
   ShAmt &= Src.getBitWidth() - 1;
   uint64_t x = Src.getZExtValue();
-  if (ShAmt & 1)
-    x = ((x & 0x5555555555555555LL) << 1) | ((x & 0xAAAAAAAAAAAAAAAALL) >> 1);
-  if (ShAmt & 2)
-    x = ((x & 0x3333333333333333LL) << 2) | ((x & 0xCCCCCCCCCCCCCCCCLL) >> 2);
-  if (ShAmt & 4)
-    x = ((x & 0x0F0F0F0F0F0F0F0FLL) << 4) | ((x & 0xF0F0F0F0F0F0F0F0LL) >> 4);
-  if (ShAmt & 8)
-    x = ((x & 0x00FF00FF00FF00FFLL) << 8) | ((x & 0xFF00FF00FF00FF00LL) >> 8);
-  if (ShAmt & 16)
-    x = ((x & 0x0000FFFF0000FFFFLL) << 16) | ((x & 0xFFFF0000FFFF0000LL) >> 16);
-  if (ShAmt & 32)
-    x = ((x & 0x00000000FFFFFFFFLL) << 32) | ((x & 0xFFFFFFFF00000000LL) >> 32);
+
+  // To compute zeros, we need to invert the value and invert it back after.
+  if (ComputeZeros)
+    x = ~x;
+
+  for (unsigned Stage = 0; Stage != 6; ++Stage) {
+    unsigned Shift = 1 << Stage;
+    if (ShAmt & Shift) {
+      uint64_t Mask = GREVMasks[Stage];
+      uint64_t Res = ((x & Mask) << Shift) | ((x >> Shift) & Mask);
+      if (IsGORC)
+        Res |= x;
+      x = Res;
+    }
+  }
+
+  if (ComputeZeros)
+    x = ~x;
+
   Src = x;
 }
 
@@ -9011,12 +9023,15 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     Known.Zero.setBitsFrom(LowBits);
     break;
   }
-  case RISCVISD::GREV: {
+  case RISCVISD::GREV:
+  case RISCVISD::GORC: {
     if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
       unsigned ShAmt = C->getZExtValue();
-      computeGREV(Known.Zero, ShAmt);
-      computeGREV(Known.One, ShAmt);
+      bool IsGORC = Op.getOpcode() == RISCVISD::GORC;
+      computeGREVOrGORC(Known.Zero, ShAmt, IsGORC,
+                        /*ComputeZeros*/ true);
+      computeGREVOrGORC(Known.One, ShAmt, IsGORC);
     }
     break;
   }

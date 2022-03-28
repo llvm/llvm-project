@@ -75,6 +75,15 @@ define signext i32 @gorci32(i32 signext %a) nounwind {
   ret i32 %tmp
 }
 
+define zeroext i32 @gorci32_zext(i32 zeroext %a) nounwind {
+; RV64ZBP-LABEL: gorci32_zext:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    orc.w a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.gorc.i32(i32 %a, i32 31)
+  ret i32 %tmp
+}
+
 declare i32 @llvm.riscv.shfl.i32(i32 %a, i32 %b)
 
 define signext i32 @shfl32(i32 signext %a, i32 signext %b) nounwind {
@@ -513,6 +522,21 @@ define i64 @gorci64(i64 %a) nounwind {
 ; RV64ZBP-NEXT:    ret
   %tmp = call i64 @llvm.riscv.gorc.i64(i64 %a, i64 13)
   ret i64 %tmp
+}
+
+; The second OR is redundant with the first. Make sure we remove it.
+define i64 @gorci64_knownbits(i64 %a) nounwind {
+; RV64ZBP-LABEL: gorci64_knownbits:
+; RV64ZBP:       # %bb.0:
+; RV64ZBP-NEXT:    lui a1, %hi(.LCPI54_0)
+; RV64ZBP-NEXT:    ld a1, %lo(.LCPI54_0)(a1)
+; RV64ZBP-NEXT:    or a0, a0, a1
+; RV64ZBP-NEXT:    orc32 a0, a0
+; RV64ZBP-NEXT:    ret
+  %tmp = or i64 %a, 72624976668147840 ; 0x102040810204080
+  %tmp2 = call i64 @llvm.riscv.gorc.i64(i64 %tmp, i64 32)
+  %tmp3 = or i64 %tmp2, 1234624599046636680 ; 0x1122448811224488
+  ret i64 %tmp3
 }
 
 define i64 @orchi64(i64 %a) nounwind {
