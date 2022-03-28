@@ -348,9 +348,8 @@ TestBranchOp::getMutableSuccessorOperands(unsigned index) {
 Optional<MutableOperandRange>
 TestProducingBranchOp::getMutableSuccessorOperands(unsigned index) {
   assert(index <= 1 && "invalid successor index");
-  if (index == 1) {
+  if (index == 1)
     return getFirstOperandsMutable();
-  }
   return getSecondOperandsMutable();
 }
 
