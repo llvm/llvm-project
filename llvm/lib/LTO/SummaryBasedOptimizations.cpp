@@ -55,7 +55,7 @@ void llvm::computeSyntheticCounts(ModuleSummaryIndex &Index) {
   };
   auto GetEntryCount = [](ValueInfo V) {
     if (V.getSummaryList().size()) {
-      auto S = V.getSummaryList().front().get()->getBaseObject();
+      auto S = V.getSummaryList().front()->getBaseObject();
       auto *F = cast<FunctionSummary>(S);
       return F->entryCount();
     } else {
