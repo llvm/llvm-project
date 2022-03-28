@@ -65,6 +65,49 @@ static bool equivalentValues(QualType Type, Value *Val1,
   return Model.compareEquivalent(Type, *Val1, Env1, *Val2, Env2);
 }
 
+/// Attempts to merge distinct values `Val1` and `Val1` in `Env1` and `Env2`,
+/// respectively, of the same type `Type`. Merging generally produces a single
+/// value that (soundly) approximates the two inputs, although the actual
+/// meaning depends on `Model`.
+static Value *mergeDistinctValues(QualType Type, Value *Val1, Environment &Env1,
+                                  Value *Val2, const Environment &Env2,
+                                  Environment::ValueModel &Model) {
+  // Join distinct boolean values preserving information about the constraints
+  // in the respective path conditions. Note: this construction can, in
+  // principle, result in exponential growth in the size of boolean values.
+  // Potential optimizations may be worth considering. For example, represent
+  // the flow condition of each environment using a bool atom and store, in
+  // `DataflowAnalysisContext`, a mapping of bi-conditionals between flow
+  // condition atoms and flow condition constraints. Something like:
+  // \code
+  //   FC1 <=> C1 ^ C2
+  //   FC2 <=> C2 ^ C3 ^ C4
+  //   FC3 <=> (FC1 v FC2) ^ C5
+  // \code
+  // Then, we can track dependencies between flow conditions (e.g. above `FC3`
+  // depends on `FC1` and `FC2`) and modify `flowConditionImplies` to construct
+  // a formula that includes the bi-conditionals for all flow condition atoms in
+  // the transitive set, before invoking the solver.
+  if (auto *Expr1 = dyn_cast<BoolValue>(Val1)) {
+    for (BoolValue *Constraint : Env1.getFlowConditionConstraints()) {
+      Expr1 = &Env1.makeAnd(*Expr1, *Constraint);
+    }
+    auto *Expr2 = cast<BoolValue>(Val2);
+    for (BoolValue *Constraint : Env2.getFlowConditionConstraints()) {
+      Expr2 = &Env1.makeAnd(*Expr2, *Constraint);
+    }
+    return &Env1.makeOr(*Expr1, *Expr2);
+  }
+
+  // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
+  // returns false to avoid storing unneeded values in `DACtx`.
+  if (Value *MergedVal = Env1.createValue(Type))
+    if (Model.merge(Type, *Val1, Env1, *Val2, Env2, *MergedVal, Env1))
+      return MergedVal;
+
+  return nullptr;
+}
+
 /// Initializes a global storage value.
 static void initGlobalVar(const VarDecl &D, Environment &Env) {
   if (!D.hasGlobalStorage() ||
@@ -309,13 +352,9 @@ LatticeJoinEffect Environment::join(const Environment &Other,
       continue;
     }
 
-    // FIXME: Consider destroying `MergedValue` immediately if
-    // `ValueModel::merge` returns false to avoid storing unneeded values in
-    // `DACtx`.
-    if (Value *MergedVal = createValue(Loc->getType()))
-      if (Model.merge(Loc->getType(), *Val, *this, *It->second, Other,
-                      *MergedVal, *this))
-        LocToVal.insert({Loc, MergedVal});
+    if (Value *MergedVal = mergeDistinctValues(Loc->getType(), Val, *this,
+                                               It->second, Other, Model))
+      LocToVal.insert({Loc, MergedVal});
   }
   if (OldLocToVal.size() != LocToVal.size())
     Effect = LatticeJoinEffect::Changed;
