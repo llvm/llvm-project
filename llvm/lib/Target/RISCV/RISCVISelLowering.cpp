@@ -1245,6 +1245,12 @@ bool RISCVTargetLowering::hasAndNotCompare(SDValue Y) const {
          !isa<ConstantSDNode>(Y);
 }
 
+bool RISCVTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
+  // We can use ANDI+SEQZ/SNEZ as a bit test. Y contains the bit position.
+  auto *C = dyn_cast<ConstantSDNode>(Y);
+  return C && C->getAPIntValue().ule(10);
+}
+
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// splats of scalars can fold into vector instructions.
