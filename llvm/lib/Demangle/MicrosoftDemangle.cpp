@@ -245,8 +245,8 @@ demanglePointerCVQualifiers(StringView &MangledName) {
 }
 
 StringView Demangler::copyString(StringView Borrowed) {
-  char *Stable = Arena.allocUnalignedBuffer(Borrowed.size() + 1);
-  std::strcpy(Stable, Borrowed.begin());
+  char *Stable = Arena.allocUnalignedBuffer(Borrowed.size());
+  std::memcpy(Stable, Borrowed.begin(), Borrowed.size());
 
   return {Stable, Borrowed.size()};
 }
