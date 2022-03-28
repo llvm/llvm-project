@@ -28,7 +28,7 @@
 
 namespace mlir {
 /// Move loop invariant code out of a `looplike` operation.
-LogicalResult moveLoopInvariantCode(LoopLikeOpInterface looplike);
+void moveLoopInvariantCode(LoopLikeOpInterface looplike);
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE_H_

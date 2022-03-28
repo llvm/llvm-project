@@ -37,8 +37,7 @@ void LoopInvariantCodeMotion::runOnOperation() {
   // the outer loop, which in turn can be further LICM'ed.
   getOperation()->walk([&](LoopLikeOpInterface loopLike) {
     LLVM_DEBUG(loopLike.print(llvm::dbgs() << "\nOriginal loop:\n"));
-    if (failed(moveLoopInvariantCode(loopLike)))
-      signalPassFailure();
+    moveLoopInvariantCode(loopLike);
   });
 }
 

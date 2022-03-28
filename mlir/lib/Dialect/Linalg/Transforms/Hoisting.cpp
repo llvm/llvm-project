@@ -271,12 +271,11 @@ static void hoistReadWrite(HoistableRead read, HoistableWrite write,
                     << "\nInvolving: " << tensorBBArg << "\n");
 
   // If a read slice is present, hoist it.
-  if (read.extractSliceOp && failed(forOp.moveOutOfLoop({read.extractSliceOp})))
-    llvm_unreachable("Unexpected failure moving extract_slice out of loop");
+  if (read.extractSliceOp)
+    forOp.moveOutOfLoop(read.extractSliceOp);
 
   // Hoist the transfer_read op.
-  if (failed(forOp.moveOutOfLoop({read.transferReadOp})))
-    llvm_unreachable("Unexpected failure moving transfer read out of loop");
+  forOp.moveOutOfLoop(read.transferReadOp);
 
   // TODO: don't hardcode /*numIvs=*/1.
   assert(tensorBBArg.getArgNumber() >= /*numIvs=*/1);
@@ -397,9 +396,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
     // First move loop invariant ops outside of their loop. This needs to be
     // done before as we cannot move ops without interputing the function walk.
     func.walk([&](LoopLikeOpInterface loopLike) {
-      if (failed(moveLoopInvariantCode(loopLike)))
-        llvm_unreachable(
-            "Unexpected failure to move invariant code out of loop");
+      moveLoopInvariantCode(loopLike);
     });
 
     func.walk([&](vector::TransferReadOp transferRead) {
@@ -484,9 +481,7 @@ void mlir::linalg::hoistRedundantVectorTransfers(FuncOp func) {
       }
 
       // Hoist read before.
-      if (failed(loop.moveOutOfLoop({transferRead})))
-        llvm_unreachable(
-            "Unexpected failure to move transfer read out of loop");
+      loop.moveOutOfLoop(transferRead);
 
       // Hoist write after.
       transferWrite->moveAfter(loop);
