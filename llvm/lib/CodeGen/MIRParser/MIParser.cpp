@@ -1723,6 +1723,15 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
         RegInfo->Kind == VRegInfo::REGBANK)
       return error("generic virtual registers must have a type");
   }
+
+  if (Flags & RegState::Define) {
+    if (Flags & RegState::Kill)
+      return error("cannot have a killed def operand");
+  } else {
+    if (Flags & RegState::Dead)
+      return error("cannot have a dead use operand");
+  }
+
   Dest = MachineOperand::CreateReg(
       Reg, Flags & RegState::Define, Flags & RegState::Implicit,
       Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
