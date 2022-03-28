@@ -20,6 +20,7 @@ add_mlir_library(MLIRLinalgTestPasses
   MLIRLinalgTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRMemRef
+  MLIRParser
   MLIRPass
   MLIRSCF
   MLIRSCFTransforms

@@ -553,69 +553,32 @@ void transformIndexOps(RewriterBase &b, LinalgOp op,
                        SmallVectorImpl<Value> &ivs,
                        const LoopIndexToRangeIndexMap &loopIndexToRangeIndex);
 
-/// Callback returning the padding value to use for a given OpOperand or failure
-/// for no padding. This should be a function of both the operation and the
-/// operand type.
-using PaddingValueComputationFunction =
-    std::function<FailureOr<Value>(OpBuilder &, OpOperand &)>;
-
-/// Callback returning true if the PadOp defining the given OpOperand shall be
-/// marked as nofold to enable packing.
-using PaddingNoFoldComputationFunction = std::function<bool(OpOperand &)>;
-
-/// Callback returning the number of loops to hoist the PadOp defining the given
-/// OpOperand.
-using PaddingHoistComputationFunction = std::function<int64_t(OpOperand &)>;
-
-/// Callback returning the transpose vector used to permute the result tensor
-/// dimensions of the PadOp defining the given OpOperand.
-using PaddingTransposeComputationFunction =
-    std::function<SmallVector<int64_t>(OpOperand &)>;
-
 struct LinalgPaddingOptions {
-  /// Callback returning the padding value to use for a given OpOperand or
-  /// failure for no padding. Padding operations are introduced if
-  /// `paddingValueComputationFunction` is set and does not return failure.
-  /// Padding all operands guarantees the operation is statically shaped and
-  /// thus can be vectorized.
-  PaddingValueComputationFunction paddingValueComputationFunction = nullptr;
-
-  LinalgPaddingOptions &
-  setPaddingValueComputationFunction(PaddingValueComputationFunction fun) {
-    paddingValueComputationFunction = std::move(fun);
+  /// A padding value for every operand.
+  SmallVector<Attribute> paddingValues;
+  LinalgPaddingOptions &setPaddingValues(ArrayRef<Attribute> pv) {
+    paddingValues.assign(pv.begin(), pv.end());
     return *this;
   }
-
-  /// Callback returning true if the PadOp defining the given OpOperand shall be
-  /// marked as nofold to enable packing. A padding operation is only marked
-  /// nofold if `paddingNoFoldComputationFunction` is set and returns true.
-  /// Otherwise, the nofold attribute is set to false.
-  PaddingNoFoldComputationFunction paddingNoFoldComputationFunction = nullptr;
-
-  LinalgPaddingOptions &
-  setPaddingNoFoldComputationFunction(PaddingNoFoldComputationFunction fun) {
-    paddingNoFoldComputationFunction = std::move(fun);
+  /// A flag for every operand to mark the PadOp as nofold which enables packing
+  /// for statically shaped operands.
+  SmallVector<bool> packPaddings;
+  LinalgPaddingOptions &setPackPaddings(ArrayRef<bool> pp) {
+    packPaddings.assign(pp.begin(), pp.end());
     return *this;
   }
-
-  /// Callback returning the number of loops to hoist the PadOp defining the
-  /// given OpOperand.
-  PaddingHoistComputationFunction paddingHoistComputationFunction = nullptr;
-
-  LinalgPaddingOptions &
-  setPaddingHoistComputationFunction(PaddingHoistComputationFunction fun) {
-    paddingHoistComputationFunction = std::move(fun);
+  /// A number of loops to hoist the PadOp out for every operand.
+  SmallVector<int64_t> hoistPaddings;
+  LinalgPaddingOptions &setHoistPaddings(ArrayRef<int64_t> hp) {
+    hoistPaddings.assign(hp.begin(), hp.end());
     return *this;
   }
-
-  /// Callback returning the transpose vector used to permute the result tensor
-  /// dimensions of the PadOp defining the given OpOperand.
-  PaddingTransposeComputationFunction paddingTransposeComputationFunction =
-      nullptr;
-
-  LinalgPaddingOptions &setPaddingTransposeComputationFunction(
-      PaddingTransposeComputationFunction fun) {
-    paddingTransposeComputationFunction = std::move(fun);
+  /// A permutation vector for every operand used to transpose the packed PadOp
+  /// results.
+  SmallVector<SmallVector<int64_t>> transposePaddings;
+  LinalgPaddingOptions &
+  setTransposePaddings(ArrayRef<SmallVector<int64_t>> tp) {
+    transposePaddings.assign(tp.begin(), tp.end());
     return *this;
   }
 };
@@ -1254,16 +1217,15 @@ struct PadOpTransformationPattern : public OpRewritePattern<tensor::PadOp> {
                                 PatternRewriter &rewriter) const override;
 };
 
-/// Pad the operands of `opToPad` to a static bounding box. Use `paddingFunc`
-/// and `nofoldFunc` to set the padding value and the nofold attribute of the
+/// Pad the operands of `opToPad` to a static bounding box. Use `paddingValues`
+/// and `packPaddings` to set the padding value and the nofold attribute of the
 /// introduced tensor::PadOps, respectively. Update `paddedOp` to the cloned
 /// statically shaped operation and return the extracted dynamically shaped
 /// results. If padding fails, return failure.
 FailureOr<SmallVector<Value>>
 rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
-                  const PaddingValueComputationFunction &paddingFunc,
-                  const PaddingNoFoldComputationFunction &nofoldFunc,
-                  LinalgOp &paddedOp);
+                  ArrayRef<Attribute> paddingValues,
+                  ArrayRef<bool> packPaddings, LinalgOp &paddedOp);
 
 using OptimizeCopyFn =
     std::function<LogicalResult(PatternRewriter &, tensor::PadOp, Value)>;
