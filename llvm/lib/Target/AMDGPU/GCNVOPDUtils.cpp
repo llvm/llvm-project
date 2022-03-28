@@ -42,9 +42,15 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   const unsigned NumVGPRBanks = 4;
   // Literals also count against scalar bus limit
-  SmallVector<int64_t> UniqueLiterals;
+  SmallVector<const MachineOperand *> UniqueLiterals;
+  auto addLiteral = [&](const MachineOperand &Op) {
+    for (auto &Literal : UniqueLiterals) {
+      if (Literal->isIdenticalTo(Op))
+        return;
+    }
+    UniqueLiterals.push_back(&Op);
+  };
   SmallVector<Register> UniqueScalarRegs;
-  uint64_t Literal;
   assert([&]() -> bool {
     for (auto MII = MachineBasicBlock::const_iterator(&FirstMI);
          MII != FirstMI.getParent()->instr_end(); ++MII) {
@@ -70,18 +76,12 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
     switch (Comp.MI.getOpcode()) {
     case AMDGPU::V_FMAMK_F32:
       // cannot inline the fixed literal in fmamk
-      Literal = Comp.MI.getOperand(2).getImm();
-      if (!is_contained(UniqueLiterals, Literal)) {
-        UniqueLiterals.push_back(Literal);
-      }
+      addLiteral(Comp.MI.getOperand(2));
       Comp.Reg2 = Comp.MI.getOperand(3).getReg();
       break;
     case AMDGPU::V_FMAAK_F32:
       // cannot inline the fixed literal in fmaak
-      Literal = Comp.MI.getOperand(3).getImm();
-      if (!is_contained(UniqueLiterals, Literal)) {
-        UniqueLiterals.push_back(Literal);
-      }
+      addLiteral(Comp.MI.getOperand(3));
       Comp.Reg1 = Comp.MI.getOperand(2).getReg();
       break;
     case AMDGPU::V_FMAC_F32_e32:
@@ -111,11 +111,8 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
       } else
         Comp.Reg0 = Op0.getReg();
     } else {
-      Literal = Comp.MI.getOperand(1).getImm();
-      if (!TII.isInlineConstant(Comp.MI, 1) &&
-          !is_contained(UniqueLiterals, Literal)) {
-        UniqueLiterals.push_back(Literal);
-      }
+      if (!TII.isInlineConstant(Comp.MI, 1))
+        addLiteral(Op0);
     }
   }
 
