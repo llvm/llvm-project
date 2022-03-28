@@ -60,4 +60,10 @@ module m1
   logical, parameter :: test_xi3b = all(maxloc(ia3, back=.true.) == [0,0,0])
   logical, parameter :: test_xi3c = all(maxloc(ia3, dim=2) == reshape([0,0,0,0],shape=[2,2]))
   logical, parameter :: test_xi3d = all(maxloc(ia3, dim=2, back=.true.) == reshape([0,0,0,0],shape=[2,2]))
+
+  character(1), parameter :: a(4) = ['a', 'b', 'a', 'b']
+  logical, parameter :: test_char1 = all(maxloc(a).eq.[2])
+  logical, parameter :: test_char2 = all(minloc(a).eq.[1])
+  logical, parameter :: test_char3 = all(maxloc(a, back=.true.).eq.[4])
+  logical, parameter :: test_char4 = all(minloc(a, back=.true.).eq.[3])
 end module
