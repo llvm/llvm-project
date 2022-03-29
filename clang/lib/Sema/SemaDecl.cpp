@@ -11323,6 +11323,11 @@ void Sema::CheckMain(FunctionDecl* FD, const DeclSpec& DS) {
     return;
   }
 
+  // Functions named main in hlsl are default entries, but don't have specific
+  // signatures they are required to conform to.
+  if (getLangOpts().HLSL)
+    return;
+
   QualType T = FD->getType();
   assert(T->isFunctionType() && "function decl is not of function type");
   const FunctionType* FT = T->castAs<FunctionType>();
