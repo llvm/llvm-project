@@ -46,39 +46,7 @@ static int64_t MinSignedConstraintValue = std::numeric_limits<int64_t>::min();
 
 namespace {
 
-/// Wrapper encapsulating separate constraint systems and corresponding value
-/// mappings for both unsigned and signed information. Facts are added to and
-/// conditions are checked against the corresponding system depending on the
-/// signed-ness of their predicates. While the information is kept separate
-/// based on signed-ness, certain conditions can be transferred between the two
-/// systems.
-class ConstraintInfo {
-  DenseMap<Value *, unsigned> UnsignedValue2Index;
-  DenseMap<Value *, unsigned> SignedValue2Index;
-
-  ConstraintSystem UnsignedCS;
-  ConstraintSystem SignedCS;
-
-public:
-  DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
-    return Signed ? SignedValue2Index : UnsignedValue2Index;
-  }
-  const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
-    return Signed ? SignedValue2Index : UnsignedValue2Index;
-  }
-
-  ConstraintSystem &getCS(bool Signed) {
-    return Signed ? SignedCS : UnsignedCS;
-  }
-  const ConstraintSystem &getCS(bool Signed) const {
-    return Signed ? SignedCS : UnsignedCS;
-  }
-
-  void popLastConstraint(bool Signed) { getCS(Signed).popLastConstraint(); }
-  void popLastNVariables(bool Signed, unsigned N) {
-    getCS(Signed).popLastNVariables(N);
-  }
-};
+class ConstraintInfo;
 
 /// Struct to express a pre-condition of the form %Op0 Pred %Op1.
 struct PreconditionTy {
@@ -128,6 +96,40 @@ struct ConstraintTy {
     if (size() != 1)
       return false;
     return isValid(Info);
+  }
+};
+
+/// Wrapper encapsulating separate constraint systems and corresponding value
+/// mappings for both unsigned and signed information. Facts are added to and
+/// conditions are checked against the corresponding system depending on the
+/// signed-ness of their predicates. While the information is kept separate
+/// based on signed-ness, certain conditions can be transferred between the two
+/// systems.
+class ConstraintInfo {
+  DenseMap<Value *, unsigned> UnsignedValue2Index;
+  DenseMap<Value *, unsigned> SignedValue2Index;
+
+  ConstraintSystem UnsignedCS;
+  ConstraintSystem SignedCS;
+
+public:
+  DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
+    return Signed ? SignedValue2Index : UnsignedValue2Index;
+  }
+  const DenseMap<Value *, unsigned> &getValue2Index(bool Signed) const {
+    return Signed ? SignedValue2Index : UnsignedValue2Index;
+  }
+
+  ConstraintSystem &getCS(bool Signed) {
+    return Signed ? SignedCS : UnsignedCS;
+  }
+  const ConstraintSystem &getCS(bool Signed) const {
+    return Signed ? SignedCS : UnsignedCS;
+  }
+
+  void popLastConstraint(bool Signed) { getCS(Signed).popLastConstraint(); }
+  void popLastNVariables(bool Signed, unsigned N) {
+    getCS(Signed).popLastNVariables(N);
   }
 };
 
