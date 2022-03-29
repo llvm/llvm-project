@@ -155,12 +155,17 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
   // Set up disassembler.
-  std::unique_ptr<const MCAsmInfo> AsmInfo(
+  std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TripleName, MCTargetOptions()));
   if (!AsmInfo)
     return createStringError(
         make_error_code(std::errc::not_supported),
         Twine("BOLT-ERROR: no assembly info for target ", TripleName));
+  // BOLT creates "func@PLT" symbols for PLT entries. In function assembly dump
+  // we want to emit such names as using @PLT without double quotes to convey
+  // variant kind to the assembler. BOLT doesn't rely on the linker so we can
+  // override the default AsmInfo behavior to emit names the way we want.
+  AsmInfo->setAllowAtInName(true);
 
   std::unique_ptr<const MCSubtargetInfo> STI(
       TheTarget->createMCSubtargetInfo(TripleName, "", FeaturesStr));
