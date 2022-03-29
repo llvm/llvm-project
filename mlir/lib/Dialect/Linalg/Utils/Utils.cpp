@@ -322,8 +322,6 @@ tensor::ExtractSliceOp makeComposedExtractSliceOp(
 
 Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
                             Value source, Value pad, bool nofold) {
-  assert(type.hasStaticShape() && "expect tensor type to have static shape");
-
   // Exit if `source` is not defined by an ExtractSliceOp.
   auto sliceOp = source.getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp)

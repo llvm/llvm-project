@@ -16,12 +16,10 @@
 // CHECK-NOT: .eh_frame
 
 // 0x200120 = 2097440
-// 0x200120 + 5 = 2097445
 // DISASM:      Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: <_start>:
 // DISASM-NEXT:   201154: {{.*}} movq 2097440, %rax
-// DISASM-NEXT:   20115c: {{.*}} movq 2097445, %rax
 
 .section .eh_frame,"a",@unwind
 
@@ -29,4 +27,3 @@
 .globl _start
 _start:
  movq .eh_frame, %rax
- movq .eh_frame + 5, %rax

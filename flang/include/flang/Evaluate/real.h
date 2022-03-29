@@ -120,6 +120,9 @@ public:
 
   ValueWithRealFlags<Real> SQRT(Rounding rounding = defaultRounding) const;
 
+  // NEAREST(), IEEE_NEXT_AFTER(), IEEE_NEXT_UP(), and IEEE_NEXT_DOWN()
+  ValueWithRealFlags<Real> NEAREST(bool upward) const;
+
   // HYPOT(x,y)=SQRT(x**2 + y**2) computed so as to avoid spurious
   // intermediate overflows.
   ValueWithRealFlags<Real> HYPOT(

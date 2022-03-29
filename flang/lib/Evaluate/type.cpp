@@ -55,7 +55,7 @@ static bool IsDescriptor(const ProcEntityDetails &details) {
 }
 
 bool IsDescriptor(const Symbol &symbol) {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const ObjectEntityDetails &d) {
             return IsAllocatableOrPointer(symbol) || IsDescriptor(d);

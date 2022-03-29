@@ -99,9 +99,9 @@ To upload a new patch:
 
 * Click *Differential*.
 * Click *+ Create Diff*.
-* Paste the text diff or browse to the patch file. Click *Create Diff*.
-* Leave this first Repository field blank. (We'll fill in the Repository
-  later, when sending the review.)
+* Paste the text diff or browse to the patch file. Leave this first Repository
+  field blank. (We'll fill in the Repository later, when sending the review.)
+  Click *Create Diff*.
 * Leave the drop down on *Create a new Revision...* and click *Continue*.
 * Enter a descriptive title and summary.  The title and summary are usually
   in the form of a :ref:`commit message <commit messages>`.

@@ -3905,7 +3905,7 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
 
   // -fdiagnostics-fixit-info is default, only pass non-default.
   if (!Args.hasFlag(options::OPT_fdiagnostics_fixit_info,
-                    options::OPT_fno_diagnostics_fixit_info))
+                    options::OPT_fno_diagnostics_fixit_info, true))
     CmdArgs.push_back("-fno-diagnostics-fixit-info");
 
   // Enable -fdiagnostics-show-option by default.
@@ -3974,7 +3974,7 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-fansi-escape-codes");
 
   if (!Args.hasFlag(options::OPT_fshow_source_location,
-                    options::OPT_fno_show_source_location))
+                    options::OPT_fno_show_source_location, true))
     CmdArgs.push_back("-fno-show-source-location");
 
   if (Args.hasArg(options::OPT_fdiagnostics_absolute_paths))
@@ -3985,7 +3985,7 @@ static void RenderDiagnosticsOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-fno-show-column");
 
   if (!Args.hasFlag(options::OPT_fspell_checking,
-                    options::OPT_fno_spell_checking))
+                    options::OPT_fno_spell_checking, true))
     CmdArgs.push_back("-fno-spell-checking");
 }
 
@@ -4780,7 +4780,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
     // Render the CodeGen options that need to be passed.
     if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
-                      options::OPT_fno_optimize_sibling_calls))
+                      options::OPT_fno_optimize_sibling_calls, true))
       CmdArgs.push_back("-mdisable-tail-calls");
 
     RenderFloatingPointOptions(TC, D, isOptimizationLevelFast(Args), Args,
@@ -5156,7 +5156,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_strict_aliasing, TBAAOnByDefault))
     CmdArgs.push_back("-relaxed-aliasing");
   if (!Args.hasFlag(options::OPT_fstruct_path_tbaa,
-                    options::OPT_fno_struct_path_tbaa))
+                    options::OPT_fno_struct_path_tbaa, true))
     CmdArgs.push_back("-no-struct-path-tbaa");
   if (Args.hasFlag(options::OPT_fstrict_enums, options::OPT_fno_strict_enums,
                    false))
@@ -5176,7 +5176,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                    false))
     CmdArgs.push_back("-fforce-emit-vtables");
   if (!Args.hasFlag(options::OPT_foptimize_sibling_calls,
-                    options::OPT_fno_optimize_sibling_calls))
+                    options::OPT_fno_optimize_sibling_calls, true))
     CmdArgs.push_back("-mdisable-tail-calls");
   if (Args.hasFlag(options::OPT_fno_escaping_block_tail_calls,
                    options::OPT_fescaping_block_tail_calls, false))
@@ -6298,7 +6298,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   RenderBuiltinOptions(TC, RawTriple, Args, CmdArgs);
 
   if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
-                    options::OPT_fno_assume_sane_operator_new))
+                    options::OPT_fno_assume_sane_operator_new, true))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
   // -fblocks=0 is default.
@@ -6577,7 +6577,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // C++ "sane" operator new.
   if (!Args.hasFlag(options::OPT_fassume_sane_operator_new,
-                    options::OPT_fno_assume_sane_operator_new))
+                    options::OPT_fno_assume_sane_operator_new, true))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
   // -frelaxed-template-template-args is off by default, as it is a severe
@@ -6614,9 +6614,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fconstant-cfstrings is default, and may be subject to argument translation
   // on Darwin.
   if (!Args.hasFlag(options::OPT_fconstant_cfstrings,
-                    options::OPT_fno_constant_cfstrings) ||
+                    options::OPT_fno_constant_cfstrings, true) ||
       !Args.hasFlag(options::OPT_mconstant_cfstrings,
-                    options::OPT_mno_constant_cfstrings))
+                    options::OPT_mno_constant_cfstrings, true))
     CmdArgs.push_back("-fno-constant-cfstrings");
 
   // -fno-pascal-strings is default, only pass non-default.
@@ -6660,12 +6660,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fsigned-bitfields is default, and clang doesn't yet support
   // -funsigned-bitfields.
   if (!Args.hasFlag(options::OPT_fsigned_bitfields,
-                    options::OPT_funsigned_bitfields))
+                    options::OPT_funsigned_bitfields, true))
     D.Diag(diag::warn_drv_clang_unsupported)
         << Args.getLastArg(options::OPT_funsigned_bitfields)->getAsString(Args);
 
   // -fsigned-bitfields is default, and clang doesn't support -fno-for-scope.
-  if (!Args.hasFlag(options::OPT_ffor_scope, options::OPT_fno_for_scope))
+  if (!Args.hasFlag(options::OPT_ffor_scope, options::OPT_fno_for_scope, true))
     D.Diag(diag::err_drv_clang_unsupported)
         << Args.getLastArg(options::OPT_fno_for_scope)->getAsString(Args);
 

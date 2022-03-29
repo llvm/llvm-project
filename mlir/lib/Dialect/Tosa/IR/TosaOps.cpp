@@ -68,21 +68,6 @@ struct TosaInlinerInterface : public DialectInlinerInterface {
 /// Returns the while loop body.
 Region &tosa::WhileOp::getLoopBody() { return body(); }
 
-bool tosa::WhileOp::isDefinedOutsideOfLoop(Value value) {
-  return !body().isAncestor(value.getParentRegion());
-}
-
-LogicalResult WhileOp::moveOutOfLoop(ArrayRef<mlir::Operation *> ops) {
-  if (ops.empty())
-    return success();
-
-  Operation *tosaWhileOp = this->getOperation();
-  for (auto *op : ops)
-    op->moveBefore(tosaWhileOp);
-
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // Tosa dialect initialization.
 //===----------------------------------------------------------------------===//
@@ -586,7 +571,7 @@ OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
   return valueAttr();
 }
 
-#define ReduceFolder(OP)                                                       \
+#define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(ArrayRef<Attribute> operands) {                        \
     ShapedType inputTy = input().getType().cast<ShapedType>();                 \
     if (!inputTy.hasRank())                                                    \
@@ -596,13 +581,13 @@ OpFoldResult ConstOp::fold(ArrayRef<Attribute> operands) {
     return {};                                                                 \
   }
 
-ReduceFolder(ReduceAllOp);
-ReduceFolder(ReduceAnyOp);
-ReduceFolder(ReduceMaxOp);
-ReduceFolder(ReduceMinOp);
-ReduceFolder(ReduceProdOp);
-ReduceFolder(ReduceSumOp);
-#undef ReduceFolder
+REDUCE_FOLDER(ReduceAllOp)
+REDUCE_FOLDER(ReduceAnyOp)
+REDUCE_FOLDER(ReduceMaxOp)
+REDUCE_FOLDER(ReduceMinOp)
+REDUCE_FOLDER(ReduceProdOp)
+REDUCE_FOLDER(ReduceSumOp)
+#undef REDUCE_FOLDER
 
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   auto inputTy = input1().getType().dyn_cast<RankedTensorType>();

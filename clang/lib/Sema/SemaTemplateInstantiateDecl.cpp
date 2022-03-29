@@ -867,6 +867,11 @@ Decl *TemplateDeclInstantiator::VisitMSGuidDecl(MSGuidDecl *D) {
   llvm_unreachable("GUID declaration cannot be instantiated");
 }
 
+Decl *TemplateDeclInstantiator::VisitUnnamedGlobalConstantDecl(
+    UnnamedGlobalConstantDecl *D) {
+  llvm_unreachable("UnnamedGlobalConstantDecl cannot be instantiated");
+}
+
 Decl *TemplateDeclInstantiator::VisitTemplateParamObjectDecl(
     TemplateParamObjectDecl *D) {
   llvm_unreachable("template parameter objects cannot be instantiated");

@@ -135,7 +135,7 @@
 ! HELP-FC1-NEXT: -test-io               Run the InputOuputTest action. Use for development and testing only.
 ! HELP-FC1-NEXT: -triple <value>        Specify target triple (e.g. i686-apple-darwin9)
 ! HELP-FC1-NEXT: -U <macro>             Undefine macro <macro>
-! HELP-FC1-NEXT: --version              Print version information
+! HELP-FC1-NEXT: -version               Print the compiler version
 ! HELP-FC1-NEXT: -W<warning>            Enable the specified warning
 
 !---------------

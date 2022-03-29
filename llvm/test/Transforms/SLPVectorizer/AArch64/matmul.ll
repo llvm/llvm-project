@@ -16,17 +16,12 @@ define void @wrap_mul4(double* nocapture %Out, [2 x double]* nocapture readonly 
 ; CHECK-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 0, i64 1
 ; CHECK-NEXT:    [[TEMP2:%.*]] = load double, double* [[ARRAYIDX5_I]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 0
-; CHECK-NEXT:    [[ARRAYIDX13_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 1
-; CHECK-NEXT:    [[ARRAYIDX18_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 1
 ; CHECK-NEXT:    [[ARRAYIDX25_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 2
 ; CHECK-NEXT:    [[ARRAYIDX30_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 2
-; CHECK-NEXT:    [[ARRAYIDX37_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 0, i64 3
-; CHECK-NEXT:    [[ARRAYIDX42_I:%.*]] = getelementptr inbounds [4 x double], [4 x double]* [[B]], i64 1, i64 3
 ; CHECK-NEXT:    [[ARRAYIDX47_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 1, i64 0
 ; CHECK-NEXT:    [[TEMP10:%.*]] = load double, double* [[ARRAYIDX47_I]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX52_I:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[A]], i64 1, i64 1
 ; CHECK-NEXT:    [[TEMP11:%.*]] = load double, double* [[ARRAYIDX52_I]], align 8
-; CHECK-NEXT:    [[RES_I_SROA_4_0_OUT2_I_SROA_IDX2:%.*]] = getelementptr inbounds double, double* [[OUT:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[ARRAYIDX3_I]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[TEMP]], i32 0
@@ -38,9 +33,8 @@ define void @wrap_mul4(double* nocapture %Out, [2 x double]* nocapture readonly 
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[TEMP2]], i32 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[OUT]] to <2 x double>*
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[OUT:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 2
-; CHECK-NEXT:    [[RES_I_SROA_6_0_OUT2_I_SROA_IDX6:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 3
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast double* [[ARRAYIDX25_I]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <2 x double>, <2 x double>* [[TMP13]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = fmul <2 x double> [[TMP4]], [[TMP14]]
@@ -52,7 +46,6 @@ define void @wrap_mul4(double* nocapture %Out, [2 x double]* nocapture readonly 
 ; CHECK-NEXT:    [[TMP20:%.*]] = bitcast double* [[RES_I_SROA_5_0_OUT2_I_SROA_IDX4]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP19]], <2 x double>* [[TMP20]], align 8
 ; CHECK-NEXT:    [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 4
-; CHECK-NEXT:    [[RES_I_SROA_8_0_OUT2_I_SROA_IDX10:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 5
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x double> poison, double [[TEMP10]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x double> [[TMP21]], double [[TEMP10]], i32 1
 ; CHECK-NEXT:    [[TMP23:%.*]] = fmul <2 x double> [[TMP2]], [[TMP22]]
@@ -63,7 +56,6 @@ define void @wrap_mul4(double* nocapture %Out, [2 x double]* nocapture readonly 
 ; CHECK-NEXT:    [[TMP28:%.*]] = bitcast double* [[RES_I_SROA_7_0_OUT2_I_SROA_IDX8]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP27]], <2 x double>* [[TMP28]], align 8
 ; CHECK-NEXT:    [[RES_I_SROA_9_0_OUT2_I_SROA_IDX12:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 6
-; CHECK-NEXT:    [[RES_I_SROA_10_0_OUT2_I_SROA_IDX14:%.*]] = getelementptr inbounds double, double* [[OUT]], i64 7
 ; CHECK-NEXT:    [[TMP29:%.*]] = fmul <2 x double> [[TMP14]], [[TMP22]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = fmul <2 x double> [[TMP17]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = fadd <2 x double> [[TMP29]], [[TMP30]]

@@ -338,14 +338,9 @@ struct LinalgStrategyEnablePass
       return signalPassFailure();
 
     if (options.licm) {
-      if (funcOp
-              ->walk([&](LoopLikeOpInterface loopLike) {
-                if (failed(moveLoopInvariantCode(loopLike)))
-                  return WalkResult::interrupt();
-                return WalkResult::advance();
-              })
-              .wasInterrupted())
-        return signalPassFailure();
+      funcOp->walk([&](LoopLikeOpInterface loopLike) {
+        moveLoopInvariantCode(loopLike);
+      });
     }
 
     // Gathers all innermost loops through a post order pruned walk.

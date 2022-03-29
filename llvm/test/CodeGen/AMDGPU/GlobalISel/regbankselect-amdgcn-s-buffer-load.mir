@@ -66,9 +66,9 @@ body: |
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
-    ; CHECK-NEXT: successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.0, %9, %bb.1
+    ; CHECK-NEXT: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.0, %9, %bb.2
     ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
     ; CHECK-NEXT: [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -80,16 +80,20 @@ body: |
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
     ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2:
+    ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.1(0x40000000)
+    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY2]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
     ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: .2:
-    ; CHECK-NEXT: successors: %bb.3(0x80000000)
+    ; CHECK-NEXT: .3:
+    ; CHECK-NEXT: successors: %bb.4(0x80000000)
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: .3:
+    ; CHECK-NEXT: .4:
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s32) = COPY $sgpr0
     %2:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD %0, %1, 0
@@ -117,9 +121,9 @@ body: |
     ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .1:
-    ; CHECK-NEXT: successors: %bb.2(0x40000000), %bb.1(0x40000000)
+    ; CHECK-NEXT: successors: %bb.2(0x80000000)
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.0, %8, %bb.1
+    ; CHECK-NEXT: [[PHI:%[0-9]+]]:sreg_64_xexec = PHI [[DEF]], %bb.0, %8, %bb.2
     ; CHECK-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub0(s64), implicit $exec
     ; CHECK-NEXT: [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0(s32) = V_READFIRSTLANE_B32 [[UV]].sub1(s64), implicit $exec
     ; CHECK-NEXT: [[MV:%[0-9]+]]:sreg_64_xexec(s64) = G_MERGE_VALUES [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32)
@@ -131,16 +135,20 @@ body: |
     ; CHECK-NEXT: [[S_AND_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_B64 [[V_CMP_EQ_U64_e64_1]], [[V_CMP_EQ_U64_e64_]], implicit-def $scc
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<4 x s32>) = G_BUILD_VECTOR [[V_READFIRSTLANE_B32_]](s32), [[V_READFIRSTLANE_B32_1]](s32), [[V_READFIRSTLANE_B32_2]](s32), [[V_READFIRSTLANE_B32_3]](s32)
     ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[S_AND_B64_]], implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: .2:
+    ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.1(0x40000000)
+    ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(<4 x s32>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY1]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
     ; CHECK-NEXT: $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
     ; CHECK-NEXT: SI_WATERFALL_LOOP %bb.1, implicit $exec
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: .2:
-    ; CHECK-NEXT: successors: %bb.3(0x80000000)
+    ; CHECK-NEXT: .3:
+    ; CHECK-NEXT: successors: %bb.4(0x80000000)
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $exec = S_MOV_B64_term [[S_MOV_B64_]]
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: .3:
+    ; CHECK-NEXT: .4:
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s32) = COPY $vgpr4
     %2:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD %0, %1, 0

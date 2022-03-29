@@ -499,13 +499,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
 
   // We have some custom DAG combine patterns for these nodes
-  setTargetDAGCombine(ISD::ADD);
-  setTargetDAGCombine(ISD::AND);
-  setTargetDAGCombine(ISD::FADD);
-  setTargetDAGCombine(ISD::MUL);
-  setTargetDAGCombine(ISD::SHL);
-  setTargetDAGCombine(ISD::SREM);
-  setTargetDAGCombine(ISD::UREM);
+  setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::FADD, ISD::MUL, ISD::SHL,
+                       ISD::SREM, ISD::UREM});
 
   // setcc for f16x2 needs special handling to prevent legalizer's
   // attempt to scalarize it due to v2i1 not being legal.
@@ -4260,40 +4255,11 @@ Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
 
   // If a function has linkage different from internal or private, we
   // must use default ABI alignment as external users rely on it.
-  switch (F->getLinkage()) {
-  case GlobalValue::InternalLinkage:
-  case GlobalValue::PrivateLinkage: {
-    // Check that if a function has internal or private linkage
-    // it is not a kernel.
-#ifndef NDEBUG
-    const NamedMDNode *NMDN =
-        F->getParent()->getNamedMetadata("nvvm.annotations");
-    if (NMDN) {
-      for (const MDNode *MDN : NMDN->operands()) {
-        assert(MDN->getNumOperands() == 3);
-
-        const Metadata *MD0 = MDN->getOperand(0).get();
-        const auto *MDV0 = cast<ConstantAsMetadata>(MD0)->getValue();
-        const auto *MDFn = cast<Function>(MDV0);
-        if (MDFn != F)
-          continue;
-
-        const Metadata *MD1 = MDN->getOperand(1).get();
-        const MDString *MDStr = cast<MDString>(MD1);
-        if (MDStr->getString() != "kernel")
-          continue;
-
-        const Metadata *MD2 = MDN->getOperand(2).get();
-        const auto *MDV2 = cast<ConstantAsMetadata>(MD2)->getValue();
-        assert(!cast<ConstantInt>(MDV2)->isZero());
-      }
-    }
-#endif
-    return Align(std::max(uint64_t(16), ABITypeAlign));
-  }
-  default:
+  if (!F->hasLocalLinkage())
     return Align(ABITypeAlign);
-  }
+
+  assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
+  return Align(std::max(uint64_t(16), ABITypeAlign));
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented

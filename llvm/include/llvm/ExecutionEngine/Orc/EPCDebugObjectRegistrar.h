@@ -23,8 +23,6 @@
 #include <memory>
 #include <vector>
 
-using namespace llvm::orc::shared;
-
 namespace llvm {
 namespace orc {
 

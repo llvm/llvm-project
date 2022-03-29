@@ -61,3 +61,17 @@ int func_13 (int x, unsigned y) {
 int func_14 (void) {
   return data1 == 0;
 }
+
+void func_15(void) {
+  // Ensure that the result of an assignment expression properly strips the
+  // _Atomic qualifier; Issue 48742.
+  _Atomic int x;
+  int y = (x = 2);
+  int z = (int)(x = 2);
+  y = (x = 2);
+  z = (int)(x = 2);
+  y = (x += 2);
+
+  _Static_assert(__builtin_types_compatible_p(__typeof__(x = 2), int), "incorrect");
+  _Static_assert(__builtin_types_compatible_p(__typeof__(x += 2), int), "incorrect");
+}

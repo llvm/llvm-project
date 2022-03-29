@@ -1016,8 +1016,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
   if (TC.getTriple().isNVPTX() ||
       (TC.getTriple().isAMDGPU() &&
-       !Args.hasFlag(options::OPT_fgpu_sanitize,
-                     options::OPT_fno_gpu_sanitize)))
+       !Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
+                     true)))
     return;
 
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.

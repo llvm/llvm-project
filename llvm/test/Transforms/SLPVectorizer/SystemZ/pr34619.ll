@@ -11,10 +11,7 @@ define void @foo() local_unnamed_addr {
 ; CHECK-NEXT:    store i32 [[ADD277]], i32* getelementptr inbounds ([4 x [4 x i32]], [4 x [4 x i32]]* @bar, i64 0, i64 3, i64 1), align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([4 x [4 x i32]], [4 x [4 x i32]]* @bar, i64 0, i64 3, i64 0), align 4
 ; CHECK-NEXT:    [[ARRAYIDX372:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 0
-; CHECK-NEXT:    [[ARRAYIDX372_1:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 1
-; CHECK-NEXT:    [[ARRAYIDX372_2:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* bitcast (i32* getelementptr inbounds ([4 x [4 x i32]], [4 x [4 x i32]]* @bar, i64 0, i64 3, i64 2) to <2 x i32>*), align 4
-; CHECK-NEXT:    [[ARRAYIDX372_3:%.*]] = getelementptr inbounds [4 x [4 x i32]], [4 x [4 x i32]]* @dct_luma, i64 0, i64 3, i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[ADD277]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
