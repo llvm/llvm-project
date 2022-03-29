@@ -202,6 +202,11 @@ public:
   /// diagnostics.
   void setDiagnosticsHotnessRequested(bool Requested);
 
+  bool getMisExpectWarningRequested() const;
+  void setMisExpectWarningRequested(bool Requested);
+  void setDiagnosticsMisExpectTolerance(Optional<uint64_t> Tolerance);
+  uint64_t getDiagnosticsMisExpectTolerance() const;
+
   /// Return the minimum hotness value a diagnostic would need in order
   /// to be included in optimization diagnostics.
   ///

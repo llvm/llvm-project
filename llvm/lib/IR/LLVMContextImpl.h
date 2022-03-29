@@ -1384,6 +1384,11 @@ public:
   /// If threshold option is not specified, it is disabled (0) by default.
   Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
+  /// The percentage of difference between profiling branch weights and
+  // llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
+  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  bool MisExpectWarningRequested = false;
+
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
   std::unique_ptr<LLVMRemarkStreamer> LLVMRS;
 
