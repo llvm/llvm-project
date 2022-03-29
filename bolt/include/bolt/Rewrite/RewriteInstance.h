@@ -22,7 +22,6 @@
 #include "llvm/Support/Error.h"
 #include <map>
 #include <set>
-#include <unordered_map>
 
 namespace llvm {
 
@@ -132,7 +131,7 @@ private:
   void processLKSMPLocks();
 
   /// Read relocations from a given section.
-  void readDynamicRelocations(const object::SectionRef &Section, bool IsJmpRel);
+  void readDynamicRelocations(const object::SectionRef &Section);
 
   /// Read relocations from a given section.
   void readRelocations(const object::SectionRef &Section);
@@ -208,10 +207,6 @@ private:
   /// Return address of a function in the new binary corresponding to
   /// \p OldAddress address in the original binary.
   uint64_t getNewFunctionAddress(uint64_t OldAddress);
-
-  /// Return address of a function or moved data in the new binary
-  /// corresponding to \p OldAddress address in the original binary.
-  uint64_t getNewFunctionOrDataAddress(uint64_t OldAddress);
 
   /// Return value for the symbol \p Name in the output.
   uint64_t getNewValueForSymbol(const StringRef Name);
@@ -323,14 +318,6 @@ private:
       const typename object::ELFObjectFile<ELFT>::Elf_Shdr &SymTabSection,
       const std::vector<uint32_t> &NewSectionIndex, WriteFuncTy Write,
       StrTabFuncTy AddToStrTab);
-
-  /// Get output index in dynamic symbol table.
-  uint32_t getOutputDynamicSymbolIndex(const MCSymbol *Symbol) {
-    auto It = SymbolIndex.find(Symbol);
-    if (It != SymbolIndex.end())
-      return It->second;
-    return 0;
-  }
 
   /// Add a notes section containing the BOLT revision and command line options.
   void addBoltInfoSection();
@@ -459,18 +446,10 @@ private:
   /// Location and size of dynamic relocations.
   Optional<uint64_t> DynamicRelocationsAddress;
   uint64_t DynamicRelocationsSize{0};
-  uint64_t DynamicRelativeRelocationsCount{0};
 
   /// PLT relocations are special kind of dynamic relocations stored separately.
   Optional<uint64_t> PLTRelocationsAddress;
   uint64_t PLTRelocationsSize{0};
-
-  /// True if relocation of specified type came from .rela.plt
-  DenseMap<uint64_t, bool> IsJmpRelocation;
-
-  /// Index of specified symbol in the dynamic symbol table. NOTE Currently it
-  /// is filled and used only with the relocations-related symbols.
-  std::unordered_map<const MCSymbol *, uint32_t> SymbolIndex;
 
   /// Store all non-zero symbols in this map for a quick address lookup.
   std::map<uint64_t, llvm::object::SymbolRef> FileSymRefs;
