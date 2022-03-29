@@ -2313,6 +2313,11 @@ def AArch64VectorPcs: DeclOrTypeAttr {
   let Documentation = [AArch64VectorPcsDocs];
 }
 
+def AArch64SVEPcs: DeclOrTypeAttr {
+  let Spellings = [Clang<"aarch64_sve_pcs">];
+  let Documentation = [AArch64SVEPcsDocs];
+}
+
 def Pure : InheritableAttr {
   let Spellings = [GCC<"pure">];
   let Documentation = [Undocumented];
