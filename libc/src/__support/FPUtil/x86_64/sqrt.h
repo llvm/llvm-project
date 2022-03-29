@@ -32,10 +32,18 @@ template <> inline double sqrt<double>(double x) {
   return result;
 }
 
+#ifdef LONG_DOUBLE_IS_DOUBLE
+template <> inline long double sqrt<long double>(long double x) {
+  long double result;
+  __asm__ __volatile__("sqrtsd %x1, %x0" : "=x"(result) : "x"(x));
+  return result;
+}
+#else
 template <> inline long double sqrt<long double>(long double x) {
   __asm__ __volatile__("fsqrt" : "+t"(x));
   return x;
 }
+#endif
 
 } // namespace fputil
 } // namespace __llvm_libc
