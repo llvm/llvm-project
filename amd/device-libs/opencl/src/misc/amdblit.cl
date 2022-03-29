@@ -642,13 +642,13 @@ __amd_streamOpsWait(
     case 3: //NOR
       if (ptrUint) {
         while (((atomic_load_explicit(ptrUint, memory_order_relaxed,
-                     memory_scope_all_svm_devices) & (uint)mask) | (uint)value) == ~0U) {
+                 memory_scope_all_svm_devices) | (uint)value) & (uint)mask) == (uint)mask) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
       else {
         while (((atomic_load_explicit(ptrUlong, memory_order_relaxed,
-                     memory_scope_all_svm_devices) & mask) | value) == ~0UL) {
+                     memory_scope_all_svm_devices) | value) & mask) == mask) {
           __builtin_amdgcn_s_sleep(1);
         }
       }
