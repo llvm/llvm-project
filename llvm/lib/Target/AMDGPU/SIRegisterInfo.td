@@ -963,14 +963,14 @@ multiclass SIRegOperand16 <string rc, string MatchName, string opType,
       let OperandType = opType#"_INT16";
       let ParserMatchClass = RegImmMatcher<MatchName#"B16_F128">;
       let DecoderMethod = "decodeOperand_VSrcT16_F128";
-      let EncoderMethod = "getMachineOpValueT16";
+      let EncoderMethod = "getMachineOpValueT16F128";
     }
 
     def _f16_F128 : RegisterOperand<!cast<RegisterClass>(rc#rc_suffix#"_F128")> {
       let OperandType = opType#"_FP16";
       let ParserMatchClass = RegImmMatcher<MatchName#"F16_F128">;
       let DecoderMethod = "decodeOperand_VSrcT16_F128";
-      let EncoderMethod = "getMachineOpValueT16";
+      let EncoderMethod = "getMachineOpValueT16F128";
     }
   }
 }
@@ -1162,7 +1162,7 @@ def VGPRSrc_16 : RegisterOperand<VGPR_16> {
 }
 def VGPRSrc_16_F128 : RegisterOperand<VGPR_16_F128> {
   let DecoderMethod = "DecodeVGPR_16_F128RegisterClass";
-  let EncoderMethod = "getMachineOpValueT16";
+  let EncoderMethod = "getMachineOpValueT16F128";
 }
 
 //===----------------------------------------------------------------------===//

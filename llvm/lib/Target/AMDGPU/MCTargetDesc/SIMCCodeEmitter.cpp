@@ -58,6 +58,10 @@ public:
                             SmallVectorImpl<MCFixup> &Fixups,
                             const MCSubtargetInfo &STI) const override;
 
+  void getMachineOpValueT16F128(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                SmallVectorImpl<MCFixup> &Fixups,
+                                const MCSubtargetInfo &STI) const override;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -523,8 +527,7 @@ static bool needsPCRel(const MCExpr *Expr) {
   llvm_unreachable("invalid kind");
 }
 
-/// \returns the encoding for a 16 bit operand in a True 16 bit instruction,
-/// which has a suffix bit as LSB
+/// \returns the encoding for a 16 bit operand in a True 16 bit instruction
 void SIMCCodeEmitter::getMachineOpValueT16(const MCInst &MI, unsigned OpNo,
                                            APInt &Op,
                                            SmallVectorImpl<MCFixup> &Fixups,
@@ -535,6 +538,26 @@ void SIMCCodeEmitter::getMachineOpValueT16(const MCInst &MI, unsigned OpNo,
     return;
   }
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+  Op = Op.shl(1);
+}
+
+/// \returns the encoding for a 16 bit operand in a True 16 bit instruction
+/// The least significant bit of the return value does not get encoded
+void SIMCCodeEmitter::getMachineOpValueT16F128(const MCInst &MI, unsigned OpNo,
+                                           APInt &Op,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg()) {
+    auto Encoding = MRI.getEncodingValue(MO.getReg());
+    assert((Encoding & (1 << 8)) == 0 &&
+           "Did not expect SGPR or VGPR RegNo > 127");
+    Encoding = ((Encoding & 1) << 8) | Encoding;
+    Op = Encoding;
+    return;
+  }
+  getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+  Op = Op.shl(1);
 }
 
 void SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,

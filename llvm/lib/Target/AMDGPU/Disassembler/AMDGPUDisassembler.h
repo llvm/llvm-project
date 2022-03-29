@@ -229,6 +229,7 @@ public:
 
   MCOperand decodeSrcOp(const OpWidthTy Width, unsigned Val,
                         bool MandatoryLiteral = false) const;
+  MCOperand decodeVGPR_16_F128(unsigned Val) const;
   MCOperand decodeNonVGPRSrcOp(const OpWidthTy Width, unsigned Val,
                             bool MandatoryLiteral = false) const;
   MCOperand decodeDstOp(const OpWidthTy Width, unsigned Val) const;
