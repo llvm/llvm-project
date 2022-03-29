@@ -393,6 +393,14 @@ bool ARMSubtarget::enableSubRegLiveness() const {
   return hasMVEIntegerOps();
 }
 
+bool ARMSubtarget::enableMachinePipeliner() const {
+  // Enable the MachinePipeliner before register allocation for subtargets
+  // with the use-mipipeliner feature.
+  return getSchedModel().hasInstrSchedModel() && useMachinePipeliner();
+}
+
+bool ARMSubtarget::useDFAforSMS() const { return false; }
+
 // This overrides the PostRAScheduler bit in the SchedModel for any CPU.
 bool ARMSubtarget::enablePostRAScheduler() const {
   if (enableMachineScheduler())
