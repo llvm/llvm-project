@@ -847,50 +847,33 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   // Vector add and sub nodes may conceal a high-half opportunity.
   // Also, try to fold ADD into CSINC/CSINV..
-  setTargetDAGCombine(ISD::ADD);
-  setTargetDAGCombine(ISD::ABS);
-  setTargetDAGCombine(ISD::SUB);
-  setTargetDAGCombine(ISD::XOR);
-  setTargetDAGCombine(ISD::SINT_TO_FP);
-  setTargetDAGCombine(ISD::UINT_TO_FP);
+  setTargetDAGCombine({ISD::ADD, ISD::ABS, ISD::SUB, ISD::XOR, ISD::SINT_TO_FP,
+                       ISD::UINT_TO_FP});
 
-  setTargetDAGCombine(ISD::FP_TO_SINT);
-  setTargetDAGCombine(ISD::FP_TO_UINT);
-  setTargetDAGCombine(ISD::FP_TO_SINT_SAT);
-  setTargetDAGCombine(ISD::FP_TO_UINT_SAT);
-  setTargetDAGCombine(ISD::FDIV);
+  setTargetDAGCombine({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
+                       ISD::FP_TO_UINT_SAT, ISD::FDIV});
 
   // Try and combine setcc with csel
   setTargetDAGCombine(ISD::SETCC);
 
   setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
 
-  setTargetDAGCombine(ISD::ANY_EXTEND);
-  setTargetDAGCombine(ISD::ZERO_EXTEND);
-  setTargetDAGCombine(ISD::SIGN_EXTEND);
-  setTargetDAGCombine(ISD::VECTOR_SPLICE);
-  setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
-  setTargetDAGCombine(ISD::CONCAT_VECTORS);
-  setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
-  setTargetDAGCombine(ISD::INSERT_SUBVECTOR);
-  setTargetDAGCombine(ISD::STORE);
+  setTargetDAGCombine({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND,
+                       ISD::VECTOR_SPLICE, ISD::SIGN_EXTEND_INREG,
+                       ISD::CONCAT_VECTORS, ISD::EXTRACT_SUBVECTOR,
+                       ISD::INSERT_SUBVECTOR, ISD::STORE});
   if (Subtarget->supportsAddressTopByteIgnored())
     setTargetDAGCombine(ISD::LOAD);
 
   setTargetDAGCombine(ISD::MUL);
 
-  setTargetDAGCombine(ISD::SELECT);
-  setTargetDAGCombine(ISD::VSELECT);
+  setTargetDAGCombine({ISD::SELECT, ISD::VSELECT});
 
-  setTargetDAGCombine(ISD::INTRINSIC_VOID);
-  setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
-  setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::VECREDUCE_ADD);
-  setTargetDAGCombine(ISD::STEP_VECTOR);
+  setTargetDAGCombine({ISD::INTRINSIC_VOID, ISD::INTRINSIC_W_CHAIN,
+                       ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
+                       ISD::VECREDUCE_ADD, ISD::STEP_VECTOR});
 
-  setTargetDAGCombine(ISD::MGATHER);
-  setTargetDAGCombine(ISD::MSCATTER);
+  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 

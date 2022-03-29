@@ -8,7 +8,6 @@ define { <2 x float>, <2 x float> } @foo(%struct.sw* %v) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, float* undef, align 4
 ; CHECK-NEXT:    [[X:%.*]] = getelementptr inbounds [[STRUCT_SW:%.*]], %struct.sw* [[V:%.*]], i64 0, i32 0
-; CHECK-NEXT:    [[Y:%.*]] = getelementptr inbounds [[STRUCT_SW]], %struct.sw* [[V]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* undef, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[X]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, <2 x float>* [[TMP2]], align 16

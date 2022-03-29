@@ -386,8 +386,7 @@ HexagonTargetLowering::initializeHVXLowering() {
     }
   }
 
-  setTargetDAGCombine(ISD::SPLAT_VECTOR);
-  setTargetDAGCombine(ISD::VSELECT);
+  setTargetDAGCombine({ISD::SPLAT_VECTOR, ISD::VSELECT});
 }
 
 unsigned

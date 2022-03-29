@@ -18,9 +18,6 @@ define void @bcast_vals(i64 *%A, i64 *%B, i64 *%S) {
 ; CHECK-NEXT:    [[V1:%.*]] = sub i64 [[A0]], 1
 ; CHECK-NEXT:    [[V2:%.*]] = sub i64 [[B0]], 1
 ; CHECK-NEXT:    [[IDXS0:%.*]] = getelementptr inbounds i64, i64* [[S:%.*]], i64 0
-; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i64, i64* [[S]], i64 1
-; CHECK-NEXT:    [[IDXS2:%.*]] = getelementptr inbounds i64, i64* [[S]], i64 2
-; CHECK-NEXT:    [[IDXS3:%.*]] = getelementptr inbounds i64, i64* [[S]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[V1]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i64> [[TMP0]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> poison, i64 [[V2]], i32 0
@@ -68,9 +65,6 @@ define void @bcast_vals2(i16 *%A, i16 *%B, i16 *%C, i16 *%D, i16 *%E, i32 *%S) {
 ; CHECK-NEXT:    [[A0:%.*]] = load i16, i16* [[A:%.*]], align 8
 ; CHECK-NEXT:    [[V1:%.*]] = sext i16 [[A0]] to i32
 ; CHECK-NEXT:    [[IDXS0:%.*]] = getelementptr inbounds i32, i32* [[S:%.*]], i64 0
-; CHECK-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds i32, i32* [[S]], i64 1
-; CHECK-NEXT:    [[IDXS2:%.*]] = getelementptr inbounds i32, i32* [[S]], i64 2
-; CHECK-NEXT:    [[IDXS3:%.*]] = getelementptr inbounds i32, i32* [[S]], i64 3
 ; CHECK-NEXT:    [[B0:%.*]] = load i16, i16* [[B:%.*]], align 8
 ; CHECK-NEXT:    [[C0:%.*]] = load i16, i16* [[C:%.*]], align 8
 ; CHECK-NEXT:    [[D0:%.*]] = load i16, i16* [[D:%.*]], align 8

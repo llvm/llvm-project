@@ -13,9 +13,6 @@ define void @test(i16 %0) {
 ; CHECK-NEXT:    br label [[FOR_BODY92:%.*]]
 ; CHECK:       for.body92:
 ; CHECK-NEXT:    [[SUM_MVR_I:%.*]] = getelementptr i32, i32* undef, i32 0
-; CHECK-NEXT:    [[SUM_MVR_ABS_I:%.*]] = getelementptr i32, i32* undef, i32 2
-; CHECK-NEXT:    [[SUM_MVC_I:%.*]] = getelementptr i32, i32* undef, i32 1
-; CHECK-NEXT:    [[SUM_MVC_ABS_I:%.*]] = getelementptr i32, i32* undef, i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> zeroinitializer, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[SUM_MVR_I]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP8]], align 8

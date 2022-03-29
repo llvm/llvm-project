@@ -10,7 +10,6 @@ define i32 @foo(i32 %0, i32* %1, float* %2)  {
 ; CHECK-NEXT:    [[T8:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 1
 ; CHECK-NEXT:    [[T9:%.*]] = getelementptr inbounds [3 x float], [3 x float]* [[T8]], i64 1, i64 0
 ; CHECK-NEXT:    [[T14:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 1, i64 0
-; CHECK-NEXT:    [[T11:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 1, i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[T14]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, <2 x float>* [[TMP4]], align 4
 ; CHECK-NEXT:    br label [[T37:%.*]]
@@ -19,9 +18,6 @@ define i32 @foo(i32 %0, i32* %1, float* %2)  {
 ; CHECK-NEXT:    [[TMP7:%.*]] = fdiv fast <2 x float> <float 1.000000e+00, float 1.000000e+00>, [[TMP6]]
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP7]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[T21:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 2, i64 0
-; CHECK-NEXT:    [[T25:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 2, i64 1
-; CHECK-NEXT:    [[T31:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 2, i64 2
-; CHECK-NEXT:    [[T33:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[T4]], i64 0, i32 2, i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast float* [[T21]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[SHUFFLE]], <4 x float>* [[TMP8]], align 4
 ; CHECK-NEXT:    [[T88:%.*]] = bitcast float* [[T9]] to <2 x float>*
