@@ -466,7 +466,37 @@ DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
   if (!Record->getName().empty())
     Fragments.appendSpace().append(
         Record->getName(), DeclarationFragments::FragmentKind::Identifier);
+  return Fragments;
+}
 
+DeclarationFragments
+DeclarationFragmentsBuilder::getFragmentsForMacro(StringRef Name,
+                                                  const MacroDirective *MD) {
+  DeclarationFragments Fragments;
+  Fragments.append("#define", DeclarationFragments::FragmentKind::Keyword)
+      .appendSpace();
+  Fragments.append(Name, DeclarationFragments::FragmentKind::Identifier);
+
+  auto *MI = MD->getMacroInfo();
+
+  if (MI->isFunctionLike()) {
+    Fragments.append("(", DeclarationFragments::FragmentKind::Text);
+    unsigned numParameters = MI->getNumParams();
+    if (MI->isC99Varargs())
+      --numParameters;
+    for (unsigned i = 0; i < numParameters; ++i) {
+      if (i)
+        Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+      Fragments.append(MI->params()[i]->getName(),
+                       DeclarationFragments::FragmentKind::InternalParam);
+    }
+    if (MI->isVariadic()) {
+      if (numParameters && MI->isC99Varargs())
+        Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
+      Fragments.append("...", DeclarationFragments::FragmentKind::Text);
+    }
+    Fragments.append(")", DeclarationFragments::FragmentKind::Text);
+  }
   return Fragments;
 }
 
@@ -698,4 +728,12 @@ DeclarationFragmentsBuilder::getSubHeading(const ObjCMethodDecl *Method) {
 
   return Fragments.append(Method->getNameAsString(),
                           DeclarationFragments::FragmentKind::Identifier);
+}
+
+// Subheading of a symbol defaults to its name.
+DeclarationFragments
+DeclarationFragmentsBuilder::getSubHeadingForMacro(StringRef Name) {
+  DeclarationFragments Fragments;
+  Fragments.append(Name, DeclarationFragments::FragmentKind::Identifier);
+  return Fragments;
 }

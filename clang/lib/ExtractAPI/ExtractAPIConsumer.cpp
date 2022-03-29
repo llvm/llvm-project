@@ -28,6 +28,10 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -506,6 +510,71 @@ private:
   ExtractAPIVisitor Visitor;
 };
 
+class MacroCallback : public PPCallbacks {
+public:
+  MacroCallback(const SourceManager &SM, APISet &API) : SM(SM), API(API) {}
+
+  void MacroDefined(const Token &MacroNameToken,
+                    const MacroDirective *MD) override {
+    auto *MacroInfo = MD->getMacroInfo();
+
+    if (MacroInfo->isBuiltinMacro())
+      return;
+
+    auto SourceLoc = MacroNameToken.getLocation();
+    if (SM.isWrittenInBuiltinFile(SourceLoc) ||
+        SM.isWrittenInCommandLineFile(SourceLoc))
+      return;
+
+    PendingMacros.emplace_back(MacroNameToken, MD);
+  }
+
+  // If a macro gets undefined at some point during preprocessing of the inputs
+  // it means that it isn't an exposed API and we should therefore not add a
+  // macro definition for it.
+  void MacroUndefined(const Token &MacroNameToken, const MacroDefinition &MD,
+                      const MacroDirective *Undef) override {
+    llvm::erase_if(PendingMacros, [&MD](const PendingMacro &PM) {
+      return MD.getMacroInfo()->getDefinitionLoc() ==
+             PM.MD->getMacroInfo()->getDefinitionLoc();
+    });
+  }
+
+  void EndOfMainFile() override {
+    for (auto &PM : PendingMacros) {
+      // `isUsedForHeaderGuard` is only set when the preprocessor leaves the
+      // file so check for it here.
+      if (PM.MD->getMacroInfo()->isUsedForHeaderGuard())
+        continue;
+
+      StringRef Name = PM.MacroNameToken.getIdentifierInfo()->getName();
+      PresumedLoc Loc = SM.getPresumedLoc(PM.MacroNameToken.getLocation());
+      StringRef USR =
+          API.recordUSRForMacro(Name, PM.MacroNameToken.getLocation(), SM);
+
+      API.addMacroDefinition(
+          Name, USR, Loc,
+          DeclarationFragmentsBuilder::getFragmentsForMacro(Name, PM.MD),
+          DeclarationFragmentsBuilder::getSubHeadingForMacro(Name));
+    }
+
+    PendingMacros.clear();
+  }
+
+private:
+  struct PendingMacro {
+    Token MacroNameToken;
+    const MacroDirective *MD;
+
+    PendingMacro(const Token &MacroNameToken, const MacroDirective *MD)
+        : MacroNameToken(MacroNameToken), MD(MD) {}
+  };
+
+  const SourceManager &SM;
+  APISet &API;
+  llvm::SmallVector<PendingMacro> PendingMacros;
+};
+
 } // namespace
 
 std::unique_ptr<ASTConsumer>
@@ -521,6 +590,10 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   API = std::make_unique<APISet>(
       CI.getTarget().getTriple(),
       CI.getFrontendOpts().Inputs.back().getKind().getLanguage());
+
+  // Register preprocessor callbacks that will add macro definitions to API.
+  CI.getPreprocessor().addPPCallbacks(
+      std::make_unique<MacroCallback>(CI.getSourceManager(), *API));
 
   return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(), *API);
 }
@@ -544,12 +617,16 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
     HeaderContents += "\"\n";
   }
 
-  Buffer = llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
-                                                getInputBufferName());
+  auto Buffer = llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
+                                                     getInputBufferName());
 
   // Set that buffer up as our "real" input in the CompilerInstance.
   Inputs.clear();
   Inputs.emplace_back(Buffer->getMemBufferRef(), Kind, /*IsSystem*/ false);
+
+  // Tell the processor about the input file.
+  CI.getPreprocessorOpts().addRemappedFile(Buffer->getBufferIdentifier(),
+                                           Buffer.release());
 
   return true;
 }

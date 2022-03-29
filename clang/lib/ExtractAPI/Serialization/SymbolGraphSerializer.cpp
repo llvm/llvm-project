@@ -397,6 +397,9 @@ Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
     Kind["identifier"] = AddLangPrefix("protocol");
     Kind["displayName"] = "Protocol";
     break;
+  case APIRecord::RK_MacroDefinition:
+    Kind["identifier"] = AddLangPrefix("macro");
+    Kind["displayName"] = "Macro";
   }
 
   return Kind;
@@ -576,6 +579,15 @@ void SymbolGraphSerializer::serializeObjCContainerRecord(
                             ObjCInterface->SuperClass);
 }
 
+void SymbolGraphSerializer::serializeMacroDefinitionRecord(
+    const MacroDefinitionRecord &Record) {
+  auto Macro = serializeAPIRecord(Record);
+  if (!Macro)
+    return;
+
+  Symbols.emplace_back(std::move(*Macro));
+}
+
 Object SymbolGraphSerializer::serialize() {
   Object Root;
   serializeObject(Root, "metadata", serializeMetadata());
@@ -600,6 +612,9 @@ Object SymbolGraphSerializer::serialize() {
   // Serialize Objective-C protocol records in the API set.
   for (const auto &ObjCProtocol : API.getObjCProtocols())
     serializeObjCContainerRecord(*ObjCProtocol.second);
+
+  for (const auto &Macro : API.getMacros())
+    serializeMacroDefinitionRecord(*Macro.second);
 
   Root["symbols"] = std::move(Symbols);
   Root["relationhips"] = std::move(Relationships);
