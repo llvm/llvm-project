@@ -1617,6 +1617,7 @@ static LogicalResult verifyTraits(Operation *op) {
 template <typename... Ts>
 static LogicalResult verifyRegionTraitsImpl(Operation *op,
                                             std::tuple<Ts...> *) {
+  (void)op;
   LogicalResult result = success();
   (void)std::initializer_list<int>{
       (result = succeeded(result) ? Ts::verifyRegionTrait(op) : failure(),
