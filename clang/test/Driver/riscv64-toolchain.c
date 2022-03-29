@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-windows
 // A basic clang -cc1 command-line, and simple environment check.
 
 // RUN: %clang %s -### -no-canonical-prefixes --target=riscv64 \
@@ -104,7 +105,7 @@
 // C-RV64-LINUX-MULTI-LP64D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib64/lp64d"
 // C-RV64-LINUX-MULTI-LP64D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64d"
 
-// RUN: %clang %s -### -fuse-ld=ld \
+// RUN: env "PATH=" %clang %s -### -fuse-ld=ld \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
 // RUN:   -march=rv64imac -mabi=lp64\
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
@@ -119,7 +120,7 @@
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64{{/|\\\\}}crtend.o"
 
-// RUN: %clang %s -### -fuse-ld=ld \
+// RUN: env "PATH=" %clang %s -### -fuse-ld=ld \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
 // RUN:   -march=rv64imafdc -mabi=lp64d \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
