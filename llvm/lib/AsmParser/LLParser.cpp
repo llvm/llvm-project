@@ -1362,6 +1362,13 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     B.addUWTableAttr(Kind);
     return false;
   }
+  case Attribute::AllocKind: {
+    AllocFnKind Kind = AllocFnKind::Unknown;
+    if (parseAllocKind(Kind))
+      return true;
+    B.addAllocKindAttr(Kind);
+    return false;
+  }
   default:
     B.addAttribute(Attr);
     Lex.Lex();
@@ -2039,6 +2046,40 @@ bool LLParser::parseOptionalUWTableKind(UWTableKind &Kind) {
     return error(KindLoc, "expected unwind table kind");
   Lex.Lex();
   return parseToken(lltok::rparen, "expected ')'");
+}
+
+bool LLParser::parseAllocKind(AllocFnKind &Kind) {
+  Lex.Lex();
+  LocTy ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return error(ParenLoc, "expected '('");
+  LocTy KindLoc = Lex.getLoc();
+  std::string Arg;
+  if (parseStringConstant(Arg))
+    return error(KindLoc, "expected allockind value");
+  for (StringRef A : llvm::split(Arg, ",")) {
+    if (A == "alloc") {
+      Kind |= AllocFnKind::Alloc;
+    } else if (A == "realloc") {
+      Kind |= AllocFnKind::Realloc;
+    } else if (A == "free") {
+      Kind |= AllocFnKind::Free;
+    } else if (A == "uninitialized") {
+      Kind |= AllocFnKind::Uninitialized;
+    } else if (A == "zeroed") {
+      Kind |= AllocFnKind::Zeroed;
+    } else if (A == "aligned") {
+      Kind |= AllocFnKind::Aligned;
+    } else {
+      return error(KindLoc, Twine("unknown allockind ") + A);
+    }
+  }
+  ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
+    return error(ParenLoc, "expected ')'");
+  if (Kind == AllocFnKind::Unknown)
+    return error(KindLoc, "expected allockind value");
+  return false;
 }
 
 /// parseOptionalCommaAlign

@@ -2080,6 +2080,25 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       return;
   }
 
+  if (Attrs.hasFnAttr(Attribute::AllocKind)) {
+    AllocFnKind K = Attrs.getAllocKind();
+    AllocFnKind Type =
+        K & (AllocFnKind::Alloc | AllocFnKind::Realloc | AllocFnKind::Free);
+    if (!is_contained(
+            {AllocFnKind::Alloc, AllocFnKind::Realloc, AllocFnKind::Free},
+            Type))
+      CheckFailed(
+          "'allockind()' requires exactly one of alloc, realloc, and free");
+    if ((Type == AllocFnKind::Free) &&
+        ((K & (AllocFnKind::Uninitialized | AllocFnKind::Zeroed |
+               AllocFnKind::Aligned)) != AllocFnKind::Unknown))
+      CheckFailed("'allockind(\"free\")' doesn't allow uninitialized, zeroed, "
+                  "or aligned modifiers.");
+    AllocFnKind ZeroedUninit = AllocFnKind::Uninitialized | AllocFnKind::Zeroed;
+    if ((K & ZeroedUninit) == ZeroedUninit)
+      CheckFailed("'allockind()' can't be both zeroed and uninitialized");
+  }
+
   if (Attrs.hasFnAttr(Attribute::VScaleRange)) {
     unsigned VScaleMin = Attrs.getFnAttrs().getVScaleRangeMin();
     if (VScaleMin == 0)
