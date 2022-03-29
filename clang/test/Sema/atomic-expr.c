@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 %s -verify -fsyntax-only
-// expected-no-diagnostics
+// RUN: %clang_cc1 %s -verify=off -fsyntax-only -Wno-atomic-access
+// off-no-diagnostics
 
 _Atomic(unsigned int) data1;
 int _Atomic data2;
@@ -74,4 +75,31 @@ void func_15(void) {
 
   _Static_assert(__builtin_types_compatible_p(__typeof__(x = 2), int), "incorrect");
   _Static_assert(__builtin_types_compatible_p(__typeof__(x += 2), int), "incorrect");
+}
+
+// Ensure that member access of an atomic structure or union type is properly
+// diagnosed as being undefined behavior; Issue 54563.
+void func_16(void) {
+  // LHS member access.
+  _Atomic struct { int val; } x, *xp;
+  x.val = 12;   // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  xp->val = 12; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+
+  _Atomic union {
+    int ival;
+    float fval;
+  } y, *yp;
+  y.ival = 12;     // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  yp->fval = 1.2f; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+
+  // RHS member access.
+  int xval = x.val; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  xval = xp->val;   // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  int yval = y.val; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  yval = yp->val;   // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+
+  // Using the type specifier instead of the type qualifier.
+  _Atomic(struct { int val; }) z;
+  z.val = 12;       // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  int zval = z.val; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
 }
