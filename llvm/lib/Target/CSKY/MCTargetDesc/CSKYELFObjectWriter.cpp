@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CSKYFixupKinds.h"
-#include "CSKYMCTargetDesc.h"
 #include "CSKYMCExpr.h"
+#include "CSKYMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"

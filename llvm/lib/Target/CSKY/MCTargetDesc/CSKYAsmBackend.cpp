@@ -224,8 +224,9 @@ void CSKYAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   bool IsLittleEndian = (Endian == support::little);
+  bool IsInstFixup = (Kind >= FirstTargetFixupKind);
 
-  if (IsLittleEndian && (NumBytes == 4)) {
+  if (IsLittleEndian && IsInstFixup && (NumBytes == 4)) {
     Data[Offset + 0] |= uint8_t((Value >> 16) & 0xff);
     Data[Offset + 1] |= uint8_t((Value >> 24) & 0xff);
     Data[Offset + 2] |= uint8_t(Value & 0xff);
