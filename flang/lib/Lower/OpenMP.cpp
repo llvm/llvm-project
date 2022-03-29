@@ -320,8 +320,12 @@ genOMP(Fortran::lower::AbstractConverter &converter,
       std::get<Fortran::parser::OmpBeginSectionsDirective>(sectionsConstruct.t)
           .t);
   for (const Fortran::parser::OmpClause &clause : sectionsClauseList.v) {
+
+    // Reduction Clause
     if (std::get_if<Fortran::parser::OmpClause::Reduction>(&clause.u)) {
       TODO(currentLocation, "OMPC_Reduction");
+
+      // Allocate clause
     } else if (const auto &allocateClause =
                    std::get_if<Fortran::parser::OmpClause::Allocate>(
                        &clause.u)) {
@@ -334,16 +338,39 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   const auto &clauseList =
       std::get<Fortran::parser::OmpClauseList>(endSectionsClauseList.t);
   for (const auto &clause : clauseList.v) {
+    // Nowait clause
     if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u)) {
       noWaitClauseOperand = firOpBuilder.getUnitAttr();
     }
   }
 
-  mlir::omp::SectionsOp sectionsOp = firOpBuilder.create<mlir::omp::SectionsOp>(
-      currentLocation, reductionVars, /*reductions = */ nullptr,
-      allocateOperands, allocatorOperands, noWaitClauseOperand);
+  llvm::omp::Directive dir =
+      std::get<Fortran::parser::OmpSectionsDirective>(
+          std::get<Fortran::parser::OmpBeginSectionsDirective>(
+              sectionsConstruct.t)
+              .t)
+          .v;
 
-  createBodyOfOp<omp::SectionsOp>(sectionsOp, firOpBuilder, currentLocation);
+  // Parallel Sections Construct
+  if (dir == llvm::omp::Directive::OMPD_parallel_sections) {
+    auto parallelOp = firOpBuilder.create<mlir::omp::ParallelOp>(
+        currentLocation, /*if_expr_var*/ nullptr, /*num_threads_var*/ nullptr,
+        allocateOperands, allocatorOperands, /*reduction_vars=*/ValueRange(),
+        /*reductions=*/nullptr, /*proc_bind_val*/ nullptr);
+    createBodyOfOp(parallelOp, firOpBuilder, currentLocation);
+    auto sectionsOp = firOpBuilder.create<mlir::omp::SectionsOp>(
+        currentLocation, /*reduction_vars*/ ValueRange(),
+        /*reductions=*/nullptr, /*allocate_vars*/ ValueRange(),
+        /*allocators_vars*/ ValueRange(), /*nowait=*/nullptr);
+    createBodyOfOp(sectionsOp, firOpBuilder, currentLocation);
+
+    // Sections Construct
+  } else if (dir == llvm::omp::Directive::OMPD_sections) {
+    auto sectionsOp = firOpBuilder.create<mlir::omp::SectionsOp>(
+        currentLocation, reductionVars, /*reductions = */ nullptr,
+        allocateOperands, allocatorOperands, noWaitClauseOperand);
+    createBodyOfOp<omp::SectionsOp>(sectionsOp, firOpBuilder, currentLocation);
+  }
 }
 
 void Fortran::lower::genOpenMPConstruct(
