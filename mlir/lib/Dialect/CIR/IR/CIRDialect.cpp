@@ -404,9 +404,13 @@ LogicalResult ScopeOp::verify() { return success(); }
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult YieldOp::verify() {
-  if (!llvm::isa<IfOp, ScopeOp, SwitchOp>(getOperation()->getParentOp()))
-    return emitOpError()
-           << "expects 'cir.if' or 'cir.scope' as the parent operation'";
+  if (llvm::isa<SwitchOp>(getOperation()->getParentOp()))
+    return mlir::success();
+
+  assert((llvm::isa<IfOp, ScopeOp>(getOperation()->getParentOp())) &&
+         "unknown parent op");
+  if (getFallthrough())
+    return emitOpError() << "fallthrough only expected within 'cir.switch'";
 
   return mlir::success();
 }

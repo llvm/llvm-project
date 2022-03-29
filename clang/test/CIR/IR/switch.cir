@@ -7,6 +7,9 @@ func.func @s0() {
       cir.return
     },
     case (equal, 3) {
+      cir.yield fallthrough
+    },
+    case (equal, 5) {
       cir.yield
     }
   ]
