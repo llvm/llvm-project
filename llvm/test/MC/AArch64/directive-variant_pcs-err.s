@@ -3,9 +3,6 @@
 // CHECK:      [[#@LINE+1]]:13: error: expected symbol name
 .variant_pcs
 
-// CHECK:      [[#@LINE+1]]:14: error: unknown symbol
-.variant_pcs foo
-
 .global foo
 // CHECK:      [[#@LINE+1]]:18: error: expected newline
 .variant_pcs foo bar
