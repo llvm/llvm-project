@@ -36,10 +36,25 @@
 // RUN: %clang %s -### --target=avr --sysroot=%S/Inputs/basic_avr_tree 2>&1 -nostdlibinc | FileCheck --check-prefix=NOSTDINC %s
 // NOSTDINC-NOT: "-internal-isystem" {{".*avr/include"}}
 
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree %s 2>&1 | FileCheck --check-prefix=WARN_STDLIB %s
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s 2>&1 | FileCheck --check-prefix=NOWARN_STDLIB %s
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -c %s 2>&1 | FileCheck --check-prefix=NOWARN_STDLIB %s
+// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s 2>&1 | FileCheck --check-prefix=NOWARN %s
+// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 -S %s 2>&1 | FileCheck --check-prefix=NOWARN %s
+// RUN: %clang -### --target=avr --sysroot=%S/Inputs/ -mmcu=atmega328 -S %s 2>&1 | FileCheck --check-prefix=NOWARN %s
+// NOWARN-NOT: warning:
 
-// WARN_STDLIB: warning: no target microcontroller specified on command line, cannot link standard libraries, please pass -mmcu=<mcu name>
-// WARN_STDLIB: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked
-// NOWARN_STDLIB-NOT: warning:
+// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -S %s 2>&1 | FileCheck --check-prefixes=NOMCU,LINKA %s
+// RUN: %clang -### --target=avr --sysroot=%S/Inputs/ -S %s 2>&1 | FileCheck --check-prefixes=NOMCU,LINKA %s
+// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree %s 2>&1 | FileCheck --check-prefixes=NOMCU,LINKB %s
+// NOMCU: warning: no target microcontroller specified on command line, cannot link standard libraries, please pass -mmcu=<mcu name>
+// LINKB: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked
+// LINKB: warning: support for passing the data section address to the linker for microcontroller '' is not implemented
+// NOMCU-NOT: warning: {{.*}} avr-gcc
+// NOMCU-NOT: warning: {{.*}} avr-libc
+// LINKA-NOT: warning: {{.*}} interrupt vector
+// LINKA-NOT: warning: {{.*}} data section address
+
+// RUN: %clang -### --target=avr --sysroot=%S/Inputs/ -mmcu=atmega328 %s 2>&1 | FileCheck --check-prefixes=NOGCC %s
+// NOGCC: warning: no avr-gcc installation can be found on the system, cannot link standard libraries
+// NOGCC: warning: standard library not linked and so no interrupt vector table or compiler runtime routines will be linked
+// NOGCC-NOT: warning: {{.*}} microcontroller
+// NOGCC-NOT: warning: {{.*}} avr-libc
+// NOGCC-NOT: warning: {{.*}} data section address
