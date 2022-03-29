@@ -8914,18 +8914,10 @@ bool RISCVTargetLowering::targetShrinkDemandedConstant(
   return UseMask(NewMask);
 }
 
-static void computeGREVOrGORC(APInt &Src, unsigned ShAmt, bool IsGORC,
-                              bool ComputeZeros = false) {
+static uint64_t computeGREVOrGORC(uint64_t x, unsigned ShAmt, bool IsGORC) {
   static const uint64_t GREVMasks[] = {
       0x5555555555555555ULL, 0x3333333333333333ULL, 0x0F0F0F0F0F0F0F0FULL,
       0x00FF00FF00FF00FFULL, 0x0000FFFF0000FFFFULL, 0x00000000FFFFFFFFULL};
-
-  ShAmt &= Src.getBitWidth() - 1;
-  uint64_t x = Src.getZExtValue();
-
-  // To compute zeros, we need to invert the value and invert it back after.
-  if (ComputeZeros)
-    x = ~x;
 
   for (unsigned Stage = 0; Stage != 6; ++Stage) {
     unsigned Shift = 1 << Stage;
@@ -8938,10 +8930,7 @@ static void computeGREVOrGORC(APInt &Src, unsigned ShAmt, bool IsGORC,
     }
   }
 
-  if (ComputeZeros)
-    x = ~x;
-
-  Src = x;
+  return x;
 }
 
 void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
@@ -9010,11 +8999,12 @@ void RISCVTargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
   case RISCVISD::GORC: {
     if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
       Known = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
-      unsigned ShAmt = C->getZExtValue();
+      unsigned ShAmt = C->getZExtValue() & (Known.getBitWidth() - 1);
       bool IsGORC = Op.getOpcode() == RISCVISD::GORC;
-      computeGREVOrGORC(Known.Zero, ShAmt, IsGORC,
-                        /*ComputeZeros*/ true);
-      computeGREVOrGORC(Known.One, ShAmt, IsGORC);
+      // To compute zeros, we need to invert the value and invert it back after.
+      Known.Zero =
+          ~computeGREVOrGORC(~Known.Zero.getZExtValue(), ShAmt, IsGORC);
+      Known.One = computeGREVOrGORC(Known.One.getZExtValue(), ShAmt, IsGORC);
     }
     break;
   }
