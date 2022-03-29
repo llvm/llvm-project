@@ -404,7 +404,7 @@ LogicalResult ScopeOp::verify() { return success(); }
 //===----------------------------------------------------------------------===//
 
 mlir::LogicalResult YieldOp::verify() {
-  if (!llvm::isa<IfOp, ScopeOp>(getOperation()->getParentOp()))
+  if (!llvm::isa<IfOp, ScopeOp, SwitchOp>(getOperation()->getParentOp()))
     return emitOpError()
            << "expects 'cir.if' or 'cir.scope' as the parent operation'";
 
