@@ -586,6 +586,9 @@ class CGFunctionInfo final
   /// Whether this function has nocf_check attribute.
   unsigned NoCfCheck : 1;
 
+  /// Log 2 of the maximum vector width.
+  unsigned MaxVectorWidth : 4;
+
   RequiredArgs Required;
 
   /// The struct representing all arguments passed in memory.  Only used when
@@ -729,6 +732,17 @@ public:
   void setArgStruct(llvm::StructType *Ty, CharUnits Align) {
     ArgStruct = Ty;
     ArgStructAlign = Align.getQuantity();
+  }
+
+  /// Return the maximum vector width in the arguments.
+  unsigned getMaxVectorWidth() const {
+    return MaxVectorWidth ? 1U << (MaxVectorWidth - 1) : 0;
+  }
+
+  /// Set the maximum vector width in the arguments.
+  void setMaxVectorWidth(unsigned Width) {
+    assert(llvm::isPowerOf2_32(Width) && "Expected power of 2 vector");
+    MaxVectorWidth = llvm::countTrailingZeros(Width) + 1;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {

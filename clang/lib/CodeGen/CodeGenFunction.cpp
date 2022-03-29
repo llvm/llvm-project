@@ -485,6 +485,9 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
         std::max((uint64_t)LargestVectorWidth,
                  VT->getPrimitiveSizeInBits().getKnownMinSize());
 
+  if (CurFnInfo->getMaxVectorWidth() > LargestVectorWidth)
+    LargestVectorWidth = CurFnInfo->getMaxVectorWidth();
+
   // Add the required-vector-width attribute. This contains the max width from:
   // 1. min-vector-width attribute used in the source program.
   // 2. Any builtins used that have a vector width specified.
