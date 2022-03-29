@@ -16,8 +16,10 @@ bool LLDBMemoryReader::queryDataLayout(DataLayoutQueryType type, void *inBuffer,
                                        void *outBuffer) {
   switch (type) {
   case DLQ_GetPtrAuthMask: {
-    assert(m_process.GetCodeAddressMask() == m_process.GetDataAddressMask() &&
-           "not supported");
+    // The MemoryReader API doesn't distinguish between the two, so
+    // this configuration is not yet supported.
+    if (m_process.GetCodeAddressMask() != m_process.GetDataAddressMask())
+      return false;
     lldb::addr_t ptrauth_mask = m_process.GetCodeAddressMask();
     if (!ptrauth_mask)
       return false;
