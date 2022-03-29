@@ -95,8 +95,8 @@ void func_16(void) {
   // RHS member access.
   int xval = x.val; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
   xval = xp->val;   // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
-  int yval = y.val; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
-  yval = yp->val;   // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  int yval = y.ival; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+  yval = yp->ival;   // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
 
   // Using the type specifier instead of the type qualifier.
   _Atomic(struct { int val; }) z;
