@@ -26,7 +26,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
-#include <set>
 #include <vector>
 
 #define DEBUG_TYPE "iroutliner"
