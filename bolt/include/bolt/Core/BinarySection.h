@@ -296,16 +296,6 @@ public:
     return make_range(Relocations.begin(), Relocations.end());
   }
 
-  /// Iterate over all dynamic relocations for this section.
-  iterator_range<RelocationSetType::iterator> dynamicRelocations() {
-    return make_range(DynamicRelocations.begin(), DynamicRelocations.end());
-  }
-
-  /// Iterate over all dynamic relocations for this section.
-  iterator_range<RelocationSetType::const_iterator> dynamicRelocations() const {
-    return make_range(DynamicRelocations.begin(), DynamicRelocations.end());
-  }
-
   /// Does this section have any non-pending relocations?
   bool hasRelocations() const { return !Relocations.empty(); }
 
