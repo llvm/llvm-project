@@ -160,11 +160,19 @@ uint64_t SectionBase::getOffset(uint64_t offset) const {
   case Regular:
   case Synthetic:
     return cast<InputSection>(this)->outSecOff + offset;
-  case EHFrame:
-    // The file crtbeginT.o has relocations pointing to the start of an empty
-    // .eh_frame that is known to be the first in the link. It does that to
-    // identify the start of the output .eh_frame.
+  case EHFrame: {
+    // Two code paths may reach here. First, clang_rt.crtbegin.o and GCC
+    // crtbeginT.o may reference the start of an empty .eh_frame to identify the
+    // start of the output .eh_frame. Just return offset.
+    //
+    // Second, InputSection::copyRelocations on .eh_frame. Some pieces may be
+    // discarded due to GC/ICF. We should compute the output section offset.
+    const EhInputSection *es = cast<EhInputSection>(this);
+    if (!es->rawData.empty())
+      if (InputSection *isec = es->getParent())
+        return isec->outSecOff + es->getParentOffset(offset);
     return offset;
+  }
   case Merge:
     const MergeInputSection *ms = cast<MergeInputSection>(this);
     if (InputSection *isec = ms->getParent())
@@ -1332,6 +1340,15 @@ void EhInputSection::split(ArrayRef<RelTy> rels) {
   if (msg)
     errorOrWarn("corrupted .eh_frame: " + Twine(msg) + "\n>>> defined in " +
                 getObjMsg(d.data() - rawData.data()));
+}
+
+// Return the offset in an output section for a given input offset.
+uint64_t EhInputSection::getParentOffset(uint64_t offset) const {
+  const EhSectionPiece &piece = partition_point(
+      pieces, [=](EhSectionPiece p) { return p.inputOff <= offset; })[-1];
+  if (piece.outputOff == -1) // invalid piece
+    return offset - piece.inputOff;
+  return piece.outputOff + (offset - piece.inputOff);
 }
 
 static size_t findNull(StringRef s, size_t entSize) {
