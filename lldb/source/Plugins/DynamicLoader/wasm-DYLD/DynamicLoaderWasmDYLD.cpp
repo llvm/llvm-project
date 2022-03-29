@@ -64,3 +64,19 @@ ThreadPlanSP DynamicLoaderWasmDYLD::GetStepThroughTrampolinePlan(Thread &thread,
                                                                  bool stop) {
   return ThreadPlanSP();
 }
+
+lldb::ModuleSP DynamicLoaderWasmDYLD::LoadModuleAtAddress(
+    const lldb_private::FileSpec &file, lldb::addr_t link_map_addr,
+    lldb::addr_t base_addr, bool base_addr_is_offset) {
+  if (ModuleSP module_sp = DynamicLoader::LoadModuleAtAddress(
+          file, link_map_addr, base_addr, base_addr_is_offset))
+    return module_sp;
+
+  if (ModuleSP module_sp = m_process->ReadModuleFromMemory(file, base_addr)) {
+    UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);
+    m_process->GetTarget().GetImages().AppendIfNeeded(module_sp);
+    return module_sp;
+  }
+
+  return nullptr;
+}
