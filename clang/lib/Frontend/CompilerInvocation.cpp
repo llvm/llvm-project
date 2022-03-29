@@ -2420,6 +2420,7 @@ static const auto &getFrontendActionTable() {
       {frontend::GenerateModule, OPT_emit_module},
       {frontend::GenerateModuleInterface, OPT_emit_module_interface},
       {frontend::GenerateHeaderModule, OPT_emit_header_module},
+      {frontend::GenerateHeaderUnit, OPT_emit_header_unit},
       {frontend::GeneratePCH, OPT_emit_pch},
       {frontend::GenerateInterfaceStubs, OPT_emit_interface_stubs},
       {frontend::InitOnly, OPT_init_only},
@@ -2436,7 +2437,7 @@ static const auto &getFrontendActionTable() {
       {frontend::MigrateSource, OPT_migrate},
       {frontend::RunPreprocessorOnly, OPT_Eonly},
       {frontend::PrintDependencyDirectivesSourceMinimizerOutput,
-          OPT_print_dependency_directives_minimized_source},
+       OPT_print_dependency_directives_minimized_source},
   };
 
   return Table;
@@ -4160,6 +4161,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::GenerateModule:
   case frontend::GenerateModuleInterface:
   case frontend::GenerateHeaderModule:
+  case frontend::GenerateHeaderUnit:
   case frontend::GeneratePCH:
   case frontend::GenerateInterfaceStubs:
   case frontend::ParseSyntaxOnly:

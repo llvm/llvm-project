@@ -2977,6 +2977,12 @@ public:
     NotACXX20Module  ///< Not a C++20 TU, or an invalid state was found.
   };
 
+private:
+  /// The parser has begun a translation unit to be compiled as a C++20
+  /// Header Unit, helper for ActOnStartOfTranslationUnit() only.
+  void HandleStartOfHeaderUnit();
+
+public:
   /// The parser has processed a module-declaration that begins the definition
   /// of a module interface or implementation.
   DeclGroupPtrTy ActOnModuleDecl(SourceLocation StartLoc,

@@ -90,6 +90,9 @@ public:
     /// Compiling a module from a list of header files.
     CMK_HeaderModule,
 
+    /// Compiling a module header unit.
+    CMK_HeaderUnit,
+
     /// Compiling a C++ modules TS module interface unit.
     CMK_ModuleInterface,
   };
