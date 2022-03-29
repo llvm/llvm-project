@@ -50,6 +50,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
+    -mfma
 )
 
 add_entrypoint_object(
@@ -62,6 +63,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.fputil
   COMPILE_OPTIONS
     -O2
+    -mfma
 )
 
 add_math_entrypoint_object(ceil)
