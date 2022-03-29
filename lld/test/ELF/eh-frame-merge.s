@@ -16,9 +16,9 @@
 
 # RELOC:        Offset             Info     Type          Symbol's Value  Symbol's Name + Addend
 # RELOC-NEXT: {{0*}}[[#%x,OFF:]]   [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 0
-# RELOC-NEXT: {{0*}}[[#%x,OFF+24]] [[#%x,]] R_X86_64_PC32 [[#%x,]]        bar + 0
-# RELOC-NEXT: {{0*}}[[#OFF+48]]    [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 1
-# RELOC-NEXT: {{0*}}[[#%x,OFF-24]] [[#%x,]] R_X86_64_NONE 0{{$}}
+# RELOC-NEXT: {{0*}}[[#%x,OFF+20]] [[#%x,]] R_X86_64_PC32 [[#%x,]]        bar + 0
+# RELOC-NEXT: {{0*}}[[#OFF]]       [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 1
+# RELOC-NEXT: {{0*}}[[#OFF+20]]    [[#%x,]] R_X86_64_NONE 0{{$}}
 
 # EH:          Format:                DWARF32
 # EH:        00000018 00000014 0000001c FDE cie=00000000 pc={{0*}}[[#%x,FOO:]]...
