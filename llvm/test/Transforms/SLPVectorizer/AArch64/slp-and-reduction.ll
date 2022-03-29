@@ -8,22 +8,8 @@ define i8 @reduce_and(%struct.buf* %a, %struct.buf* %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_BUF:%.*]], %struct.buf* [[A:%.*]], i64 0, i32 0, i64 0
 ; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B:%.*]], i64 0, i32 0, i64 0
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 1
-; CHECK-NEXT:    [[ARRAYIDX3_1:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 2
-; CHECK-NEXT:    [[ARRAYIDX3_2:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 2
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 3
-; CHECK-NEXT:    [[ARRAYIDX3_3:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 3
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 4
-; CHECK-NEXT:    [[ARRAYIDX3_4:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 4
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 5
-; CHECK-NEXT:    [[ARRAYIDX3_5:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 5
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 6
-; CHECK-NEXT:    [[ARRAYIDX3_6:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 6
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[A]], i64 0, i32 0, i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ARRAYIDX]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 1
-; CHECK-NEXT:    [[ARRAYIDX3_7:%.*]] = getelementptr inbounds [[STRUCT_BUF]], %struct.buf* [[B]], i64 0, i32 0, i64 7
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[ARRAYIDX3]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i8>, <8 x i8>* [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <8 x i8> [[TMP3]], [[TMP1]]

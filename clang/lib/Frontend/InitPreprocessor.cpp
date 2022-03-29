@@ -371,6 +371,52 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
                                                const LangOptions &LangOpts,
                                                const FrontendOptions &FEOpts,
                                                MacroBuilder &Builder) {
+  if (LangOpts.HLSL) {
+    Builder.defineMacro("__hlsl_clang");
+    // HLSL Version
+    Builder.defineMacro("__HLSL_VERSION",
+                        Twine((unsigned)LangOpts.getHLSLVersion()));
+
+    // Shader target information
+    // "enums" for shader stages
+    Builder.defineMacro("__SHADER_STAGE_VERTEX",
+                        Twine((uint32_t)ShaderStage::Vertex));
+    Builder.defineMacro("__SHADER_STAGE_PIXEL",
+                        Twine((uint32_t)ShaderStage::Pixel));
+    Builder.defineMacro("__SHADER_STAGE_GEOMETRY",
+                        Twine((uint32_t)ShaderStage::Geometry));
+    Builder.defineMacro("__SHADER_STAGE_HULL",
+                        Twine((uint32_t)ShaderStage::Hull));
+    Builder.defineMacro("__SHADER_STAGE_DOMAIN",
+                        Twine((uint32_t)ShaderStage::Domain));
+    Builder.defineMacro("__SHADER_STAGE_COMPUTE",
+                        Twine((uint32_t)ShaderStage::Compute));
+    Builder.defineMacro("__SHADER_STAGE_AMPLIFICATION",
+                        Twine((uint32_t)ShaderStage::Amplification));
+    Builder.defineMacro("__SHADER_STAGE_MESH",
+                        Twine((uint32_t)ShaderStage::Mesh));
+    Builder.defineMacro("__SHADER_STAGE_LIBRARY",
+                        Twine((uint32_t)ShaderStage::Library));
+    // The current shader stage itself
+    uint32_t StageInteger = StageInteger =
+        (uint32_t)TI.getTriple().getEnvironment() -
+        (uint32_t)llvm::Triple::Pixel;
+    // TODO: When we add raytracing support we can clean this up
+    if (TI.getTriple().getEnvironment() == llvm::Triple::Mesh)
+      StageInteger = (uint32_t)ShaderStage::Mesh;
+    else if (TI.getTriple().getEnvironment() == llvm::Triple::Amplification)
+      StageInteger = (uint32_t)ShaderStage::Amplification;
+
+    Builder.defineMacro("__SHADER_TARGET_STAGE", Twine(StageInteger));
+    // Add target versions
+    if (TI.getTriple().getOS() == llvm::Triple::ShaderModel) {
+      VersionTuple Version = TI.getTriple().getOSVersion();
+      Builder.defineMacro("__SHADER_TARGET_MAJOR", Twine(Version.getMajor()));
+      unsigned Minor = Version.getMinor() ? *Version.getMinor() : 0;
+      Builder.defineMacro("__SHADER_TARGET_MINOR", Twine(Minor));
+    }
+    return;
+  }
   // C++ [cpp.predefined]p1:
   //   The following macro names shall be defined by the implementation:
 

@@ -10,7 +10,6 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
-#include <vector>
 
 namespace llvm {
 namespace memprof {

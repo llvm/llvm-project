@@ -11,8 +11,10 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIRegisterInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/MC/MCInstrDesc.h"
 
 #define DEBUG_TYPE "si-shrink-instructions"
 
@@ -112,6 +114,26 @@ static bool foldImmediates(MachineInstr &MI, const SIInstrInfo *TII,
   }
 
   return false;
+}
+
+/// Only shrink physical 16 bit registers after RA
+static bool shouldShrinkTrue16(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isReg()) {
+      Register Reg = MO.getReg();
+      if (Reg.isVirtual()) {
+        if (MRI.getRegClass(MO.getReg())
+                ->hasSubClassEq(&AMDGPU::VGPR_16RegClass))
+          return false;
+      } else {
+        if (AMDGPU::VGPR_16RegClass.contains(Reg) &&
+            !AMDGPU::VGPR_16_F128RegClass.contains(Reg))
+          return false;
+      }
+    }
+  }
+  return true;
 }
 
 static bool isKImmOperand(const SIInstrInfo *TII, const MachineOperand &Src) {
@@ -265,6 +287,7 @@ void SIShrinkInstructions::shrinkMIMG(MachineInstr &MI, MachineRegisterInfo &MRI
     const MachineOperand &Op = MI.getOperand(VAddr0Idx + Idx);
     unsigned Vgpr = TRI.getHWRegIndex(Op.getReg());
     unsigned Dwords = TRI.getRegSizeInBits(Op.getReg(), MRI) / 32;
+    assert(Dwords > 0 && "Un-implemented for less than 32 bit regs");
 
     if (Idx == 0) {
       VgprBase = Vgpr;
@@ -746,21 +769,27 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       int Op32 = AMDGPU::getVOPe32(MI.getOpcode());
 
       if (TII->isVOPC(Op32)) {
-        Register DstReg = MI.getOperand(0).getReg();
-        if (DstReg.isVirtual()) {
-          // VOPC instructions can only write to the VCC register. We can't
-          // force them to use VCC here, because this is only one register and
-          // cannot deal with sequences which would require multiple copies of
-          // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
-          //
-          // So, instead of forcing the instruction to write to VCC, we provide
-          // a hint to the register allocator to use VCC and then we will run
-          // this pass again after RA and shrink it if it outputs to VCC.
-          MRI.setRegAllocationHint(MI.getOperand(0).getReg(), 0, VCCReg);
-          continue;
+        MachineOperand &Op0 = MI.getOperand(0);
+        if (Op0.isReg()) {
+          // Exclude VOPCX instructions as these don't explicitly write a
+          // dst.
+          Register DstReg = Op0.getReg();
+          if (DstReg.isVirtual()) {
+            // VOPC instructions can only write to the VCC register. We can't
+            // force them to use VCC here, because this is only one register and
+            // cannot deal with sequences which would require multiple copies of
+            // VCC, e.g. S_AND_B64 (vcc = V_CMP_...), (vcc = V_CMP_...)
+            //
+            // So, instead of forcing the instruction to write to VCC, we
+            // provide a hint to the register allocator to use VCC and then we
+            // will run this pass again after RA and shrink it if it outputs to
+            // VCC.
+            MRI.setRegAllocationHint(DstReg, 0, VCCReg);
+            continue;
+          }
+          if (DstReg != VCCReg)
+            continue;
         }
-        if (DstReg != VCCReg)
-          continue;
       }
 
       if (Op32 == AMDGPU::V_CNDMASK_B32_e32) {
@@ -805,6 +834,8 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
         if (Next)
           continue;
       }
+      if (ST.hasTrue16BitInsts() && !shouldShrinkTrue16(MI, MRI))
+        continue;
 
       // We can shrink this instruction
       LLVM_DEBUG(dbgs() << "Shrinking " << MI);

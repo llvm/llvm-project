@@ -15,30 +15,15 @@ define i32 @foo(i32* nocapture readonly %diff) #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP1]], 1
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i64 [[TMP1]], 5
-; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP1]], 2
-; CHECK-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = or i64 [[TMP1]], 6
-; CHECK-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP1]], 3
-; CHECK-NEXT:    [[ARRAYIDX41:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP9:%.*]] = load <4 x i32>, <4 x i32>* [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP1]], 7
-; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds i32, i32* [[DIFF]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[ARRAYIDX2]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x i32>, <4 x i32>* [[TMP11]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = add nsw <4 x i32> [[TMP12]], [[TMP9]]
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX34:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX48:%.*]] = getelementptr inbounds [8 x [8 x i32]], [8 x [8 x i32]]* [[M2]], i64 0, i64 [[INDVARS_IV]], i64 3
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i32* [[ARRAYIDX6]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP13]], <4 x i32>* [[TMP14]], align 16
-; CHECK-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP13]])
-; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP15]], [[A_088]]
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[ARRAYIDX]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[ARRAYIDX2]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i32>, <4 x i32>* [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw <4 x i32> [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32* [[ARRAYIDX6]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP7]], <4 x i32>* [[TMP8]], align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP7]])
+; CHECK-NEXT:    [[OP_EXTRA]] = add nsw i32 [[TMP9]], [[A_088]]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 8
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END:%.*]], label [[FOR_BODY]]

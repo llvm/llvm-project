@@ -115,5 +115,5 @@ define void @f0() {
   ret void
 }
 ;.
-; CHECK: attributes #0 = { nofree nosync nounwind readnone willreturn }
+; CHECK: attributes #0 = { nocallback nofree nosync nounwind readnone willreturn }
 ;.

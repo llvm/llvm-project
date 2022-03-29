@@ -13,12 +13,7 @@ define void @f_noalias(i8* noalias nocapture %dst, i8* noalias nocapture readonl
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[SCALE]], align 16
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds [[STRUCT_WEIGHT_T]], %struct.weight_t* [[W]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[OFFSET]], align 4
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i8, i8* [[DST:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i8, i8* [[SRC]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC]] to <4 x i8>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[SRC:%.*]] to <4 x i8>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i8>, <4 x i8>* [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i8> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i32 0
@@ -32,8 +27,7 @@ define void @f_noalias(i8* noalias nocapture %dst, i8* noalias nocapture readonl
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i1> [[TMP10]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> [[TMP8]], <4 x i32> [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[TMP12]] to <4 x i8>
-; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i8, i8* [[DST]], i64 3
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8* [[DST]] to <4 x i8>*
+; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i8* [[DST:%.*]] to <4 x i8>*
 ; CHECK-NEXT:    store <4 x i8> [[TMP13]], <4 x i8>* [[TMP14]], align 1
 ; CHECK-NEXT:    ret void
 ;

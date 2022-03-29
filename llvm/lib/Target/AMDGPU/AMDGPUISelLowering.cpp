@@ -591,26 +591,16 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   if (AMDGPUBypassSlowDiv)
     addBypassSlowDiv(64, 32);
 
-  setTargetDAGCombine(ISD::BITCAST);
-  setTargetDAGCombine(ISD::SHL);
-  setTargetDAGCombine(ISD::SRA);
-  setTargetDAGCombine(ISD::SRL);
-  setTargetDAGCombine(ISD::TRUNCATE);
-  setTargetDAGCombine(ISD::MUL);
-  setTargetDAGCombine(ISD::SMUL_LOHI);
-  setTargetDAGCombine(ISD::UMUL_LOHI);
-  setTargetDAGCombine(ISD::MULHU);
-  setTargetDAGCombine(ISD::MULHS);
-  setTargetDAGCombine(ISD::SELECT);
-  setTargetDAGCombine(ISD::SELECT_CC);
-  setTargetDAGCombine(ISD::STORE);
-  setTargetDAGCombine(ISD::FADD);
-  setTargetDAGCombine(ISD::FSUB);
-  setTargetDAGCombine(ISD::FNEG);
-  setTargetDAGCombine(ISD::FABS);
-  setTargetDAGCombine(ISD::AssertZext);
-  setTargetDAGCombine(ISD::AssertSext);
-  setTargetDAGCombine(ISD::INTRINSIC_WO_CHAIN);
+  setTargetDAGCombine({ISD::BITCAST,    ISD::SHL,
+                       ISD::SRA,        ISD::SRL,
+                       ISD::TRUNCATE,   ISD::MUL,
+                       ISD::SMUL_LOHI,  ISD::UMUL_LOHI,
+                       ISD::MULHU,      ISD::MULHS,
+                       ISD::SELECT,     ISD::SELECT_CC,
+                       ISD::STORE,      ISD::FADD,
+                       ISD::FSUB,       ISD::FNEG,
+                       ISD::FABS,       ISD::AssertZext,
+                       ISD::AssertSext, ISD::INTRINSIC_WO_CHAIN});
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {

@@ -9,6 +9,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
 
@@ -292,6 +293,181 @@ static bool isLiveOut(const MachineBasicBlock &MBB, unsigned Reg) {
   return false;
 }
 
+// Backwards-iterate from Origin (for n=MaxInstructions iterations) until either
+// the beginning of the BB is reached or Pred evaluates to true - which can be
+// an arbitrary condition based on the current MachineInstr, for instance an
+// target instruction. Breaks prematurely by returning nullptr if  one of the
+// registers given in NonModifiableRegs is modified by the current instruction.
+static MachineInstr *
+findInstrBackwards(MachineInstr &Origin,
+                   std::function<bool(MachineInstr *)> Pred,
+                   ArrayRef<MCRegister> NonModifiableRegs,
+                   const SIRegisterInfo *TRI, unsigned MaxInstructions = 5) {
+  MachineBasicBlock::reverse_iterator A = Origin.getReverseIterator(),
+                                      E = Origin.getParent()->rend();
+  unsigned CurrentIteration = 0;
+
+  for (++A; CurrentIteration < MaxInstructions && A != E; ++A) {
+    if (Pred(&*A))
+      return &*A;
+
+    for (MCRegister Reg : NonModifiableRegs) {
+      if (A->modifiesRegister(Reg, TRI))
+        return nullptr;
+    }
+
+    ++CurrentIteration;
+  }
+
+  return nullptr;
+}
+
+// Determine if a register Reg is not re-defined and still in use
+// in the range (Stop..BB.end].
+// It does so by backwards calculating liveness from the end of the BB until
+// either Stop or the beginning of the BB is reached.
+// After liveness is calculated, we can determine if Reg is still in use and not
+// defined inbetween the instructions.
+static bool isRegisterInUseAfter(MachineInstr &Stop, MCRegister Reg,
+                                 const SIRegisterInfo *TRI,
+                                 MachineRegisterInfo &MRI) {
+  LivePhysRegs LR(*TRI);
+  LR.addLiveOuts(*Stop.getParent());
+
+  for (auto A = Stop.getParent()->rbegin();
+       A != Stop.getParent()->rend() && A != Stop; ++A) {
+    LR.stepBackward(*A);
+  }
+
+  return !LR.available(MRI, Reg);
+}
+
+// Tries to find a possibility to optimize a v_cmp ..., s_and_saveexec sequence
+// by looking at an instance of a s_and_saveexec instruction. Returns a pointer
+// to the v_cmp instruction if it is safe to replace the sequence (see the
+// conditions in the function body). This is after register allocation, so some
+// checks on operand dependencies need to be considered.
+static MachineInstr *findPossibleVCMPVCMPXOptimization(
+    MachineInstr &SaveExec, MCRegister Exec, const SIRegisterInfo *TRI,
+    const SIInstrInfo *TII, MachineRegisterInfo &MRI) {
+
+  MachineInstr *VCmp = nullptr;
+
+  Register SaveExecDest = SaveExec.getOperand(0).getReg();
+  if (!TRI->isSGPRReg(MRI, SaveExecDest))
+    return nullptr;
+
+  MachineOperand *SaveExecSrc0 =
+      TII->getNamedOperand(SaveExec, AMDGPU::OpName::src0);
+  if (!SaveExecSrc0->isReg())
+    return nullptr;
+
+  // Try to find the last v_cmp instruction that defs the saveexec input
+  // operand without any write to Exec or the saveexec input operand inbetween.
+  VCmp = findInstrBackwards(
+      SaveExec,
+      [&](MachineInstr *Check) {
+        return AMDGPU::getVCMPXOpFromVCMP(Check->getOpcode()) != -1 &&
+               Check->modifiesRegister(SaveExecSrc0->getReg(), TRI);
+      },
+      {Exec, SaveExecSrc0->getReg()}, TRI);
+
+  if (!VCmp)
+    return nullptr;
+
+  MachineOperand *VCmpDest = TII->getNamedOperand(*VCmp, AMDGPU::OpName::sdst);
+  assert(VCmpDest && "Should have an sdst operand!");
+
+  // Check if any of the v_cmp source operands is written by the saveexec.
+  MachineOperand *Src0 = TII->getNamedOperand(*VCmp, AMDGPU::OpName::src0);
+  if (Src0->isReg() && TRI->isSGPRReg(MRI, Src0->getReg()) &&
+      SaveExec.modifiesRegister(Src0->getReg(), TRI))
+    return nullptr;
+
+  MachineOperand *Src1 = TII->getNamedOperand(*VCmp, AMDGPU::OpName::src1);
+  if (Src1->isReg() && TRI->isSGPRReg(MRI, Src1->getReg()) &&
+      SaveExec.modifiesRegister(Src1->getReg(), TRI))
+    return nullptr;
+
+  // Don't do the transformation if the destination operand is included in
+  // it's MBB Live-outs, meaning it's used in any of it's successors, leading
+  // to incorrect code if the v_cmp and therefore the def of
+  // the dest operand is removed.
+  if (isLiveOut(*VCmp->getParent(), VCmpDest->getReg()))
+    return nullptr;
+
+  // If the v_cmp target is in use after the s_and_saveexec, skip the
+  // optimization.
+  if (isRegisterInUseAfter(SaveExec, VCmpDest->getReg(), TRI, MRI))
+    return nullptr;
+
+  // Try to determine if there is a write to any of the VCmp
+  // operands between the saveexec and the vcmp.
+  // If yes, additional VGPR spilling might need to be inserted. In this case,
+  // it's not worth replacing the instruction sequence.
+  SmallVector<MCRegister, 2> NonDefRegs;
+  if (Src0->isReg())
+    NonDefRegs.push_back(Src0->getReg());
+
+  if (Src1->isReg())
+    NonDefRegs.push_back(Src1->getReg());
+
+  if (!findInstrBackwards(
+          SaveExec, [&](MachineInstr *Check) { return Check == VCmp; },
+          NonDefRegs, TRI))
+    return nullptr;
+
+  return VCmp;
+}
+
+// Inserts the optimized s_mov_b32 / v_cmpx sequence based on the
+// operands extracted from a v_cmp ..., s_and_saveexec pattern.
+static bool optimizeVCMPSaveExecSequence(MachineInstr &SaveExecInstr,
+                                         MachineInstr &VCmp, MCRegister Exec,
+                                         const SIInstrInfo *TII,
+                                         const SIRegisterInfo *TRI,
+                                         MachineRegisterInfo &MRI) {
+  const int NewOpcode = AMDGPU::getVCMPXOpFromVCMP(VCmp.getOpcode());
+
+  if (NewOpcode == -1)
+    return false;
+
+  MachineOperand *Src0 = TII->getNamedOperand(VCmp, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(VCmp, AMDGPU::OpName::src1);
+
+  Register MoveDest = SaveExecInstr.getOperand(0).getReg();
+
+  MachineBasicBlock::instr_iterator InsertPosIt = SaveExecInstr.getIterator();
+  if (!SaveExecInstr.uses().empty()) {
+    bool isSGPR32 = TRI->getRegSizeInBits(MoveDest, MRI) == 32;
+    unsigned MovOpcode = isSGPR32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    BuildMI(*SaveExecInstr.getParent(), InsertPosIt,
+            SaveExecInstr.getDebugLoc(), TII->get(MovOpcode), MoveDest)
+        .addReg(Exec);
+  }
+
+  // Omit dst as V_CMPX is implicitly writing to EXEC.
+  // Add dummy src and clamp modifiers, if needed.
+  auto Builder = BuildMI(*VCmp.getParent(), std::next(InsertPosIt),
+                         VCmp.getDebugLoc(), TII->get(NewOpcode));
+
+  auto TryAddImmediateValueFromNamedOperand =
+      [&](unsigned OperandName) -> void {
+    if (auto *Mod = TII->getNamedOperand(VCmp, OperandName))
+      Builder.addImm(Mod->getImm());
+  };
+
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::src0_modifiers);
+  Builder.add(*Src0);
+
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::src1_modifiers);
+  Builder.add(*Src1);
+
+  TryAddImmediateValueFromNamedOperand(AMDGPU::OpName::clamp);
+
+  return true;
+}
+
 bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -299,6 +475,7 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
   MCRegister Exec = ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
 
   // Optimize sequences emitted for control flow lowering. They are originally
@@ -460,6 +637,46 @@ bool SIOptimizeExecMasking::runOnMachineFunction(MachineFunction &MF) {
     }
 
     Changed = true;
+  }
+
+  // After all s_op_saveexec instructions are inserted,
+  // replace (on GFX10.3 and later)
+  // v_cmp_* SGPR, IMM, VGPR
+  // s_and_saveexec_b32 EXEC_SGPR_DEST, SGPR
+  // with
+  // s_mov_b32 EXEC_SGPR_DEST, exec_lo
+  // v_cmpx_* IMM, VGPR
+  // to reduce pipeline stalls.
+  if (ST.hasGFX10_3Insts()) {
+    DenseMap<MachineInstr *, MachineInstr *> SaveExecVCmpMapping;
+    const unsigned AndSaveExecOpcode =
+        ST.isWave32() ? AMDGPU::S_AND_SAVEEXEC_B32 : AMDGPU::S_AND_SAVEEXEC_B64;
+
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : MBB) {
+        // Record relevant v_cmp / s_and_saveexec instruction pairs for
+        // replacement.
+        if (MI.getOpcode() != AndSaveExecOpcode)
+          continue;
+
+        if (MachineInstr *VCmp =
+                findPossibleVCMPVCMPXOptimization(MI, Exec, TRI, TII, *MRI))
+          SaveExecVCmpMapping[&MI] = VCmp;
+      }
+    }
+
+    for (const auto &Entry : SaveExecVCmpMapping) {
+      MachineInstr *SaveExecInstr = Entry.getFirst();
+      MachineInstr *VCmpInstr = Entry.getSecond();
+
+      if (optimizeVCMPSaveExecSequence(*SaveExecInstr, *VCmpInstr, Exec, TII,
+                                       TRI, *MRI)) {
+        SaveExecInstr->eraseFromParent();
+        VCmpInstr->eraseFromParent();
+
+        Changed = true;
+      }
+    }
   }
 
   return Changed;

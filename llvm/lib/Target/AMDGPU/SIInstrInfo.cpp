@@ -18,17 +18,21 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -705,24 +709,39 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                               const DebugLoc &DL, MCRegister DestReg,
                               MCRegister SrcReg, bool KillSrc) const {
   const TargetRegisterClass *RC = RI.getPhysRegClass(DestReg);
+  unsigned Size = RI.getRegSizeInBits(*RC);
+  const TargetRegisterClass *SrcRC = RI.getPhysRegClass(SrcReg);
+  unsigned SrcSize = RI.getRegSizeInBits(*SrcRC);
 
-  // FIXME: This is hack to resolve copies between 16 bit and 32 bit
-  // registers until all patterns are fixed.
-  if (Fix16BitCopies &&
-      ((RI.getRegSizeInBits(*RC) == 16) ^
-       (RI.getRegSizeInBits(*RI.getPhysRegClass(SrcReg)) == 16))) {
-    MCRegister &RegToFix = (RI.getRegSizeInBits(*RC) == 16) ? DestReg : SrcReg;
-    MCRegister Super = RI.get32BitRegister(RegToFix);
-    assert(RI.getSubReg(Super, AMDGPU::lo16) == RegToFix);
-    RegToFix = Super;
+  // The rest of copyPhysReg assumes Src and Dst size are the same size.
+  // TODO-GFX11_16BIT If all true 16 bit instruction patterns are completed can
+  // we remove Fix16BitCopies and this code block?
+  if (Fix16BitCopies) {
+    if (((Size == 16) != (SrcSize == 16))) {
+      if (ST.hasTrue16BitInsts()) {
+        // Non-VGPR Src and Dst will later be expanded back to 32 bits
+        MCRegister &RegToFix = (Size == 32) ? DestReg : SrcReg;
+        MCRegister SubReg = RI.getSubReg(RegToFix, AMDGPU::lo16);
+        RegToFix = SubReg;
+      } else {
+        MCRegister &RegToFix = (Size == 16) ? DestReg : SrcReg;
+        MCRegister Super = RI.get32BitRegister(RegToFix);
+        assert(RI.getSubReg(Super, AMDGPU::lo16) == RegToFix ||
+               RI.getSubReg(Super, AMDGPU::hi16) == RegToFix);
+        RegToFix = Super;
+      }
 
-    if (DestReg == SrcReg) {
-      // Insert empty bundle since ExpandPostRA expects an instruction here.
-      BuildMI(MBB, MI, DL, get(AMDGPU::BUNDLE));
-      return;
+      if (DestReg == SrcReg) {
+        // Identity copy
+        // Insert empty bundle since ExpandPostRA expects an instruction here.
+        BuildMI(MBB, MI, DL, get(AMDGPU::BUNDLE));
+        return;
+      }
+      RC = RI.getPhysRegClass(DestReg);
+      Size = RI.getRegSizeInBits(*RC);
+      SrcRC = RI.getPhysRegClass(SrcReg);
+      SrcSize = RI.getRegSizeInBits(*SrcRC);
     }
-
-    RC = RI.getPhysRegClass(DestReg);
   }
 
   if (RC == &AMDGPU::VGPR_32RegClass) {
@@ -845,10 +864,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  const unsigned Size = RI.getRegSizeInBits(*RC);
   if (Size == 16) {
-    assert(AMDGPU::VGPR_LO16RegClass.contains(SrcReg) ||
-           AMDGPU::VGPR_HI16RegClass.contains(SrcReg) ||
+    assert(AMDGPU::VGPR_16RegClass.contains(SrcReg) ||
            AMDGPU::SReg_LO16RegClass.contains(SrcReg) ||
            AMDGPU::AGPR_LO16RegClass.contains(SrcReg));
 
@@ -897,23 +914,27 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       return;
     }
 
-    // TODO-GFX11: Implement this without SDWA.
-    auto MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), NewDestReg)
-      .addImm(0) // src0_modifiers
-      .addReg(NewSrcReg)
-      .addImm(0) // clamp
-      .addImm(DstLow ? AMDGPU::SDWA::SdwaSel::WORD_0
-                     : AMDGPU::SDWA::SdwaSel::WORD_1)
-      .addImm(AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
-      .addImm(SrcLow ? AMDGPU::SDWA::SdwaSel::WORD_0
-                     : AMDGPU::SDWA::SdwaSel::WORD_1)
-      .addReg(NewDestReg, RegState::Implicit | RegState::Undef);
-    // First implicit operand is $exec.
-    MIB->tieOperands(0, MIB->getNumOperands() - 1);
+    MachineInstrBuilder MIB;
+    if (ST.hasTrue16BitInsts()) {
+      MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B16_e32), DestReg)
+                .addReg(SrcReg);
+    } else {
+      MIB = BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_sdwa), NewDestReg)
+                .addImm(0) // src0_modifiers
+                .addReg(NewSrcReg)
+                .addImm(0) // clamp
+                .addImm(DstLow ? AMDGPU::SDWA::SdwaSel::WORD_0
+                               : AMDGPU::SDWA::SdwaSel::WORD_1)
+                .addImm(AMDGPU::SDWA::DstUnused::UNUSED_PRESERVE)
+                .addImm(SrcLow ? AMDGPU::SDWA::SdwaSel::WORD_0
+                               : AMDGPU::SDWA::SdwaSel::WORD_1)
+                .addReg(NewDestReg, RegState::Implicit | RegState::Undef);
+      // First implicit operand is $exec.
+      MIB->tieOperands(0, MIB->getNumOperands() - 1);
+    }
     return;
   }
 
-  const TargetRegisterClass *SrcRC = RI.getPhysRegClass(SrcReg);
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
     if (ST.hasMovB64()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
@@ -1425,6 +1446,8 @@ static unsigned getSGPRSpillSaveOpcode(unsigned Size) {
 
 static unsigned getVGPRSpillSaveOpcode(unsigned Size) {
   switch (Size) {
+  case 2:
+    return AMDGPU::SI_SPILL_V16_SAVE;
   case 4:
     return AMDGPU::SI_SPILL_V32_SAVE;
   case 8:
@@ -1550,6 +1573,9 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
+  assert(RC->getID() != AMDGPU::VGPR_16_F128RegClassID &&
+         "getVGPRSpillSaveOpcode must consider more than size if spilling "
+         "after shrinking");
   unsigned Opcode = RI.isVectorSuperClass(RC) ? getAVSpillSaveOpcode(SpillSize)
                     : RI.isAGPRClass(RC) ? getAGPRSpillSaveOpcode(SpillSize)
                                          : getVGPRSpillSaveOpcode(SpillSize);
@@ -1592,6 +1618,8 @@ static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
 
 static unsigned getVGPRSpillRestoreOpcode(unsigned Size) {
   switch (Size) {
+  case 2:
+    return AMDGPU::SI_SPILL_V16_RESTORE;
   case 4:
     return AMDGPU::SI_SPILL_V32_RESTORE;
   case 8:
@@ -3880,18 +3908,19 @@ static void copyFlagsToImplicitVCC(MachineInstr &MI,
 
 MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
                                            unsigned Op32) const {
-  MachineBasicBlock *MBB = MI.getParent();;
+  MachineBasicBlock *MBB = MI.getParent();
   MachineInstrBuilder Inst32 =
     BuildMI(*MBB, MI, MI.getDebugLoc(), get(Op32))
     .setMIFlags(MI.getFlags());
 
   // Add the dst operand if the 32-bit encoding also has an explicit $vdst.
   // For VOPC instructions, this is replaced by an implicit def of vcc.
-  int Op32DstIdx = AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::vdst);
-  if (Op32DstIdx != -1) {
+  if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::vdst) != -1) {
     // dst
     Inst32.add(MI.getOperand(0));
-  } else {
+  } else if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::sdst) != -1) {
+    // VOPCX instructions won't be writing to an explicit dst, so this should
+    // not fail for these instructions.
     assert(((MI.getOperand(0).getReg() == AMDGPU::VCC) ||
             (MI.getOperand(0).getReg() == AMDGPU::VCC_LO)) &&
            "Unexpected case");
@@ -5501,7 +5530,8 @@ void SIInstrInfo::legalizeGenericOperand(MachineBasicBlock &InsertMBB,
 static void
 emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
                           MachineBasicBlock &OrigBB, MachineBasicBlock &LoopBB,
-                          const DebugLoc &DL, MachineOperand &Rsrc) {
+                          MachineBasicBlock &BodyBB, const DebugLoc &DL,
+                          MachineOperand &Rsrc) {
   MachineFunction &MF = *OrigBB.getParent();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -5594,14 +5624,14 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
       .addReg(CondReg, RegState::Kill);
 
   // The original instruction is here; we insert the terminators after it.
-  I = LoopBB.end();
+  I = BodyBB.end();
 
   // Update EXEC, switch all done bits to 0 and all todo bits to 1.
-  BuildMI(LoopBB, I, DL, TII.get(XorTermOpc), Exec)
+  BuildMI(BodyBB, I, DL, TII.get(XorTermOpc), Exec)
       .addReg(Exec)
       .addReg(SaveExec);
 
-  BuildMI(LoopBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
+  BuildMI(BodyBB, I, DL, TII.get(AMDGPU::SI_WATERFALL_LOOP)).addMBB(&LoopBB);
 }
 
 // Build a waterfall loop around \p MI, replacing the VGPR \p Rsrc register
@@ -5648,31 +5678,35 @@ loadSRsrcFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
   // To insert the loop we need to split the block. Move everything after this
   // point to a new block, and insert a new empty block between the two.
   MachineBasicBlock *LoopBB = MF.CreateMachineBasicBlock();
+  MachineBasicBlock *BodyBB = MF.CreateMachineBasicBlock();
   MachineBasicBlock *RemainderBB = MF.CreateMachineBasicBlock();
   MachineFunction::iterator MBBI(MBB);
   ++MBBI;
 
   MF.insert(MBBI, LoopBB);
+  MF.insert(MBBI, BodyBB);
   MF.insert(MBBI, RemainderBB);
 
-  LoopBB->addSuccessor(LoopBB);
-  LoopBB->addSuccessor(RemainderBB);
+  LoopBB->addSuccessor(BodyBB);
+  BodyBB->addSuccessor(LoopBB);
+  BodyBB->addSuccessor(RemainderBB);
 
-  // Move Begin to MI to the LoopBB, and the remainder of the block to
+  // Move Begin to MI to the BodyBB, and the remainder of the block to
   // RemainderBB.
   RemainderBB->transferSuccessorsAndUpdatePHIs(&MBB);
   RemainderBB->splice(RemainderBB->begin(), &MBB, End, MBB.end());
-  LoopBB->splice(LoopBB->begin(), &MBB, Begin, MBB.end());
+  BodyBB->splice(BodyBB->begin(), &MBB, Begin, MBB.end());
 
   MBB.addSuccessor(LoopBB);
 
   // Update dominators. We know that MBB immediately dominates LoopBB, that
-  // LoopBB immediately dominates RemainderBB, and that RemainderBB immediately
-  // dominates all of the successors transferred to it from MBB that MBB used
-  // to properly dominate.
+  // LoopBB immediately dominates BodyBB, and BodyBB immediately dominates
+  // RemainderBB. RemainderBB immediately dominates all of the successors
+  // transferred to it from MBB that MBB used to properly dominate.
   if (MDT) {
     MDT->addNewBlock(LoopBB, &MBB);
-    MDT->addNewBlock(RemainderBB, LoopBB);
+    MDT->addNewBlock(BodyBB, LoopBB);
+    MDT->addNewBlock(RemainderBB, BodyBB);
     for (auto &Succ : RemainderBB->successors()) {
       if (MDT->properlyDominates(&MBB, Succ)) {
         MDT->changeImmediateDominator(Succ, RemainderBB);
@@ -5680,12 +5714,12 @@ loadSRsrcFromVGPR(const SIInstrInfo &TII, MachineInstr &MI,
     }
   }
 
-  emitLoadSRsrcFromVGPRLoop(TII, MRI, MBB, *LoopBB, DL, Rsrc);
+  emitLoadSRsrcFromVGPRLoop(TII, MRI, MBB, *LoopBB, *BodyBB, DL, Rsrc);
 
   // Restore the EXEC mask
   MachineBasicBlock::iterator First = RemainderBB->begin();
   BuildMI(*RemainderBB, First, DL, TII.get(MovExecOpc), Exec).addReg(SaveExec);
-  return LoopBB;
+  return BodyBB;
 }
 
 // Extract pointer from Rsrc and return a zero-value Rsrc replacement.

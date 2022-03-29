@@ -53,7 +53,6 @@ define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceabl
 ; CHECK-LABEL: @PR16739_byref(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 2
 ; CHECK-NEXT:    [[X0:%.*]] = load float, float* [[GEP0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP1]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
@@ -80,7 +79,6 @@ define <4 x float> @PR16739_byref(<4 x float>* nocapture readonly dereferenceabl
 define <4 x float> @PR16739_byref_alt(<4 x float>* nocapture readonly dereferenceable(16) %x) {
 ; CHECK-LABEL: @PR16739_byref_alt(
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds <4 x float>, <4 x float>* [[X]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[GEP0]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
@@ -139,26 +137,22 @@ define <4 x float> @PR16739_byval(<4 x float>* nocapture readonly dereferenceabl
 define void @PR43578_prefer128(i32* %r, i64* %p, i64* %q) #0 {
 ; CHECK-LABEL: @PR43578_prefer128(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i64, i64* [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 1
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, i64* [[P]], i64 3
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr inbounds i64, i64* [[Q:%.*]], i64 0
-; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds i64, i64* [[Q]], i64 1
 ; CHECK-NEXT:    [[Q2:%.*]] = getelementptr inbounds i64, i64* [[Q]], i64 2
-; CHECK-NEXT:    [[Q3:%.*]] = getelementptr inbounds i64, i64* [[Q]], i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64* [[P0]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* [[TMP1]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[P2]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i64* [[Q0]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* [[TMP3]], align 2
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[Q0]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* [[TMP5]], align 2
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i64* [[Q2]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i64>, <2 x i64>* [[TMP7]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = sub nsw <2 x i64> [[TMP2]], [[TMP6]]
-; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw <2 x i64> [[TMP4]], [[TMP8]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw <2 x i64> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[P2]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 2
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64* [[Q2]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x i64>, <2 x i64>* [[TMP8]], align 2
+; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw <2 x i64> [[TMP7]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP5]], i32 0
 ; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, i32* [[R:%.*]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP9]], i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP5]], i32 1
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, i32* [[R]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i64> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, i32* [[R]], i64 [[TMP13]]

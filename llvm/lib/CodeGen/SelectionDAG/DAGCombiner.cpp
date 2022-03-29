@@ -2167,6 +2167,8 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
       case ISD::SRA: // X s>> 0 --> X
       case ISD::SRL: // X u>> 0 --> X
         return C->isZero();
+      case ISD::MUL: // X * 1 --> X
+        return C->isOne();
       }
     }
     return false;
@@ -5925,6 +5927,9 @@ static SDValue combineShiftAnd1ToBitTest(SDNode *And, SelectionDAG &DAG) {
   if (ShiftAmt.uge(VTBitWidth))
     return SDValue();
 
+  if (!TLI.hasBitTest(Srl.getOperand(0), Srl.getOperand(1)))
+    return SDValue();
+
   // Turn this into a bit-test pattern using mask op + setcc:
   // and (not (srl X, C)), 1 --> (and X, 1<<C) == 0
   SDLoc DL(And);
@@ -6350,9 +6355,8 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   if (SDValue Shifts = unfoldExtremeBitClearingToShifts(N))
     return Shifts;
 
-  if (TLI.hasBitTest(N0, N1))
-    if (SDValue V = combineShiftAnd1ToBitTest(N, DAG))
-      return V;
+  if (SDValue V = combineShiftAnd1ToBitTest(N, DAG))
+    return V;
 
   // Recognize the following pattern:
   //

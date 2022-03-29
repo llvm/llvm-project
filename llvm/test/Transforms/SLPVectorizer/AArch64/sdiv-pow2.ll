@@ -6,22 +6,13 @@ target triple = "aarch64--linux-gnu"
 define void @test1(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* noalias nocapture readonly %c) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv <4 x i32> [[TMP4]], <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
 ;

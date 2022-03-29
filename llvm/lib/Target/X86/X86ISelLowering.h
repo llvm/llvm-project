@@ -1039,10 +1039,7 @@ namespace llvm {
 
     bool isCtlzFast() const override;
 
-    bool hasBitPreservingFPLogic(EVT VT) const override {
-      return VT == MVT::f32 || VT == MVT::f64 || VT.isVector() ||
-             (VT == MVT::f16 && X86ScalarSSEf16);
-    }
+    bool hasBitPreservingFPLogic(EVT VT) const override;
 
     bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
       // If the pair to store is a mixture of float and int values, we will
@@ -1322,12 +1319,7 @@ namespace llvm {
     /// If true, then instruction selection should
     /// seek to shrink the FP constant of the specified type to a smaller type
     /// in order to save space and / or reduce runtime.
-    bool ShouldShrinkFPConstant(EVT VT) const override {
-      // Don't shrink FP constpool if SSE2 is available since cvtss2sd is more
-      // expensive than a straight movsd. On the other hand, it's important to
-      // shrink long double fp constant since fldt is very slow.
-      return !X86ScalarSSEf64 || VT == MVT::f80;
-    }
+    bool ShouldShrinkFPConstant(EVT VT) const override;
 
     /// Return true if we believe it is correct and profitable to reduce the
     /// load node to a smaller type.
@@ -1336,11 +1328,7 @@ namespace llvm {
 
     /// Return true if the specified scalar FP type is computed in an SSE
     /// register, not on the X87 floating point stack.
-    bool isScalarFPTypeInSSEReg(EVT VT) const {
-      return (VT == MVT::f64 && X86ScalarSSEf64) || // f64 is when SSE2
-             (VT == MVT::f32 && X86ScalarSSEf32) || // f32 is when SSE1
-             (VT == MVT::f16 && X86ScalarSSEf16);   // f16 is when AVX512FP16
-    }
+    bool isScalarFPTypeInSSEReg(EVT VT) const;
 
     /// Returns true if it is beneficial to convert a load of a constant
     /// to just the constant itself.
@@ -1493,13 +1481,6 @@ namespace llvm {
     /// Keep a reference to the X86Subtarget around so that we can
     /// make the right decision when generating code for different targets.
     const X86Subtarget &Subtarget;
-
-    /// Select between SSE or x87 floating point ops.
-    /// When SSE is available, use it for f32 operations.
-    /// When SSE2 is available, use it for f64 operations.
-    bool X86ScalarSSEf32;
-    bool X86ScalarSSEf64;
-    bool X86ScalarSSEf16;
 
     /// A list of legal FP immediates.
     std::vector<APFloat> LegalFPImmediates;

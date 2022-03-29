@@ -91,8 +91,8 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; MUBUF11-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF11-NEXT:    v_mov_b32_e32 v0, s2
 ; MUBUF11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; MUBUF11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; MUBUF11-NEXT:    s_and_saveexec_b32 s0, vcc_lo
+; MUBUF11-NEXT:    s_mov_b32 s0, exec_lo
+; MUBUF11-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; MUBUF11-NEXT:    s_cbranch_execz .LBB0_2
 ; MUBUF11-NEXT:  ; %bb.1: ; %if.then4.i
 ; MUBUF11-NEXT:    s_movk_i32 vcc_lo, 0x4000
@@ -119,8 +119,8 @@ define amdgpu_kernel void @kernel_background_evaluate(float addrspace(5)* %kg, <
 ; FLATSCR11-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v0, s2
 ; FLATSCR11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; FLATSCR11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; FLATSCR11-NEXT:    s_and_saveexec_b32 s0, vcc_lo
+; FLATSCR11-NEXT:    s_mov_b32 s0, exec_lo
+; FLATSCR11-NEXT:    v_cmpx_ne_u32_e32 0, v0
 ; FLATSCR11-NEXT:    s_cbranch_execz .LBB0_2
 ; FLATSCR11-NEXT:  ; %bb.1: ; %if.then4.i
 ; FLATSCR11-NEXT:    s_movk_i32 vcc_lo, 0x4000

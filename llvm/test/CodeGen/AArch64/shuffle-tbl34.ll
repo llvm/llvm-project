@@ -696,3 +696,83 @@ define <16 x i8> @insert4_v16i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c, <16 x i8
   %i16 = insertelement <16 x i8> %i15, i8 %e16, i32 15
   ret <16 x i8> %i16
 }
+
+
+; CHECK: .LCPI16_0:
+; CHECK: 	.byte	0
+; CHECK: 	.byte	1
+; CHECK: 	.byte	4
+; CHECK: 	.byte	5
+; CHECK: 	.byte	16
+; CHECK: 	.byte	17
+; CHECK: 	.byte	20
+; CHECK: 	.byte	21
+; CHECK: 	.byte	32
+; CHECK: 	.byte	33
+; CHECK: 	.byte	36
+; CHECK: 	.byte	37
+; CHECK: 	.byte	48
+; CHECK: 	.byte	49
+; CHECK: 	.byte	52
+; CHECK: 	.byte	53
+define <16 x i16> @test(<2 x double> %l213, <2 x double> %l231, <2 x double> %l249, <2 x double> %l267, <2 x double> %l285, <2 x double> %l303, <2 x double> %l321, <2 x double> %l339) {
+; CHECK-LABEL: test:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    frintm v0.2d, v0.2d
+; CHECK-NEXT:    adrp x8, .LCPI16_0
+; CHECK-NEXT:    frintm v4.2d, v4.2d
+; CHECK-NEXT:    frintm v1.2d, v1.2d
+; CHECK-NEXT:    frintm v5.2d, v5.2d
+; CHECK-NEXT:    frintm v2.2d, v2.2d
+; CHECK-NEXT:    frintm v6.2d, v6.2d
+; CHECK-NEXT:    frintm v3.2d, v3.2d
+; CHECK-NEXT:    frintm v7.2d, v7.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzs v4.2d, v4.2d
+; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-NEXT:    fcvtzs v5.2d, v5.2d
+; CHECK-NEXT:    fcvtzs v2.2d, v2.2d
+; CHECK-NEXT:    fcvtzs v6.2d, v6.2d
+; CHECK-NEXT:    fcvtzs v3.2d, v3.2d
+; CHECK-NEXT:    xtn v16.2s, v0.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v7.2d
+; CHECK-NEXT:    xtn v20.2s, v4.2d
+; CHECK-NEXT:    xtn v17.2s, v1.2d
+; CHECK-NEXT:    xtn v21.2s, v5.2d
+; CHECK-NEXT:    xtn v18.2s, v2.2d
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    xtn v22.2s, v6.2d
+; CHECK-NEXT:    xtn v19.2s, v3.2d
+; CHECK-NEXT:    xtn v23.2s, v0.2d
+; CHECK-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v1.16b
+; CHECK-NEXT:    tbl v1.16b, { v20.16b, v21.16b, v22.16b, v23.16b }, v1.16b
+; CHECK-NEXT:    uzp1 v0.8h, v2.8h, v1.8h
+; CHECK-NEXT:    uzp2 v1.8h, v2.8h, v1.8h
+; CHECK-NEXT:    ret
+  %l214 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l213)
+  %l215 = fptosi <2 x double> %l214 to <2 x i16>
+  %l232 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l231)
+  %l233 = fptosi <2 x double> %l232 to <2 x i16>
+  %l250 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l249)
+  %l251 = fptosi <2 x double> %l250 to <2 x i16>
+  %l268 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l267)
+  %l269 = fptosi <2 x double> %l268 to <2 x i16>
+  %l286 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l285)
+  %l287 = fptosi <2 x double> %l286 to <2 x i16>
+  %l304 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l303)
+  %l305 = fptosi <2 x double> %l304 to <2 x i16>
+  %l322 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l321)
+  %l323 = fptosi <2 x double> %l322 to <2 x i16>
+  %l340 = call fast <2 x double> @llvm.floor.v2f64(<2 x double> %l339)
+  %l341 = fptosi <2 x double> %l340 to <2 x i16>
+  %l342 = shufflevector <2 x i16> %l215, <2 x i16> %l233, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %l343 = shufflevector <2 x i16> %l251, <2 x i16> %l269, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %l344 = shufflevector <2 x i16> %l287, <2 x i16> %l305, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %l345 = shufflevector <2 x i16> %l323, <2 x i16> %l341, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %l346 = shufflevector <4 x i16> %l342, <4 x i16> %l343, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %l347 = shufflevector <4 x i16> %l344, <4 x i16> %l345, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %interleaved.vec = shufflevector <8 x i16> %l346, <8 x i16> %l347, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  ret <16 x i16> %interleaved.vec
+}
+
+declare <2 x double> @llvm.floor.v2f64(<2 x double> %l213)

@@ -48,7 +48,7 @@ llvm::Expected<GsymReader> GsymReader::copyBuffer(StringRef Bytes) {
 
 llvm::Expected<llvm::gsym::GsymReader>
 GsymReader::create(std::unique_ptr<MemoryBuffer> &MemBuffer) {
-  if (!MemBuffer.get())
+  if (!MemBuffer)
     return createStringError(std::errc::invalid_argument,
                              "invalid memory buffer");
   GsymReader GR(std::move(MemBuffer));

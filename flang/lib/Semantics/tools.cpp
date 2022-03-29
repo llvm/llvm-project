@@ -103,6 +103,9 @@ Tristate IsDefinedAssignment(
   if (!lhsType || !rhsType) {
     return Tristate::No; // error or rhs is untyped
   }
+  if (lhsType->IsUnlimitedPolymorphic() || rhsType->IsUnlimitedPolymorphic()) {
+    return Tristate::No;
+  }
   TypeCategory lhsCat{lhsType->category()};
   TypeCategory rhsCat{rhsType->category()};
   if (rhsRank > 0 && lhsRank != rhsRank) {

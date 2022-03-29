@@ -200,6 +200,12 @@ public:
     return FieldInfo.lookup(FD);
   }
 
+  // Return whether the following non virtual base has a corresponding
+  // entry in the LLVM struct.
+  bool hasNonVirtualBaseLLVMField(const CXXRecordDecl *RD) const {
+    return NonVirtualBases.count(RD);
+  }
+
   unsigned getNonVirtualBaseLLVMFieldNo(const CXXRecordDecl *RD) const {
     assert(NonVirtualBases.count(RD) && "Invalid non-virtual base!");
     return NonVirtualBases.lookup(RD);

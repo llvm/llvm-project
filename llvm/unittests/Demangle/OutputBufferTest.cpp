@@ -15,7 +15,8 @@ using namespace llvm;
 using llvm::itanium_demangle::OutputBuffer;
 
 static std::string toString(OutputBuffer &OB) {
-  return {OB.getBuffer(), OB.getCurrentPosition()};
+  StringView SV = OB;
+  return {SV.begin(), SV.end()};
 }
 
 template <typename T> static std::string printToString(const T &Value) {

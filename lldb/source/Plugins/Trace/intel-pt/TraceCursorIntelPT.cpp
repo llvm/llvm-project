@@ -77,8 +77,8 @@ bool TraceCursorIntelPT::IsError() {
   return m_decoded_thread_sp->GetInstructions()[m_pos].IsError();
 }
 
-Error TraceCursorIntelPT::GetError() {
-  return m_decoded_thread_sp->GetInstructions()[m_pos].ToError();
+const char *TraceCursorIntelPT::GetError() {
+  return m_decoded_thread_sp->GetErrorByInstructionIndex(m_pos);
 }
 
 lldb::addr_t TraceCursorIntelPT::GetLoadAddress() {

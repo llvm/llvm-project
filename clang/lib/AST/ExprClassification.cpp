@@ -465,14 +465,11 @@ static Cl::Kinds ClassifyDecl(ASTContext &Ctx, const Decl *D) {
     islvalue = NTTParm->getType()->isReferenceType() ||
                NTTParm->getType()->isRecordType();
   else
-    islvalue = isa<VarDecl>(D) || isa<FieldDecl>(D) ||
-               isa<IndirectFieldDecl>(D) ||
-               isa<BindingDecl>(D) ||
-               isa<MSGuidDecl>(D) ||
-               isa<TemplateParamObjectDecl>(D) ||
-               (Ctx.getLangOpts().CPlusPlus &&
-                (isa<FunctionDecl>(D) || isa<MSPropertyDecl>(D) ||
-                 isa<FunctionTemplateDecl>(D)));
+    islvalue =
+        isa<VarDecl, FieldDecl, IndirectFieldDecl, BindingDecl, MSGuidDecl,
+            UnnamedGlobalConstantDecl, TemplateParamObjectDecl>(D) ||
+        (Ctx.getLangOpts().CPlusPlus &&
+         (isa<FunctionDecl, MSPropertyDecl, FunctionTemplateDecl>(D)));
 
   return islvalue ? Cl::CL_LValue : Cl::CL_PRValue;
 }

@@ -43,7 +43,9 @@ subroutine dyn_array_cst_len(n)
   character(10) :: c(n)
   ! CHECK: %[[n:.*]] = fir.load %[[arg0]] : !fir.ref<i32>
   ! CHECK: %[[ni:.*]] = fir.convert %[[n]] : (i32) -> index
-  ! CHECK: fir.alloca !fir.array<?x!fir.char<1,10>>, %[[ni]] {{{.*}}uniq_name = "_QFdyn_array_cst_lenEc"}
+  ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[ni]], %c0{{.*}} : index
+  ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[ni]], %c0{{.*}} : index
+  ! CHECK: fir.alloca !fir.array<?x!fir.char<1,10>>, %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_cst_lenEc"}
 end subroutine
 
 ! CHECK: func @_QPdyn_array_dyn_len
@@ -56,7 +58,9 @@ subroutine dyn_array_dyn_len(l, n)
   ! CHECK-DAG: %[[l:.*]] = arith.select %[[is_positive]], %[[lexpr]], %c0{{.*}} : i32
   ! CHECK-DAG: %[[n:.*]] = fir.load %[[arg1]] : !fir.ref<i32>
   ! CHECK: %[[ni:.*]] = fir.convert %[[n]] : (i32) -> index
-  ! CHECK: fir.alloca !fir.array<?x!fir.char<1,?>>(%[[l]] : i32), %[[ni]] {{{.*}}uniq_name = "_QFdyn_array_dyn_lenEc"}
+  ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[ni]], %c0{{.*}} : index
+  ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[ni]], %c0{{.*}} : index
+  ! CHECK: fir.alloca !fir.array<?x!fir.char<1,?>>(%[[l]] : i32), %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_dyn_lenEc"}
 end subroutine
 
 ! CHECK-LABEL: func @_QPcst_array_cst_len_lb
@@ -84,7 +88,9 @@ subroutine dyn_array_cst_len_lb(n)
   ! CHECK-DAG: %[[cm10:.*]] = arith.constant -10 : index
   ! CHECK-DAG: %[[n:.*]] = fir.load %[[arg0]] : !fir.ref<i64>
   ! CHECK-DAG: %[[ni:.*]] = fir.convert %[[n]] : (i64) -> index
-  ! CHECK: %[[extent:.*]] = arith.addi %[[ni]], %[[cm10]] : index
+  ! CHECK: %[[raw_extent:.*]] = arith.addi %[[ni]], %[[cm10]] : index
+  ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[raw_extent]], %c0{{.*}} : index
+  ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: fir.alloca !fir.array<?x!fir.char<1,10>>, %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_cst_len_lbEc"}
 end subroutine
 
@@ -99,7 +105,9 @@ subroutine dyn_array_dyn_len_lb(l, n)
   ! CHECK-DAG: %[[l:.*]] = arith.select %[[is_positive]], %[[lexpr]], %c0{{.*}} : i64
   ! CHECK-DAG: %[[n:.*]] = fir.load %[[arg1]] : !fir.ref<i64>
   ! CHECK-DAG: %[[ni:.*]] = fir.convert %[[n]] : (i64) -> index
-  ! CHECK: %[[extent:.*]] = arith.addi %[[ni]], %[[cm10]] : index
+  ! CHECK: %[[raw_extent:.*]] = arith.addi %[[ni]], %[[cm10]] : index
+  ! CHECK: %[[is_positive:.*]] = arith.cmpi sgt, %[[raw_extent]], %c0{{.*}} : index
+  ! CHECK: %[[extent:.*]] = arith.select %[[is_positive]], %[[raw_extent]], %c0{{.*}} : index
   ! CHECK: fir.alloca !fir.array<?x!fir.char<1,?>>(%[[l]] : i64), %[[extent]] {{{.*}}uniq_name = "_QFdyn_array_dyn_len_lbEc"}
 end subroutine
 

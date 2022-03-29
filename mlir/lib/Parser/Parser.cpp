@@ -394,10 +394,6 @@ public:
   /// us to diagnose references to blocks that are not defined precisely.
   Block *getBlockNamed(StringRef name, SMLoc loc);
 
-  /// Define the block with the specified name. Returns the Block* or nullptr in
-  /// the case of redefinition.
-  Block *defineBlockNamed(StringRef name, SMLoc loc, Block *existing);
-
 private:
   /// This class represents a definition of a Block.
   struct BlockDefinition {
@@ -1953,11 +1949,38 @@ ParseResult OperationParser::parseBlock(Block *&block) {
   if (parseToken(Token::caret_identifier, "expected block name"))
     return failure();
 
-  block = defineBlockNamed(name, nameLoc, block);
+  // Define the block with the specified name.
+  auto &blockAndLoc = getBlockInfoByName(name);
+  blockAndLoc.loc = nameLoc;
 
-  // Fail if the block was already defined.
-  if (!block)
+  // Use a unique pointer for in-flight block being parsed. Release ownership
+  // only in the case of a successful parse. This ensures that the Block
+  // allocated is released if the parse fails and control returns early.
+  std::unique_ptr<Block> inflightBlock;
+
+  // If a block has yet to be set, this is a new definition. If the caller
+  // provided a block, use it. Otherwise create a new one.
+  if (!blockAndLoc.block) {
+    if (block) {
+      blockAndLoc.block = block;
+    } else {
+      inflightBlock = std::make_unique<Block>();
+      blockAndLoc.block = inflightBlock.get();
+    }
+
+    // Otherwise, the block has a forward declaration. Forward declarations are
+    // removed once defined, so if we are defining a existing block and it is
+    // not a forward declaration, then it is a redeclaration. Fail if the block
+    // was already defined.
+  } else if (!eraseForwardRef(blockAndLoc.block)) {
     return emitError(nameLoc, "redefinition of block '") << name << "'";
+  }
+
+  // Populate the high level assembly state if necessary.
+  if (state.asmState)
+    state.asmState->addDefinition(blockAndLoc.block, nameLoc);
+
+  block = blockAndLoc.block;
 
   // If an argument list is present, parse it.
   if (getToken().is(Token::l_paren))
@@ -1967,7 +1990,10 @@ ParseResult OperationParser::parseBlock(Block *&block) {
   if (parseToken(Token::colon, "expected ':' after block name"))
     return failure();
 
-  return parseBlockBody(block);
+  ParseResult res = parseBlockBody(block);
+  if (succeeded(res))
+    inflightBlock.release();
+  return res;
 }
 
 ParseResult OperationParser::parseBlockBody(Block *block) {
@@ -1997,32 +2023,6 @@ Block *OperationParser::getBlockNamed(StringRef name, SMLoc loc) {
     state.asmState->addUses(blockDef.block, loc);
 
   return blockDef.block;
-}
-
-/// Define the block with the specified name. Returns the Block* or nullptr in
-/// the case of redefinition.
-Block *OperationParser::defineBlockNamed(StringRef name, SMLoc loc,
-                                         Block *existing) {
-  auto &blockAndLoc = getBlockInfoByName(name);
-  blockAndLoc.loc = loc;
-
-  // If a block has yet to be set, this is a new definition. If the caller
-  // provided a block, use it. Otherwise create a new one.
-  if (!blockAndLoc.block) {
-    blockAndLoc.block = existing ? existing : new Block();
-
-    // Otherwise, the block has a forward declaration. Forward declarations are
-    // removed once defined, so if we are defining a existing block and it is
-    // not a forward declaration, then it is a redeclaration.
-  } else if (!eraseForwardRef(blockAndLoc.block)) {
-    return nullptr;
-  }
-
-  // Populate the high level assembly state if necessary.
-  if (state.asmState)
-    state.asmState->addDefinition(blockAndLoc.block, loc);
-
-  return blockAndLoc.block;
 }
 
 /// Parse a (possibly empty) list of SSA operands with types as block arguments

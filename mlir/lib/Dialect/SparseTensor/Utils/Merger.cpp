@@ -563,7 +563,7 @@ Type Merger::inferType(unsigned e, Value src) {
   // Inspect source type. For vector types, apply the same
   // vectorization to the destination type.
   if (auto vtp = src.getType().dyn_cast<VectorType>())
-    return VectorType::get(vtp.getNumElements(), dtp);
+    return VectorType::get(vtp.getNumElements(), dtp, vtp.getNumScalableDims());
   return dtp;
 }
 

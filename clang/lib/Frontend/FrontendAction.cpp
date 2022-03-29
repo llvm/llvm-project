@@ -798,9 +798,65 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                                            &CI.getPreprocessor());
   HasBegunSourceFile = true;
 
-  // Initialize the main file entry.
+  // Handle C++20 header units.
+  // Here, the user has the option to specify that the header name should be
+  // looked up in the pre-processor search paths (and the main filename as
+  // passed by the driver might therefore be incomplete until that look-up).
+  if (CI.getLangOpts().CPlusPlusModules && Input.getKind().isHeaderUnit() &&
+      !Input.getKind().isPreprocessed()) {
+    StringRef FileName = Input.getFile();
+    InputKind Kind = Input.getKind();
+    if (Kind.getHeaderUnitKind() != InputKind::HeaderUnit_Abs) {
+      assert(CI.hasPreprocessor() &&
+             "trying to build a header unit without a Pre-processor?");
+      HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
+      // Relative searches begin from CWD.
+      const DirectoryEntry *Dir = nullptr;
+      if (auto DirOrErr = CI.getFileManager().getDirectory("."))
+        Dir = *DirOrErr;
+      SmallVector<std::pair<const FileEntry *, const DirectoryEntry *>, 1> CWD;
+      CWD.push_back({nullptr, Dir});
+      Optional<FileEntryRef> FE =
+          HS.LookupFile(FileName, SourceLocation(),
+                        /*Angled*/ Input.getKind().getHeaderUnitKind() ==
+                            InputKind::HeaderUnit_System,
+                        nullptr, nullptr, CWD, nullptr, nullptr, nullptr,
+                        nullptr, nullptr, nullptr);
+      if (!FE) {
+        CI.getDiagnostics().Report(diag::err_module_header_file_not_found)
+            << FileName;
+        return false;
+      }
+      // We now have the filename...
+      FileName = FE->getFileEntry().getName();
+      // ... still a header unit, but now use the path as written.
+      Kind = Input.getKind().withHeaderUnit(InputKind::HeaderUnit_Abs);
+      Input = FrontendInputFile(FileName, Kind, Input.isSystem());
+    }
+    // Unless the user has overridden the name, the header unit module name is
+    // the pathname for the file.
+    if (CI.getLangOpts().ModuleName.empty())
+      CI.getLangOpts().ModuleName = std::string(FileName);
+    CI.getLangOpts().CurrentModule = CI.getLangOpts().ModuleName;
+  }
+
   if (!CI.InitializeSourceManager(Input))
     return false;
+
+  if (CI.getLangOpts().CPlusPlusModules && Input.getKind().isHeaderUnit() &&
+      Input.getKind().isPreprocessed() && !usesPreprocessorOnly()) {
+    // We have an input filename like foo.iih, but we want to find the right
+    // module name (and original file, to build the map entry).
+    // Check if the first line specifies the original source file name with a
+    // linemarker.
+    std::string PresumedInputFile = std::string(getCurrentFileOrBufferName());
+    ReadOriginalFileName(CI, PresumedInputFile);
+    // Unless the user overrides this, the module name is the name by which the
+    // original file was known.
+    if (CI.getLangOpts().ModuleName.empty())
+      CI.getLangOpts().ModuleName = std::string(PresumedInputFile);
+    CI.getLangOpts().CurrentModule = CI.getLangOpts().ModuleName;
+  }
 
   // For module map files, we first parse the module map and synthesize a
   // "<module-includes>" buffer before more conventional processing.

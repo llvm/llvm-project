@@ -366,11 +366,11 @@ static std::string GetSeenProcs(
 // 15.4.3.6, paragraph 2.
 static std::optional<DummyArgument> CharacterizeDummyArgument(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::UnorderedSymbolSet &seenProcs);
+    semantics::UnorderedSymbolSet seenProcs);
 
 static std::optional<Procedure> CharacterizeProcedure(
     const semantics::Symbol &original, FoldingContext &context,
-    semantics::UnorderedSymbolSet &seenProcs) {
+    semantics::UnorderedSymbolSet seenProcs) {
   Procedure result;
   const auto &symbol{ResolveAssociations(original)};
   if (seenProcs.find(symbol) != seenProcs.end()) {
@@ -508,7 +508,7 @@ static std::optional<Procedure> CharacterizeProcedure(
 
 static std::optional<DummyProcedure> CharacterizeDummyProcedure(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::UnorderedSymbolSet &seenProcs) {
+    semantics::UnorderedSymbolSet seenProcs) {
   if (auto procedure{CharacterizeProcedure(symbol, context, seenProcs)}) {
     // Dummy procedures may not be elemental.  Elemental dummy procedure
     // interfaces are errors when the interface is not intrinsic, and that
@@ -562,7 +562,7 @@ bool DummyArgument::IsCompatibleWith(const DummyArgument &actual) const {
 
 static std::optional<DummyArgument> CharacterizeDummyArgument(
     const semantics::Symbol &symbol, FoldingContext &context,
-    semantics::UnorderedSymbolSet &seenProcs) {
+    semantics::UnorderedSymbolSet seenProcs) {
   auto name{symbol.name().ToString()};
   if (symbol.has<semantics::ObjectEntityDetails>() ||
       symbol.has<semantics::EntityDetails>()) {

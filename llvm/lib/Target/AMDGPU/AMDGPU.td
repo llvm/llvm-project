@@ -361,6 +361,12 @@ def Feature16BitInsts : SubtargetFeature<"16-bit-insts",
   "Has i16/f16 instructions"
 >;
 
+def FeatureTrue16BitInsts : SubtargetFeature<"true16",
+  "HasTrue16BitInsts",
+  "true",
+  "True 16 bit operand instructions"
+>;
+
 def FeatureVOP3P : SubtargetFeature<"vop3p",
   "HasVOP3PInsts",
   "true",
@@ -902,7 +908,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
-   FeatureGFX11Insts, FeatureVOP3P, FeatureVOPD,
+   FeatureGFX11Insts, FeatureVOP3P, FeatureVOPD, FeatureTrue16BitInsts,
    FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
@@ -1587,6 +1593,10 @@ def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarry()">;
 
 def Has16BitInsts : Predicate<"Subtarget->has16BitInsts()">,
   AssemblerPredicate<(all_of Feature16BitInsts)>;
+
+def HasTrue16BitInsts : Predicate<"Subtarget->hasTrue16BitInsts()">,
+  AssemblerPredicate<(all_of FeatureTrue16BitInsts)>;
+
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 

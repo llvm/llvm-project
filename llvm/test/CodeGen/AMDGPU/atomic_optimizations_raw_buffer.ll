@@ -1,8 +1,8 @@
 ; RUN: llc -march=amdgcn -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX7LESS %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10PLUS %s
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10PLUS %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB,GFX8910 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX89,DPPCOMB,GFX8910 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10PLUS,GFX8910 %s
+; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10PLUS,GFX8910 %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN64,GFX8MORE,GFX8MORE64,GFX10PLUS %s
 ; RUN: llc -march=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -mattr=-flat-for-global -amdgpu-atomic-optimizations=true -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GCN32,GFX8MORE,GFX8MORE32,GFX10PLUS %s
 
@@ -17,8 +17,8 @@ declare i32 @llvm.amdgcn.raw.buffer.atomic.sub(i32, <4 x i32>, i32, i32, i32)
 ; GCN64: s_mov_b64 s[[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]], exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
-; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
-; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
+; GFX8910: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GFX8910: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s[[[exec_lo]]:[[exec_hi]]]
 ; GCN: s_mul_i32 s[[popcount]], s[[popcount]], 5
@@ -36,8 +36,8 @@ entry:
 ; GCN64: s_mov_b64 s[[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]], exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
-; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
-; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
+; GFX8910: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GFX8910: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s[[[exec_lo]]:[[exec_hi]]]
 ; GCN: s_mul_i32 s[[scalar_value:[0-9]+]], s{{[0-9]+}}, s[[popcount]]
@@ -89,8 +89,8 @@ entry:
 ; GCN64: s_mov_b64 s[[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]], exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
-; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
-; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
+; GFX8910: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GFX8910: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s[[[exec_lo]]:[[exec_hi]]]
 ; GCN: s_mul_i32 s[[popcount]], s[[popcount]], 5
@@ -108,8 +108,8 @@ entry:
 ; GCN64: s_mov_b64 s[[[exec_lo:[0-9]+]]:[[exec_hi:[0-9]+]]], exec
 ; GCN: v_mbcnt_lo_u32_b32{{(_e[0-9]+)?}} v[[mbcnt:[0-9]+]], s[[exec_lo]], 0
 ; GCN64: v_mbcnt_hi_u32_b32{{(_e[0-9]+)?}} v[[mbcnt]], s[[exec_hi]], v[[mbcnt]]
-; GCN: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
-; GCN: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
+; GFX8910: v_cmp_eq_u32{{(_e[0-9]+)?}} vcc{{(_lo)?}}, 0, v[[mbcnt]]
+; GFX8910: s_and_saveexec_b{{32|64}} s[[exec:\[?[0-9:]+\]?]], vcc
 ; GCN32: s_bcnt1_i32_b32 s[[popcount:[0-9]+]], s[[exec_lo]]
 ; GCN64: s_bcnt1_i32_b64 s[[popcount:[0-9]+]], s[[[exec_lo]]:[[exec_hi]]]
 ; GCN: s_mul_i32 s[[scalar_value:[0-9]+]], s{{[0-9]+}}, s[[popcount]]

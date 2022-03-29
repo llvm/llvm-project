@@ -347,7 +347,7 @@ public:
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
-  int Destroy(bool finalize = false);
+  int Destroy(bool finalize = false, bool destroyPointers = false);
 
   bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};

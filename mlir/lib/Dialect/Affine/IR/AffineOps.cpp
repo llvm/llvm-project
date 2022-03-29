@@ -1859,10 +1859,6 @@ bool AffineForOp::matchingBoundOperandList() {
 
 Region &AffineForOp::getLoopBody() { return region(); }
 
-bool AffineForOp::isDefinedOutsideOfLoop(Value value) {
-  return !region().isAncestor(value.getParentRegion());
-}
-
 Optional<Value> AffineForOp::getSingleInductionVar() {
   return getInductionVar();
 }
@@ -1877,12 +1873,6 @@ Optional<OpFoldResult> AffineForOp::getSingleLowerBound() {
 Optional<OpFoldResult> AffineForOp::getSingleStep() {
   OpBuilder b(getContext());
   return OpFoldResult(b.getI64IntegerAttr(getStep()));
-}
-
-LogicalResult AffineForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (auto *op : ops)
-    op->moveBefore(*this);
-  return success();
 }
 
 /// Returns true if the provided value is the induction variable of a
@@ -2410,17 +2400,22 @@ OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
       SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.nameAttr()));
   if (!global)
     return {};
-  if (auto cstAttr =
-          global.getConstantInitValue().dyn_cast_or_null<DenseElementsAttr>()) {
-    // We can fold only if we know the indices.
-    if (!getAffineMap().isConstant())
-      return {};
-    auto indices = llvm::to_vector<4>(
-        llvm::map_range(getAffineMap().getConstantResults(),
-                        [](int64_t v) -> uint64_t { return v; }));
-    return cstAttr.getValues<Attribute>()[indices];
-  }
-  return {};
+
+  // Check if the global memref is a constant.
+  auto cstAttr =
+      global.getConstantInitValue().dyn_cast_or_null<DenseElementsAttr>();
+  if (!cstAttr)
+    return {};
+  // If it's a splat constant, we can fold irrespective of indices.
+  if (auto splatAttr = cstAttr.dyn_cast<SplatElementsAttr>())
+    return splatAttr.getSplatValue<Attribute>();
+  // Otherwise, we can fold only if we know the indices.
+  if (!getAffineMap().isConstant())
+    return {};
+  auto indices = llvm::to_vector<4>(
+      llvm::map_range(getAffineMap().getConstantResults(),
+                      [](int64_t v) -> uint64_t { return v; }));
+  return cstAttr.getValues<Attribute>()[indices];
 }
 
 //===----------------------------------------------------------------------===//
@@ -3056,16 +3051,6 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
 }
 
 Region &AffineParallelOp::getLoopBody() { return region(); }
-
-bool AffineParallelOp::isDefinedOutsideOfLoop(Value value) {
-  return !region().isAncestor(value.getParentRegion());
-}
-
-LogicalResult AffineParallelOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (Operation *op : ops)
-    op->moveBefore(*this);
-  return success();
-}
 
 unsigned AffineParallelOp::getNumDims() { return steps().size(); }
 

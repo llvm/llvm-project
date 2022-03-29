@@ -2943,6 +2943,7 @@ cc_library(
     deps = [
         ":Affine",
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":BufferizationDialect",
         ":BufferizationTransforms",
         ":DialectUtils",
@@ -3861,6 +3862,14 @@ gentbl_cc_library(
         (
             ["-gen-enum-defs"],
             "include/mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc",
+        ),
+        (
+            ["-gen-struct-attr-decls"],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsStructs.h.inc",
+        ),
+        (
+            ["-gen-struct-attr-defs"],
+            "include/mlir/Dialect/LLVMIR/NVVMOpsStructs.cpp.inc",
         ),
         (
             [
@@ -7222,6 +7231,7 @@ cc_library(
         ":AMX",
         ":AMXTransforms",
         ":ArithmeticDialect",
+        ":ArithmeticUtils",
         ":ArmNeon",
         ":ArmSVE",
         ":ArmSVETransforms",

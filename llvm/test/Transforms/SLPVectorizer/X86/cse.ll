@@ -15,12 +15,10 @@ define i32 @test(double* nocapture %G) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, double* [[G:%.*]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[G]], i64 6
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 4.000000e+00, double 3.000000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 6.000000e+00>
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[G]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[G]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
@@ -30,7 +28,6 @@ define i32 @test(double* nocapture %G) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[MUL11]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = fadd <2 x double> [[TMP8]], <double 7.000000e+00, double 8.000000e+00>
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds double, double* [[G]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double* [[ARRAYIDX9]] to <2 x double>*
 ; CHECK-NEXT:    store <2 x double> [[TMP9]], <2 x double>* [[TMP10]], align 8
 ; CHECK-NEXT:    ret i32 undef
@@ -68,10 +65,7 @@ define i32 @foo(double* nocapture %A, i32 %n) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, double* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds double, double* [[A]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to <4 x double>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A:%.*]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 7.900000e+00, double 7.700000e+00, double 7.600000e+00, double 7.400000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
@@ -128,7 +122,7 @@ define i32 @test2(double* nocapture %G, i32 %k) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, double* [[G:%.*]], i64 5
 ; CHECK-NEXT:    [[TMP3:%.*]] = load double, double* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul double [[TMP3]], 4.000000e+00
-; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP14:%.*]], label [[TMP5:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP13:%.*]], label [[TMP5:%.*]]
 ; CHECK:       5:
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, double* [[G]], i64 6
 ; CHECK-NEXT:    [[TMP7:%.*]] = load double, double* [[TMP6]], align 8
@@ -136,23 +130,21 @@ define i32 @test2(double* nocapture %G, i32 %k) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x double> [[TMP9]], double [[TMP8]], i32 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP10]], <double 1.000000e+00, double 6.000000e+00>
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds double, double* [[G]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast double* [[G]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP13]], align 8
-; CHECK-NEXT:    br label [[TMP24:%.*]]
-; CHECK:       14:
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, double* [[G]], i64 2
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds double, double* [[G]], i64 6
-; CHECK-NEXT:    [[TMP17:%.*]] = load double, double* [[TMP16]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = fmul double [[TMP17]], 3.000000e+00
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <2 x double> [[TMP19]], double [[TMP18]], i32 1
-; CHECK-NEXT:    [[TMP21:%.*]] = fadd <2 x double> [[TMP20]], <double 7.000000e+00, double 8.000000e+00>
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds double, double* [[G]], i64 3
-; CHECK-NEXT:    [[TMP23:%.*]] = bitcast double* [[TMP15]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP21]], <2 x double>* [[TMP23]], align 8
-; CHECK-NEXT:    br label [[TMP24]]
-; CHECK:       24:
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast double* [[G]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP12]], align 8
+; CHECK-NEXT:    br label [[TMP22:%.*]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, double* [[G]], i64 2
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, double* [[G]], i64 6
+; CHECK-NEXT:    [[TMP16:%.*]] = load double, double* [[TMP15]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = fmul double [[TMP16]], 3.000000e+00
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> [[TMP18]], double [[TMP17]], i32 1
+; CHECK-NEXT:    [[TMP20:%.*]] = fadd <2 x double> [[TMP19]], <double 7.000000e+00, double 8.000000e+00>
+; CHECK-NEXT:    [[TMP21:%.*]] = bitcast double* [[TMP14]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP20]], <2 x double>* [[TMP21]], align 8
+; CHECK-NEXT:    br label [[TMP22]]
+; CHECK:       22:
 ; CHECK-NEXT:    ret i32 undef
 ;
   %1 = icmp eq i32 %k, 0
@@ -200,10 +192,7 @@ define i32 @foo4(double* nocapture %A, i32 %n) {
 ; CHECK-LABEL: @foo4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, double* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds double, double* [[A]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to <4 x double>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A:%.*]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, <4 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 7.900000e+00, double 7.900000e+00, double 7.900000e+00, double 7.900000e+00>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> poison, double [[CONV]], i32 0
@@ -254,8 +243,7 @@ define i32 @partial_mrg(double* nocapture %A, i32 %n) {
 ; CHECK-LABEL: @partial_mrg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[N:%.*]] to double
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to <2 x double>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[CONV]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[CONV]], i32 1
@@ -266,11 +254,10 @@ define i32 @partial_mrg(double* nocapture %A, i32 %n) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds double, double* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds double, double* [[A]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX7]] to <2 x double>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[N]], 4
 ; CHECK-NEXT:    [[CONV12:%.*]] = sitofp i32 [[ADD]] to double
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[ARRAYIDX7]] to <2 x double>*
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP2]], double [[CONV12]], i32 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP8]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double* [[ARRAYIDX7]] to <2 x double>*

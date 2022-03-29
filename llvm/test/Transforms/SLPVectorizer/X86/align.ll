@@ -10,12 +10,9 @@ define void @test1(double* %a, double* %b, double* %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP_I_I_SROA_0:%.*]] = alloca [3 x double], align 16
 ; CHECK-NEXT:    [[STORE1:%.*]] = getelementptr inbounds [3 x double], [3 x double]* [[AGG_TMP_I_I_SROA_0]], i64 0, i64 1
-; CHECK-NEXT:    [[STORE2:%.*]] = getelementptr inbounds [3 x double], [3 x double]* [[AGG_TMP_I_I_SROA_0]], i64 0, i64 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to <2 x double>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[B]] to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast double* [[B:%.*]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, <2 x double>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[STORE1]] to <2 x double>*
@@ -45,15 +42,9 @@ entry:
 define void @test2(float * %a, float * %b) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds float, float* [[A]], i64 2
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds float, float* [[A]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A]] to <4 x float>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
-; CHECK-NEXT:    [[B1:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds float, float* [[B]], i64 2
-; CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[B]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float>* [[TMP2]], align 4
 ; CHECK-NEXT:    ret void
 ;

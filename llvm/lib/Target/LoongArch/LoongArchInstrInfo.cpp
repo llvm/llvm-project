@@ -19,6 +19,4 @@ using namespace llvm;
 
 LoongArchInstrInfo::LoongArchInstrInfo(LoongArchSubtarget &STI)
     // FIXME: add CFSetup and CFDestroy Inst when we implement function call.
-    : LoongArchGenInstrInfo(),
-
-      STI(STI) {}
+    : LoongArchGenInstrInfo() {}

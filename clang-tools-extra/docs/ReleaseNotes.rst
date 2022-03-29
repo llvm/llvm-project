@@ -96,6 +96,9 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Added trace code to help narrow down any checks and the relevant source code
+  that result in crashes.
+
 New checks
 ^^^^^^^^^^
 
@@ -118,6 +121,9 @@ Changes in existing checks
 
 - Fixed a false positive in :doc:`misc-redundant-expression <clang-tidy/checks/misc-redundant-expression>`
   involving overloaded comparison operators.
+
+- Fixed a crash in :doc:`bugprone-sizeof-expression <clang-tidy/checks/bugprone-sizeof-expression>` when
+  `sizeof(...)` is compared agains a `__int128_t`.
 
 Removed checks
 ^^^^^^^^^^^^^^

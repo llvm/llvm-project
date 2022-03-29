@@ -119,6 +119,31 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
         RelationalOperator::GT, T::Scalar::HUGE().Negate());
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "nearest") {
+    if (const auto *sExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
+      return std::visit(
+          [&](const auto &sVal) {
+            using TS = ResultType<decltype(sVal)>;
+            return FoldElementalIntrinsic<T, T, TS>(context, std::move(funcRef),
+                ScalarFunc<T, T, TS>([&](const Scalar<T> &x,
+                                         const Scalar<TS> &s) -> Scalar<T> {
+                  if (s.IsZero()) {
+                    context.messages().Say(
+                        "NEAREST: S argument is zero"_warn_en_US);
+                  }
+                  auto result{x.NEAREST(!s.IsNegative())};
+                  if (result.flags.test(RealFlag::Overflow)) {
+                    context.messages().Say(
+                        "NEAREST intrinsic folding overflow"_warn_en_US);
+                  } else if (result.flags.test(RealFlag::InvalidArgument)) {
+                    context.messages().Say(
+                        "NEAREST intrinsic folding: bad argument"_warn_en_US);
+                  }
+                  return result.value;
+                }));
+          },
+          sExpr->u);
+    }
   } else if (name == "min") {
     return FoldMINorMAX(context, std::move(funcRef), Ordering::Less);
   } else if (name == "minval") {
@@ -167,10 +192,58 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     return FoldSum<T>(context, std::move(funcRef));
   } else if (name == "tiny") {
     return Expr<T>{Scalar<T>::TINY()};
+  } else if (name == "__builtin_ieee_next_after") {
+    if (const auto *yExpr{UnwrapExpr<Expr<SomeReal>>(args[1])}) {
+      return std::visit(
+          [&](const auto &yVal) {
+            using TY = ResultType<decltype(yVal)>;
+            return FoldElementalIntrinsic<T, T, TY>(context, std::move(funcRef),
+                ScalarFunc<T, T, TY>([&](const Scalar<T> &x,
+                                         const Scalar<TY> &y) -> Scalar<T> {
+                  bool upward{true};
+                  switch (x.Compare(Scalar<T>::Convert(y).value)) {
+                  case Relation::Unordered:
+                    context.messages().Say(
+                        "IEEE_NEXT_AFTER intrinsic folding: bad argument"_warn_en_US);
+                    return x;
+                  case Relation::Equal:
+                    return x;
+                  case Relation::Less:
+                    upward = true;
+                    break;
+                  case Relation::Greater:
+                    upward = false;
+                    break;
+                  }
+                  auto result{x.NEAREST(upward)};
+                  if (result.flags.test(RealFlag::Overflow)) {
+                    context.messages().Say(
+                        "IEEE_NEXT_AFTER intrinsic folding overflow"_warn_en_US);
+                  }
+                  return result.value;
+                }));
+          },
+          yExpr->u);
+    }
+  } else if (name == "__builtin_ieee_next_up" ||
+      name == "__builtin_ieee_next_down") {
+    bool upward{name == "__builtin_ieee_next_up"};
+    const char *iName{upward ? "IEEE_NEXT_UP" : "IEEE_NEXT_DOWN"};
+    return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T>([&](const Scalar<T> &x) -> Scalar<T> {
+          auto result{x.NEAREST(upward)};
+          if (result.flags.test(RealFlag::Overflow)) {
+            context.messages().Say(
+                "%s intrinsic folding overflow"_warn_en_US, iName);
+          } else if (result.flags.test(RealFlag::InvalidArgument)) {
+            context.messages().Say(
+                "%s intrinsic folding: bad argument"_warn_en_US, iName);
+          }
+          return result.value;
+        }));
   }
   // TODO: dim, dot_product, fraction, matmul,
-  // modulo, nearest, norm2, rrspacing,
-  // __builtin_next_after/down/up,
+  // modulo, norm2, rrspacing,
   // set_exponent, spacing, transfer,
   // bessel_jn (transformational) and bessel_yn (transformational)
   return Expr<T>{std::move(funcRef)};
