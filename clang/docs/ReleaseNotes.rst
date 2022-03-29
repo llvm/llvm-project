@@ -85,6 +85,10 @@ Bug Fixes
 - Assignment expressions in C11 and later mode now properly strip the _Atomic
   qualifier when determining the type of the assignment expression. Fixes
   `Issue 48742 <https://github.com/llvm/llvm-project/issues/48742>`_.
+- Improved the diagnostic when accessing a member of an atomic structure or
+  union object in C; was previously an unhelpful error, but now issues a
+  `-Watomic-access` warning which defaults to an error. Fixes
+  `Issue 54563 <https://github.com/llvm/llvm-project/issues/54563>`_.
 - Unevaluated lambdas in dependant contexts no longer result in clang crashing.
   This fixes Issues `50376 <https://github.com/llvm/llvm-project/issues/50376>`_,
   `51414 <https://github.com/llvm/llvm-project/issues/51414>`_,
