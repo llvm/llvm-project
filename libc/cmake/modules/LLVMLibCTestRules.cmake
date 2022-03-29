@@ -389,7 +389,12 @@ function(add_integration_test test_name)
       ${LIBC_BUILD_DIR}
       ${LIBC_BUILD_DIR}/include
   )
-  target_link_options(${fq_target_name} PRIVATE --sysroot=${sysroot} -static -stdlib=libc++)
+  # We set a number of link options to prevent picking up system libc binaries.
+  # Also, we restrict the integration tests to fully static executables. The
+  # rtlib is set to compiler-rt to make the compiler drivers pick up the compiler
+  # runtime binaries using full paths. Otherwise, files like crtbegin.o are passed
+  # as is (and not as paths like /usr/lib/.../crtbegin.o).
+  target_link_options(${fq_target_name} PRIVATE --sysroot=${sysroot} -static -stdlib=libc++ --rtlib=compiler-rt)
   add_dependencies(${fq_target_name}
                    ${fq_target_name}.__copy_loader__
                    ${fq_libc_target_name}
