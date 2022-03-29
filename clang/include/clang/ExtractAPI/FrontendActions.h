@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H
 #define LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H
 
+#include "clang/ExtractAPI/API.h"
 #include "clang/Frontend/FrontendAction.h"
 
 namespace clang {
@@ -25,11 +26,19 @@ protected:
                                                  StringRef InFile) override;
 
 private:
+  /// A representation of the APIs this action extracts.
+  std::unique_ptr<extractapi::APISet> API;
+
+  /// A stream to the output file of this action.
+  std::unique_ptr<raw_pwrite_stream> OS;
+
+  /// The product this action is extracting API information for.
+  std::string ProductName;
+
   /// The synthesized input buffer that contains all the provided input header
   /// files.
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
 
-public:
   /// Prepare to execute the action on the given CompilerInstance.
   ///
   /// This is called before executing the action on any inputs. This generates a
@@ -37,8 +46,15 @@ public:
   /// list with it before actually executing the action.
   bool PrepareToExecuteAction(CompilerInstance &CI) override;
 
+  /// Called after executing the action on the synthesized input buffer.
+  ///
+  /// Note: Now that we have gathered all the API definitions to surface we can
+  /// emit them in this callback.
+  void EndSourceFileAction() override;
+
   static std::unique_ptr<llvm::raw_pwrite_stream>
   CreateOutputFile(CompilerInstance &CI, StringRef InFile);
+
   static StringRef getInputBufferName() { return "<extract-api-includes>"; }
 };
 
