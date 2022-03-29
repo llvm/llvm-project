@@ -168,6 +168,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     MaxStoresPerMemset = MaxStoresPerMemsetOptSize = 0;
     MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = 0;
     MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = 0;
+    MaxLoadsPerMemcmp = 0;
   } else {
     // inline memcpy() for kernel to see explicit copy
     unsigned CommonMaxStores =
@@ -176,6 +177,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     MaxStoresPerMemset = MaxStoresPerMemsetOptSize = CommonMaxStores;
     MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize = CommonMaxStores;
     MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize = CommonMaxStores;
+    MaxLoadsPerMemcmp = MaxLoadsPerMemcmpOptSize = CommonMaxStores;
   }
 
   // CPU/Feature control

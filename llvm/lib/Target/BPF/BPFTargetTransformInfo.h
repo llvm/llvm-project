@@ -71,6 +71,15 @@ public:
                                            Opd2Info, Opd1PropInfo,
                                            Opd2PropInfo);
   }
+
+  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
+                                                    bool IsZeroCmp) const {
+    TTI::MemCmpExpansionOptions Options;
+    Options.LoadSizes = {8, 4, 2, 1};
+    Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+    return Options;
+  }
+
 };
 
 } // end namespace llvm
