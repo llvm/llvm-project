@@ -1682,6 +1682,9 @@ TEST(TripleTest, FileFormat) {
   Triple CygwinNormalized(Triple::normalize("i686-pc-cygwin-elf"));
   EXPECT_EQ(Triple::ELF, CygwinNormalized.getObjectFormat());
 
+  EXPECT_EQ(Triple::DXContainer,
+            Triple("dxil-unknown-shadermodel").getObjectFormat());
+
   Triple T = Triple("");
   T.setObjectFormat(Triple::ELF);
   EXPECT_EQ(Triple::ELF, T.getObjectFormat());

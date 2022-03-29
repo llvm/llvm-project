@@ -9599,11 +9599,9 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   NewPointerPhi->addIncoming(ScalarStartValue, State.CFG.VectorPreHeader);
 
   // A pointer induction, performed by using a gep
-  BasicBlock *LoopLatch =
-      State.LI->getLoopFor(State.CFG.PrevBB)->getLoopLatch();
+  const DataLayout &DL = NewPointerPhi->getModule()->getDataLayout();
+  Instruction *InductionLoc = &*State.Builder.GetInsertPoint();
 
-  const DataLayout &DL = LoopLatch->getModule()->getDataLayout();
-  Instruction *InductionLoc = LoopLatch->getTerminator();
   const SCEV *ScalarStep = IndDesc.getStep();
   SCEVExpander Exp(SE, DL, "induction");
   Value *ScalarStepValue = Exp.expandCodeFor(ScalarStep, PhiType, InductionLoc);
@@ -9614,7 +9612,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
       IndDesc.getElementType(), NewPointerPhi,
       State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
       InductionLoc);
-  NewPointerPhi->addIncoming(InductionGEP, LoopLatch);
+  // Add induction update using an incorrect block temporarily. The phi node
+  // will be fixed after VPlan execution. Note that at this point the latch
+  // block cannot be used, as it does not exist yet.
+  // TODO: Model increment value in VPlan, by turning the recipe into a
+  // multi-def and a subclass of VPHeaderPHIRecipe.
+  NewPointerPhi->addIncoming(InductionGEP, State.CFG.VectorPreHeader);
 
   // Create UF many actual address geps that use the pointer
   // phi as base and a vectorized version of the step value

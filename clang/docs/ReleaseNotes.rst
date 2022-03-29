@@ -116,6 +116,7 @@ Non-comprehensive list of changes in this release
 - Improve __builtin_dump_struct:
   - Support bitfields in struct and union.
   - Improve the dump format, dump both bitwidth(if its a bitfield) and field value.
+  - Remove anonymous tag locations.
 
 New Compiler Flags
 ------------------
