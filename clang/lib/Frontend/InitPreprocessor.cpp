@@ -398,9 +398,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SHADER_STAGE_LIBRARY",
                         Twine((uint32_t)ShaderStage::Library));
     // The current shader stage itself
-    uint32_t StageInteger = StageInteger =
-        (uint32_t)TI.getTriple().getEnvironment() -
-        (uint32_t)llvm::Triple::Pixel;
+    uint32_t StageInteger = (uint32_t)TI.getTriple().getEnvironment() -
+                            (uint32_t)llvm::Triple::Pixel;
 
     Builder.defineMacro("__SHADER_TARGET_STAGE", Twine(StageInteger));
     // Add target versions
