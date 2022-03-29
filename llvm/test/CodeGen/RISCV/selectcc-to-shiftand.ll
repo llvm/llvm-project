@@ -106,8 +106,8 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 ;
 ; RV64-LABEL: pos_sel_special_constant:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a1, -1
-; RV64-NEXT:    slt a0, a1, a0
+; RV64-NEXT:    slti a0, a0, 0
+; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    slli a0, a0, 9
 ; RV64-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
