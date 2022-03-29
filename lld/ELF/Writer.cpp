@@ -722,23 +722,30 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
     auto *sec = dyn_cast<OutputSection>(cmd);
     if (!sec)
       continue;
-    auto i = llvm::find_if(sec->commands, [](SectionCommand *cmd) {
-      if (auto *isd = dyn_cast<InputSectionDescription>(cmd))
-        return !isd->sections.empty();
-      return false;
-    });
-    if (i == sec->commands.end())
-      continue;
-    InputSectionBase *isec = cast<InputSectionDescription>(*i)->sections[0];
+    OutputSection &osec = *sec;
+    InputSectionBase *isec = nullptr;
+    // Iterate over all input sections and add a STT_SECTION symbol if any input
+    // section may be a relocation target.
+    for (SectionCommand *cmd : osec.commands) {
+      auto *isd = dyn_cast<InputSectionDescription>(cmd);
+      if (!isd)
+        continue;
+      for (InputSectionBase *s : isd->sections) {
+        // Relocations are not using REL[A] section symbols.
+        if (s->type == SHT_REL || s->type == SHT_RELA)
+          continue;
 
-    // Relocations are not using REL[A] section symbols.
-    if (isec->type == SHT_REL || isec->type == SHT_RELA)
-      continue;
+        // Unlike other synthetic sections, mergeable output sections contain
+        // data copied from input sections, and there may be a relocation
+        // pointing to its contents if -r or --emit-reloc is given.
+        if (isa<SyntheticSection>(s) && !(s->flags & SHF_MERGE))
+          continue;
 
-    // Unlike other synthetic sections, mergeable output sections contain data
-    // copied from input sections, and there may be a relocation pointing to its
-    // contents if -r or --emit-reloc is given.
-    if (isa<SyntheticSection>(isec) && !(isec->flags & SHF_MERGE))
+        isec = s;
+        break;
+      }
+    }
+    if (!isec)
       continue;
 
     // Set the symbol to be relative to the output section so that its st_value
