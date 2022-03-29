@@ -20,6 +20,7 @@
 namespace llvm {
 class CSKYTargetMachine;
 class FunctionPass;
+class PassRegistry;
 
 FunctionPass *createCSKYISelDag(CSKYTargetMachine &TM);
 FunctionPass *createCSKYConstantIslandPass();
