@@ -1248,6 +1248,9 @@ def gi_fpimm32 : GICustomOperandRenderer<"renderFPImm32">,
   GISDNodeXFormEquiv<fpimm32XForm>;
 def gi_fpimm64 : GICustomOperandRenderer<"renderFPImm64">,
   GISDNodeXFormEquiv<fpimm64XForm>;
+def gi_fpimm32SIMDModImmType4 :
+    GICustomOperandRenderer<"renderFPImm32SIMDModImmType4">,
+  GISDNodeXFormEquiv<fpimm32SIMDModImmType4XForm>;
 
 // Vector lane operands
 class AsmVectorIndex<int Min, int Max, string NamePrefix=""> : AsmOperandClass {
