@@ -60,18 +60,45 @@ void EmitOptRST(RecordKeeper &Records, raw_ostream &OS) {
       // Print the option name.
       OS << R->getValueAsString("Name");
 
+      StringRef MetaVarName;
       // Print the meta-variable.
       if (!isa<UnsetInit>(R->getValueInit("MetaVarName"))) {
+        MetaVarName = R->getValueAsString("MetaVarName");
+      } else if (!isa<UnsetInit>(R->getValueInit("Values")))
+        MetaVarName = "<value>";
+
+      if (!MetaVarName.empty()) {
         OS << '=';
-        OS.write_escaped(R->getValueAsString("MetaVarName"));
+        OS.write_escaped(MetaVarName);
       }
 
       OS << "\n\n";
 
+      std::string HelpText;
       // The option help text.
       if (!isa<UnsetInit>(R->getValueInit("HelpText"))) {
+        HelpText = R->getValueAsString("HelpText").trim().str();
+        if (!HelpText.empty() && HelpText.back() != '.')
+          HelpText.push_back('.');
+      }
+
+      if (!isa<UnsetInit>(R->getValueInit("Values"))) {
+        SmallVector<StringRef> Values;
+        SplitString(R->getValueAsString("Values"), Values, ",");
+        HelpText += (" " + MetaVarName + " can be ").str();
+
+        if (Values.size() == 1) {
+          HelpText += ("'" + Values.front() + "'.").str();
+        } else {
+          HelpText += "one of '";
+          HelpText += join(Values.begin(), Values.end() - 1, "', '");
+          HelpText += ("' or '" + Values.back() + "'.").str();
+        }
+      }
+
+      if (!HelpText.empty()) {
         OS << ' ';
-        OS.write_escaped(R->getValueAsString("HelpText"));
+        OS.write_escaped(HelpText);
         OS << "\n\n";
       }
     }

@@ -28,7 +28,7 @@ struct LowerVectorToLLVMOptions {
     return *this;
   }
   LowerVectorToLLVMOptions &enableIndexOptimizations(bool b = true) {
-    indexOptimizations = b;
+    force32BitVectorIndices = b;
     return *this;
   }
   LowerVectorToLLVMOptions &enableArmNeon(bool b = true) {
@@ -49,7 +49,7 @@ struct LowerVectorToLLVMOptions {
   }
 
   bool reassociateFPReductions{false};
-  bool indexOptimizations{true};
+  bool force32BitVectorIndices{true};
   bool armNeon{false};
   bool armSVE{false};
   bool amx{false};
@@ -63,10 +63,9 @@ void populateVectorToLLVMMatrixConversionPatterns(LLVMTypeConverter &converter,
                                                   RewritePatternSet &patterns);
 
 /// Collect a set of patterns to convert from the Vector dialect to LLVM.
-/// If `indexOptimizations` is set, assume indices fit in 32-bit.
 void populateVectorToLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool reassociateFPReductions = false, bool indexOptimizations = false);
+    bool reassociateFPReductions = false, bool force32BitVectorIndices = false);
 
 /// Create a pass to convert vector operations to the LLVMIR dialect.
 std::unique_ptr<OperationPass<ModuleOp>> createConvertVectorToLLVMPass(

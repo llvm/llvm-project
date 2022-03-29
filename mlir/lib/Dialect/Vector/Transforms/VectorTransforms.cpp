@@ -2185,22 +2185,22 @@ struct BubbleUpBitCastForStridedSliceInsert
 //       generates more elaborate instructions for this intrinsic since it
 //       is very conservative on the boundary conditions.
 static Value buildVectorComparison(PatternRewriter &rewriter, Operation *op,
-                                   bool indexOptimizations, int64_t dim,
+                                   bool force32BitVectorIndices, int64_t dim,
                                    Value b, Value *off = nullptr) {
   auto loc = op->getLoc();
   // If we can assume all indices fit in 32-bit, we perform the vector
   // comparison in 32-bit to get a higher degree of SIMD parallelism.
   // Otherwise we perform the vector comparison using 64-bit indices.
   Type idxType =
-      indexOptimizations ? rewriter.getI32Type() : rewriter.getI64Type();
+      force32BitVectorIndices ? rewriter.getI32Type() : rewriter.getI64Type();
   DenseIntElementsAttr indicesAttr;
-  if (dim == 0 && indexOptimizations) {
+  if (dim == 0 && force32BitVectorIndices) {
     indicesAttr = DenseIntElementsAttr::get(
         VectorType::get(ArrayRef<int64_t>{}, idxType), ArrayRef<int32_t>{0});
   } else if (dim == 0) {
     indicesAttr = DenseIntElementsAttr::get(
         VectorType::get(ArrayRef<int64_t>{}, idxType), ArrayRef<int64_t>{0});
-  } else if (indexOptimizations) {
+  } else if (force32BitVectorIndices) {
     indicesAttr = rewriter.getI32VectorAttr(
         llvm::to_vector<4>(llvm::seq<int32_t>(0, dim)));
   } else {
@@ -2227,7 +2227,7 @@ struct MaterializeTransferMask : public OpRewritePattern<ConcreteOp> {
 public:
   explicit MaterializeTransferMask(MLIRContext *context, bool enableIndexOpt)
       : mlir::OpRewritePattern<ConcreteOp>(context),
-        indexOptimizations(enableIndexOpt) {}
+        force32BitVectorIndices(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(ConcreteOp xferOp,
                                 PatternRewriter &rewriter) const override {
@@ -2270,7 +2270,7 @@ public:
   }
 
 private:
-  const bool indexOptimizations;
+  const bool force32BitVectorIndices;
 };
 
 /// Conversion pattern for a `vector.create_mask` (0-D and 1-D only).
@@ -2280,7 +2280,7 @@ public:
   explicit VectorCreateMaskOpConversion(MLIRContext *context,
                                         bool enableIndexOpt)
       : mlir::OpRewritePattern<vector::CreateMaskOp>(context),
-        indexOptimizations(enableIndexOpt) {}
+        force32BitVectorIndices(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2291,14 +2291,14 @@ public:
     if (rank > 1)
       return failure();
     rewriter.replaceOp(
-        op, buildVectorComparison(rewriter, op, indexOptimizations,
+        op, buildVectorComparison(rewriter, op, force32BitVectorIndices,
                                   rank == 0 ? 0 : dstType.getDimSize(0),
                                   op.getOperand(0)));
     return success();
   }
 
 private:
-  const bool indexOptimizations;
+  const bool force32BitVectorIndices;
 };
 
 // Drop inner most contiguous unit dimensions from transfer_read operand.
@@ -2592,11 +2592,11 @@ struct ScanToArithOps : public OpRewritePattern<vector::ScanOp> {
 } // namespace
 
 void mlir::vector::populateVectorMaskMaterializationPatterns(
-    RewritePatternSet &patterns, bool indexOptimizations) {
+    RewritePatternSet &patterns, bool force32BitVectorIndices) {
   patterns.add<VectorCreateMaskOpConversion,
                MaterializeTransferMask<vector::TransferReadOp>,
                MaterializeTransferMask<vector::TransferWriteOp>>(
-      patterns.getContext(), indexOptimizations);
+      patterns.getContext(), force32BitVectorIndices);
 }
 
 void mlir::vector::populateShapeCastFoldingPatterns(
