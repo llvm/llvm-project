@@ -942,11 +942,18 @@ static llvm::cl::opt<bool> outlineAllIntrinsics(
 
 /// Command line option to modify math runtime version used to implement
 /// intrinsics.
-enum MathRuntimeVersion { fastVersion, llvmOnly };
+enum MathRuntimeVersion {
+  fastVersion,
+  relaxedVersion,
+  preciseVersion,
+  llvmOnly
+};
 llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
     "math-runtime", llvm::cl::desc("Select math runtime version:"),
     llvm::cl::values(
         clEnumValN(fastVersion, "fast", "use pgmath fast runtime"),
+        clEnumValN(relaxedVersion, "relaxed", "use pgmath relaxed runtime"),
+        clEnumValN(preciseVersion, "precise", "use pgmath precise runtime"),
         clEnumValN(llvmOnly, "llvm",
                    "only use LLVM intrinsics (may be incomplete)")),
     llvm::cl::init(fastVersion));
@@ -965,6 +972,16 @@ struct RuntimeFunction {
   {#name, #func, fir::runtime::RuntimeTableKey<decltype(func)>::getTypeModel()},
 static constexpr RuntimeFunction pgmathFast[] = {
 #define PGMATH_FAST
+#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
+#include "flang/Evaluate/pgmath.h.inc"
+};
+static constexpr RuntimeFunction pgmathRelaxed[] = {
+#define PGMATH_RELAXED
+#define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
+#include "flang/Evaluate/pgmath.h.inc"
+};
+static constexpr RuntimeFunction pgmathPrecise[] = {
+#define PGMATH_PRECISE
 #define PGMATH_USE_ALL_TYPES(name, func) RUNTIME_STATIC_DESCRIPTION(name, func)
 #include "flang/Evaluate/pgmath.h.inc"
 };
@@ -1250,8 +1267,18 @@ static mlir::FuncOp getRuntimeFunction(mlir::Location loc,
   using RtMap = Fortran::common::StaticMultimapView<RuntimeFunction>;
   static constexpr RtMap pgmathF(pgmathFast);
   static_assert(pgmathF.Verify() && "map must be sorted");
+  static constexpr RtMap pgmathR(pgmathRelaxed);
+  static_assert(pgmathR.Verify() && "map must be sorted");
+  static constexpr RtMap pgmathP(pgmathPrecise);
+  static_assert(pgmathP.Verify() && "map must be sorted");
   if (mathRuntimeVersion == fastVersion) {
     match = searchFunctionInLibrary(loc, builder, pgmathF, name, funcType,
+                                    &bestNearMatch, bestMatchDistance);
+  } else if (mathRuntimeVersion == relaxedVersion) {
+    match = searchFunctionInLibrary(loc, builder, pgmathR, name, funcType,
+                                    &bestNearMatch, bestMatchDistance);
+  } else if (mathRuntimeVersion == preciseVersion) {
+    match = searchFunctionInLibrary(loc, builder, pgmathP, name, funcType,
                                     &bestNearMatch, bestMatchDistance);
   } else {
     assert(mathRuntimeVersion == llvmOnly && "unknown math runtime");

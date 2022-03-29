@@ -3377,10 +3377,9 @@ as the first argument to the intrinsic.
 Source location builtins
 ------------------------
 
-Clang provides experimental builtins to support C++ standard library implementation
-of ``std::experimental::source_location`` as specified in  http://wg21.link/N4600.
-With the exception of ``__builtin_COLUMN``, these builtins are also implemented by
-GCC.
+Clang provides builtins to support C++ standard library implementation
+of ``std::source_location`` as specified in C++20.  With the exception
+of ``__builtin_COLUMN``, these builtins are also implemented by GCC.
 
 **Syntax**:
 
@@ -3390,6 +3389,7 @@ GCC.
   const char *__builtin_FUNCTION();
   unsigned    __builtin_LINE();
   unsigned    __builtin_COLUMN(); // Clang only
+  const std::source_location::__impl *__builtin_source_location();
 
 **Example of use**:
 
@@ -3416,9 +3416,11 @@ GCC.
 
 **Description**:
 
-The builtins ``__builtin_LINE``, ``__builtin_FUNCTION``, and ``__builtin_FILE`` return
-the values, at the "invocation point", for ``__LINE__``, ``__FUNCTION__``, and
-``__FILE__`` respectively. These builtins are constant expressions.
+The builtins ``__builtin_LINE``, ``__builtin_FUNCTION``, and ``__builtin_FILE``
+return the values, at the "invocation point", for ``__LINE__``,
+``__FUNCTION__``, and ``__FILE__`` respectively. ``__builtin_COLUMN`` similarly
+returns the column, though there is no corresponding macro. These builtins are
+constant expressions.
 
 When the builtins appear as part of a default function argument the invocation
 point is the location of the caller. When the builtins appear as part of a
@@ -3428,6 +3430,15 @@ the invocation point is the same as the location of the builtin.
 
 When the invocation point of ``__builtin_FUNCTION`` is not a function scope the
 empty string is returned.
+
+The builtin ``__builtin_source_location`` returns a pointer to constant static
+data of type ``std::source_location::__impl``. This type must have already been
+defined, and must contain exactly four fields: ``const char *_M_file_name``,
+``const char *_M_function_name``, ``<any-integral-type> _M_line``, and
+``<any-integral-type> _M_column``. The fields will be populated in the same
+manner as the above four builtins, except that ``_M_function_name`` is populated
+with ``__PRETTY_FUNCTION__`` rather than ``__FUNCTION__``.
+
 
 Alignment builtins
 ------------------

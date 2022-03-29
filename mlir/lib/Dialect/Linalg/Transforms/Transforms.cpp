@@ -158,29 +158,44 @@ LinalgTilingOptions &mlir::linalg::LinalgTilingOptions::scalarizeDynamicDims() {
   return *this;
 }
 
-/// Helper function that tries to pad `opOperand`. Exit early for scalar
-/// operands, if `paddingFunc` returns failure, or if `opOperand` is not defined
-/// by an ExtractSliceOp. Otherwise, try to pad the operand even if it already
-/// has a static shape. Set `result` to the result of the created tensor::PadOp
-/// or and return success if the operand either has been padded to a static
-/// shape or already had a static shape and failure otherwise.
-static LogicalResult padOperandToSmallestStaticBoundingBox(
+/// Pad the `opOperand` in the `paddingDimensions` using the padding value and
+/// the nofold flag found in `paddingValues` and `packPaddings`, respectively.
+/// Exit early and return the `opOperand` value if the shape dimensions that
+/// match `paddingDimensions` have a static size and the nofold flag is not set.
+/// Otherwise, try to pad the shape dimensions that match the iterator
+/// dimensions `paddingDimensions` and return the tensor::PadOp result if
+/// padding succeeds or failure otherwise.
+static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
     OpBuilder &b, linalg::LinalgOp opToPad, OpOperand *opOperand,
-    const PaddingValueComputationFunction &paddingFunc,
-    const PaddingNoFoldComputationFunction &nofoldFunc, Value &result) {
-  // Get the shape of the operand and check if it has a dynamic shape. Only
-  // return failure if the operand is not a scalar and has a dynamic shape.
+    ArrayRef<int64_t> paddingDimensions, ArrayRef<Attribute> paddingValues,
+    ArrayRef<bool> packPaddings) {
+  AffineMap indexingMap = opToPad.getTiedIndexingMap(opOperand);
   ArrayRef<int64_t> shape = opToPad.getShape(opOperand);
-  bool hasDynamicShape = llvm::is_contained(shape, ShapedType::kDynamicSize);
 
-  // Cannot pad scalar operands.
-  if (shape.empty())
-    return success();
+  // Collect the shape dimension that are a function of the `paddingDimensions`.
+  llvm::SmallDenseSet<int64_t> shapeDimsToPad;
+  for (int64_t dim : paddingDimensions)
+    for (const auto &en : enumerate(indexingMap.getResults()))
+      if (en.value().isFunctionOfDim(dim))
+        shapeDimsToPad.insert(en.index());
 
-  // Cannot pad if the padding value is unknown.
-  FailureOr<Value> paddingValue = paddingFunc(b, *opOperand);
-  if (failed(paddingValue))
-    return failure(hasDynamicShape);
+  // Return the unpadded operand if padding to a static shape is not needed and
+  // if the nofold flag is not set.
+  bool nofold = opOperand->getOperandNumber() < packPaddings.size()
+                    ? packPaddings[opOperand->getOperandNumber()]
+                    : false;
+  bool hasStaticShape = llvm::none_of(shapeDimsToPad, [&](int64_t dim) {
+    return ShapedType::isDynamic(shape[dim]);
+  });
+  if (!nofold && hasStaticShape)
+    return opOperand->get();
+
+  // Fail if `paddingValues` specifies no padding value.
+  if (opOperand->getOperandNumber() >= paddingValues.size())
+    return failure();
+  Attribute paddingAttr = paddingValues[opOperand->getOperandNumber()];
+  Value paddingValue = b.create<arith::ConstantOp>(
+      opToPad.getLoc(), paddingAttr.getType(), paddingAttr);
 
   // Follow the use-def chain if `currOpOperand` is defined by a LinalgOp.
   OpOperand *currOpOperand = opOperand;
@@ -189,27 +204,31 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
     currOpOperand = linalgOp.getOutputOperand(result.getResultNumber());
   }
 
-  // Cannot construct a static bounding box if the `currOpOperand` is not
-  // defined by an ExtractSliceOp.
+  // Fail if `currOpOperand` is not defined by an ExtractSliceOp.
   auto sliceOp = currOpOperand->get().getDefiningOp<tensor::ExtractSliceOp>();
   if (!sliceOp)
-    return failure(hasDynamicShape);
+    return failure();
 
   // Compute the dropped dimensions if `sliceOp` is ranke-reducing.
   llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+  OffsetSizeAndStrideOpInterface shapedOp = sliceOp;
 
   // Upper bound the `sliceOp` sizes to obtain a static bounding box.
-  SmallVector<int64_t> staticSizes;
-  staticSizes.reserve(shape.size());
-  auto shapedOp = cast<OffsetSizeAndStrideOpInterface>(sliceOp.getOperation());
+  SmallVector<int64_t> paddedShape(shape.begin(), shape.end());
+  int64_t shapeIdx = 0;
   for (const auto &en : enumerate(shapedOp.getMixedSizes())) {
     // Skip dropped dimensions.
     if (droppedDims.test(en.index()))
       continue;
-    // If the size is an attribute add it directly to `staticSizes`.
+    // Skip dimensions that do not require padding.
+    if (!shapeDimsToPad.contains(shapeIdx)) {
+      shapeIdx++;
+      continue;
+    }
+    // If the size is an attribute add it directly to `paddedShape`.
     if (en.value().is<Attribute>()) {
-      staticSizes.push_back(
-          en.value().get<Attribute>().dyn_cast<IntegerAttr>().getInt());
+      paddedShape[shapeIdx++] =
+          en.value().get<Attribute>().dyn_cast<IntegerAttr>().getInt();
       continue;
     }
     // Otherwise, try to compute a constant upper bound for the size value.
@@ -219,26 +238,23 @@ static LogicalResult padOperandToSmallestStaticBoundingBox(
       LLVM_DEBUG(DBGS() << "No constant bounding box can be found for padding");
       return failure();
     }
-    staticSizes.push_back(upperBound.getValue());
+    paddedShape[shapeIdx++] = upperBound.getValue();
   }
-  assert(staticSizes.size() == shape.size() &&
+  assert(shapeIdx == static_cast<int64_t>(shape.size()) &&
          "expect the dynamic and static ranks to match");
 
-  // Pad the operand to the bounding box defined by `staticSizes`.
-  auto staticTensorType = RankedTensorType::get(
-      staticSizes, getElementTypeOrSelf(opOperand->get()));
-  bool nofold = nofoldFunc ? nofoldFunc(*opOperand) : false;
-  result =
-      makeComposedPadHighOp(b, opToPad->getLoc(), staticTensorType,
-                            opOperand->get(), paddingValue.getValue(), nofold);
-  return success();
+  // Pad the operand to the bounding box defined by `paddedShape`.
+  auto paddedTensorType = RankedTensorType::get(
+      paddedShape, getElementTypeOrSelf(opOperand->get()));
+  return makeComposedPadHighOp(b, opToPad->getLoc(), paddedTensorType,
+                               opOperand->get(), paddingValue, nofold);
 }
 
 FailureOr<SmallVector<Value>>
 linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
-                          const PaddingValueComputationFunction &paddingFunc,
-                          const PaddingNoFoldComputationFunction &nofoldFunc,
-                          LinalgOp &paddedOp) {
+                          ArrayRef<int64_t> paddingDimensions,
+                          ArrayRef<Attribute> paddingValues,
+                          ArrayRef<bool> packPaddings, LinalgOp &paddedOp) {
   Location loc = opToPad->getLoc();
 
   // TODO: there are cases where we may still want to pad to larger sizes.
@@ -252,13 +268,12 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
   SmallVector<Value> newOperands;
   newOperands.reserve(opToPad.getNumInputsAndOutputs());
   for (OpOperand *opOperand : opToPad.getInputAndOutputOperands()) {
-    Value paddedOperand;
-    // If padding was requested but the shape cannot be bounded statically then
-    // the pattern fails to apply.
-    if (failed(padOperandToSmallestStaticBoundingBox(
-            b, opToPad, opOperand, paddingFunc, nofoldFunc, paddedOperand)))
+    FailureOr<Value> paddedOperand = padOperandToSmallestStaticBoundingBox(
+        b, opToPad, opOperand, paddingDimensions, paddingValues, packPaddings);
+    // Exit if `paddingDimensions` cannot be bounded statically.
+    if (failed(paddedOperand))
       return failure();
-    newOperands.push_back(paddedOperand ? paddedOperand : opOperand->get());
+    newOperands.push_back(*paddedOperand);
   }
 
   SmallVector<SmallVector<Value>> reifiedResultShapes;
@@ -498,29 +513,32 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
 
   // Pad the operation.
   LinalgOp paddedOp;
-  FailureOr<SmallVector<Value>> newResults = rewriteAsPaddedOp(
-      rewriter, linalgOp, options.paddingValueComputationFunction,
-      options.paddingNoFoldComputationFunction, paddedOp);
+  FailureOr<SmallVector<Value>> newResults =
+      rewriteAsPaddedOp(rewriter, linalgOp, options.paddingDimensions,
+                        options.paddingValues, options.packPaddings, paddedOp);
   if (failed(newResults))
     return failure();
 
-  // Compute the desired hoisting depths.
-  SmallVector<int64_t> depths;
-  if (options.paddingHoistComputationFunction) {
-    for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands())
-      depths.push_back(options.paddingHoistComputationFunction(*opOperand));
-  }
-
   // Hoist the padding.
-  for (const auto &en : enumerate(depths)) {
-    OpOperand &opOperand = paddedOp->getOpOperand(en.index());
-    auto padOp = opOperand.get().getDefiningOp<tensor::PadOp>();
+  for (const auto &en : enumerate(options.hoistPaddings)) {
+    if (static_cast<int64_t>(en.index()) >= paddedOp.getNumInputsAndOutputs())
+      break;
+    OpOperand *opOperand = &paddedOp->getOpOperand(en.index());
+    auto padOp = opOperand->get().getDefiningOp<tensor::PadOp>();
     if (!padOp || en.value() == 0)
       continue;
+
+    // Fail hoisting if the operand shape is not fully static.
+    if (llvm::any_of(paddedOp.getShape(opOperand),
+                     [](int64_t size) { return ShapedType::isDynamic(size); }))
+      return failure();
+
     tensor::PadOp hoistedOp;
     SmallVector<GenericOp> transposeOps;
     SmallVector<int64_t> transposeVector =
-        options.paddingTransposeComputationFunction(opOperand);
+        en.index() < options.transposePaddings.size()
+            ? options.transposePaddings[en.index()]
+            : SmallVector<int64_t>{};
 
     FailureOr<Value> newResult = hoistPaddingOnTensors(
         padOp, en.value(), transposeVector, hoistedOp, transposeOps);

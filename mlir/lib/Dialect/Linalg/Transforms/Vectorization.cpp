@@ -846,15 +846,15 @@ struct PadOpVectorizationWithTransferReadPattern
     if (!padValue)
       return failure();
     // Padding value of existing `xferOp` is unused.
-    if (xferOp.hasOutOfBoundsDim() || xferOp.mask())
+    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
       return failure();
 
     rewriter.updateRootInPlace(xferOp, [&]() {
       SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
       xferOp->setAttr(xferOp.getInBoundsAttrName(),
                       rewriter.getBoolArrayAttr(inBounds));
-      xferOp.sourceMutable().assign(padOp.source());
-      xferOp.paddingMutable().assign(padValue);
+      xferOp.getSourceMutable().assign(padOp.source());
+      xferOp.getPaddingMutable().assign(padValue);
     });
 
     return success();
@@ -929,8 +929,8 @@ struct PadOpVectorizationWithTransferWritePattern
 
     SmallVector<bool> inBounds(xferOp.getVectorType().getRank(), false);
     auto newXferOp = rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
-        xferOp, padOp.source().getType(), xferOp.vector(), padOp.source(),
-        xferOp.indices(), xferOp.permutation_mapAttr(), xferOp.mask(),
+        xferOp, padOp.source().getType(), xferOp.getVector(), padOp.source(),
+        xferOp.getIndices(), xferOp.getPermutationMapAttr(), xferOp.getMask(),
         rewriter.getBoolArrayAttr(inBounds));
     rewriter.replaceOp(trimPadding, newXferOp->getResult(0));
 
@@ -1174,11 +1174,11 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
     vector::TransferReadOp xferOp, PatternRewriter &rewriter) const {
 
   // TODO: support mask.
-  if (xferOp.mask())
+  if (xferOp.getMask())
     return failure();
 
   // Transfer into `view`.
-  Value viewOrAlloc = xferOp.source();
+  Value viewOrAlloc = xferOp.getSource();
   if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
       !viewOrAlloc.getDefiningOp<memref::AllocOp>())
     return failure();
@@ -1226,7 +1226,7 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
     }
   }
   // Ensure padding matches.
-  if (maybeFillOp && xferOp.padding() != maybeFillOp.value())
+  if (maybeFillOp && xferOp.getPadding() != maybeFillOp.value())
     return failure();
   if (maybeFillOp)
     LDBG("with maybeFillOp " << *maybeFillOp);
@@ -1239,8 +1239,8 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
   // When forwarding to vector.transfer_read, the attribute must be reset
   // conservatively.
   Value res = rewriter.create<vector::TransferReadOp>(
-      xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.indices(),
-      xferOp.permutation_mapAttr(), xferOp.padding(), xferOp.mask(),
+      xferOp.getLoc(), xferOp.getVectorType(), in, xferOp.getIndices(),
+      xferOp.getPermutationMapAttr(), xferOp.getPadding(), xferOp.getMask(),
       // in_bounds is explicitly reset
       /*inBoundsAttr=*/ArrayAttr());
 
@@ -1257,11 +1257,11 @@ LogicalResult LinalgCopyVTRForwardingPattern::matchAndRewrite(
 LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
     vector::TransferWriteOp xferOp, PatternRewriter &rewriter) const {
   // TODO: support mask.
-  if (xferOp.mask())
+  if (xferOp.getMask())
     return failure();
 
   // Transfer into `viewOrAlloc`.
-  Value viewOrAlloc = xferOp.source();
+  Value viewOrAlloc = xferOp.getSource();
   if (!viewOrAlloc.getDefiningOp<memref::ViewOp>() &&
       !viewOrAlloc.getDefiningOp<memref::AllocOp>())
     return failure();
@@ -1297,8 +1297,8 @@ LogicalResult LinalgCopyVTWForwardingPattern::matchAndRewrite(
   // When forwarding to vector.transfer_write, the attribute must be reset
   // conservatively.
   rewriter.create<vector::TransferWriteOp>(
-      xferOp.getLoc(), xferOp.vector(), out, xferOp.indices(),
-      xferOp.permutation_mapAttr(), xferOp.mask(),
+      xferOp.getLoc(), xferOp.getVector(), out, xferOp.getIndices(),
+      xferOp.getPermutationMapAttr(), xferOp.getMask(),
       // in_bounds is explicitly reset
       /*inBoundsAttr=*/ArrayAttr());
 

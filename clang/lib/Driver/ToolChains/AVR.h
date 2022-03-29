@@ -31,17 +31,14 @@ public:
                         llvm::opt::ArgStringList &CC1Args,
                         Action::OffloadKind DeviceOffloadKind) const override;
 
+  llvm::Optional<std::string> findAVRLibcInstallation() const;
+  StringRef getGCCInstallPath() const { return GCCInstallPath; }
+
 protected:
   Tool *buildLinker() const override;
 
 private:
-  /// Whether libgcc, libct, and friends should be linked.
-  ///
-  /// This is not done if the user does not specify a
-  /// microcontroller on the command line.
-  bool LinkStdlib;
-
-  llvm::Optional<std::string> findAVRLibcInstallation() const;
+  StringRef GCCInstallPath;
 };
 
 } // end namespace toolchains
@@ -50,9 +47,8 @@ namespace tools {
 namespace AVR {
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:
-  Linker(const llvm::Triple &Triple, const ToolChain &TC, bool LinkStdlib)
-      : Tool("AVR::Linker", "avr-ld", TC), Triple(Triple),
-        LinkStdlib(LinkStdlib) {}
+  Linker(const llvm::Triple &Triple, const ToolChain &TC)
+      : Tool("AVR::Linker", "avr-ld", TC), Triple(Triple) {}
 
   bool hasIntegratedCPP() const override { return false; }
   bool isLinkJob() const override { return true; }
@@ -63,7 +59,6 @@ public:
 
 protected:
   const llvm::Triple &Triple;
-  bool LinkStdlib;
 };
 } // end namespace AVR
 } // end namespace tools

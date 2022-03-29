@@ -1144,6 +1144,10 @@ public:
   /// The MSVC "_GUID" struct, which is defined in MSVC header files.
   RecordDecl *MSVCGuidDecl;
 
+  /// The C++ "std::source_location::__impl" struct, defined in
+  /// \<source_location>.
+  RecordDecl *StdSourceLocationImplDecl;
+
   /// Caches identifiers/selectors for NSFoundation APIs.
   std::unique_ptr<NSAPI> NSAPIObj;
 
@@ -3254,8 +3258,7 @@ public:
   /// Perform ODR-like check for C/ObjC when merging tag types from modules.
   /// Differently from C++, actually parse the body and reject / error out
   /// in case of a structural mismatch.
-  bool ActOnDuplicateDefinition(DeclSpec &DS, Decl *Prev,
-                                SkipBodyInfo &SkipBody);
+  bool ActOnDuplicateDefinition(Decl *Prev, SkipBodyInfo &SkipBody);
 
   typedef void *SkippedDefinitionContext;
 
@@ -5685,14 +5688,15 @@ public:
                             TypeSourceInfo *TInfo, SourceLocation RPLoc);
 
   // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FILE(),
-  // __builtin_COLUMN()
+  // __builtin_COLUMN(), __builtin_source_location()
   ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
 
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
-                                SourceLocation BuiltinLoc, SourceLocation RPLoc,
+                                QualType ResultTy, SourceLocation BuiltinLoc,
+                                SourceLocation RPLoc,
                                 DeclContext *ParentContext);
 
   // __null
@@ -12989,7 +12993,8 @@ private:
   /// attempts to add itself into the container
   void CheckObjCCircularContainer(ObjCMessageExpr *Message);
 
-  void CheckTCBEnforcement(const CallExpr *TheCall, const FunctionDecl *Callee);
+  void CheckTCBEnforcement(const SourceLocation CallExprLoc,
+                           const NamedDecl *Callee);
 
   void AnalyzeDeleteExprMismatch(const CXXDeleteExpr *DE);
   void AnalyzeDeleteExprMismatch(FieldDecl *Field, SourceLocation DeleteLoc,

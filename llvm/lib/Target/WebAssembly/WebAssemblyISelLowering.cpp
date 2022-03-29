@@ -161,22 +161,17 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setTargetDAGCombine(ISD::VECTOR_SHUFFLE);
 
     // Combine extends of extract_subvectors into widening ops
-    setTargetDAGCombine(ISD::SIGN_EXTEND);
-    setTargetDAGCombine(ISD::ZERO_EXTEND);
+    setTargetDAGCombine({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND});
 
     // Combine int_to_fp or fp_extend of extract_vectors and vice versa into
     // conversions ops
-    setTargetDAGCombine(ISD::SINT_TO_FP);
-    setTargetDAGCombine(ISD::UINT_TO_FP);
-    setTargetDAGCombine(ISD::FP_EXTEND);
-    setTargetDAGCombine(ISD::EXTRACT_SUBVECTOR);
+    setTargetDAGCombine({ISD::SINT_TO_FP, ISD::UINT_TO_FP, ISD::FP_EXTEND,
+                         ISD::EXTRACT_SUBVECTOR});
 
     // Combine fp_to_{s,u}int_sat or fp_round of concat_vectors or vice versa
     // into conversion ops
-    setTargetDAGCombine(ISD::FP_TO_SINT_SAT);
-    setTargetDAGCombine(ISD::FP_TO_UINT_SAT);
-    setTargetDAGCombine(ISD::FP_ROUND);
-    setTargetDAGCombine(ISD::CONCAT_VECTORS);
+    setTargetDAGCombine({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT,
+                         ISD::FP_ROUND, ISD::CONCAT_VECTORS});
 
     setTargetDAGCombine(ISD::TRUNCATE);
 

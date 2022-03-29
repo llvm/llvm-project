@@ -598,7 +598,10 @@ public:
            const TargetTransformInfo &TTI, DominatorTree &DT,
            AssumptionCache &AC, MemorySSA *MSSA)
       : TLI(TLI), TTI(TTI), DT(DT), AC(AC), SQ(DL, &TLI, &DT, &AC), MSSA(MSSA),
-        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {}
+        MSSAUpdater(std::make_unique<MemorySSAUpdater>(MSSA)) {
+    if (MSSA)
+      MSSA->ensureOptimizedUses();
+  }
 
   bool run();
 

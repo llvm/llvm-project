@@ -111,3 +111,10 @@ func @invalid_splat(%v : f32) { // expected-note {{prior use here}}
   // expected-error@-1 {{expects different type than prior uses}}
   return
 }
+
+// -----
+
+// Case that resulted in leak previously.
+
+// expected-error@+1 {{expected ':' after block name}}
+"g"()({^a:^b })

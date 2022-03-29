@@ -449,16 +449,6 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
 
 Region &ForOp::getLoopBody() { return getRegion(); }
 
-bool ForOp::isDefinedOutsideOfLoop(Value value) {
-  return !getRegion().isAncestor(value.getParentRegion());
-}
-
-LogicalResult ForOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (auto *op : ops)
-    op->moveBefore(*this);
-  return success();
-}
-
 ForOp mlir::scf::getForInductionVarOwner(Value val) {
   auto ivArg = val.dyn_cast<BlockArgument>();
   if (!ivArg)
@@ -2060,16 +2050,6 @@ void ParallelOp::print(OpAsmPrinter &p) {
 }
 
 Region &ParallelOp::getLoopBody() { return getRegion(); }
-
-bool ParallelOp::isDefinedOutsideOfLoop(Value value) {
-  return !getRegion().isAncestor(value.getParentRegion());
-}
-
-LogicalResult ParallelOp::moveOutOfLoop(ArrayRef<Operation *> ops) {
-  for (auto *op : ops)
-    op->moveBefore(*this);
-  return success();
-}
 
 ParallelOp mlir::scf::getParallelForInductionVarOwner(Value val) {
   auto ivArg = val.dyn_cast<BlockArgument>();

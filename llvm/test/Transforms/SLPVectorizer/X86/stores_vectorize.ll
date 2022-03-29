@@ -25,9 +25,6 @@ define void @_Z8DistanceIlLi5EEvPfiPmS0_(float* %p1, i32 %p2, i64* %p3, float* %
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[TMP3]], <i64 5, i64 5, i64 5, i64 5>
@@ -82,15 +79,6 @@ define void @store_reverse(i64* %p3) {
 ; CHECK-LABEL: @store_reverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i64, i64* [[P3:%.*]], i64 8
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 7
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 9
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 10
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 11
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[P3]] to <4 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 8
@@ -145,9 +133,6 @@ define void @store15(float* %p1, i32 %p2, i64* %p3, float* %p4) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
@@ -227,9 +212,6 @@ define void @store16(float* %p1, i32 %p2, i64* %p3, float* %p4) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    store float [[ADD]], float* [[ARRAYIDX2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 3
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i64, i64* [[P3]], i64 5
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8
 ; CHECK-NEXT:    store i64 5, i64* [[ARRAYIDX9]], align 8

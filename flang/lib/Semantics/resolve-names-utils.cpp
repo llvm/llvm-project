@@ -126,7 +126,7 @@ void GenericSpecInfo::Analyze(const parser::DefinedOpName &name) {
 
 void GenericSpecInfo::Analyze(const parser::GenericSpec &x) {
   symbolName_ = x.source;
-  kind_ = common::visit(
+  kind_ = std::visit(
       common::visitors{
           [&](const parser::Name &y) -> GenericKind {
             parseName_ = &y;
@@ -134,7 +134,7 @@ void GenericSpecInfo::Analyze(const parser::GenericSpec &x) {
             return GenericKind::OtherKind::Name;
           },
           [&](const parser::DefinedOperator &y) {
-            return common::visit(
+            return std::visit(
                 common::visitors{
                     [&](const parser::DefinedOpName &z) -> GenericKind {
                       Analyze(z);
@@ -265,20 +265,19 @@ ArraySpec AnalyzeCoarraySpec(
 }
 
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
-  common::visit([this](const auto &y) { Analyze(y); }, x.u);
+  std::visit([this](const auto &y) { Analyze(y); }, x.u);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
-  common::visit(common::visitors{
-                    [&](const parser::AssumedSizeSpec &y) {
-                      Analyze(
-                          std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
-                      Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
-                    },
-                    [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
-                    [&](const auto &y) { Analyze(y); },
-                },
+  std::visit(common::visitors{
+                 [&](const parser::AssumedSizeSpec &y) {
+                   Analyze(std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
+                   Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
+                 },
+                 [&](const parser::ImpliedShapeSpec &y) { Analyze(y.v); },
+                 [&](const auto &y) { Analyze(y); },
+             },
       x.u);
   CHECK(!arraySpec_.empty());
   return arraySpec_;
@@ -290,7 +289,7 @@ ArraySpec ArraySpecAnalyzer::AnalyzeDeferredShapeSpecList(
   return arraySpec_;
 }
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::CoarraySpec &x) {
-  common::visit(
+  std::visit(
       common::visitors{
           [&](const parser::DeferredCoshapeSpecList &y) { MakeDeferred(y.v); },
           [&](const parser::ExplicitCoshapeSpec &y) {
@@ -496,7 +495,7 @@ const EquivalenceObject *EquivalenceSets::Find(
 }
 
 bool EquivalenceSets::CheckDesignator(const parser::Designator &designator) {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::DataRef &x) {
             return CheckDataRef(designator.source, x);
@@ -521,7 +520,7 @@ bool EquivalenceSets::CheckDesignator(const parser::Designator &designator) {
 
 bool EquivalenceSets::CheckDataRef(
     const parser::CharBlock &source, const parser::DataRef &x) {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const parser::Name &name) { return CheckObject(name); },
           [&](const common::Indirection<parser::StructureComponent> &) {
@@ -533,7 +532,7 @@ bool EquivalenceSets::CheckDataRef(
           [&](const common::Indirection<parser::ArrayElement> &elem) {
             bool ok{CheckDataRef(source, elem.value().base)};
             for (const auto &subscript : elem.value().subscripts) {
-              ok &= common::visit(
+              ok &= std::visit(
                   common::visitors{
                       [&](const parser::SubscriptTriplet &) {
                         context_.Say(source, // C924, R872

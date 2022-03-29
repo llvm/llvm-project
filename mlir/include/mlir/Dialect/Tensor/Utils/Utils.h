@@ -15,11 +15,11 @@ namespace mlir {
 namespace tensor {
 
 // Return a PadOp that pads `source` to `type` size where the static
-// sizes are assumed to be greater than the dynamic sizes. The op performs
-// "high" padding (i.e. it adds trailing padding values until the desired
-// size is met).
-PadOp createPadHighOp(Type type, Value source, Value pad, bool nofold,
-                      Location loc, OpBuilder &builder);
+// sizes are assumed to be greater than the dynamic sizes. If `type` has dynamic
+// dimensions the padding width is set to zero. The op performs "high" padding
+// (i.e. it adds trailing padding values until the desired size is met).
+PadOp createPadHighOp(RankedTensorType type, Value source, Value pad,
+                      bool nofold, Location loc, OpBuilder &builder);
 
 // Return a PadOp that pads `source to `type` size with `pad` value.
 // I.e., a block will be created and the `pad` value will be yielded

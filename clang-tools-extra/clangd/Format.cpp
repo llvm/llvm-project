@@ -116,12 +116,41 @@ struct IncrementalChanges {
   std::string CursorPlaceholder;
 };
 
+// The two functions below, columnWidth() and columnWidthWithTabs(), were
+// adapted from similar functions in clang/lib/Format/Encoding.h.
+// FIXME: Move those functions to clang/include/clang/Format.h and reuse them?
+
+// Helper function for columnWidthWithTabs().
+inline unsigned columnWidth(StringRef Text) {
+  int ContentWidth = llvm::sys::unicode::columnWidthUTF8(Text);
+  if (ContentWidth < 0)
+    return Text.size(); // fallback for unprintable characters
+  return ContentWidth;
+}
+
+// Returns the number of columns required to display the \p Text on a terminal
+// with the \p TabWidth.
+inline unsigned columnWidthWithTabs(StringRef Text, unsigned TabWidth) {
+  unsigned TotalWidth = 0;
+  StringRef Tail = Text;
+  for (;;) {
+    StringRef::size_type TabPos = Tail.find('\t');
+    if (TabPos == StringRef::npos)
+      return TotalWidth + columnWidth(Tail);
+    TotalWidth += columnWidth(Tail.substr(0, TabPos));
+    if (TabWidth)
+      TotalWidth += TabWidth - TotalWidth % TabWidth;
+    Tail = Tail.substr(TabPos + 1);
+  }
+}
+
 // After a newline:
 //  - we continue any line-comment that was split
 //  - we format the old line in addition to the cursor
 //  - we represent the cursor with a line comment to preserve the newline
 IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
-                                                     unsigned Cursor) {
+                                                     unsigned Cursor,
+                                                     unsigned TabWidth) {
   IncrementalChanges Result;
   // Before newline, code looked like:
   //    leading^trailing
@@ -152,12 +181,12 @@ IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
   if (!CommentMarker.empty() &&
       (NewLineIsComment || !commentMarker(NextLine).empty() ||
        (!TrailingTrim.empty() && !TrailingTrim.startswith("//")))) {
-    using llvm::sys::unicode::columnWidthUTF8;
     // We indent the new comment to match the previous one.
     StringRef PreComment =
         Leading.take_front(CommentMarker.data() - Leading.data());
     std::string IndentAndComment =
-        (std::string(columnWidthUTF8(PreComment), ' ') + CommentMarker + " ")
+        (std::string(columnWidthWithTabs(PreComment, TabWidth), ' ') +
+         CommentMarker + " ")
             .str();
     cantFail(
         Result.Changes.add(replacement(Code, Indentation, IndentAndComment)));
@@ -191,10 +220,11 @@ IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
 }
 
 IncrementalChanges getIncrementalChanges(llvm::StringRef Code, unsigned Cursor,
-                                         llvm::StringRef InsertedText) {
+                                         llvm::StringRef InsertedText,
+                                         unsigned TabWidth) {
   IncrementalChanges Result;
   if (InsertedText == "\n")
-    return getIncrementalChangesAfterNewline(Code, Cursor);
+    return getIncrementalChangesAfterNewline(Code, Cursor, TabWidth);
 
   Result.CursorPlaceholder = " /**/";
   return Result;
@@ -246,8 +276,8 @@ split(const tooling::Replacements &Replacements, unsigned OldCursor,
 std::vector<tooling::Replacement>
 formatIncremental(llvm::StringRef OriginalCode, unsigned OriginalCursor,
                   llvm::StringRef InsertedText, format::FormatStyle Style) {
-  IncrementalChanges Incremental =
-      getIncrementalChanges(OriginalCode, OriginalCursor, InsertedText);
+  IncrementalChanges Incremental = getIncrementalChanges(
+      OriginalCode, OriginalCursor, InsertedText, Style.TabWidth);
   // Never *remove* lines in response to pressing enter! This annoys users.
   if (InsertedText == "\n") {
     Style.MaxEmptyLinesToKeep = 1000;

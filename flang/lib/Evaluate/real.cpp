@@ -346,6 +346,45 @@ ValueWithRealFlags<Real<W, P>> Real<W, P>::SQRT(Rounding rounding) const {
   return result;
 }
 
+template <typename W, int P>
+ValueWithRealFlags<Real<W, P>> Real<W, P>::NEAREST(bool upward) const {
+  ValueWithRealFlags<Real> result;
+  if (IsFinite()) {
+    Fraction fraction{GetFraction()};
+    int expo{Exponent()};
+    Fraction one{1};
+    Fraction nearest;
+    bool isNegative{IsNegative()};
+    if (upward != isNegative) { // upward in magnitude
+      auto next{fraction.AddUnsigned(one)};
+      if (next.carry) {
+        ++expo;
+        nearest = Fraction::Least(); // MSB only
+      } else {
+        nearest = next.value;
+      }
+    } else { // downward in magnitude
+      if (IsZero()) {
+        nearest = 1; // smallest magnitude negative subnormal
+        isNegative = !isNegative;
+      } else {
+        auto sub1{fraction.SubtractSigned(one)};
+        if (sub1.overflow) {
+          nearest = Fraction{0}.NOT();
+          --expo;
+        } else {
+          nearest = sub1.value;
+        }
+      }
+    }
+    result.flags = result.value.Normalize(isNegative, expo, nearest);
+  } else {
+    result.flags.set(RealFlag::InvalidArgument);
+    result.value = *this;
+  }
+  return result;
+}
+
 // HYPOT(x,y) = SQRT(x**2 + y**2) by definition, but those squared intermediate
 // values are susceptible to over/underflow when computed naively.
 // Assuming that x>=y, calculate instead:

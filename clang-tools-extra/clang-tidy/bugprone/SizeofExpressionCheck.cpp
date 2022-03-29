@@ -20,7 +20,7 @@ namespace bugprone {
 namespace {
 
 AST_MATCHER_P(IntegerLiteral, isBiggerThan, unsigned, N) {
-  return Node.getValue().getZExtValue() > N;
+  return Node.getValue().ugt(N);
 }
 
 AST_MATCHER_P2(Expr, hasSizeOfDescendant, int, Depth,

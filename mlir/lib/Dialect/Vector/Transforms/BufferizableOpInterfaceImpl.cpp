@@ -55,9 +55,9 @@ struct TransferReadOpInterface
     Value buffer =
         *state.getBuffer(rewriter, readOp->getOpOperand(0) /*source*/);
     replaceOpWithNewBufferizedOp<vector::TransferReadOp>(
-        rewriter, readOp, readOp.getVectorType(), buffer, readOp.indices(),
-        readOp.permutation_map(), readOp.padding(), readOp.mask(),
-        readOp.in_boundsAttr());
+        rewriter, readOp, readOp.getVectorType(), buffer, readOp.getIndices(),
+        readOp.getPermutationMap(), readOp.getPadding(), readOp.getMask(),
+        readOp.getInBoundsAttr());
     return success();
   }
 };
@@ -107,8 +107,9 @@ struct TransferWriteOpInterface
     if (failed(resultBuffer))
       return failure();
     rewriter.create<vector::TransferWriteOp>(
-        writeOp.getLoc(), writeOp.vector(), *resultBuffer, writeOp.indices(),
-        writeOp.permutation_mapAttr(), writeOp.in_boundsAttr());
+        writeOp.getLoc(), writeOp.getVector(), *resultBuffer,
+        writeOp.getIndices(), writeOp.getPermutationMapAttr(),
+        writeOp.getInBoundsAttr());
     replaceOpWithBufferizedValues(rewriter, op, *resultBuffer);
 
     return success();

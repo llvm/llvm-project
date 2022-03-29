@@ -2570,6 +2570,20 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
       return replaceOperand(SI, 0, A);
 
+    Value *C;
+    // select (~a | c), a, b -> and a, (or c, freeze(b))
+    if (match(CondVal, m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))) &&
+        CondVal->hasOneUse()) {
+      FalseVal = Builder.CreateFreeze(FalseVal);
+      return BinaryOperator::CreateAnd(TrueVal, Builder.CreateOr(C, FalseVal));
+    }
+    // select (~c & b), a, b -> and b, (or freeze(a), c)
+    if (match(CondVal, m_c_And(m_Not(m_Value(C)), m_Specific(FalseVal))) &&
+        CondVal->hasOneUse()) {
+      TrueVal = Builder.CreateFreeze(TrueVal);
+      return BinaryOperator::CreateAnd(FalseVal, Builder.CreateOr(C, TrueVal));
+    }
+
     if (!SelType->isVectorTy()) {
       if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal, One, SQ,
                                             /* AllowRefinement */ true))

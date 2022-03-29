@@ -404,4 +404,15 @@ def int_hexagon_V6_vmaskedstorenq_128B: Hexagon_custom_vms_Intrinsic_128B;
 def int_hexagon_V6_vmaskedstorentq_128B: Hexagon_custom_vms_Intrinsic_128B;
 def int_hexagon_V6_vmaskedstorentnq_128B: Hexagon_custom_vms_Intrinsic_128B;
 
+
+// Intrinsic for instrumentation based profiling using a custom handler. The
+// name of the handler is passed as the first operand to the intrinsic. The
+// handler can take only one int32 input which is passed as the second
+// operand to the intrinsic.
+def int_hexagon_instrprof_custom
+    : Hexagon_NonGCC_Intrinsic<[],
+                               [llvm_ptr_ty, llvm_i32_ty],
+                               [IntrInaccessibleMemOnly]>;
+
+
 include "llvm/IR/IntrinsicsHexagonDep.td"

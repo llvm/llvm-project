@@ -545,3 +545,9 @@ struct t65 {
 // AVX: @f65(<8 x float> %{{[^,)]+}})
 void f65(struct t65 a0) {
 }
+
+typedef float t66 __attribute__((__vector_size__(128), __aligned__(128)));
+
+// AVX512: @f66(<32 x float>* noundef byval(<32 x float>) align 128 %0)
+void f66(t66 a0) {
+}

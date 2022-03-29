@@ -42,7 +42,7 @@ int8x8_t test_vtbl2_s8(int8x8x2_t a, int8x8_t b) {
   return vtbl2_s8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl2_s8([2 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl2_s8([2 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.int8x16x2_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.int8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x2_t, %struct.int8x16x2_t* [[A]], i32 0, i32 0
@@ -89,7 +89,7 @@ int8x8_t test_vtbl3_s8(int8x8x3_t a, int8x8_t b) {
   return vtbl3_s8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl3_s8([3 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl3_s8([3 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.int8x16x3_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.int8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x3_t, %struct.int8x16x3_t* [[A]], i32 0, i32 0
@@ -142,7 +142,7 @@ int8x8_t test_vtbl4_s8(int8x8x4_t a, int8x8_t b) {
   return vtbl4_s8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl4_s8([4 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl4_s8([4 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.int8x16x4_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.int8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x4_t, %struct.int8x16x4_t* [[A]], i32 0, i32 0
@@ -352,7 +352,7 @@ int8x8_t test_vqtbx1_s8(int8x8_t a, int8x16_t b, uint8x8_t c) {
   return vqtbx1_s8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx2_s8(<8 x i8> noundef %a, [2 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx2_s8(<8 x i8> noundef %a, [2 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.int8x16x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x2_t, %struct.int8x16x2_t* [[B]], i32 0, i32 0
@@ -373,7 +373,7 @@ int8x8_t test_vqtbx2_s8(int8x8_t a, int8x16x2_t b, uint8x8_t c) {
   return vqtbx2_s8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx3_s8(<8 x i8> noundef %a, [3 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx3_s8(<8 x i8> noundef %a, [3 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.int8x16x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x3_t, %struct.int8x16x3_t* [[B]], i32 0, i32 0
@@ -397,7 +397,7 @@ int8x8_t test_vqtbx3_s8(int8x8_t a, int8x16x3_t b, uint8x8_t c) {
   return vqtbx3_s8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx4_s8(<8 x i8> noundef %a, [4 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx4_s8(<8 x i8> noundef %a, [4 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.int8x16x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.int8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.int8x16x4_t, %struct.int8x16x4_t* [[B]], i32 0, i32 0
@@ -540,7 +540,7 @@ uint8x8_t test_vtbl2_u8(uint8x8x2_t a, uint8x8_t b) {
   return vtbl2_u8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl2_u8([2 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl2_u8([2 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.uint8x16x2_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.uint8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[A]], i32 0, i32 0
@@ -587,7 +587,7 @@ uint8x8_t test_vtbl3_u8(uint8x8x3_t a, uint8x8_t b) {
   return vtbl3_u8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl3_u8([3 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl3_u8([3 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.uint8x16x3_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.uint8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x3_t, %struct.uint8x16x3_t* [[A]], i32 0, i32 0
@@ -640,7 +640,7 @@ uint8x8_t test_vtbl4_u8(uint8x8x4_t a, uint8x8_t b) {
   return vtbl4_u8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl4_u8([4 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl4_u8([4 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.uint8x16x4_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.uint8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x4_t, %struct.uint8x16x4_t* [[A]], i32 0, i32 0
@@ -850,7 +850,7 @@ uint8x8_t test_vqtbx1_u8(uint8x8_t a, uint8x16_t b, uint8x8_t c) {
   return vqtbx1_u8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx2_u8(<8 x i8> noundef %a, [2 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx2_u8(<8 x i8> noundef %a, [2 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.uint8x16x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x2_t, %struct.uint8x16x2_t* [[B]], i32 0, i32 0
@@ -871,7 +871,7 @@ uint8x8_t test_vqtbx2_u8(uint8x8_t a, uint8x16x2_t b, uint8x8_t c) {
   return vqtbx2_u8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx3_u8(<8 x i8> noundef %a, [3 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx3_u8(<8 x i8> noundef %a, [3 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.uint8x16x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x3_t, %struct.uint8x16x3_t* [[B]], i32 0, i32 0
@@ -895,7 +895,7 @@ uint8x8_t test_vqtbx3_u8(uint8x8_t a, uint8x16x3_t b, uint8x8_t c) {
   return vqtbx3_u8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx4_u8(<8 x i8> noundef %a, [4 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx4_u8(<8 x i8> noundef %a, [4 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.uint8x16x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.uint8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.uint8x16x4_t, %struct.uint8x16x4_t* [[B]], i32 0, i32 0
@@ -1038,7 +1038,7 @@ poly8x8_t test_vtbl2_p8(poly8x8x2_t a, uint8x8_t b) {
   return vtbl2_p8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl2_p8([2 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl2_p8([2 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.poly8x16x2_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.poly8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[A]], i32 0, i32 0
@@ -1085,7 +1085,7 @@ poly8x8_t test_vtbl3_p8(poly8x8x3_t a, uint8x8_t b) {
   return vtbl3_p8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl3_p8([3 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl3_p8([3 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.poly8x16x3_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.poly8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x3_t, %struct.poly8x16x3_t* [[A]], i32 0, i32 0
@@ -1138,7 +1138,7 @@ poly8x8_t test_vtbl4_p8(poly8x8x4_t a, uint8x8_t b) {
   return vtbl4_p8(a, b);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl4_p8([4 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbl4_p8([4 x <16 x i8>] %a.coerce, <8 x i8> noundef %b) #1 {
 // CHECK:   [[__P0_I:%.*]] = alloca %struct.poly8x16x4_t, align 16
 // CHECK:   [[A:%.*]] = alloca %struct.poly8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x4_t, %struct.poly8x16x4_t* [[A]], i32 0, i32 0
@@ -1348,7 +1348,7 @@ poly8x8_t test_vqtbx1_p8(poly8x8_t a, uint8x16_t b, uint8x8_t c) {
   return vqtbx1_p8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx2_p8(<8 x i8> noundef %a, [2 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx2_p8(<8 x i8> noundef %a, [2 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.poly8x16x2_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x16x2_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x2_t, %struct.poly8x16x2_t* [[B]], i32 0, i32 0
@@ -1369,7 +1369,7 @@ poly8x8_t test_vqtbx2_p8(poly8x8_t a, poly8x16x2_t b, uint8x8_t c) {
   return vqtbx2_p8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx3_p8(<8 x i8> noundef %a, [3 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx3_p8(<8 x i8> noundef %a, [3 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.poly8x16x3_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x16x3_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x3_t, %struct.poly8x16x3_t* [[B]], i32 0, i32 0
@@ -1393,7 +1393,7 @@ poly8x8_t test_vqtbx3_p8(poly8x8_t a, poly8x16x3_t b, uint8x8_t c) {
   return vqtbx3_p8(a, b, c);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx4_p8(<8 x i8> noundef %a, [4 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #0 {
+// CHECK-LABEL: define{{.*}} <8 x i8> @test_vqtbx4_p8(<8 x i8> noundef %a, [4 x <16 x i8>] %b.coerce, <8 x i8> noundef %c) #1 {
 // CHECK:   [[__P1_I:%.*]] = alloca %struct.poly8x16x4_t, align 16
 // CHECK:   [[B:%.*]] = alloca %struct.poly8x16x4_t, align 16
 // CHECK:   [[COERCE_DIVE:%.*]] = getelementptr inbounds %struct.poly8x16x4_t, %struct.poly8x16x4_t* [[B]], i32 0, i32 0

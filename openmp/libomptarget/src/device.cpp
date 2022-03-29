@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <thread>
 
 #ifdef OMPT_SUPPORT
 #include "ompt_callback.h"
@@ -219,9 +220,10 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       ((LR.Flags.ExtendsBefore || LR.Flags.ExtendsAfter) && IsImplicit)) {
     auto &HT = *LR.Entry;
     const char *RefCountAction;
-    assert(HT.getTotalRefCount() > 0 && "expected existing RefCount > 0");
     if (UpdateRefCount) {
-      // After this, RefCount > 1.
+      // After this, reference count >= 1. If the reference count was 0 but the
+      // entry was still there we can reuse the data on the device and avoid a
+      // new submission.
       HT.incRefCount(HasHoldModifier);
       RefCountAction = " (incremented)";
     } else {
@@ -385,27 +387,30 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool &IsLast,
       !lr.Entry->IsUSMAlloc) {
     auto &HT = *lr.Entry;
 
-    // We do not zero the total reference count here.  deallocTgtPtr does that
-    // atomically with removing the mapping.  Otherwise, before this thread
-    // removed the mapping in deallocTgtPtr, another thread could retrieve the
-    // mapping, increment and decrement back to zero, and then both threads
-    // would try to remove the mapping, resulting in a double free.
     IsLast = HT.decShouldRemove(UseHoldRefCount, ForceDelete);
-    const char *RefCountAction;
-    if (!UpdateRefCount) {
-      RefCountAction = " (update suppressed)";
-    } else if (ForceDelete) {
+
+    if (ForceDelete) {
       HT.resetRefCount(UseHoldRefCount);
       assert(IsLast == HT.decShouldRemove(UseHoldRefCount) &&
              "expected correct IsLast prediction for reset");
-      if (IsLast)
-        RefCountAction = " (reset, deferred final decrement)";
-      else {
-        HT.decRefCount(UseHoldRefCount);
-        RefCountAction = " (reset)";
-      }
+    }
+
+    const char *RefCountAction;
+    if (!UpdateRefCount) {
+      RefCountAction = " (update suppressed)";
     } else if (IsLast) {
-      RefCountAction = " (deferred final decrement)";
+      // Mark the entry as to be deleted by this thread. Another thread might
+      // reuse the entry and take "ownership" for the deletion while this thread
+      // is waiting for data transfers. That is fine and the current thread will
+      // simply skip the deletion step then.
+      HT.setDeleteThreadId();
+      HT.decRefCount(UseHoldRefCount);
+      assert(HT.getTotalRefCount() == 0 &&
+             "Expected zero reference count when deletion is scheduled");
+      if (ForceDelete)
+        RefCountAction = " (reset, delayed deletion)";
+      else
+        RefCountAction = " (decremented, delayed deletion)";
     } else {
       HT.decRefCount(UseHoldRefCount);
       RefCountAction = " (decremented)";
@@ -448,39 +453,38 @@ void *DeviceTy::getTgtPtrBegin(HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin,
   return NULL;
 }
 
-int DeviceTy::deallocTgtPtr(void *HstPtrBegin, int64_t Size,
-                            bool HasHoldModifier) {
-  HDTTMapAccessorTy HDTTMap = HostDataToTargetMap.getExclusiveAccessor();
-
+int DeviceTy::deallocTgtPtr(HDTTMapAccessorTy &HDTTMap, LookupResult LR,
+                            int64_t Size) {
   // Check if the pointer is contained in any sub-nodes.
-  int Ret = OFFLOAD_SUCCESS;
-  LookupResult lr = lookupMapping(HDTTMap, HstPtrBegin, Size);
-  if (lr.Flags.IsContained || lr.Flags.ExtendsBefore || lr.Flags.ExtendsAfter) {
-    auto &HT = *lr.Entry;
-    if (HT.decRefCount(HasHoldModifier) == 0) {
-      if (!HT.IsUSMAlloc) {
-        DP("Deleting tgt data " DPxMOD " of size %" PRId64 "\n",
-           DPxPTR(HT.TgtPtrBegin), Size);
-        deleteData((void *)HT.TgtPtrBegin);
-      }
-      INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
-           "Removing map entry with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
-           ", Size=%" PRId64 ", Name=%s\n",
-           DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size,
-           (HT.HstPtrName) ? getNameFromMapping(HT.HstPtrName).c_str()
-                           : "unknown");
-      void *Event = lr.Entry->getEvent();
-      HDTTMap->erase(lr.Entry);
-      delete lr.Entry;
-      if (Event && destroyEvent(Event) != OFFLOAD_SUCCESS) {
-        REPORT("Failed to destroy event " DPxMOD "\n", DPxPTR(Event));
-        Ret = OFFLOAD_FAIL;
-      }
-    }
-  } else {
+  if (!(LR.Flags.IsContained || LR.Flags.ExtendsBefore ||
+        LR.Flags.ExtendsAfter)) {
     REPORT("Section to delete (hst addr " DPxMOD ") does not exist in the"
            " allocated memory\n",
-           DPxPTR(HstPtrBegin));
+           DPxPTR(LR.Entry->HstPtrBegin));
+    return OFFLOAD_FAIL;
+  }
+
+  auto &HT = *LR.Entry;
+  // Verify this thread is still in charge of deleting the entry.
+  assert(HT.getTotalRefCount() == 0 &&
+         HT.getDeleteThreadId() == std::this_thread::get_id() &&
+         "Trying to delete entry that is in use or owned by another thread.");
+
+  DP("Deleting tgt data " DPxMOD " of size %" PRId64 "\n",
+     DPxPTR(HT.TgtPtrBegin), Size);
+  deleteData((void *)HT.TgtPtrBegin);
+  INFO(OMP_INFOTYPE_MAPPING_CHANGED, DeviceID,
+       "Removing map entry with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
+       ", Size=%" PRId64 ", Name=%s\n",
+       DPxPTR(HT.HstPtrBegin), DPxPTR(HT.TgtPtrBegin), Size,
+       (HT.HstPtrName) ? getNameFromMapping(HT.HstPtrName).c_str() : "unknown");
+  void *Event = LR.Entry->getEvent();
+  HDTTMap->erase(LR.Entry);
+  delete LR.Entry;
+
+  int Ret = OFFLOAD_SUCCESS;
+  if (Event && destroyEvent(Event) != OFFLOAD_SUCCESS) {
+    REPORT("Failed to destroy event " DPxMOD "\n", DPxPTR(Event));
     Ret = OFFLOAD_FAIL;
   }
 

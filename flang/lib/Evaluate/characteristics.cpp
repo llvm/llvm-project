@@ -69,7 +69,7 @@ TypeAndShape &TypeAndShape::Rewrite(FoldingContext &context) {
 std::optional<TypeAndShape> TypeAndShape::Characterize(
     const semantics::Symbol &symbol, FoldingContext &context) {
   const auto &ultimate{symbol.GetUltimate()};
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const semantics::ProcEntityDetails &proc) {
             const semantics::ProcInterface &interface{proc.interface()};
@@ -392,7 +392,7 @@ static std::optional<Procedure> CharacterizeProcedure(
           result.attrs.test(Procedure::Attr::Elemental))) {
     result.attrs.set(Procedure::Attr::Pure);
   }
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const semantics::SubprogramDetails &subp)
               -> std::optional<Procedure> {
@@ -578,7 +578,7 @@ static std::optional<DummyArgument> CharacterizeDummyArgument(
 
 std::optional<DummyArgument> DummyArgument::FromActual(
     std::string &&name, const Expr<SomeType> &expr, FoldingContext &context) {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const BOZLiteralConstant &) {
             return std::make_optional<DummyArgument>(std::move(name),
@@ -619,7 +619,7 @@ std::optional<DummyArgument> DummyArgument::FromActual(
 }
 
 bool DummyArgument::IsOptional() const {
-  return common::visit(
+  return std::visit(
       common::visitors{
           [](const DummyDataObject &data) {
             return data.attrs.test(DummyDataObject::Attr::Optional);
@@ -633,36 +633,35 @@ bool DummyArgument::IsOptional() const {
 }
 
 void DummyArgument::SetOptional(bool value) {
-  common::visit(common::visitors{
-                    [value](DummyDataObject &data) {
-                      data.attrs.set(DummyDataObject::Attr::Optional, value);
-                    },
-                    [value](DummyProcedure &proc) {
-                      proc.attrs.set(DummyProcedure::Attr::Optional, value);
-                    },
-                    [](AlternateReturn &) { DIE("cannot set optional"); },
-                },
+  std::visit(common::visitors{
+                 [value](DummyDataObject &data) {
+                   data.attrs.set(DummyDataObject::Attr::Optional, value);
+                 },
+                 [value](DummyProcedure &proc) {
+                   proc.attrs.set(DummyProcedure::Attr::Optional, value);
+                 },
+                 [](AlternateReturn &) { DIE("cannot set optional"); },
+             },
       u);
 }
 
 void DummyArgument::SetIntent(common::Intent intent) {
-  common::visit(common::visitors{
-                    [intent](DummyDataObject &data) { data.intent = intent; },
-                    [intent](DummyProcedure &proc) { proc.intent = intent; },
-                    [](AlternateReturn &) { DIE("cannot set intent"); },
-                },
+  std::visit(common::visitors{
+                 [intent](DummyDataObject &data) { data.intent = intent; },
+                 [intent](DummyProcedure &proc) { proc.intent = intent; },
+                 [](AlternateReturn &) { DIE("cannot set intent"); },
+             },
       u);
 }
 
 common::Intent DummyArgument::GetIntent() const {
-  return common::visit(
-      common::visitors{
-          [](const DummyDataObject &data) { return data.intent; },
-          [](const DummyProcedure &proc) { return proc.intent; },
-          [](const AlternateReturn &) -> common::Intent {
-            DIE("Alternate returns have no intent");
-          },
-      },
+  return std::visit(common::visitors{
+                        [](const DummyDataObject &data) { return data.intent; },
+                        [](const DummyProcedure &proc) { return proc.intent; },
+                        [](const AlternateReturn &) -> common::Intent {
+                          DIE("Alternate returns have no intent");
+                        },
+                    },
       u);
 }
 
@@ -686,7 +685,7 @@ llvm::raw_ostream &DummyArgument::Dump(llvm::raw_ostream &o) const {
   if (pass) {
     o << " PASS";
   }
-  common::visit([&](const auto &x) { x.Dump(o); }, u);
+  std::visit([&](const auto &x) { x.Dump(o); }, u);
   return o;
 }
 
@@ -799,12 +798,12 @@ bool FunctionResult::IsCompatibleWith(const FunctionResult &actual) const {
 
 llvm::raw_ostream &FunctionResult::Dump(llvm::raw_ostream &o) const {
   attrs.Dump(o, EnumToString);
-  common::visit(common::visitors{
-                    [&](const TypeAndShape &ts) { ts.Dump(o); },
-                    [&](const CopyableIndirection<Procedure> &p) {
-                      p.value().Dump(o << " procedure(") << ')';
-                    },
-                },
+  std::visit(common::visitors{
+                 [&](const TypeAndShape &ts) { ts.Dump(o); },
+                 [&](const CopyableIndirection<Procedure> &p) {
+                   p.value().Dump(o << " procedure(") << ')';
+                 },
+             },
       u);
   return o;
 }
@@ -1136,7 +1135,7 @@ bool DistinguishUtils::Distinguishable(
   if (x.u.index() != y.u.index()) {
     return true; // different kind: data/proc/alt-return
   }
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const DummyDataObject &z) {
             return Distinguishable(z, std::get<DummyDataObject>(y.u));
@@ -1198,7 +1197,7 @@ bool DistinguishUtils::Distinguishable(
   if (x.u.index() != y.u.index()) {
     return true; // one is data object, one is procedure
   }
-  return common::visit(
+  return std::visit(
       common::visitors{
           [&](const TypeAndShape &z) {
             return Distinguishable(z, std::get<TypeAndShape>(y.u));
