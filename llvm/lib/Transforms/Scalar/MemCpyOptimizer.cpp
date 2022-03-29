@@ -761,27 +761,25 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       // Detect cases where we're performing call slot forwarding, but
       // happen to be using a load-store pair to implement it, rather than
       // a memcpy.
-      CallInst *C = nullptr;
-      if (auto *LoadClobber = dyn_cast<MemoryUseOrDef>(
-              MSSA->getWalker()->getClobberingMemoryAccess(LI))) {
-        // The load most post-dom the call. Limit to the same block for now.
-        // TODO: Support non-local call-slot optimization?
-        if (LoadClobber->getBlock() == SI->getParent())
-          C = dyn_cast_or_null<CallInst>(LoadClobber->getMemoryInst());
-      }
+      auto GetCall = [&]() -> CallInst * {
+        // We defer this expensive clobber walk until the cheap checks
+        // have been done on the source inside performCallSlotOptzn.
+        if (auto *LoadClobber = dyn_cast<MemoryUseOrDef>(
+              MSSA->getWalker()->getClobberingMemoryAccess(LI)))
+          return dyn_cast_or_null<CallInst>(LoadClobber->getMemoryInst());
+        return nullptr;
+      };
 
-      if (C) {
-        bool changed = performCallSlotOptzn(
-            LI, SI, SI->getPointerOperand()->stripPointerCasts(),
-            LI->getPointerOperand()->stripPointerCasts(),
-            DL.getTypeStoreSize(SI->getOperand(0)->getType()),
-            commonAlignment(SI->getAlign(), LI->getAlign()), C);
-        if (changed) {
-          eraseInstruction(SI);
-          eraseInstruction(LI);
-          ++NumMemCpyInstr;
-          return true;
-        }
+      bool changed = performCallSlotOptzn(
+          LI, SI, SI->getPointerOperand()->stripPointerCasts(),
+          LI->getPointerOperand()->stripPointerCasts(),
+          DL.getTypeStoreSize(SI->getOperand(0)->getType()),
+          commonAlignment(SI->getAlign(), LI->getAlign()), GetCall);
+      if (changed) {
+        eraseInstruction(SI);
+        eraseInstruction(LI);
+        ++NumMemCpyInstr;
+        return true;
       }
     }
   }
@@ -856,7 +854,8 @@ bool MemCpyOptPass::processMemSet(MemSetInst *MSI, BasicBlock::iterator &BBI) {
 bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
                                          Instruction *cpyStore, Value *cpyDest,
                                          Value *cpySrc, TypeSize cpySize,
-                                         Align cpyAlign, CallInst *C) {
+                                         Align cpyAlign,
+                                         std::function<CallInst *()> GetC) {
   // The general transformation to keep in mind is
   //
   //   call @func(..., src, ...)
@@ -875,11 +874,6 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (cpySize.isScalable())
     return false;
 
-  // Lifetime marks shouldn't be operated on.
-  if (Function *F = C->getCalledFunction())
-    if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::lifetime_start)
-      return false;
-
   // Require that src be an alloca.  This simplifies the reasoning considerably.
   auto *srcAlloca = dyn_cast<AllocaInst>(cpySrc);
   if (!srcAlloca)
@@ -895,6 +889,16 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
 
   if (cpySize < srcSize)
     return false;
+
+  CallInst *C = GetC();
+  if (!C)
+    return false;
+
+  // Lifetime marks shouldn't be operated on.
+  if (Function *F = C->getCalledFunction())
+    if (F->isIntrinsic() && F->getIntrinsicID() == Intrinsic::lifetime_start)
+      return false;
+
 
   if (C->getParent() != cpyStore->getParent()) {
     LLVM_DEBUG(dbgs() << "Call Slot: block local restriction\n");
@@ -1459,7 +1463,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
           if (performCallSlotOptzn(
                   M, M, M->getDest(), M->getSource(),
                   TypeSize::getFixed(CopySize->getZExtValue()), Alignment,
-                  C)) {
+                  [C]() -> CallInst * { return C; })) {
             LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
                               << "    call: " << *C << "\n"
                               << "    memcpy: " << *M << "\n");
