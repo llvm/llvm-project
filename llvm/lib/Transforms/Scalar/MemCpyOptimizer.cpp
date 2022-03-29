@@ -771,15 +771,6 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
       }
 
       if (C) {
-        // Check that nothing touches the dest of the "copy" between
-        // the call and the store.
-        MemoryLocation StoreLoc = MemoryLocation::get(SI);
-        if (accessedBetween(*AA, StoreLoc, MSSA->getMemoryAccess(C),
-                            MSSA->getMemoryAccess(SI)))
-          C = nullptr;
-      }
-
-      if (C) {
         bool changed = performCallSlotOptzn(
             LI, SI, SI->getPointerOperand()->stripPointerCasts(),
             LI->getPointerOperand()->stripPointerCasts(),
@@ -905,6 +896,23 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   if (cpySize < srcSize)
     return false;
 
+  if (C->getParent() != cpyStore->getParent()) {
+    LLVM_DEBUG(dbgs() << "Call Slot: block local restriction\n");
+    return false;
+  }
+
+  MemoryLocation DestLoc = isa<StoreInst>(cpyStore) ?
+    MemoryLocation::get(cpyStore) :
+    MemoryLocation::getForDest(cast<MemCpyInst>(cpyStore));
+
+  // Check that nothing touches the dest of the copy between
+  // the call and the store/memcpy.
+  if (accessedBetween(*AA, DestLoc, MSSA->getMemoryAccess(C),
+                      MSSA->getMemoryAccess(cpyStore))) {
+    LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer modified after call\n");
+    return false;
+  }
+
   // Check that accessing the first srcSize bytes of dest will not cause a
   // trap.  Otherwise the transform is invalid since it might cause a trap
   // to occur earlier than it otherwise would.
@@ -913,6 +921,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
     LLVM_DEBUG(dbgs() << "Call Slot: Dest pointer not dereferenceable\n");
     return false;
   }
+
 
   // Make sure that nothing can observe cpyDest being written early. There are
   // a number of cases to consider:
@@ -1443,28 +1452,20 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
     if (Instruction *MI = MD->getMemoryInst()) {
       if (auto *CopySize = dyn_cast<ConstantInt>(M->getLength())) {
         if (auto *C = dyn_cast<CallInst>(MI)) {
-          // The memcpy must post-dom the call. Limit to the same block for
-          // now. Additionally, we need to ensure that there are no accesses
-          // to dest between the call and the memcpy. Accesses to src will be
-          // checked by performCallSlotOptzn().
-          // TODO: Support non-local call-slot optimization?
-          if (C->getParent() == M->getParent() &&
-              !accessedBetween(*AA, DestLoc, MD, MA)) {
-            // FIXME: Can we pass in either of dest/src alignment here instead
-            // of conservatively taking the minimum?
-            Align Alignment = std::min(M->getDestAlign().valueOrOne(),
-                                       M->getSourceAlign().valueOrOne());
-            if (performCallSlotOptzn(
-                    M, M, M->getDest(), M->getSource(),
-                    TypeSize::getFixed(CopySize->getZExtValue()), Alignment,
-                    C)) {
-              LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
-                                << "    call: " << *C << "\n"
-                                << "    memcpy: " << *M << "\n");
-              eraseInstruction(M);
-              ++NumMemCpyInstr;
-              return true;
-            }
+          // FIXME: Can we pass in either of dest/src alignment here instead
+          // of conservatively taking the minimum?
+          Align Alignment = std::min(M->getDestAlign().valueOrOne(),
+                                     M->getSourceAlign().valueOrOne());
+          if (performCallSlotOptzn(
+                  M, M, M->getDest(), M->getSource(),
+                  TypeSize::getFixed(CopySize->getZExtValue()), Alignment,
+                  C)) {
+            LLVM_DEBUG(dbgs() << "Performed call slot optimization:\n"
+                              << "    call: " << *C << "\n"
+                              << "    memcpy: " << *M << "\n");
+            eraseInstruction(M);
+            ++NumMemCpyInstr;
+            return true;
           }
         }
       }
