@@ -981,14 +981,27 @@ void VPlan::execute(VPTransformState *State) {
   }
   for (VPRecipeBase &R : Header->phis()) {
     // Skip phi-like recipes that generate their backedege values themselves.
-    // TODO: Model their backedge values explicitly.
-    if (isa<VPWidenPHIRecipe>(&R) || isa<VPWidenPointerInductionRecipe>(&R))
+    if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    // Set the correct incoming block for backedge values and move induction to
-    // latch.
-    if (auto *IndR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-      auto *Phi = cast<PHINode>(State->get(IndR, 0));
+    if (isa<VPWidenPointerInductionRecipe>(&R) ||
+        isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+      PHINode *Phi = nullptr;
+      if (isa<VPWidenIntOrFpInductionRecipe>(&R)) {
+        Phi = cast<PHINode>(State->get(R.getVPSingleValue(), 0));
+      } else {
+        auto *WidenPhi = cast<VPWidenPointerInductionRecipe>(&R);
+        // TODO: Split off the case that all users of a pointer phi are scalar
+        // from the VPWidenPointerInductionRecipe.
+        if (all_of(WidenPhi->users(), [WidenPhi](const VPUser *U) {
+              return cast<VPRecipeBase>(U)->usesScalars(WidenPhi);
+            }))
+          continue;
+
+        auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi, 0));
+        Phi = cast<PHINode>(GEP->getPointerOperand());
+      }
+
       Phi->setIncomingBlock(1, VectorLatchBB);
 
       // Move the last step to the end of the latch block. This ensures
