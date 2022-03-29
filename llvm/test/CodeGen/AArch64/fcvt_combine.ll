@@ -285,6 +285,7 @@ declare <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double>)
 declare <2 x i64> @llvm.fptosi.sat.v2i64.v2f64(<2 x double>)
 declare <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float>)
 declare <2 x i16> @llvm.fptosi.sat.v2i16.v2f32(<2 x float>)
+declare <4 x i16> @llvm.fptosi.sat.v4i16.v4f32(<4 x float>)
 declare <2 x i64> @llvm.fptosi.sat.v2i64.v2f32(<2 x float>)
 declare <3 x i32> @llvm.fptosi.sat.v3i32.v3f32(<3 x float>)
 declare <8 x i16> @llvm.fptosi.sat.v8i16.v8f16(<8 x half>)
@@ -326,8 +327,14 @@ define <2 x i64> @test3_sat(<2 x double> %d) {
 define <2 x i32> @test4_sat(<2 x double> %d) {
 ; CHECK-LABEL: test4_sat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d, #4
-; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    fmov v1.2d, #16.00000000
+; CHECK-NEXT:    fmul v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    fcvtzs w8, d0
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    fcvtzs w8, d1
+; CHECK-NEXT:    mov v0.s[1], w8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %mul.i = fmul <2 x double> %d, <double 16.000000e+00, double 16.000000e+00>
   %vcvt.i = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f64(<2 x double> %mul.i)
@@ -338,11 +345,27 @@ define <2 x i32> @test4_sat(<2 x double> %d) {
 define <2 x i16> @test5_sat(<2 x float> %f) {
 ; CHECK-LABEL: test5_sat:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2s, #127, msl #8
 ; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #4
+; CHECK-NEXT:    smin v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    mvni v1.2s, #127, msl #8
+; CHECK-NEXT:    smax v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = call <2 x i16> @llvm.fptosi.sat.v2i16.v2f32(<2 x float> %mul.i)
   ret <2 x i16> %vcvt.i
+}
+
+; Truncate float to i16
+define <4 x i16> @test5l_sat(<4 x float> %f) {
+; CHECK-LABEL: test5l_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #4
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
+  %mul.i = fmul <4 x float> %f, <float 16.000000e+00, float 16.000000e+00, float 16.000000e+00, float 16.000000e+00>
+  %vcvt.i = call <4 x i16> @llvm.fptosi.sat.v4i16.v4f32(<4 x float> %mul.i)
+  ret <4 x i16> %vcvt.i
 }
 
 ; Don't convert float to i64
@@ -389,8 +412,8 @@ define <2 x i32> @test8_sat(<2 x float> %f) {
 define <2 x i32> @test9_sat(<2 x float> %f) {
 ; CHECK-LABEL: test9_sat:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI26_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI26_0]
+; CHECK-NEXT:    adrp x8, .LCPI27_0
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
 ; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
 ; CHECK-NEXT:    ret
