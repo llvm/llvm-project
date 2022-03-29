@@ -151,11 +151,9 @@ Optional<Object> serializeAvailability(const AvailabilityInfo &Avail) {
   return Availbility;
 }
 
-/// Get the short language name string for interface language references.
-StringRef getLanguageName(const LangOptions &LangOpts) {
-  auto LanguageKind =
-      LangStandard::getLangStandardForKind(LangOpts.LangStd).getLanguage();
-  switch (LanguageKind) {
+/// Get the language name string for interface language references.
+StringRef getLanguageName(Language Lang) {
+  switch (Lang) {
   case Language::C:
     return "c";
   case Language::ObjC:
@@ -185,11 +183,10 @@ StringRef getLanguageName(const LangOptions &LangOpts) {
 ///
 /// The identifier property of a symbol contains the USR for precise and unique
 /// references, and the interface language name.
-Object serializeIdentifier(const APIRecord &Record,
-                           const LangOptions &LangOpts) {
+Object serializeIdentifier(const APIRecord &Record, Language Lang) {
   Object Identifier;
   Identifier["precise"] = Record.USR;
-  Identifier["interfaceLanguage"] = getLanguageName(LangOpts);
+  Identifier["interfaceLanguage"] = getLanguageName(Lang);
 
   return Identifier;
 }
@@ -335,10 +332,9 @@ Object serializeNames(const APIRecord &Record) {
 /// The Symbol Graph symbol kind property contains a shorthand \c identifier
 /// which is prefixed by the source language name, useful for tooling to parse
 /// the kind, and a \c displayName for rendering human-readable names.
-Object serializeSymbolKind(const APIRecord &Record,
-                           const LangOptions &LangOpts) {
-  auto AddLangPrefix = [&LangOpts](StringRef S) -> std::string {
-    return (getLanguageName(LangOpts) + "." + S).str();
+Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
+  auto AddLangPrefix = [&Lang](StringRef S) -> std::string {
+    return (getLanguageName(Lang) + "." + S).str();
   };
 
   Object Kind;
@@ -420,8 +416,8 @@ SymbolGraphSerializer::serializeAPIRecord(const APIRecord &Record) const {
 
   Object Obj;
   serializeObject(Obj, "identifier",
-                  serializeIdentifier(Record, API.getLangOpts()));
-  serializeObject(Obj, "kind", serializeSymbolKind(Record, API.getLangOpts()));
+                  serializeIdentifier(Record, API.getLanguage()));
+  serializeObject(Obj, "kind", serializeSymbolKind(Record, API.getLanguage()));
   serializeObject(Obj, "names", serializeNames(Record));
   serializeObject(
       Obj, "location",

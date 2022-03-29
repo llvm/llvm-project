@@ -56,7 +56,7 @@ def SPV_AssumeTrueKHROp : SPV_Op<"AssumeTrueKHR", []> {
 
 // -----
 
-def SPV_UndefOp : SPV_Op<"Undef", []> {
+def SPV_UndefOp : SPV_Op<"Undef", [NoSideEffect]> {
   let summary = "Make an intermediate object whose value is undefined.";
 
   let description = [{

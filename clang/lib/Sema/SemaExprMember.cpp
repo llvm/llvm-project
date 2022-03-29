@@ -1292,6 +1292,20 @@ static ExprResult LookupMemberExpr(Sema &S, LookupResult &R,
     }
   }
 
+  // If the base type is an atomic type, this access is undefined behavior per
+  // C11 6.5.2.3p5. Instead of giving a typecheck error, we'll warn the user
+  // about the UB and recover by converting the atomic lvalue into a non-atomic
+  // lvalue. Because this is inherently unsafe as an atomic operation, the
+  // warning defaults to an error.
+  if (const auto *ATy = BaseType->getAs<AtomicType>()) {
+    S.Diag(OpLoc, diag::warn_atomic_member_access);
+    BaseType = ATy->getValueType().getUnqualifiedType();
+    BaseExpr = ImplicitCastExpr::Create(
+        S.Context, IsArrow ? S.Context.getPointerType(BaseType) : BaseType,
+        CK_AtomicToNonAtomic, BaseExpr.get(), nullptr,
+        BaseExpr.get()->getValueKind(), FPOptionsOverride());
+  }
+
   // Handle field access to simple records.
   if (const RecordType *RTy = BaseType->getAs<RecordType>()) {
     TypoExpr *TE = nullptr;

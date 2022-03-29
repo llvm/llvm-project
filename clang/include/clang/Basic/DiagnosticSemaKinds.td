@@ -6439,6 +6439,9 @@ def err_atomic_specifier_bad_type
             "%select{incomplete |array |function |reference |atomic |qualified "
             "|sizeless ||integer }0type "
             "%1 %select{|||||||which is not trivially copyable|}0">;
+def warn_atomic_member_access : Warning<
+  "accessing a member of an atomic structure or union is undefined behavior">,
+  InGroup<DiagGroup<"atomic-access">>, DefaultError;
 
 // Expressions.
 def ext_sizeof_alignof_function_type : Extension<

@@ -172,10 +172,7 @@ int Foo() { int A[T]; return sizeof(T); }
 template <typename T>
 int Bar() { T A[5]; return sizeof(A[0]) / sizeof(T); }
 // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: suspicious usage of sizeof pointer 'sizeof(T)/sizeof(T)'
-template <__int128_t N> 
-bool Baz() { return sizeof(A) < N; }
-// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: suspicious comparison of 'sizeof(expr)' to a constant
-int Test3() { return Foo<42>() + Bar<char>() + Baz<-1>(); }
+int Test3() { return Foo<42>() + Bar<char>(); }
 
 static const char* kABC = "abc";
 static const wchar_t* kDEF = L"def";
@@ -288,6 +285,13 @@ int Test6() {
 
   return sum;
 }
+
+#ifdef __SIZEOF_INT128__
+template <__int128_t N> 
+bool Baz() { return sizeof(A) < N; }
+// CHECK-MESSAGES: :[[@LINE-1]]:21: warning: suspicious comparison of 'sizeof(expr)' to a constant
+bool Test7() { return Baz<-1>(); }
+#endif
 
 int ValidExpressions() {
   int A[] = {1, 2, 3, 4};
