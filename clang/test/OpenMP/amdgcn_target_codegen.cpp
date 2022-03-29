@@ -9,7 +9,7 @@
 #define N 1000
 
 int test_amdgcn_target_tid_threads() {
-// CHECK-LABEL: define weak amdgpu_kernel void @{{.*}}test_amdgcn_target_tid_threads
+// CHECK-LABEL: define weak_odr amdgpu_kernel void @{{.*}}test_amdgcn_target_tid_threads
 
   int arr[N];
 
@@ -23,7 +23,7 @@ int test_amdgcn_target_tid_threads() {
 }
 
 int test_amdgcn_target_tid_threads_simd() {
-// CHECK-LABEL: define weak amdgpu_kernel void @{{.*}}test_amdgcn_target_tid_threads_simd
+// CHECK-LABEL: define weak_odr amdgpu_kernel void @{{.*}}test_amdgcn_target_tid_threads_simd
 
   int arr[N];
 

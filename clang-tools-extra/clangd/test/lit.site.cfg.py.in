@@ -7,7 +7,7 @@ config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 # Support substitution of the tools and libs dirs with user parameters. This is
 # used when we can't determine the tool dir at configuration time.
-config.clang_tools_dir = lit_config.substitute("@CLANG_TOOLS_DIR@")
+config.clang_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
 

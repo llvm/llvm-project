@@ -13,6 +13,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
+#include "flang/Common/visit.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include <array>
 #include <functional>
@@ -602,24 +603,24 @@ public:
   bool IsSubprogram() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {
-    return std::visit(common::visitors{
-                          [](const SubprogramDetails &) { return true; },
-                          [](const SubprogramNameDetails &) { return true; },
-                          [&](const ProcEntityDetails &x) {
-                            return attrs_.test(Attr::INTRINSIC) ||
-                                x.HasExplicitInterface();
-                          },
-                          [](const ProcBindingDetails &x) {
-                            return x.symbol().HasExplicitInterface();
-                          },
-                          [](const UseDetails &x) {
-                            return x.symbol().HasExplicitInterface();
-                          },
-                          [](const HostAssocDetails &x) {
-                            return x.symbol().HasExplicitInterface();
-                          },
-                          [](const auto &) { return false; },
-                      },
+    return common::visit(common::visitors{
+                             [](const SubprogramDetails &) { return true; },
+                             [](const SubprogramNameDetails &) { return true; },
+                             [&](const ProcEntityDetails &x) {
+                               return attrs_.test(Attr::INTRINSIC) ||
+                                   x.HasExplicitInterface();
+                             },
+                             [](const ProcBindingDetails &x) {
+                               return x.symbol().HasExplicitInterface();
+                             },
+                             [](const UseDetails &x) {
+                               return x.symbol().HasExplicitInterface();
+                             },
+                             [](const HostAssocDetails &x) {
+                               return x.symbol().HasExplicitInterface();
+                             },
+                             [](const auto &) { return false; },
+                         },
         details_);
   }
 
@@ -627,7 +628,7 @@ public:
   bool operator!=(const Symbol &that) const { return !(*this == that); }
 
   int Rank() const {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const SubprogramDetails &sd) {
               return sd.isFunction() ? sd.result().Rank() : 0;
@@ -656,7 +657,7 @@ public:
   }
 
   int Corank() const {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [](const SubprogramDetails &sd) {
               return sd.isFunction() ? sd.result().Corank() : 0;
@@ -772,7 +773,7 @@ inline DeclTypeSpec *Symbol::GetType() {
       const_cast<const Symbol *>(this)->GetType());
 }
 inline const DeclTypeSpec *Symbol::GetType() const {
-  return std::visit(
+  return common::visit(
       common::visitors{
           [](const EntityDetails &x) { return x.type(); },
           [](const ObjectEntityDetails &x) { return x.type(); },

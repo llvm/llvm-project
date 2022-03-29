@@ -67,7 +67,7 @@ public:
 
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(const Expr<T> &expr) {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) { return FoldDesignator(x, elementNumber_++); },
         expr.u);
   }
@@ -98,7 +98,7 @@ private:
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(
       const Expr<T> &expr, ConstantSubscript which) {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, expr.u);
   }
 
@@ -110,14 +110,14 @@ private:
   template <typename T>
   std::optional<OffsetSymbol> FoldDesignator(
       const Designator<T> &designator, ConstantSubscript which) {
-    return std::visit(
+    return common::visit(
         [&](const auto &x) { return FoldDesignator(x, which); }, designator.u);
   }
   template <int KIND>
   std::optional<OffsetSymbol> FoldDesignator(
       const Designator<Type<TypeCategory::Character, KIND>> &designator,
       ConstantSubscript which) {
-    return std::visit(
+    return common::visit(
         common::visitors{
             [&](const Substring &ss) {
               if (const auto *dataRef{ss.GetParentIf<DataRef>()}) {
