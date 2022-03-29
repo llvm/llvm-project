@@ -10,11 +10,9 @@ define void @test_supernode_add(double* %Aarray, double* %Barray, double *%Carra
 ; ENABLED-NEXT:    [[IDXA0:%.*]] = getelementptr inbounds double, double* [[AARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, double* [[AARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXB0:%.*]] = getelementptr inbounds double, double* [[BARRAY:%.*]], i64 0
-; ENABLED-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, double* [[BARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXC0:%.*]] = getelementptr inbounds double, double* [[CARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXC1:%.*]] = getelementptr inbounds double, double* [[CARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXS0:%.*]] = getelementptr inbounds double, double* [[SARRAY:%.*]], i64 0
-; ENABLED-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, double* [[SARRAY]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, double* [[IDXA0]], align 8
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, double* [[IDXA1]], align 8
 ; ENABLED-NEXT:    [[TMP0:%.*]] = bitcast double* [[IDXB0]] to <2 x double>*
@@ -69,11 +67,9 @@ define void @test_supernode_addsub(double* %Aarray, double* %Barray, double *%Ca
 ; ENABLED-NEXT:    [[IDXA0:%.*]] = getelementptr inbounds double, double* [[AARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, double* [[AARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXB0:%.*]] = getelementptr inbounds double, double* [[BARRAY:%.*]], i64 0
-; ENABLED-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, double* [[BARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXC0:%.*]] = getelementptr inbounds double, double* [[CARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXC1:%.*]] = getelementptr inbounds double, double* [[CARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXS0:%.*]] = getelementptr inbounds double, double* [[SARRAY:%.*]], i64 0
-; ENABLED-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, double* [[SARRAY]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, double* [[IDXA0]], align 8
 ; ENABLED-NEXT:    [[A1:%.*]] = load double, double* [[IDXA1]], align 8
 ; ENABLED-NEXT:    [[TMP0:%.*]] = bitcast double* [[IDXB0]] to <2 x double>*
@@ -208,13 +204,11 @@ define void @supernode_scheduling(double* %Aarray, double* %Barray, double *%Car
 ; ENABLED-LABEL: @supernode_scheduling(
 ; ENABLED-NEXT:  entry:
 ; ENABLED-NEXT:    [[IDXA0:%.*]] = getelementptr inbounds double, double* [[AARRAY:%.*]], i64 0
-; ENABLED-NEXT:    [[IDXA1:%.*]] = getelementptr inbounds double, double* [[AARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXB0:%.*]] = getelementptr inbounds double, double* [[BARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, double* [[BARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXC:%.*]] = getelementptr inbounds double, double* [[CARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXD:%.*]] = getelementptr inbounds double, double* [[DARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXS0:%.*]] = getelementptr inbounds double, double* [[SARRAY:%.*]], i64 0
-; ENABLED-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, double* [[SARRAY]], i64 1
 ; ENABLED-NEXT:    [[C:%.*]] = load double, double* [[IDXC]], align 8
 ; ENABLED-NEXT:    [[B0:%.*]] = load double, double* [[IDXB0]], align 8
 ; ENABLED-NEXT:    [[TMP0:%.*]] = bitcast double* [[IDXA0]] to <2 x double>*
@@ -283,7 +277,6 @@ define void @supernode_scheduling_cross_block(double* %Aarray, double* %Barray, 
 ; ENABLED-NEXT:    [[IDXB0:%.*]] = getelementptr inbounds double, double* [[BARRAY:%.*]], i64 0
 ; ENABLED-NEXT:    [[IDXB1:%.*]] = getelementptr inbounds double, double* [[BARRAY]], i64 1
 ; ENABLED-NEXT:    [[IDXS0:%.*]] = getelementptr inbounds double, double* [[SARRAY:%.*]], i64 0
-; ENABLED-NEXT:    [[IDXS1:%.*]] = getelementptr inbounds double, double* [[SARRAY]], i64 1
 ; ENABLED-NEXT:    [[A0:%.*]] = load double, double* [[IDXA0]], align 8
 ; ENABLED-NEXT:    [[B1:%.*]] = load double, double* [[IDXB1]], align 8
 ; ENABLED-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
