@@ -34,6 +34,28 @@ public:
 };
 } // namespace
 
+namespace {
+// Make sure the node matchers provide constructor parameters. This is a
+// compilation test.
+template <typename NT> struct Ctor {
+  template <typename... Args> void operator()(Args &&...args) {
+    auto _ = NT(std::forward<Args>(args)...);
+  }
+};
+
+template <typename NT> void Visit(const NT *Node) { Node->match(Ctor<NT>{}); }
+#define NOMATCHER(X)                                                           \
+  template <> void Visit<itanium_demangle::X>(const itanium_demangle::X *) {}
+// Some nodes have no match member.
+NOMATCHER(ForwardTemplateReference)
+#undef NOMATCHER
+
+void __attribute__((used)) Visitor() {
+#define NODE(X) Visit(static_cast<const itanium_demangle::X *>(nullptr));
+#include "llvm/Demangle/ItaniumNodes.def"
+}
+} // namespace
+
 TEST(ItaniumDemangle, MethodOverride) {
   struct TestParser : AbstractManglingParser<TestParser, TestAllocator> {
     std::vector<char> Types;
