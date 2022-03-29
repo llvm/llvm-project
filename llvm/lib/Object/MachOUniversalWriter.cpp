@@ -213,7 +213,7 @@ Expected<Slice> Slice::create(const Archive &A, LLVMContext *LLVMCtx) {
             .c_str());
 
   if (MFO) {
-    Slice ArchiveSlice(*(MFO.get()), MFO->is64Bit() ? 3 : 2);
+    Slice ArchiveSlice(*(MFO), MFO->is64Bit() ? 3 : 2);
     ArchiveSlice.B = &A;
     return ArchiveSlice;
   }

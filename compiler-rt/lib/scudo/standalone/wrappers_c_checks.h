@@ -47,9 +47,12 @@ inline bool checkPosixMemalignAlignment(uptr Alignment) {
 // costly division.
 inline bool checkForCallocOverflow(uptr Size, uptr N, uptr *Product) {
 #if __has_builtin(__builtin_umull_overflow) && (SCUDO_WORDSIZE == 64U)
-  return __builtin_umull_overflow(Size, N, Product);
+  return __builtin_umull_overflow(Size, N,
+                                  reinterpret_cast<unsigned long *>(Product));
 #elif __has_builtin(__builtin_umul_overflow) && (SCUDO_WORDSIZE == 32U)
-  return __builtin_umul_overflow(Size, N, Product);
+  // On, e.g. armv7, uptr/uintptr_t may be defined as unsigned long
+  return __builtin_umul_overflow(Size, N,
+                                 reinterpret_cast<unsigned int *>(Product));
 #else
   *Product = Size * N;
   if (!Size)

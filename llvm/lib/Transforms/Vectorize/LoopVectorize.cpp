@@ -9534,16 +9534,14 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
     LastInduction->setDebugLoc(EntryVal->getDebugLoc());
   }
 
-  // Move the last step to the end of the latch block. This ensures consistent
-  // placement of all induction updates.
-  auto *LoopVectorLatch =
-      State.LI->getLoopFor(State.CFG.PrevBB)->getLoopLatch();
-  auto *Br = cast<BranchInst>(LoopVectorLatch->getTerminator());
-  LastInduction->moveBefore(Br);
   LastInduction->setName("vec.ind.next");
-
   VecInd->addIncoming(SteppedStart, State.CFG.VectorPreHeader);
-  VecInd->addIncoming(LastInduction, LoopVectorLatch);
+  // Add induction update using an incorrect block temporarily. The phi node
+  // will be fixed after VPlan execution. Note that at this point the latch
+  // block cannot be used, as it does not exist yet.
+  // TODO: Model increment value in VPlan, by turning the recipe into a
+  // multi-def and a subclass of VPHeaderPHIRecipe.
+  VecInd->addIncoming(LastInduction, State.CFG.VectorPreHeader);
 }
 
 void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {

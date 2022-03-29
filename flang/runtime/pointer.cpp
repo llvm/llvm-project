@@ -141,7 +141,7 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, pointer.Destroy(true), errMsg, hasStat);
+  return ReturnError(terminator, pointer.Destroy(true, true), errMsg, hasStat);
 }
 
 bool RTNAME(PointerIsAssociated)(const Descriptor &pointer) {

@@ -4,8 +4,7 @@
 define i32 @foo(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR:%.*]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A1:%.*]], i32 0
@@ -52,10 +51,7 @@ entry:
 define i32 @foo1(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8) {
 ; CHECK-LABEL: @foo1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 1, i32 2, i32 3, i32 1, i32 1, i32 0, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A1:%.*]], i32 0
@@ -106,10 +102,7 @@ entry:
 define i32 @foo2(i32* nocapture readonly %arr, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8) {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[ARR:%.*]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[ARR]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[ARR:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <8 x i32> <i32 3, i32 2, i32 3, i32 0, i32 1, i32 0, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[A1:%.*]], i32 0

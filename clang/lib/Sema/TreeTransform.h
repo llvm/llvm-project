@@ -3386,10 +3386,11 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
-                                  SourceLocation BuiltinLoc,
+                                  QualType ResultTy, SourceLocation BuiltinLoc,
                                   SourceLocation RPLoc,
                                   DeclContext *ParentContext) {
-    return getSema().BuildSourceLocExpr(Kind, BuiltinLoc, RPLoc, ParentContext);
+    return getSema().BuildSourceLocExpr(Kind, ResultTy, BuiltinLoc, RPLoc,
+                                        ParentContext);
   }
 
   /// Build a new Objective-C boxed expression.
@@ -10513,9 +10514,7 @@ TreeTransform<Derived>::TransformCharacterLiteral(CharacterLiteral *E) {
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformUserDefinedLiteral(UserDefinedLiteral *E) {
-  if (FunctionDecl *FD = E->getDirectCallee())
-    SemaRef.MarkFunctionReferenced(E->getBeginLoc(), FD);
-  return SemaRef.MaybeBindToTemporary(E);
+  return getDerived().TransformCallExpr(E);
 }
 
 template<typename Derived>
@@ -11655,8 +11654,8 @@ ExprResult TreeTransform<Derived>::TransformSourceLocExpr(SourceLocExpr *E) {
   if (!getDerived().AlwaysRebuild() && !NeedRebuildFunc)
     return E;
 
-  return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getBeginLoc(),
-                                           E->getEndLoc(),
+  return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
+                                           E->getBeginLoc(), E->getEndLoc(),
                                            getSema().CurContext);
 }
 

@@ -1877,6 +1877,8 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
   PreprocessorOutputOpts<"RewriteIncludes">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>;
 
+defm directives_only : OptInCC1FFlag<"directives-only", "">;
+
 defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
   CodeGenOpts<"NullPointerIsValid">, DefaultTrue,
   NegFlag<SetTrue, [CC1Option], "Do not treat usage of null pointers as undefined behavior">,
@@ -4207,7 +4209,7 @@ def _serialize_diags : Separate<["-", "--"], "serialize-diagnostics">, Flags<[No
   HelpText<"Serialize compiler diagnostics to a file">;
 // We give --version different semantics from -version.
 def _version : Flag<["--"], "version">,
-  Flags<[CoreOption, FC1Option, FlangOption]>,
+  Flags<[CoreOption, FlangOption]>,
   HelpText<"Print version information">;
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;
@@ -5751,11 +5753,16 @@ def aligned_alloc_unavailable : Flag<["-"], "faligned-alloc-unavailable">,
 // Language Options
 //===----------------------------------------------------------------------===//
 
-let Flags = [CC1Option, CC1AsOption, NoDriverOption] in {
+let Flags = [CC1Option, CC1AsOption, FC1Option, NoDriverOption] in {
 
 def version : Flag<["-"], "version">,
   HelpText<"Print the compiler version">,
   MarshallingInfoFlag<FrontendOpts<"ShowVersion">>;
+
+} // let Flags = [CC1Option, CC1AsOption, FC1Option, NoDriverOption]
+
+let Flags = [CC1Option, CC1AsOption, NoDriverOption] in {
+
 def main_file_name : Separate<["-"], "main-file-name">,
   HelpText<"Main file name to use for debug info and source if missing">,
   MarshallingInfoString<CodeGenOpts<"MainFileName">>;

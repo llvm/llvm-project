@@ -209,6 +209,36 @@ LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
 LANGSTANDARD(hip, "hip", HIP, "HIP",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
 
+// HLSL
+LANGSTANDARD(hlsl, "hlsl",
+             HLSL, "High Level Shader Language",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2015, "hlsl2015",
+             HLSL, "High Level Shader Language 2015",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2016, "hlsl2016",
+             HLSL, "High Level Shader Language 2016",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2017, "hlsl2017",
+             HLSL, "High Level Shader Language 2017",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2018, "hlsl2018",
+             HLSL, "High Level Shader Language 2018",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl2021, "hlsl2021",
+             HLSL, "High Level Shader Language 2021",
+             LineComment | HLSL | CPlusPlus )
+
+LANGSTANDARD(hlsl202x, "hlsl202x",
+             HLSL, "High Level Shader Language 202x",
+             LineComment | HLSL | CPlusPlus | CPlusPlus11)
+
+
 #undef LANGSTANDARD
 #undef LANGSTANDARD_ALIAS
 #undef LANGSTANDARD_ALIAS_DEPR

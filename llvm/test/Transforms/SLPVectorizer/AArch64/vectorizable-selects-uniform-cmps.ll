@@ -193,14 +193,7 @@ entry:
 define void @select_uniform_ugt_8xi8(i8* %ptr, i8 %x) {
 ; CHECK-LABEL: @select_uniform_ugt_8xi8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i8 1
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 2
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 3
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 4
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 5
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 6
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 7
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[PTR]] to <8 x i8>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[PTR:%.*]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <8 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[X:%.*]], i32 0
@@ -263,14 +256,7 @@ entry:
 define void @select_uniform_ugt_16xi8(i8* %ptr, i8 %x) {
 ; CHECK-LABEL: @select_uniform_ugt_16xi8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, i8* [[PTR:%.*]], i8 1
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 2
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 3
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 4
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 5
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 6
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i8, i8* [[PTR]], i8 7
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[PTR]] to <8 x i8>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[PTR:%.*]] to <8 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, <8 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <8 x i8> [[TMP1]], <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i8> poison, i8 [[X:%.*]], i32 0
@@ -425,10 +411,7 @@ entry:
 define void @select_uniform_ugt_4xi16(i16* %ptr, i16 %x) {
 ; CHECK-LABEL: @select_uniform_ugt_4xi16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i16 1
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 2
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[PTR]] to <4 x i16>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[PTR:%.*]] to <4 x i16>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, <4 x i16>* [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[X:%.*]], i32 0
@@ -468,14 +451,7 @@ entry:
 define void @select_uniform_ult_8xi16(i16* %ptr, i16 %x) {
 ; CHECK-LABEL: @select_uniform_ult_8xi16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i16 1
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 2
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 3
-; CHECK-NEXT:    [[GEP_4:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 4
-; CHECK-NEXT:    [[GEP_5:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 5
-; CHECK-NEXT:    [[GEP_6:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 6
-; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i16 7
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[PTR]] to <8 x i16>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i16* [[PTR:%.*]] to <8 x i16>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <8 x i16> [[TMP1]], <i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383, i16 16383>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> poison, i16 [[X:%.*]], i32 0
@@ -538,8 +514,7 @@ entry:
 define void @select_uniform_eq_2xi32(i32* %ptr, i32 %x) {
 ; CHECK-LABEL: @select_uniform_eq_2xi32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR]] to <2 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR:%.*]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 16383, i32 16383>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
@@ -567,10 +542,7 @@ entry:
 define void @select_uniform_eq_4xi32(i32* %ptr, i32 %x) {
 ; CHECK-LABEL: @select_uniform_eq_4xi32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i32 1
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 2
-; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i32 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[PTR:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[TMP1]], <i32 16383, i32 16383, i32 16383, i32 16383>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[X:%.*]], i32 0
@@ -609,8 +581,7 @@ entry:
 define void @select_uniform_ne_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-LABEL: @select_uniform_ne_2xi64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, i64* [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64* [[PTR:%.*]] to <2 x i64>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], <i64 16383, i64 16383>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0

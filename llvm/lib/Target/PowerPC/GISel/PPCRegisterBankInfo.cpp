@@ -23,5 +23,4 @@
 
 using namespace llvm;
 
-PPCRegisterBankInfo::PPCRegisterBankInfo(const TargetRegisterInfo &TRI)
-    : PPCGenRegisterBankInfo() {}
+PPCRegisterBankInfo::PPCRegisterBankInfo(const TargetRegisterInfo &TRI) {}

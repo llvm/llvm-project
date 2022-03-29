@@ -13,6 +13,7 @@
 #include "CSKYTargetMachine.h"
 #include "CSKY.h"
 #include "CSKYSubtarget.h"
+#include "CSKYTargetObjectFile.h"
 #include "TargetInfo/CSKYTargetInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
@@ -53,7 +54,7 @@ CSKYTargetMachine::CSKYTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         RM.getValueOr(Reloc::Static),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<CSKYELFTargetObjectFile>()) {
   initAsmInfo();
 }
 

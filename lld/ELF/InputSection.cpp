@@ -1410,26 +1410,17 @@ void MergeInputSection::splitIntoPieces() {
     splitNonStrings(data(), entsize);
 }
 
-SectionPiece *MergeInputSection::getSectionPiece(uint64_t offset) {
-  if (this->rawData.size() <= offset)
+SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
+  if (rawData.size() <= offset)
     fatal(toString(this) + ": offset is outside the section");
-
-  // If Offset is not at beginning of a section piece, it is not in the map.
-  // In that case we need to  do a binary search of the original section piece vector.
-  auto it = partition_point(
-      pieces, [=](SectionPiece p) { return p.inputOff <= offset; });
-  return &it[-1];
+  return partition_point(
+      pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
 }
 
-// Returns the offset in an output section for a given input offset.
-// Because contents of a mergeable section is not contiguous in output,
-// it is not just an addition to a base output offset.
+// Return the offset in an output section for a given input offset.
 uint64_t MergeInputSection::getParentOffset(uint64_t offset) const {
-  // If Offset is not at beginning of a section piece, it is not in the map.
-  // In that case we need to search from the original section piece vector.
-  const SectionPiece &piece = *getSectionPiece(offset);
-  uint64_t addend = offset - piece.inputOff;
-  return piece.outputOff + addend;
+  const SectionPiece &piece = getSectionPiece(offset);
+  return piece.outputOff + (offset - piece.inputOff);
 }
 
 template InputSection::InputSection(ObjFile<ELF32LE> &, const ELF32LE::Shdr &,

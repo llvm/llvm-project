@@ -12,13 +12,16 @@
 #ifndef LLVM_TRANSFORMS_UTILS_MEMORYTAGGINGSUPPORT_H
 #define LLVM_TRANSFORMS_UTILS_MEMORYTAGGINGSUPPORT_H
 
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/PostDominators.h"
-#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 class DominatorTree;
+class DbgVariableIntrinsic;
+class IntrinsicInst;
+class PostDominatorTree;
 class AllocaInst;
 class Instruction;
 namespace memtag {

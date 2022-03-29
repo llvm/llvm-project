@@ -34,6 +34,7 @@
 // CHECK-AARCH64: "-fsanitize=shadow-call-stack"
 // CHECK-X86_64: "-fsanitize=safe-stack"
 // CHECK: "-stack-protector" "2"
+// CHECK-AARCH64: "-target-feature" "+outline-atomics"
 // CHECK-NOT: "-fcommon"
 // CHECK: {{.*}}ld.lld{{.*}}" "-z" "max-page-size=4096" "-z" "now" "-z" "rodynamic" "-z" "separate-loadable-segments" "-z" "rel" "--pack-dyn-relocs=relr"
 // CHECK: "--sysroot=[[SYSROOT]]"
@@ -73,7 +74,7 @@
 // CHECK-RELOCATABLE-NOT: "--build-id"
 // CHECK-RELOCATABLE: "-r"
 // CHECK-RELOCATABLE-NOT: "-l
-// CHECK-RELOCATABLE-NOT: crt{{[^.]+}}.o
+// CHECK-RELOCATABLE-NOT: crt{{[^./]+}}.o
 
 // RUN: %clang %s -### --target=x86_64-unknown-fuchsia -nodefaultlibs -fuse-ld=lld 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \

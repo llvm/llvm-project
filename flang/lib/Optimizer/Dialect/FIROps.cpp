@@ -1724,17 +1724,6 @@ void IterWhileOp::print(mlir::OpAsmPrinter &p) {
 
 mlir::Region &fir::IterWhileOp::getLoopBody() { return getRegion(); }
 
-bool fir::IterWhileOp::isDefinedOutsideOfLoop(mlir::Value value) {
-  return !getRegion().isAncestor(value.getParentRegion());
-}
-
-mlir::LogicalResult
-fir::IterWhileOp::moveOutOfLoop(llvm::ArrayRef<mlir::Operation *> ops) {
-  for (auto *op : ops)
-    op->moveBefore(*this);
-  return success();
-}
-
 mlir::BlockArgument fir::IterWhileOp::iterArgToBlockArg(mlir::Value iterArg) {
   for (auto i : llvm::enumerate(getInitArgs()))
     if (iterArg == i.value())
@@ -2021,17 +2010,6 @@ void DoLoopOp::print(mlir::OpAsmPrinter &p) {
 }
 
 mlir::Region &fir::DoLoopOp::getLoopBody() { return getRegion(); }
-
-bool fir::DoLoopOp::isDefinedOutsideOfLoop(mlir::Value value) {
-  return !getRegion().isAncestor(value.getParentRegion());
-}
-
-mlir::LogicalResult
-fir::DoLoopOp::moveOutOfLoop(llvm::ArrayRef<mlir::Operation *> ops) {
-  for (auto op : ops)
-    op->moveBefore(*this);
-  return success();
-}
 
 /// Translate a value passed as an iter_arg to the corresponding block
 /// argument in the body of the loop.

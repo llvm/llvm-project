@@ -44,7 +44,7 @@ static LogicalResult replaceTransferOpWithMubuf(
     Type &vecTy, Value &dwordConfig, Value &vindex, Value &offsetSizeInBytes,
     Value &glc, Value &slc) {
   auto adaptor = TransferWriteOpAdaptor(operands, xferOp->getAttrDictionary());
-  rewriter.replaceOpWithNewOp<ROCDL::MubufStoreOp>(xferOp, adaptor.vector(),
+  rewriter.replaceOpWithNewOp<ROCDL::MubufStoreOp>(xferOp, adaptor.getVector(),
                                                    dwordConfig, vindex,
                                                    offsetSizeInBytes, glc, slc);
   return success();
@@ -68,10 +68,10 @@ public:
       return failure();
 
     if (xferOp.getVectorType().getRank() > 1 ||
-        llvm::size(xferOp.indices()) == 0)
+        llvm::size(xferOp.getIndices()) == 0)
       return failure();
 
-    if (!xferOp.permutation_map().isMinorIdentity())
+    if (!xferOp.getPermutationMap().isMinorIdentity())
       return failure();
 
     // Have it handled in vector->llvm conversion pass.
@@ -105,7 +105,7 @@ public:
     // indices, so no need to calculate offset size in bytes again in
     // the MUBUF instruction.
     Value dataPtr = this->getStridedElementPtr(
-        loc, memRefType, adaptor.source(), adaptor.indices(), rewriter);
+        loc, memRefType, adaptor.getSource(), adaptor.getIndices(), rewriter);
 
     // 1. Create and fill a <4 x i32> dwordConfig with:
     //    1st two elements holding the address of dataPtr.

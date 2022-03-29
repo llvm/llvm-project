@@ -10,7 +10,6 @@
 #define FORTRAN_PARSER_PARSE_TREE_VISITOR_H_
 
 #include "parse-tree.h"
-#include "flang/Common/visit.h"
 #include <cstddef>
 #include <optional>
 #include <tuple>
@@ -134,14 +133,14 @@ void Walk(std::tuple<A...> &x, M &mutator) {
 template <typename V, typename... A>
 void Walk(const std::variant<A...> &x, V &visitor) {
   if (visitor.Pre(x)) {
-    common::visit([&](const auto &y) { Walk(y, visitor); }, x);
+    std::visit([&](const auto &y) { Walk(y, visitor); }, x);
     visitor.Post(x);
   }
 }
 template <typename M, typename... A>
 void Walk(std::variant<A...> &x, M &mutator) {
   if (mutator.Pre(x)) {
-    common::visit([&](auto &y) { Walk(y, mutator); }, x);
+    std::visit([&](auto &y) { Walk(y, mutator); }, x);
     mutator.Post(x);
   }
 }
