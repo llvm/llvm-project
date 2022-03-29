@@ -135,6 +135,7 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
       if (flags()->strict_init_order)               \
         StopInitOrderChecking();                    \
       CheckNoDeepBind(filename, flag);              \
+      PatchHsaRuntimeDlopenFlag(filename, flag);    \
       REAL(dlopen)(filename, flag);                 \
     })
 #  define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()

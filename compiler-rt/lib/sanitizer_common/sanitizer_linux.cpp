@@ -2253,6 +2253,22 @@ void CheckNoDeepBind(const char *filename, int flag) {
 #endif
 }
 
+#if SANITIZER_AMDGPU
+void PatchHsaRuntimeDlopenFlag(const char *filename, int &flag) {
+  if ((internal_strstr(filename, "libhsa-runtime64.so") ||
+       internal_strstr(filename, "libamdocl64.so")) &&
+     !(flag & RTLD_GLOBAL)) {
+    flag |= RTLD_GLOBAL;
+    if (Verbosity() >= 2) {
+      Printf(
+          "RTLD_GLOBAL flag on dlopen call forced on for %s due to AMDGPU "
+          "device sanitizer runtime requirements.\n",
+          filename);
+    }
+  }
+}
+#endif
+
 uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
                               uptr *largest_gap_found,
                               uptr *max_occupied_addr) {
