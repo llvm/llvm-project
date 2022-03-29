@@ -351,7 +351,7 @@ def IfOp : CIR_Op<"if",
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["IfOp", "ScopeOp"]>]> {
+                               ParentOneOf<["IfOp", "ScopeOp", "SwitchOp"]>]> {
   let summary = "termination operation for regions inside if, for, scope, etc";
   let description = [{
     "cir.yield" yields an SSA value from a CIR dialect op region and

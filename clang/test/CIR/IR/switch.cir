@@ -7,7 +7,7 @@ func.func @s0() {
       cir.return
     },
     case (equal, 3) {
-      cir.return
+      cir.yield
     }
   ]
   cir.return
