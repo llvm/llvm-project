@@ -13973,7 +13973,7 @@ static SDValue performFpToIntCombine(SDNode *N, SelectionDAG &DAG,
   if (N->getOpcode() == ISD::FP_TO_SINT_SAT ||
       N->getOpcode() == ISD::FP_TO_UINT_SAT) {
     EVT SatVT = cast<VTSDNode>(N->getOperand(1))->getVT();
-    if (SatVT.getScalarSizeInBits() != IntBits)
+    if (SatVT.getScalarSizeInBits() != IntBits || IntBits != FloatBits)
       return SDValue();
   }
 
