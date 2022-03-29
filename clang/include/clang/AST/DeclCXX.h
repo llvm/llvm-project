@@ -4221,7 +4221,8 @@ class UnnamedGlobalConstantDecl : public ValueDecl,
 
   void anchor() override;
 
-  UnnamedGlobalConstantDecl(DeclContext *DC, QualType T, const APValue &Val);
+  UnnamedGlobalConstantDecl(const ASTContext &C, DeclContext *DC, QualType T,
+                            const APValue &Val);
 
   static UnnamedGlobalConstantDecl *Create(const ASTContext &C, QualType T,
                                            const APValue &APVal);
