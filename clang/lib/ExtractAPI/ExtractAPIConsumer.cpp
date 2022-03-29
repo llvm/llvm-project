@@ -41,9 +41,8 @@ namespace {
 /// information.
 class ExtractAPIVisitor : public RecursiveASTVisitor<ExtractAPIVisitor> {
 public:
-  explicit ExtractAPIVisitor(ASTContext &Context)
-      : Context(Context),
-        API(Context.getTargetInfo().getTriple(), Context.getLangOpts()) {}
+  ExtractAPIVisitor(ASTContext &Context, Language Lang)
+      : Context(Context), API(Context.getTargetInfo().getTriple(), Lang) {}
 
   const APISet &getAPI() const { return API; }
 
@@ -309,9 +308,9 @@ private:
 
 class ExtractAPIConsumer : public ASTConsumer {
 public:
-  ExtractAPIConsumer(ASTContext &Context, StringRef ProductName,
+  ExtractAPIConsumer(ASTContext &Context, StringRef ProductName, Language Lang,
                      std::unique_ptr<raw_pwrite_stream> OS)
-      : Visitor(Context), ProductName(ProductName), OS(std::move(OS)) {}
+      : Visitor(Context, Lang), ProductName(ProductName), OS(std::move(OS)) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     // Use ExtractAPIVisitor to traverse symbol declarations in the context.
@@ -339,6 +338,7 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
   return std::make_unique<ExtractAPIConsumer>(
       CI.getASTContext(), CI.getInvocation().getFrontendOpts().ProductName,
+      CI.getFrontendOpts().Inputs.back().getKind().getLanguage(),
       std::move(OS));
 }
 
