@@ -1094,7 +1094,7 @@ class VOPBinOpClampPat<SDPatternOperator node, Instruction inst, ValueType vt> :
 >;
 
 //===----------------------------------------------------------------------===//
-// VOP3 Classes, Also created by VOP1,2,C
+// VOP3 Classes
 //===----------------------------------------------------------------------===//
 
 class getVOP3ModPat<VOPProfile P, SDPatternOperator node> {

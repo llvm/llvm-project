@@ -144,14 +144,12 @@ define <4 x i32> @vec128_i32_signed_reg_reg(<4 x i32> %a1, <4 x i32> %a2) nounwi
 ; AVX512VL-LABEL: vec128_i32_signed_reg_reg:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsd %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsrld $1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmulld %xmm3, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubd %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -313,14 +311,12 @@ define <4 x i32> @vec128_i32_unsigned_reg_reg(<4 x i32> %a1, <4 x i32> %a2) noun
 ; AVX512VL-LABEL: vec128_i32_unsigned_reg_reg:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpnleud %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminud %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxud %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsrld $1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmulld %xmm3, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubd %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -483,14 +479,12 @@ define <4 x i32> @vec128_i32_signed_mem_reg(<4 x i32>* %a1_addr, <4 x i32> %a2) 
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VL-NEXT:    vpcmpgtd %xmm0, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsd %xmm0, %xmm1, %xmm2
 ; AVX512VL-NEXT:    vpmaxsd %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    vpsubd %xmm2, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vpsrld $1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmulld %xmm3, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubd %xmm0, %xmm2, %xmm0 {%k1}
 ; AVX512VL-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -652,14 +646,12 @@ define <4 x i32> @vec128_i32_signed_reg_mem(<4 x i32> %a1, <4 x i32>* %a2_addr) 
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VL-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsd %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsrld $1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmulld %xmm3, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubd %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -829,14 +821,12 @@ define <4 x i32> @vec128_i32_signed_mem_mem(<4 x i32>* %a1_addr, <4 x i32>* %a2_
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX512VL-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [1,1,1,1]
-; AVX512VL-NEXT:    vmovdqa32 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsd %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubd %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpsrld $1, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmulld %xmm3, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubd %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -1049,22 +1039,13 @@ define <2 x i64> @vec128_i64_signed_reg_reg(<2 x i64> %a1, <2 x i64> %a2) nounwi
 ; AVX512VL-LABEL: vec128_i64_signed_reg_reg:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1]
-; AVX512VL-NEXT:    vmovdqa64 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsq %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxsq %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm2
-; AVX512VL-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX512VL-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX512VL-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
-; AVX512VL-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubq %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i64_signed_reg_reg:
@@ -1281,22 +1262,13 @@ define <2 x i64> @vec128_i64_unsigned_reg_reg(<2 x i64> %a1, <2 x i64> %a2) noun
 ; AVX512VL-LABEL: vec128_i64_unsigned_reg_reg:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1]
-; AVX512VL-NEXT:    vmovdqa64 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminuq %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxuq %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm2
-; AVX512VL-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX512VL-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX512VL-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
-; AVX512VL-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubq %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i64_unsigned_reg_reg:
@@ -1515,22 +1487,13 @@ define <2 x i64> @vec128_i64_signed_mem_reg(<2 x i64>* %a1_addr, <2 x i64> %a2) 
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VL-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1]
-; AVX512VL-NEXT:    vmovdqa64 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsq %xmm0, %xmm1, %xmm2
 ; AVX512VL-NEXT:    vpmaxsq %xmm0, %xmm1, %xmm0
 ; AVX512VL-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpsrlq $1, %xmm0, %xmm2
-; AVX512VL-NEXT:    vpsrlq $33, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX512VL-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm4, %xmm0
-; AVX512VL-NEXT:    vpsllq $32, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsrlq $1, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubq %xmm0, %xmm2, %xmm0 {%k1}
 ; AVX512VL-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i64_signed_mem_reg:
@@ -1747,22 +1710,13 @@ define <2 x i64> @vec128_i64_signed_reg_mem(<2 x i64> %a1, <2 x i64>* %a2_addr) 
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VL-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1]
-; AVX512VL-NEXT:    vmovdqa64 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsq %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxsq %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm2
-; AVX512VL-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX512VL-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX512VL-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
-; AVX512VL-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubq %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i64_signed_reg_mem:
@@ -1985,22 +1939,13 @@ define <2 x i64> @vec128_i64_signed_mem_mem(<2 x i64>* %a1_addr, <2 x i64>* %a2_
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX512VL-NEXT:    vpcmpgtq %xmm1, %xmm0, %k1
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1]
-; AVX512VL-NEXT:    vmovdqa64 %xmm2, %xmm3 {%k1}
 ; AVX512VL-NEXT:    vpminsq %xmm1, %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmaxsq %xmm1, %xmm0, %xmm1
 ; AVX512VL-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm2
-; AVX512VL-NEXT:    vpsrlq $33, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpsrlq $32, %xmm3, %xmm4
-; AVX512VL-NEXT:    vpmuludq %xmm4, %xmm2, %xmm4
-; AVX512VL-NEXT:    vpaddq %xmm1, %xmm4, %xmm1
-; AVX512VL-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX512VL-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsrlq $1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubq %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VL-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
-; AVX512VL-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i64_signed_mem_mem:
@@ -2109,13 +2054,13 @@ define <8 x i16> @vec128_i16_signed_reg_reg(<8 x i16> %a1, <8 x i16> %a2) nounwi
 ;
 ; AVX512VL-FALLBACK-LABEL: vec128_i16_signed_reg_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm1, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm3, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
@@ -2139,14 +2084,12 @@ define <8 x i16> @vec128_i16_signed_reg_reg(<8 x i16> %a1, <8 x i16> %a2) nounwi
 ; AVX512VLBW-LABEL: vec128_i16_signed_reg_reg:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpcmpgtw %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu16 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsw %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmullw %xmm3, %xmm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubw %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %t3 = icmp sgt <8 x i16> %a1, %a2 ; signed
@@ -2252,13 +2195,13 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 ; AVX512VL-FALLBACK-LABEL: vec128_i16_unsigned_reg_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $190, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm4
 ; AVX512VL-FALLBACK-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmullw %xmm4, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
@@ -2282,14 +2225,12 @@ define <8 x i16> @vec128_i16_unsigned_reg_reg(<8 x i16> %a1, <8 x i16> %a2) noun
 ; AVX512VLBW-LABEL: vec128_i16_unsigned_reg_reg:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpcmpnleuw %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu16 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxuw %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmullw %xmm3, %xmm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubw %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %t3 = icmp ugt <8 x i16> %a1, %a2
@@ -2375,13 +2316,13 @@ define <8 x i16> @vec128_i16_signed_mem_reg(<8 x i16>* %a1_addr, <8 x i16> %a2) 
 ; AVX512VL-FALLBACK-LABEL: vec128_i16_signed_mem_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm0, %xmm1, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm0, %xmm1, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm3, %xmm0, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
+; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm0, %xmm1, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm0, %xmm1, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm0, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm0, %xmm2, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
@@ -2406,14 +2347,12 @@ define <8 x i16> @vec128_i16_signed_mem_reg(<8 x i16>* %a1_addr, <8 x i16> %a2) 
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VLBW-NEXT:    vpcmpgtw %xmm0, %xmm1, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu16 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsw %xmm0, %xmm1, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX512VLBW-NEXT:    vpmullw %xmm3, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubw %xmm0, %xmm2, %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %a1 = load <8 x i16>, <8 x i16>* %a1_addr
@@ -2498,13 +2437,13 @@ define <8 x i16> @vec128_i16_signed_reg_mem(<8 x i16> %a1, <8 x i16>* %a2_addr) 
 ; AVX512VL-FALLBACK-LABEL: vec128_i16_signed_reg_mem:
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm1, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm3, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
@@ -2529,14 +2468,12 @@ define <8 x i16> @vec128_i16_signed_reg_mem(<8 x i16> %a1, <8 x i16>* %a2_addr) 
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VLBW-NEXT:    vpcmpgtw %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu16 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsw %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmullw %xmm3, %xmm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubw %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %a2 = load <8 x i16>, <8 x i16>* %a2_addr
@@ -2627,13 +2564,13 @@ define <8 x i16> @vec128_i16_signed_mem_mem(<8 x i16>* %a1_addr, <8 x i16>* %a2_
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm1, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm3, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmullw %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminsw %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubw %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
@@ -2659,14 +2596,12 @@ define <8 x i16> @vec128_i16_signed_mem_mem(<8 x i16>* %a1_addr, <8 x i16>* %a2_
 ; AVX512VLBW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VLBW-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX512VLBW-NEXT:    vpcmpgtw %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu16 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsw %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsw %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubw %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmullw %xmm3, %xmm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubw %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddw %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %a1 = load <8 x i16>, <8 x i16>* %a1_addr
@@ -2865,20 +2800,15 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ;
 ; AVX512VL-FALLBACK-LABEL: vec128_i8_signed_reg_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm1, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vzeroupper
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i8_signed_reg_reg:
@@ -2905,20 +2835,14 @@ define <16 x i8> @vec128_i8_signed_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounwin
 ; AVX512VLBW-LABEL: vec128_i8_signed_reg_reg:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpcmpgtb %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu8 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsb %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
-; AVX512VLBW-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VLBW-NEXT:    vpmovwb %ymm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubb %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
   %t3 = icmp sgt <16 x i8> %a1, %a2 ; signed
   %t4 = select <16 x i1> %t3, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -3110,20 +3034,15 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; AVX512VL-FALLBACK-LABEL: vec128_i8_unsigned_reg_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vpminub %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpcmpeqd %xmm4, %xmm4, %xmm4
-; AVX512VL-FALLBACK-NEXT:    vpternlogq $190, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm4
 ; AVX512VL-FALLBACK-NEXT:    vpmaxub %xmm1, %xmm0, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpternlogq $15, %xmm2, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vzeroupper
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i8_unsigned_reg_reg:
@@ -3150,20 +3069,14 @@ define <16 x i8> @vec128_i8_unsigned_reg_reg(<16 x i8> %a1, <16 x i8> %a2) nounw
 ; AVX512VLBW-LABEL: vec128_i8_unsigned_reg_reg:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vpcmpnleub %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu8 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminub %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxub %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
-; AVX512VLBW-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VLBW-NEXT:    vpmovwb %ymm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubb %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
   %t3 = icmp ugt <16 x i8> %a1, %a2
   %t4 = select <16 x i1> %t3, <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
@@ -3366,20 +3279,15 @@ define <16 x i8> @vec128_i8_signed_mem_reg(<16 x i8>* %a1_addr, <16 x i8> %a2) n
 ; AVX512VL-FALLBACK-LABEL: vec128_i8_signed_mem_reg:
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm0, %xmm1, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm0, %xmm1, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm0, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
-; AVX512VL-FALLBACK-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovdb %zmm0, %xmm0
+; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm0, %xmm1, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm0, %xmm1, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm0, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm0, %xmm2, %xmm0
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vzeroupper
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i8_signed_mem_reg:
@@ -3407,20 +3315,14 @@ define <16 x i8> @vec128_i8_signed_mem_reg(<16 x i8>* %a1_addr, <16 x i8> %a2) n
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VLBW-NEXT:    vpcmpgtb %xmm0, %xmm1, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu8 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsb %xmm0, %xmm1, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsb %xmm0, %xmm1, %xmm0
 ; AVX512VLBW-NEXT:    vpsubb %xmm2, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
-; AVX512VLBW-NEXT:    vpmullw %ymm2, %ymm0, %ymm0
-; AVX512VLBW-NEXT:    vpmovwb %ymm0, %xmm0
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubb %xmm0, %xmm2, %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
   %a1 = load <16 x i8>, <16 x i8>* %a1_addr
   %t3 = icmp sgt <16 x i8> %a1, %a2 ; signed
@@ -3620,20 +3522,15 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, <16 x i8>* %a2_addr) n
 ; AVX512VL-FALLBACK-LABEL: vec128_i8_signed_reg_mem:
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm1, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vzeroupper
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i8_signed_reg_mem:
@@ -3661,20 +3558,14 @@ define <16 x i8> @vec128_i8_signed_reg_mem(<16 x i8> %a1, <16 x i8>* %a2_addr) n
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX512VLBW-NEXT:    vpcmpgtb %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu8 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsb %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
-; AVX512VLBW-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VLBW-NEXT:    vpmovwb %ymm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubb %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
   %a2 = load <16 x i8>, <16 x i8>* %a2_addr
   %t3 = icmp sgt <16 x i8> %a1, %a2 ; signed
@@ -3883,20 +3774,15 @@ define <16 x i8> @vec128_i8_signed_mem_mem(<16 x i8>* %a1_addr, <16 x i8>* %a2_a
 ; AVX512VL-FALLBACK:       # %bb.0:
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VL-FALLBACK-NEXT:    vmovdqa (%rsi), %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
-; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm1, %xmm0, %xmm3
-; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm3, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VL-FALLBACK-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
-; AVX512VL-FALLBACK-NEXT:    vpmovdb %zmm1, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpminsb %xmm1, %xmm0, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm3
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm2, %xmm3, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsrlw $1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm1
+; AVX512VL-FALLBACK-NEXT:    vpxor %xmm1, %xmm2, %xmm2
+; AVX512VL-FALLBACK-NEXT:    vpsubb %xmm1, %xmm2, %xmm1
 ; AVX512VL-FALLBACK-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VL-FALLBACK-NEXT:    vzeroupper
 ; AVX512VL-FALLBACK-NEXT:    retq
 ;
 ; AVX512BW-FALLBACK-LABEL: vec128_i8_signed_mem_mem:
@@ -3925,20 +3811,14 @@ define <16 x i8> @vec128_i8_signed_mem_mem(<16 x i8>* %a1_addr, <16 x i8>* %a2_a
 ; AVX512VLBW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VLBW-NEXT:    vmovdqa (%rsi), %xmm1
 ; AVX512VLBW-NEXT:    vpcmpgtb %xmm1, %xmm0, %k1
-; AVX512VLBW-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VLBW-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512VLBW-NEXT:    vmovdqu8 %xmm2, %xmm3 {%k1}
 ; AVX512VLBW-NEXT:    vpminsb %xmm1, %xmm0, %xmm2
 ; AVX512VLBW-NEXT:    vpmaxsb %xmm1, %xmm0, %xmm1
 ; AVX512VLBW-NEXT:    vpsubb %xmm2, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpsrlw $1, %xmm1, %xmm1
 ; AVX512VLBW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero,xmm1[8],zero,xmm1[9],zero,xmm1[10],zero,xmm1[11],zero,xmm1[12],zero,xmm1[13],zero,xmm1[14],zero,xmm1[15],zero
-; AVX512VLBW-NEXT:    vpmovzxbw {{.*#+}} ymm2 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
-; AVX512VLBW-NEXT:    vpmullw %ymm2, %ymm1, %ymm1
-; AVX512VLBW-NEXT:    vpmovwb %ymm1, %xmm1
+; AVX512VLBW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpsubb %xmm1, %xmm2, %xmm1 {%k1}
 ; AVX512VLBW-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
   %a1 = load <16 x i8>, <16 x i8>* %a1_addr
   %a2 = load <16 x i8>, <16 x i8>* %a2_addr

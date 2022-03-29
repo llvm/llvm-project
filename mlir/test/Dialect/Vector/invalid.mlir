@@ -944,6 +944,13 @@ func @constant_mask_with_zero_mask_dim_size() {
 
 // -----
 
+func @constant_mask_scalable_non_zero_dim_size() {
+  // expected-error@+1 {{expected mask dim sizes for scalable masks to be 0}}
+  %0 = vector.constant_mask [2] : vector<[8]xi1>
+}
+
+// -----
+
 func @print_no_result(%arg0 : f32) -> i32 {
   // expected-error@+1 {{cannot name an operation with no results}}
   %0 = vector.print %arg0 : f32

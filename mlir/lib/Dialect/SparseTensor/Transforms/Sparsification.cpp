@@ -552,7 +552,8 @@ static void genBuffers(Merger &merger, CodeGen &codegen,
 
 /// Constructs vector type.
 static VectorType vectorType(CodeGen &codegen, Type etp) {
-  return VectorType::get(codegen.curVecLength, etp);
+  unsigned numScalableDims = codegen.options.enableVLAVectorization;
+  return VectorType::get(codegen.curVecLength, etp, numScalableDims);
 }
 
 /// Constructs vector type from pointer.
@@ -1164,6 +1165,11 @@ static Operation *genFor(Merger &merger, CodeGen &codegen,
   Value lo = isSparse ? codegen.pidxs[tensor][idx] : codegen.loops[idx];
   Value hi = isSparse ? codegen.highs[tensor][idx] : codegen.sizes[idx];
   Value step = constantIndex(rewriter, loc, codegen.curVecLength);
+  if (isVector && codegen.options.enableVLAVectorization) {
+    Value vscale = rewriter.create<vector::VectorScaleOp>(
+        loc, IndexType::get(rewriter.getContext()));
+    step = rewriter.create<arith::MulIOp>(loc, vscale, step);
+  }
 
   // Emit a parallel loop.
   if (isParallel) {
