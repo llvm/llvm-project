@@ -37,3 +37,13 @@ func.func @yield0() {
   }
   cir.return
 }
+
+// -----
+
+func.func @yieldfallthrough() {
+  %0 = cir.cst(true) : !cir.bool
+  cir.if %0 {
+    cir.yield fallthrough // expected-error {{'cir.yield' op fallthrough only expected within 'cir.switch'}}
+  }
+  cir.return
+}

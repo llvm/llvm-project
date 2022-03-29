@@ -358,18 +358,40 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     terminates the regions. The semantics of how the values are yielded is
     defined by the parent operation.
 
-    Currently, there are not parents where "cir.yield" has any operands,
-    but it will be useful to represent lifetime extension in the future. In
-    that case the operands must match the parent operation's results.
+    Currently, there are not parents where `cir.yield` has any operands,
+    but it will be useful to represent lifetime extension in the future.
 
-    `cir.yield` be present whenever the region has more than one block.
+    When used to leave `cir.switch` regions there are two possible meanings:
+    1. Plain `cir.yield` has "breaking out of a switch" semantics.
+    2. `cir.yield fallthrough` means the next region in the case list should
+    be executed.
+
+    The `cir.yield` must be explicitly used whenever a region has more than
+    one block, or within `cir.switch` regions not `cir.return` terminated.
+
+    Example:
+    ```
+    cir.if %4 {
+      ...
+      cir.yield
+    }
+
+    cir.switch (%5) [
+      case (equal, 3) {
+        ...
+        cir.yield fallthrough
+      }, ...
+    ]
+    ```
   }];
 
-  let arguments = (ins Variadic<AnyType>:$results);
+  let arguments = (ins UnitAttr:$fallthrough, Variadic<AnyType>:$results);
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
-  let assemblyFormat =
-      [{  attr-dict ($results^ `:` type($results))? }];
+  let assemblyFormat = [{
+    (`fallthrough` $fallthrough^)? ($results^ `:` type($results))?
+    attr-dict
+  }];
 
   let hasVerifier = 1;
 }
@@ -552,9 +574,8 @@ def SwitchOp : CIR_Op<"switch",
     executing multiple regions of code. The operand to an switch is an integral
     value.
 
-    Each region contains only one block and only accepts cir.case instructions.
-    The op body must be terminated with cir.yield, though it's never printed or
-    needed for parsing.
+    Each region contains only one block and must be explicitly terminated with
+    a cir.yield operation.
 
     Examples:
 
@@ -562,7 +583,7 @@ def SwitchOp : CIR_Op<"switch",
     cir.switch (%b : i32) [
       case (#equal, 20) {
         ...
-        cir.yield #break
+        cir.yield // break semantics
       },
       case (#default) {
         ...
