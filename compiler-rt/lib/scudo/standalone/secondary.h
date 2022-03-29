@@ -459,7 +459,7 @@ public:
     }
   }
 
-  uptr canCache(uptr Size) { return Cache.canCache(Size); }
+  bool canCache(uptr Size) { return Cache.canCache(Size); }
 
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 
