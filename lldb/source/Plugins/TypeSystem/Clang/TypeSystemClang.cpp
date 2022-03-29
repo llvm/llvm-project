@@ -495,6 +495,9 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
     case clang::Language::HIP:
       LangStd = LangStandard::lang_hip;
       break;
+    case clang::Language::HLSL:
+      LangStd = LangStandard::lang_hlsl;
+      break;
     }
   }
 
