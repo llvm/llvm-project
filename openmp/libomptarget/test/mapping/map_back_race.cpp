@@ -1,4 +1,4 @@
-// RUN: %libomptarget-compile-run-and-check-generic
+// RUN: %libomptarget-compilexx-run-and-check-generic
 
 // Taken from https://github.com/llvm/llvm-project/issues/54216
 
