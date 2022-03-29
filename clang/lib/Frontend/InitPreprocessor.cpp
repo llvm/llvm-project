@@ -401,11 +401,6 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     uint32_t StageInteger = StageInteger =
         (uint32_t)TI.getTriple().getEnvironment() -
         (uint32_t)llvm::Triple::Pixel;
-    // TODO: When we add raytracing support we can clean this up
-    if (TI.getTriple().getEnvironment() == llvm::Triple::Mesh)
-      StageInteger = (uint32_t)ShaderStage::Mesh;
-    else if (TI.getTriple().getEnvironment() == llvm::Triple::Amplification)
-      StageInteger = (uint32_t)ShaderStage::Amplification;
 
     Builder.defineMacro("__SHADER_TARGET_STAGE", Twine(StageInteger));
     // Add target versions
