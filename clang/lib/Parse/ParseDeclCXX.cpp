@@ -4302,10 +4302,19 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
   ParsedAttr::Syntax Syntax =
       LO.CPlusPlus ? ParsedAttr::AS_CXX11 : ParsedAttr::AS_C2x;
 
+  // Try parsing microsoft attributes
+  if (getLangOpts().MicrosoftExt || getLangOpts().HLSL) {
+    if (hasAttribute(AttrSyntax::Microsoft, ScopeName, AttrName,
+                     getTargetInfo(), getLangOpts()))
+      Syntax = ParsedAttr::AS_Microsoft;
+  }
+
   // If the attribute isn't known, we will not attempt to parse any
   // arguments.
-  if (!hasAttribute(LO.CPlusPlus ? AttrSyntax::CXX : AttrSyntax::C, ScopeName,
+  if (Syntax != ParsedAttr::AS_Microsoft &&
+      !hasAttribute(LO.CPlusPlus ? AttrSyntax::CXX : AttrSyntax::C, ScopeName,
                     AttrName, getTargetInfo(), getLangOpts())) {
+    if (getLangOpts().MicrosoftExt || getLangOpts().HLSL) {}
     // Eat the left paren, then skip to the ending right paren.
     ConsumeParen();
     SkipUntil(tok::r_paren);
@@ -4688,8 +4697,17 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
         break;
       if (Tok.getIdentifierInfo()->getName() == "uuid")
         ParseMicrosoftUuidAttributeArgs(Attrs);
-      else
+      else {
+        IdentifierInfo *II = Tok.getIdentifierInfo();
+        SourceLocation NameLoc = Tok.getLocation();
         ConsumeToken();
+        if (Tok.is(tok::l_paren)) {
+          CachedTokens OpenMPTokens;
+          ParseCXX11AttributeArgs(II, NameLoc, Attrs, &EndLoc, nullptr,
+                                  SourceLocation(), OpenMPTokens);
+          ReplayOpenMPAttributeTokens(OpenMPTokens);
+        } // FIXME: handle attributes that don't have arguments
+      }
     }
 
     T.consumeClose();
