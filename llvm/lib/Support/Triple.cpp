@@ -275,6 +275,12 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Domain: return "domain";
   case Compute: return "compute";
   case Library: return "library";
+  case RayGeneration: return "raygeneration";
+  case Intersection: return "intersection";
+  case AnyHit: return "anyhit";
+  case ClosestHit: return "closesthit";
+  case Miss: return "miss";
+  case Callable: return "callable";
   case Mesh: return "mesh";
   case Amplification: return "amplification";
   }
@@ -608,6 +614,12 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
       .StartsWith("domain", Triple::Domain)
       .StartsWith("compute", Triple::Compute)
       .StartsWith("library", Triple::Library)
+      .StartsWith("raygeneration", Triple::RayGeneration)
+      .StartsWith("intersection", Triple::Intersection)
+      .StartsWith("anyhit", Triple::AnyHit)
+      .StartsWith("closesthit", Triple::ClosestHit)
+      .StartsWith("miss", Triple::Miss)
+      .StartsWith("callable", Triple::Callable)
       .StartsWith("mesh", Triple::Mesh)
       .StartsWith("amplification", Triple::Amplification)
       .Default(Triple::UnknownEnvironment);
@@ -1901,4 +1913,20 @@ static_assert(Triple::Domain - Triple::Pixel == 4,
 static_assert(Triple::Compute - Triple::Pixel == 5,
               "incorrect HLSL stage order");
 static_assert(Triple::Library - Triple::Pixel == 6,
+              "incorrect HLSL stage order");
+static_assert(Triple::RayGeneration - Triple::Pixel == 7,
+              "incorrect HLSL stage order");
+static_assert(Triple::Intersection - Triple::Pixel == 8,
+              "incorrect HLSL stage order");
+static_assert(Triple::AnyHit - Triple::Pixel == 9,
+              "incorrect HLSL stage order");
+static_assert(Triple::ClosestHit - Triple::Pixel == 10,
+              "incorrect HLSL stage order");
+static_assert(Triple::Miss - Triple::Pixel == 11,
+              "incorrect HLSL stage order");
+static_assert(Triple::Callable - Triple::Pixel == 12,
+              "incorrect HLSL stage order");
+static_assert(Triple::Mesh - Triple::Pixel == 13,
+              "incorrect HLSL stage order");
+static_assert(Triple::Amplification - Triple::Pixel == 14,
               "incorrect HLSL stage order");

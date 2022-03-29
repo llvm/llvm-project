@@ -662,6 +662,42 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::ShaderModel, T.getOS());
   EXPECT_EQ(Triple::Library, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-raygeneration");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::RayGeneration, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-intersection");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Intersection, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-anyhit");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::AnyHit, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-closesthit");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::ClosestHit, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-miss");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Miss, T.getEnvironment());
+
+  T = Triple("dxil-unknown-shadermodel-callable");
+  EXPECT_EQ(Triple::dxil, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ShaderModel, T.getOS());
+  EXPECT_EQ(Triple::Callable, T.getEnvironment());
   
   T = Triple("dxil-unknown-shadermodel-mesh");
   EXPECT_EQ(Triple::dxil, T.getArch());
