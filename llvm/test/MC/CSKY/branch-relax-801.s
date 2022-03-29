@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple=csky -mcpu=ck801 < %s \
+# RUN: llvm-mc -filetype=obj -triple=csky  < %s \
 # RUN:     | llvm-objdump --mattr=+e1 --no-show-raw-insn -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ-CK801 %s
 # RUN: llvm-mc -filetype=obj -triple=csky -mcpu=ck802 < %s \

@@ -413,6 +413,19 @@ def psrflag : Operand<i32>, ImmLeaf<i32, "return isShiftedUInt<5, 0>(Imm);"> {
   let PrintMethod = "printPSRFlag";
 }
 
+multiclass uimm8SRLXForm<SDNode opc> {
+  def _0: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 0) & 0xFF, SDLoc(N), MVT::i32);}]>;
+  def _8: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 8) & 0xFF, SDLoc(N), MVT::i32);}]>;
+  def _16: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 16) & 0xFF, SDLoc(N), MVT::i32);}]>;
+  def _24: SDNodeXForm<opc,
+    [{return CurDAG->getTargetConstant((N->getZExtValue() >> 24) & 0xFF, SDLoc(N), MVT::i32);}]>;
+}
+
+defm uimm8SRL : uimm8SRLXForm<imm>;
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
