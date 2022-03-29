@@ -1436,20 +1436,20 @@ def LLVM_UMaxOp : LLVM_BinarySameArgsIntrinsicOp<"umax">;
 def LLVM_UMinOp : LLVM_BinarySameArgsIntrinsicOp<"umin">;
 
 def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]> {
-  let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
+  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, Arg<LLVM_Type,"",[MemRead]>:$src, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
 }
 def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
-  let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
+  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, Arg<LLVM_Type,"",[MemRead]>:$src, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
 }
 def LLVM_MemmoveOp : LLVM_ZeroResultIntrOp<"memmove", [0, 1, 2]> {
-  let arguments = (ins LLVM_Type:$dst, LLVM_Type:$src, LLVM_Type:$len,
+  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, Arg<LLVM_Type,"",[MemRead]>:$src, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
 }
 
 def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2]> {
-  let arguments = (ins LLVM_Type:$dst, LLVM_Type:$val, LLVM_Type:$len,
+  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, LLVM_Type:$val, LLVM_Type:$len,
                    LLVM_Type:$isVolatile);
 }
 
@@ -1751,6 +1751,14 @@ def LLVM_masked_compressstore
 
 /// Create a call to vscale intrinsic.
 def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
+
+/// Create a call to stepvector intrinsic.
+def LLVM_StepVectorOp
+    : LLVM_IntrOp<"experimental.stepvector", [0], [], [NoSideEffect], 1> {
+  let arguments = (ins);
+  let results = (outs LLVM_Type:$res);
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
 
 // Atomic operations.
 //

@@ -34,6 +34,10 @@ extern StringSet<> KnownAssumptionStrings;
 /// Helper that allows to insert a new assumption string in the known assumption
 /// set by creating a (static) object.
 struct KnownAssumptionString {
+  KnownAssumptionString(const char *AssumptionStr)
+      : AssumptionStr(AssumptionStr) {
+    KnownAssumptionStrings.insert(AssumptionStr);
+  }
   KnownAssumptionString(StringRef AssumptionStr)
       : AssumptionStr(AssumptionStr) {
     KnownAssumptionStrings.insert(AssumptionStr);

@@ -463,6 +463,10 @@ namespace dr1467 {  // dr1467: 3.7 c++11
 #endif
 } // dr1467
 
+namespace dr1479 { // dr1479: yes
+  int operator"" _a(const char*, std::size_t = 0); // expected-error {{literal operator cannot have a default argument}}
+}
+
 namespace dr1490 {  // dr1490: 3.7 c++11
   // List-initialization from a string literal
 

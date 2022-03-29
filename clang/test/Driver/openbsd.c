@@ -38,7 +38,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-LD %s
 // CHECK-LD-R:     "-r"
 // CHECK-LD-R-NOT: "-l
-// CHECK-LD-R-NOT: crt{{[^.]+}}.o
+// CHECK-LD-R-NOT: crt{{[^./]+}}.o
 // CHECK-LD-S: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"
 // CHECK-LD-S: ld{{.*}}" "-e" "__start" "--eh-frame-hdr" "-Bdynamic" "-dynamic-linker" "{{.*}}ld.so" "-o" "a.out" "{{.*}}crt0.o" "{{.*}}crtbegin.o" "-L{{.*}}" "-s" "{{.*}}.o" "-lcompiler_rt" "-lc" "-lcompiler_rt" "{{.*}}crtend.o"
 // CHECK-LD-T: clang{{.*}}" "-cc1" "-triple" "i686-pc-openbsd"

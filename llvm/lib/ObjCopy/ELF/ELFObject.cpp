@@ -1907,9 +1907,9 @@ template <class ELFT> Error ELFBuilder<ELFT>::build(bool EnsureSymtab) {
   return readProgramHeaders(*HeadersFile);
 }
 
-Writer::~Writer() {}
+Writer::~Writer() = default;
 
-Reader::~Reader() {}
+Reader::~Reader() = default;
 
 Expected<std::unique_ptr<Object>>
 BinaryReader::create(bool /*EnsureSymtab*/) const {

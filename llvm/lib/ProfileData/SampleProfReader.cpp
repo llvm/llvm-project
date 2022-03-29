@@ -1828,7 +1828,7 @@ SampleProfileReaderItaniumRemapper::create(std::unique_ptr<MemoryBuffer> &B,
                                            SampleProfileReader &Reader,
                                            LLVMContext &C) {
   auto Remappings = std::make_unique<SymbolRemappingReader>();
-  if (Error E = Remappings->read(*B.get())) {
+  if (Error E = Remappings->read(*B)) {
     handleAllErrors(
         std::move(E), [&](const SymbolRemappingParseError &ParseError) {
           C.diagnose(DiagnosticInfoSampleProfile(B->getBufferIdentifier(),

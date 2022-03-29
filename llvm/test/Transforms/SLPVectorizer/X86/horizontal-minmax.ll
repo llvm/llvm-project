@@ -110,20 +110,20 @@ define i32 @maxi8_store_in(i32) {
 ; SSE-NEXT:    ret i32 [[TMP23]]
 ;
 ; AVX-LABEL: @maxi8_store_in(
-; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX-NEXT:    store i32 0, i32* @var, align 8
+; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; AVX-NEXT:    ret i32 [[TMP3]]
 ;
 ; AVX2-LABEL: @maxi8_store_in(
-; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX2-NEXT:    store i32 0, i32* @var, align 8
+; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; AVX2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; AVX2-NEXT:    ret i32 [[TMP3]]
 ;
 ; THRESH-LABEL: @maxi8_store_in(
-; THRESH-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; THRESH-NEXT:    store i32 0, i32* @var, align 8
+; THRESH-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* bitcast ([32 x i32]* @arr to <8 x i32>*), align 16
 ; THRESH-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; THRESH-NEXT:    ret i32 [[TMP3]]
 ;
@@ -1245,40 +1245,19 @@ define i32 @smax_intrinsic_rdx_v8i32(i32* %p0) {
 ; SSE-NEXT:    ret i32 [[M]]
 ;
 ; AVX-LABEL: @smax_intrinsic_rdx_v8i32(
-; AVX-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, i32* [[P0:%.*]], i64 1
-; AVX-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 2
-; AVX-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 3
-; AVX-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 4
-; AVX-NEXT:    [[P5:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 5
-; AVX-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 6
-; AVX-NEXT:    [[P7:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 7
-; AVX-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0]] to <8 x i32>*
+; AVX-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0:%.*]] to <8 x i32>*
 ; AVX-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* [[TMP1]], align 4
 ; AVX-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; AVX-NEXT:    ret i32 [[TMP3]]
 ;
 ; AVX2-LABEL: @smax_intrinsic_rdx_v8i32(
-; AVX2-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, i32* [[P0:%.*]], i64 1
-; AVX2-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 2
-; AVX2-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 3
-; AVX2-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 4
-; AVX2-NEXT:    [[P5:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 5
-; AVX2-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 6
-; AVX2-NEXT:    [[P7:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 7
-; AVX2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0]] to <8 x i32>*
+; AVX2-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0:%.*]] to <8 x i32>*
 ; AVX2-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* [[TMP1]], align 4
 ; AVX2-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; AVX2-NEXT:    ret i32 [[TMP3]]
 ;
 ; THRESH-LABEL: @smax_intrinsic_rdx_v8i32(
-; THRESH-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, i32* [[P0:%.*]], i64 1
-; THRESH-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 2
-; THRESH-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 3
-; THRESH-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 4
-; THRESH-NEXT:    [[P5:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 5
-; THRESH-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 6
-; THRESH-NEXT:    [[P7:%.*]] = getelementptr inbounds i32, i32* [[P0]], i64 7
-; THRESH-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0]] to <8 x i32>*
+; THRESH-NEXT:    [[TMP1:%.*]] = bitcast i32* [[P0:%.*]] to <8 x i32>*
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <8 x i32>, <8 x i32>* [[TMP1]], align 4
 ; THRESH-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP2]])
 ; THRESH-NEXT:    ret i32 [[TMP3]]
@@ -1310,14 +1289,7 @@ define i32 @smax_intrinsic_rdx_v8i32(i32* %p0) {
 
 define i16 @smin_intrinsic_rdx_v8i16(i16* %p0) {
 ; CHECK-LABEL: @smin_intrinsic_rdx_v8i16(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i16, i16* [[P0:%.*]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 3
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 4
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 5
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 6
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i16, i16* [[P0]], i64 7
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[P0]] to <8 x i16>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[P0:%.*]] to <8 x i16>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i16>, <8 x i16>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> [[TMP2]])
 ; CHECK-NEXT:    ret i16 [[TMP3]]
@@ -1362,10 +1334,7 @@ define i64 @umax_intrinsic_rdx_v4i64(i64* %p0) {
 ; DEFAULT-NEXT:    ret i64 [[M]]
 ;
 ; THRESH-LABEL: @umax_intrinsic_rdx_v4i64(
-; THRESH-NEXT:    [[P1:%.*]] = getelementptr inbounds i64, i64* [[P0:%.*]], i64 1
-; THRESH-NEXT:    [[P2:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 2
-; THRESH-NEXT:    [[P3:%.*]] = getelementptr inbounds i64, i64* [[P0]], i64 3
-; THRESH-NEXT:    [[TMP1:%.*]] = bitcast i64* [[P0]] to <4 x i64>*
+; THRESH-NEXT:    [[TMP1:%.*]] = bitcast i64* [[P0:%.*]] to <4 x i64>*
 ; THRESH-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* [[TMP1]], align 4
 ; THRESH-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[TMP2]])
 ; THRESH-NEXT:    ret i64 [[TMP3]]
@@ -1385,22 +1354,7 @@ define i64 @umax_intrinsic_rdx_v4i64(i64* %p0) {
 
 define i8 @umin_intrinsic_rdx_v16i8(i8* %p0) {
 ; CHECK-LABEL: @umin_intrinsic_rdx_v16i8(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, i8* [[P0:%.*]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 3
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 4
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 5
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 6
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 7
-; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 8
-; CHECK-NEXT:    [[P9:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 9
-; CHECK-NEXT:    [[PA:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 10
-; CHECK-NEXT:    [[PB:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 11
-; CHECK-NEXT:    [[PC:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 12
-; CHECK-NEXT:    [[PD:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 13
-; CHECK-NEXT:    [[PE:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 14
-; CHECK-NEXT:    [[PF:%.*]] = getelementptr inbounds i8, i8* [[P0]], i64 15
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[P0]] to <16 x i8>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[P0:%.*]] to <16 x i8>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i8 @llvm.vector.reduce.umin.v16i8(<16 x i8> [[TMP2]])
 ; CHECK-NEXT:    ret i8 [[TMP3]]

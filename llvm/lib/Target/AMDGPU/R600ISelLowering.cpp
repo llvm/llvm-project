@@ -247,12 +247,8 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   setSchedulingPreference(Sched::Source);
 
-  setTargetDAGCombine(ISD::FP_ROUND);
-  setTargetDAGCombine(ISD::FP_TO_SINT);
-  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::SELECT_CC);
-  setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::LOAD);
+  setTargetDAGCombine({ISD::FP_ROUND, ISD::FP_TO_SINT, ISD::EXTRACT_VECTOR_ELT,
+                       ISD::SELECT_CC, ISD::INSERT_VECTOR_ELT, ISD::LOAD});
 }
 
 static inline bool isEOP(MachineBasicBlock::iterator I) {

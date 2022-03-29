@@ -6,22 +6,13 @@
 define void @powof2mul_uniform(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* noalias nocapture readonly %c){
 ; CHECK-LABEL: @powof2mul_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], <i32 2, i32 2, i32 2, i32 2>
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -61,22 +52,13 @@ entry:
 define void @negpowof2mul_uniform(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* noalias nocapture readonly %c){
 ; CHECK-LABEL: @negpowof2mul_uniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], <i32 -2, i32 -2, i32 -2, i32 -2>
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -116,22 +98,13 @@ entry:
 define void @powof2mul_nonuniform(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* noalias nocapture readonly %c){
 ; CHECK-LABEL: @powof2mul_nonuniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], <i32 2, i32 4, i32 8, i32 16>
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -171,22 +144,13 @@ entry:
 define void @negpowof2mul_nonuniform(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* noalias nocapture readonly %c){
 ; CHECK-LABEL: @negpowof2mul_nonuniform(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i32, i32* [[C]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[C:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i32> [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i32> [[TMP4]], <i32 -2, i32 -4, i32 -8, i32 -16>
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 3
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[A:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -269,25 +233,19 @@ define void @PR51436(i64* nocapture %a) {
 ;
 ; AVX-LABEL: @PR51436(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 1
-; AVX-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 2
-; AVX-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 3
-; AVX-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 4
-; AVX-NEXT:    [[GEP5:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 5
-; AVX-NEXT:    [[GEP6:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 6
-; AVX-NEXT:    [[GEP7:%.*]] = getelementptr inbounds i64, i64* [[A]], i64 7
+; AVX-NEXT:    [[GEP4:%.*]] = getelementptr inbounds i64, i64* [[A:%.*]], i64 4
 ; AVX-NEXT:    [[TMP0:%.*]] = bitcast i64* [[A]] to <4 x i64>*
 ; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* [[TMP0]], align 8
-; AVX-NEXT:    [[TMP2:%.*]] = bitcast i64* [[GEP4]] to <4 x i64>*
-; AVX-NEXT:    [[TMP3:%.*]] = load <4 x i64>, <4 x i64>* [[TMP2]], align 8
-; AVX-NEXT:    [[TMP4:%.*]] = mul <4 x i64> [[TMP1]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
-; AVX-NEXT:    [[TMP5:%.*]] = mul <4 x i64> [[TMP3]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
-; AVX-NEXT:    [[TMP6:%.*]] = add <4 x i64> [[TMP4]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
-; AVX-NEXT:    [[TMP7:%.*]] = add <4 x i64> [[TMP5]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
-; AVX-NEXT:    [[TMP8:%.*]] = bitcast i64* [[A]] to <4 x i64>*
-; AVX-NEXT:    store <4 x i64> [[TMP6]], <4 x i64>* [[TMP8]], align 8
+; AVX-NEXT:    [[TMP2:%.*]] = mul <4 x i64> [[TMP1]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
+; AVX-NEXT:    [[TMP3:%.*]] = add <4 x i64> [[TMP2]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
+; AVX-NEXT:    [[TMP4:%.*]] = bitcast i64* [[A]] to <4 x i64>*
+; AVX-NEXT:    store <4 x i64> [[TMP3]], <4 x i64>* [[TMP4]], align 8
+; AVX-NEXT:    [[TMP5:%.*]] = bitcast i64* [[GEP4]] to <4 x i64>*
+; AVX-NEXT:    [[TMP6:%.*]] = load <4 x i64>, <4 x i64>* [[TMP5]], align 8
+; AVX-NEXT:    [[TMP7:%.*]] = mul <4 x i64> [[TMP6]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
+; AVX-NEXT:    [[TMP8:%.*]] = add <4 x i64> [[TMP7]], <i64 -17592186044416, i64 -17592186044416, i64 -17592186044416, i64 -17592186044416>
 ; AVX-NEXT:    [[TMP9:%.*]] = bitcast i64* [[GEP4]] to <4 x i64>*
-; AVX-NEXT:    store <4 x i64> [[TMP7]], <4 x i64>* [[TMP9]], align 8
+; AVX-NEXT:    store <4 x i64> [[TMP8]], <4 x i64>* [[TMP9]], align 8
 ; AVX-NEXT:    ret void
 ;
 entry:

@@ -66,7 +66,7 @@ def OpenMP_PointerLikeType : Type<
 def ParallelOp : OpenMP_Op<"parallel", [
                  AutomaticAllocationScope, AttrSizedOperandSegments,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
-                 RecursiveSideEffects]> {
+                 RecursiveSideEffects, ReductionClauseInterface]> {
   let summary = "parallel construct";
   let description = [{
     The parallel construct includes a region of code which is to be executed
@@ -83,6 +83,18 @@ def ParallelOp : OpenMP_Op<"parallel", [
     The $allocators_vars and $allocate_vars parameters are a variadic list of values
     that specify the memory allocator to be used to obtain storage for private values.
 
+    Reductions can be performed in a parallel construct by specifying reduction
+    accumulator variables in `reduction_vars` and symbols referring to reduction
+    declarations in the `reductions` attribute. Each reduction is identified
+    by the accumulator it uses and accumulators must not be repeated in the same
+    reduction. The `omp.reduction` operation accepts the accumulator and a
+    partial value which is considered to be produced by the thread for the
+    given reduction. If multiple values are produced for the same accumulator,
+    i.e. there are multiple `omp.reduction`s, the last value is taken. The
+    reduction declaration specifies how to combine the values from each thread
+    into the final value, which is available in the accumulator after all the
+    threads complete.
+
     The optional $proc_bind_val attribute controls the thread affinity for the execution
     of the parallel region.
   }];
@@ -91,6 +103,8 @@ def ParallelOp : OpenMP_Op<"parallel", [
              Optional<AnyType>:$num_threads_var,
              Variadic<AnyType>:$allocate_vars,
              Variadic<AnyType>:$allocators_vars,
+             Variadic<OpenMP_PointerLikeType>:$reduction_vars,
+             OptionalAttr<SymbolRefArrayAttr>:$reductions,
              OptionalAttr<ProcBindKindAttr>:$proc_bind_val);
 
   let regions = (region AnyRegion:$region);
@@ -99,7 +113,11 @@ def ParallelOp : OpenMP_Op<"parallel", [
     OpBuilder<(ins CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
   ];
   let assemblyFormat = [{
-    oilist( `if` `(` $if_expr_var `:` type($if_expr_var) `)`
+    oilist( `reduction` `(`
+              custom<ReductionVarList>(
+                $reduction_vars, type($reduction_vars), $reductions
+              ) `)`
+          | `if` `(` $if_expr_var `:` type($if_expr_var) `)`
           | `num_threads` `(` $num_threads_var `:` type($num_threads_var) `)`
           | `allocate` `(`
               custom<AllocateAndAllocator>(
@@ -110,6 +128,12 @@ def ParallelOp : OpenMP_Op<"parallel", [
     ) $region attr-dict
   }];
   let hasVerifier = 1;
+  let extraClassDeclaration = [{
+    // TODO: remove this once emitAccessorPrefix is set to
+    // kEmitAccessorPrefix_Prefixed for the dialect.
+    /// Returns the reduction variables
+    operand_range getReductionVars() { return reduction_vars(); }
+  }];
 }
 
 def TerminatorOp : OpenMP_Op<"terminator", [Terminator]> {
@@ -156,7 +180,8 @@ def SectionOp : OpenMP_Op<"section", [HasParent<"SectionsOp">]> {
   let assemblyFormat = "$region attr-dict";
 }
 
-def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
+def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments,
+                           ReductionClauseInterface]> {
   let summary = "sections construct";
   let description = [{
     The sections construct is a non-iterative worksharing construct that
@@ -207,6 +232,13 @@ def SectionsOp : OpenMP_Op<"sections", [AttrSizedOperandSegments]> {
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
+
+  let extraClassDeclaration = [{
+    // TODO: remove this once emitAccessorPrefix is set to
+    // kEmitAccessorPrefix_Prefixed for the dialect.
+    /// Returns the reduction variables
+    operand_range getReductionVars() { return reduction_vars(); }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -247,7 +279,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 
 def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-                         RecursiveSideEffects]> {
+                         RecursiveSideEffects, ReductionClauseInterface]> {
   let summary = "workshare loop construct";
   let description = [{
     The workshare loop construct specifies that the iterations of the loop(s)
@@ -338,6 +370,11 @@ def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
 
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return reduction_vars().size(); }
+
+    // TODO: remove this once emitAccessorPrefix is set to
+    // kEmitAccessorPrefix_Prefixed for the dialect.
+    /// Returns the reduction variables
+    operand_range getReductionVars() { return reduction_vars(); }
   }];
   let hasCustomAssemblyFormat = 1;
   let assemblyFormat = [{

@@ -168,6 +168,8 @@ struct DeviceDataTy {
 /// accordingly. The implementation should not raise any exception.
 template <typename T> struct AllocatorTy {
   using ElementTy = T;
+  virtual ~AllocatorTy() {}
+
   /// Create a resource and assign to R.
   virtual int create(T &R) noexcept = 0;
   /// Destroy the resource.
@@ -224,22 +226,32 @@ template <typename AllocTy> class ResourcePoolTy {
   size_t Next = 0;
   /// Mutex to guard the pool.
   std::mutex Mutex;
-  /// Pool of resources.
+  /// Pool of resources. The difference between \p Resources and \p Pool is,
+  /// when a resource is acquired and released, it is all on \p Resources. When
+  /// a batch of new resources are needed, they are both added to \p Resources
+  /// and \p Pool. The reason for this setting is, \p Resources could contain
+  /// redundant elements because resources are not released, which can cause
+  /// double free. This setting makes sure that \p Pool always has every
+  /// resource allocated from the device.
   std::vector<ElementTy> Resources;
+  std::vector<ElementTy> Pool;
   /// A reference to the corresponding allocator.
   AllocTy Allocator;
 
   /// If `Resources` is used up, we will fill in more resources. It assumes that
   /// the new size `Size` should be always larger than the current size.
   bool resize(size_t Size) {
+    assert(Resources.size() == Pool.size() && "size mismatch");
     auto CurSize = Resources.size();
     assert(Size > CurSize && "Unexpected smaller size");
+    Pool.reserve(Size);
     Resources.reserve(Size);
     for (auto I = CurSize; I < Size; ++I) {
       ElementTy NewItem;
       int Ret = Allocator.create(NewItem);
       if (Ret != OFFLOAD_SUCCESS)
         return false;
+      Pool.push_back(NewItem);
       Resources.push_back(NewItem);
     }
     return true;
@@ -300,8 +312,9 @@ public:
   /// Released all stored resources and clear the pool.
   /// Note: This function is not thread safe. Be sure to guard it if necessary.
   void clear() noexcept {
-    for (auto &R : Resources)
+    for (auto &R : Pool)
       (void)Allocator.destroy(R);
+    Pool.clear();
     Resources.clear();
   }
 };

@@ -1926,7 +1926,10 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
       llvm::Function *Fn = CGM.CreateGlobalInitOrCleanUpFunction(
-          FTy, Twine(Buffer, "_ctor"), FI, Loc);
+          FTy, Twine(Buffer, "_ctor"), FI, Loc, false,
+          llvm::GlobalValue::WeakODRLinkage);
+      if (CGM.getTriple().isAMDGCN())
+        Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
       auto NL = ApplyDebugLocation::CreateEmpty(CtorCGF);
       CtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI,
                             FunctionArgList(), Loc, Loc);
@@ -1944,7 +1947,6 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       CtorCGF.FinishFunction();
       Ctor = Fn;
       ID = llvm::ConstantExpr::getBitCast(Fn, CGM.Int8PtrTy);
-      CGM.addUsedGlobal(cast<llvm::GlobalValue>(Ctor));
     } else {
       Ctor = new llvm::GlobalVariable(
           CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
@@ -1970,7 +1972,10 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
       llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
       llvm::Function *Fn = CGM.CreateGlobalInitOrCleanUpFunction(
-          FTy, Twine(Buffer, "_dtor"), FI, Loc);
+          FTy, Twine(Buffer, "_dtor"), FI, Loc, false,
+          llvm::GlobalValue::WeakODRLinkage);
+      if (CGM.getTriple().isAMDGCN())
+        Fn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
       auto NL = ApplyDebugLocation::CreateEmpty(DtorCGF);
       DtorCGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, Fn, FI,
                             FunctionArgList(), Loc, Loc);
@@ -1989,7 +1994,6 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
       DtorCGF.FinishFunction();
       Dtor = Fn;
       ID = llvm::ConstantExpr::getBitCast(Fn, CGM.Int8PtrTy);
-      CGM.addUsedGlobal(cast<llvm::GlobalValue>(Dtor));
     } else {
       Dtor = new llvm::GlobalVariable(
           CGM.getModule(), CGM.Int8Ty, /*isConstant=*/true,
@@ -6537,7 +6541,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
 
   if (CGM.getLangOpts().OpenMPIsDevice) {
     OutlinedFnID = llvm::ConstantExpr::getBitCast(OutlinedFn, CGM.Int8PtrTy);
-    OutlinedFn->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
+    OutlinedFn->setLinkage(llvm::GlobalValue::WeakODRLinkage);
     OutlinedFn->setDSOLocal(false);
     if (CGM.getTriple().isAMDGCN())
       OutlinedFn->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);

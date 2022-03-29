@@ -28,12 +28,6 @@ define i32 @add_red(float* %A, i32 %n) {
 ; ALL-NEXT:    [[SUM_032:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD17:%.*]], [[FOR_BODY]] ]
 ; ALL-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_033]], 2
 ; ALL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; ALL-NEXT:    [[ADD28:%.*]] = or i64 [[MUL]], 1
-; ALL-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD28]]
-; ALL-NEXT:    [[ADD829:%.*]] = or i64 [[MUL]], 2
-; ALL-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD829]]
-; ALL-NEXT:    [[ADD1330:%.*]] = or i64 [[MUL]], 3
-; ALL-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1330]]
 ; ALL-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX]] to <4 x float>*
 ; ALL-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; ALL-NEXT:    [[TMP3:%.*]] = fmul <4 x float> [[TMP2]], <float 7.000000e+00, float 7.000000e+00, float 7.000000e+00, float 7.000000e+00>
@@ -110,10 +104,7 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    [[CMP38:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; ALL-NEXT:    br i1 [[CMP38]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; ALL:       for.body.lr.ph:
-; ALL-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 1
-; ALL-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[B]], i64 2
-; ALL-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
-; ALL-NEXT:    [[TMP0:%.*]] = bitcast float* [[B]] to <4 x float>*
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
 ; ALL-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
 ; ALL-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; ALL-NEXT:    br label [[FOR_BODY:%.*]]
@@ -122,12 +113,6 @@ define i32 @mul_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    [[SUM_039:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[MUL21:%.*]], [[FOR_BODY]] ]
 ; ALL-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_040]], 2
 ; ALL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; ALL-NEXT:    [[ADD35:%.*]] = or i64 [[MUL]], 1
-; ALL-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD35]]
-; ALL-NEXT:    [[ADD1136:%.*]] = or i64 [[MUL]], 2
-; ALL-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1136]]
-; ALL-NEXT:    [[ADD1737:%.*]] = or i64 [[MUL]], 3
-; ALL-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1737]]
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; ALL-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; ALL-NEXT:    [[TMP5:%.*]] = fmul <4 x float> [[TMP1]], [[TMP4]]
@@ -216,14 +201,7 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    [[CMP81:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; ALL-NEXT:    br i1 [[CMP81]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; ALL:       for.body.lr.ph:
-; ALL-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 1
-; ALL-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[B]], i64 2
-; ALL-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
-; ALL-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds float, float* [[B]], i64 4
-; ALL-NEXT:    [[ARRAYIDX27:%.*]] = getelementptr inbounds float, float* [[B]], i64 5
-; ALL-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds float, float* [[B]], i64 6
-; ALL-NEXT:    [[ARRAYIDX39:%.*]] = getelementptr inbounds float, float* [[B]], i64 7
-; ALL-NEXT:    [[TMP0:%.*]] = bitcast float* [[B]] to <8 x float>*
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast float* [[B:%.*]] to <8 x float>*
 ; ALL-NEXT:    [[TMP1:%.*]] = load <8 x float>, <8 x float>* [[TMP0]], align 4
 ; ALL-NEXT:    [[ARRAYIDX45:%.*]] = getelementptr inbounds float, float* [[B]], i64 8
 ; ALL-NEXT:    [[TMP2:%.*]] = load float, float* [[ARRAYIDX45]], align 4
@@ -234,20 +212,6 @@ define i32 @long_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    [[SUM_082:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[ADD51:%.*]], [[FOR_BODY]] ]
 ; ALL-NEXT:    [[MUL:%.*]] = mul nsw i64 [[I_083]], 6
 ; ALL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; ALL-NEXT:    [[ADD80:%.*]] = or i64 [[MUL]], 1
-; ALL-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD80]]
-; ALL-NEXT:    [[ADD11:%.*]] = add nsw i64 [[MUL]], 2
-; ALL-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD11]]
-; ALL-NEXT:    [[ADD17:%.*]] = add nsw i64 [[MUL]], 3
-; ALL-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD17]]
-; ALL-NEXT:    [[ADD23:%.*]] = add nsw i64 [[MUL]], 4
-; ALL-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD23]]
-; ALL-NEXT:    [[ADD29:%.*]] = add nsw i64 [[MUL]], 5
-; ALL-NEXT:    [[ARRAYIDX30:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD29]]
-; ALL-NEXT:    [[ADD35:%.*]] = add nsw i64 [[MUL]], 6
-; ALL-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD35]]
-; ALL-NEXT:    [[ADD41:%.*]] = add nsw i64 [[MUL]], 7
-; ALL-NEXT:    [[ARRAYIDX42:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD41]]
 ; ALL-NEXT:    [[TMP4:%.*]] = bitcast float* [[ARRAYIDX2]] to <8 x float>*
 ; ALL-NEXT:    [[TMP5:%.*]] = load <8 x float>, <8 x float>* [[TMP4]], align 4
 ; ALL-NEXT:    [[TMP6:%.*]] = fmul fast <8 x float> [[TMP1]], [[TMP5]]
@@ -371,10 +335,7 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    [[CMP41:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; ALL-NEXT:    br i1 [[CMP41]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; ALL:       for.body.lr.ph:
-; ALL-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 1
-; ALL-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[B]], i64 2
-; ALL-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
-; ALL-NEXT:    [[TMP0:%.*]] = bitcast float* [[B]] to <4 x float>*
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
 ; ALL-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
 ; ALL-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; ALL-NEXT:    br label [[FOR_BODY:%.*]]
@@ -383,12 +344,6 @@ define i32 @chain_red(float* noalias %A, float* noalias %B, i32 %n) {
 ; ALL-NEXT:    [[SUM_042:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_LR_PH]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
 ; ALL-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_043]], 2
 ; ALL-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; ALL-NEXT:    [[ADD638:%.*]] = or i64 [[MUL]], 1
-; ALL-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD638]]
-; ALL-NEXT:    [[ADD1239:%.*]] = or i64 [[MUL]], 2
-; ALL-NEXT:    [[ARRAYIDX13:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1239]]
-; ALL-NEXT:    [[ADD1840:%.*]] = or i64 [[MUL]], 3
-; ALL-NEXT:    [[ARRAYIDX19:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1840]]
 ; ALL-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; ALL-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; ALL-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP4]]
@@ -650,8 +605,7 @@ define void @store_red_double(double* noalias %A, double* noalias %B, double* no
 ; STORE-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; STORE-NEXT:    br i1 [[CMP17]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; STORE:       for.body.lr.ph:
-; STORE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
-; STORE-NEXT:    [[TMP0:%.*]] = bitcast double* [[B]] to <2 x double>*
+; STORE-NEXT:    [[TMP0:%.*]] = bitcast double* [[B:%.*]] to <2 x double>*
 ; STORE-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8
 ; STORE-NEXT:    [[TMP2:%.*]] = sext i32 [[N]] to i64
 ; STORE-NEXT:    br label [[FOR_BODY:%.*]]
@@ -659,8 +613,6 @@ define void @store_red_double(double* noalias %A, double* noalias %B, double* no
 ; STORE-NEXT:    [[I_018:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; STORE-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_018]], 2
 ; STORE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 [[MUL]]
-; STORE-NEXT:    [[ADD16:%.*]] = or i64 [[MUL]], 1
-; STORE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds double, double* [[A]], i64 [[ADD16]]
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast double* [[ARRAYIDX2]] to <2 x double>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <2 x double>, <2 x double>* [[TMP3]], align 8
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP1]], [[TMP4]]
@@ -768,9 +720,6 @@ define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i
 ; STORE-NEXT:    [[CMP37:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; STORE-NEXT:    br i1 [[CMP37]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_END:%.*]]
 ; STORE:       for.body.lr.ph:
-; STORE-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 1
-; STORE-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds float, float* [[B]], i64 2
-; STORE-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
 ; STORE-NEXT:    [[TMP0:%.*]] = sext i32 [[N]] to i64
 ; STORE-NEXT:    br label [[FOR_BODY:%.*]]
 ; STORE:       for.body:
@@ -778,14 +727,8 @@ define i32 @store_red(float* noalias %A, float* noalias %B, float* noalias %C, i
 ; STORE-NEXT:    [[C_ADDR_038:%.*]] = phi float* [ [[C:%.*]], [[FOR_BODY_LR_PH]] ], [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ]
 ; STORE-NEXT:    [[MUL:%.*]] = shl nsw i64 [[I_039]], 2
 ; STORE-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 [[MUL]]
-; STORE-NEXT:    [[ADD34:%.*]] = or i64 [[MUL]], 1
-; STORE-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD34]]
-; STORE-NEXT:    [[ADD1135:%.*]] = or i64 [[MUL]], 2
-; STORE-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1135]]
-; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[B]] to <4 x float>*
+; STORE-NEXT:    [[TMP1:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
 ; STORE-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
-; STORE-NEXT:    [[ADD1736:%.*]] = or i64 [[MUL]], 3
-; STORE-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds float, float* [[A]], i64 [[ADD1736]]
 ; STORE-NEXT:    [[TMP3:%.*]] = bitcast float* [[ARRAYIDX2]] to <4 x float>*
 ; STORE-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
 ; STORE-NEXT:    [[TMP5:%.*]] = fmul fast <4 x float> [[TMP2]], [[TMP4]]
@@ -1386,10 +1329,7 @@ define i32 @reduction_result_used_in_phi(i32* nocapture readonly %data, i1 zeroe
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; ALL:       bb:
-; ALL-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 1
-; ALL-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
-; ALL-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
-; ALL-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA]] to <4 x i32>*
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA:%.*]] to <4 x i32>*
 ; ALL-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; ALL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; ALL-NEXT:    br label [[EXIT]]
@@ -1423,10 +1363,7 @@ define i32 @reduction_result_used_in_phi_loop(i32* nocapture readonly %data, i1 
 ; ALL-NEXT:  entry:
 ; ALL-NEXT:    br i1 [[B:%.*]], label [[BB:%.*]], label [[EXIT:%.*]]
 ; ALL:       bb:
-; ALL-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds i32, i32* [[DATA:%.*]], i64 1
-; ALL-NEXT:    [[IDX_2:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 2
-; ALL-NEXT:    [[IDX_3:%.*]] = getelementptr inbounds i32, i32* [[DATA]], i64 3
-; ALL-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA]] to <4 x i32>*
+; ALL-NEXT:    [[TMP0:%.*]] = bitcast i32* [[DATA:%.*]] to <4 x i32>*
 ; ALL-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
 ; ALL-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
 ; ALL-NEXT:    br label [[EXIT]]
@@ -1484,10 +1421,7 @@ bb.1:
 
 define float @fadd_v4f32_fmf(float* %p) {
 ; ALL-LABEL: @fadd_v4f32_fmf(
-; ALL-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
-; ALL-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; ALL-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; ALL-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; ALL-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
 ; ALL-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; ALL-NEXT:    [[TMP3:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
 ; ALL-NEXT:    ret float [[TMP3]]
@@ -1511,10 +1445,7 @@ define float @fadd_v4f32_fmf(float* %p) {
 
 define float @fadd_v4f32_fmf_intersect(float* %p) {
 ; ALL-LABEL: @fadd_v4f32_fmf_intersect(
-; ALL-NEXT:    [[P1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
-; ALL-NEXT:    [[P2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; ALL-NEXT:    [[P3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; ALL-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; ALL-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
 ; ALL-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; ALL-NEXT:    [[TMP3:%.*]] = call reassoc ninf nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
 ; ALL-NEXT:    ret float [[TMP3]]

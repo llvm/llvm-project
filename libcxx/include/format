@@ -125,6 +125,7 @@ namespace std {
 #include <__algorithm/clamp.h>
 #include <__config>
 #include <__debug>
+#include <__format/buffer.h>
 #include <__format/format_arg.h>
 #include <__format/format_args.h>
 #include <__format/format_context.h>
@@ -292,11 +293,12 @@ requires(output_iterator<_OutIt, const _CharT&>) _LIBCPP_HIDE_FROM_ABI _OutIt
         basic_format_parse_context{__fmt, __args.__size()},
         _VSTD::__format_context_create(_VSTD::move(__out_it), __args));
   else {
-    basic_string<_CharT> __str;
+    __format::__format_buffer<_OutIt, _CharT> __buffer{_VSTD::move(__out_it)};
     _VSTD::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()},
-        _VSTD::__format_context_create(_VSTD::back_inserter(__str), __args));
-    return _VSTD::copy_n(__str.begin(), __str.size(), _VSTD::move(__out_it));
+        _VSTD::__format_context_create(__buffer.make_output_iterator(),
+                                       __args));
+    return _VSTD::move(__buffer).out();
   }
 }
 
@@ -417,12 +419,12 @@ requires(output_iterator<_OutIt, const _CharT&>) _LIBCPP_HIDE_FROM_ABI _OutIt
         _VSTD::__format_context_create(_VSTD::move(__out_it), __args,
                                        _VSTD::move(__loc)));
   else {
-    basic_string<_CharT> __str;
+    __format::__format_buffer<_OutIt, _CharT> __buffer{_VSTD::move(__out_it)};
     _VSTD::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()},
-        _VSTD::__format_context_create(_VSTD::back_inserter(__str), __args,
-                                       _VSTD::move(__loc)));
-    return _VSTD::copy_n(__str.begin(), __str.size(), _VSTD::move(__out_it));
+        _VSTD::__format_context_create(__buffer.make_output_iterator(),
+                                       __args, _VSTD::move(__loc)));
+    return _VSTD::move(__buffer).out();
   }
 }
 

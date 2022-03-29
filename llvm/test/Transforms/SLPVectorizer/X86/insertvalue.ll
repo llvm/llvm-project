@@ -6,15 +6,12 @@ define void @julia_2xdouble([2 x double]* sret([2 x double]), [2 x double]*, [2 
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[PX0:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[TMP2:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[PY0:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[TMP3:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[PX1:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[TMP2]], i64 0, i64 1
+; CHECK-NEXT:    [[PZ0:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[TMP1:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double* [[PX0]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, <2 x double>* [[TMP4]], align 4
-; CHECK-NEXT:    [[PY1:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[TMP3]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[PY0]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, <2 x double>* [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[PZ0:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[TMP1:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[PZ1:%.*]] = getelementptr inbounds [2 x double], [2 x double]* [[TMP1]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[PZ0]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x double>, <2 x double>* [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x double> [[TMP8]], [[TMP10]]
@@ -53,21 +50,12 @@ define void @julia_4xfloat([4 x float]* sret([4 x float]), [4 x float]*, [4 x fl
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[PX0:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP2:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[PY0:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP3:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[PX1:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP2]], i64 0, i64 1
-; CHECK-NEXT:    [[PY1:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP3]], i64 0, i64 1
-; CHECK-NEXT:    [[PX2:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP2]], i64 0, i64 2
-; CHECK-NEXT:    [[PY2:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP3]], i64 0, i64 2
-; CHECK-NEXT:    [[PX3:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP2]], i64 0, i64 3
+; CHECK-NEXT:    [[PZ0:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP1:%.*]], i64 0, i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float* [[PX0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, <4 x float>* [[TMP4]], align 4
-; CHECK-NEXT:    [[PY3:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP3]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = bitcast float* [[PY0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, <4 x float>* [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x float> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[PZ0:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP1:%.*]], i64 0, i64 0
-; CHECK-NEXT:    [[PZ1:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP1]], i64 0, i64 1
-; CHECK-NEXT:    [[PZ2:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP1]], i64 0, i64 2
-; CHECK-NEXT:    [[PZ3:%.*]] = getelementptr inbounds [4 x float], [4 x float]* [[TMP1]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast float* [[PZ0]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x float>, <4 x float>* [[TMP9]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP8]], [[TMP10]]
@@ -128,10 +116,8 @@ define void @julia_load_array_of_float([4 x float]* %a, [4 x float]* %b, [4 x fl
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [4 x float]* [[A:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
-; CHECK-NEXT:    [[A_ARR:%.*]] = load [4 x float], [4 x float]* [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [4 x float]* [[B:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* [[TMP2]], align 4
-; CHECK-NEXT:    [[B_ARR:%.*]] = load [4 x float], [4 x float]* [[B]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <4 x float> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[C_ARR0:%.*]] = insertvalue [4 x float] undef, float [[TMP5]], 0
@@ -172,10 +158,8 @@ define void @julia_load_array_of_i32([4 x i32]* %a, [4 x i32]* %b, [4 x i32]* %c
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast [4 x i32]* [[A:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[A_ARR:%.*]] = load [4 x i32], [4 x i32]* [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [4 x i32]* [[B:%.*]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x i32>, <4 x i32>* [[TMP2]], align 4
-; CHECK-NEXT:    [[B_ARR:%.*]] = load [4 x i32], [4 x i32]* [[B]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub <4 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i32 0
 ; CHECK-NEXT:    [[C_ARR0:%.*]] = insertvalue [4 x i32] undef, i32 [[TMP5]], 0
@@ -267,13 +251,11 @@ define void @julia_load_struct_of_float(%pseudovec* %a, %pseudovec* %b, %pseudov
 ; CHECK-NEXT:  top:
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast %pseudovec* [[A:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
-; CHECK-NEXT:    [[A_STRUCT:%.*]] = load [[PSEUDOVEC:%.*]], %pseudovec* [[A]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %pseudovec* [[B:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, <4 x float>* [[TMP2]], align 4
-; CHECK-NEXT:    [[B_STRUCT:%.*]] = load [[PSEUDOVEC]], %pseudovec* [[B]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <4 x float> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x float> [[TMP4]], i32 0
-; CHECK-NEXT:    [[C_STRUCT0:%.*]] = insertvalue [[PSEUDOVEC]] undef, float [[TMP5]], 0
+; CHECK-NEXT:    [[C_STRUCT0:%.*]] = insertvalue [[PSEUDOVEC:%.*]] undef, float [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x float> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[C_STRUCT1:%.*]] = insertvalue [[PSEUDOVEC]] [[C_STRUCT0]], float [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x float> [[TMP4]], i32 2

@@ -48,6 +48,7 @@ private:
 protected:
   bool GCN3Encoding;
   bool Has16BitInsts;
+  bool HasTrue16BitInsts;
   bool HasMadMixInsts;
   bool HasMadMacF32Insts;
   bool HasDsSrc2Insts;
@@ -145,6 +146,8 @@ public:
   bool has16BitInsts() const {
     return Has16BitInsts;
   }
+
+  bool hasTrue16BitInsts() const { return HasTrue16BitInsts; }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;

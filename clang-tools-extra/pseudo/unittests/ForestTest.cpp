@@ -71,26 +71,27 @@ TEST_F(ForestTest, DumpBasic) {
                                             ruleFor("id-expression"), {&T[2]});
 
   const auto *Add =
-      &Arena.createSequence(symbol("add-expression"), ruleFor("add-expression"), {Left, &T[1], Right});
+      &Arena.createSequence(symbol("add-expression"), ruleFor("add-expression"),
+                            {Left, &T[1], Right});
   EXPECT_EQ(Add->dumpRecursive(*G, true),
             "[  0, end) add-expression := id-expression + id-expression\n"
-            "[  0,   1)   id-expression~IDENTIFIER := tok[0]\n"
-            "[  1,   2)   + := tok[1]\n"
-            "[  2, end)   id-expression~IDENTIFIER := tok[2]\n");
+            "[  0,   1) ├─id-expression~IDENTIFIER := tok[0]\n"
+            "[  1,   2) ├─+ := tok[1]\n"
+            "[  2, end) └─id-expression~IDENTIFIER := tok[2]\n");
   EXPECT_EQ(Add->dumpRecursive(*G, false),
             "[  0, end) add-expression := id-expression + id-expression\n"
-            "[  0,   1)   id-expression := IDENTIFIER\n"
-            "[  0,   1)     IDENTIFIER := tok[0]\n"
-            "[  1,   2)   + := tok[1]\n"
-            "[  2, end)   id-expression := IDENTIFIER\n"
-            "[  2, end)     IDENTIFIER := tok[2]\n");
+            "[  0,   1) ├─id-expression := IDENTIFIER\n"
+            "[  0,   1) │ └─IDENTIFIER := tok[0]\n"
+            "[  1,   2) ├─+ := tok[1]\n"
+            "[  2, end) └─id-expression := IDENTIFIER\n"
+            "[  2, end)   └─IDENTIFIER := tok[2]\n");
 }
 
 TEST_F(ForestTest, DumpAmbiguousAndRefs) {
   build(R"cpp(
     _ := type
-    type := class-type # rule 1
-    type := enum-type # rule 2
+    type := class-type # rule 3
+    type := enum-type # rule 4
     class-type := shared-type
     enum-type := shared-type
     shared-type := IDENTIFIER)cpp");
@@ -105,24 +106,24 @@ TEST_F(ForestTest, DumpAmbiguousAndRefs) {
       symbol("shared-type"), ruleFor("shared-type"), {Terminals.begin()});
   const auto *ClassType = &Arena.createSequence(
       symbol("class-type"), ruleFor("class-type"), {SharedType});
-  const auto *Enumtype = &Arena.createSequence(
+  const auto *EnumType = &Arena.createSequence(
       symbol("enum-type"), ruleFor("enum-type"), {SharedType});
   const auto *Alternative1 =
-      &Arena.createSequence(symbol("type"), /*RuleID=*/1, {ClassType});
+      &Arena.createSequence(symbol("type"), /*RuleID=*/3, {ClassType});
   const auto *Alternative2 =
-      &Arena.createSequence(symbol("type"), /*RuleID=*/2, {Enumtype});
+      &Arena.createSequence(symbol("type"), /*RuleID=*/4, {EnumType});
   const auto *Type =
       &Arena.createAmbiguous(symbol("type"), {Alternative1, Alternative2});
   EXPECT_EQ(Type->dumpRecursive(*G),
             "[  0, end) type := <ambiguous>\n"
-            "[  0, end)   class-type := shared-type\n"
-            "[  0, end)     class-type := shared-type\n"
-            "[  0, end)       shared-type := IDENTIFIER #1\n"
-            "[  0, end)         IDENTIFIER := tok[0]\n"
-            "[  0, end)   enum-type := shared-type\n"
-            "[  0, end)     enum-type := shared-type\n"
-            "[  0, end)       shared-type := IDENTIFIER =#1\n"
-            "[  0, end)         IDENTIFIER := tok[0]\n");
+            "[  0, end) ├─type := class-type\n"
+            "[  0, end) │ └─class-type := shared-type\n"
+            "[  0, end) │   └─shared-type := IDENTIFIER #1\n"
+            "[  0, end) │     └─IDENTIFIER := tok[0]\n"
+            "[  0, end) └─type := enum-type\n"
+            "[  0, end)   └─enum-type := shared-type\n"
+            "[  0, end)     └─shared-type := IDENTIFIER =#1\n"
+            "[  0, end)       └─IDENTIFIER := tok[0]\n");
 }
 
 } // namespace

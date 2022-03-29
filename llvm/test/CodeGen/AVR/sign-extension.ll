@@ -1,4 +1,4 @@
-; RUN: llc -march=avr < %s | FileCheck %s
+; RUN: llc -march=avr -verify-machineinstrs < %s | FileCheck %s
 
 define i8 @sign_extended_1_to_8(i1) {
 ; CHECK-LABEL: sign_extended_1_to_8

@@ -12,10 +12,7 @@ declare void @unknown()
 define void @test(float * %a, float * %b, float * %c, float * %d) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds float, float* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds float, float* [[A]], i64 2
-; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds float, float* [[A]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A]] to <4 x float>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, <4 x float>* [[TMP0]], align 4
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @unknown()
@@ -45,20 +42,11 @@ define void @test(float * %a, float * %b, float * %c, float * %d) {
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @unknown()
 ; CHECK-NEXT:    call void @unknown()
-; CHECK-NEXT:    [[B1:%.*]] = getelementptr inbounds float, float* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[B2:%.*]] = getelementptr inbounds float, float* [[B]], i64 2
-; CHECK-NEXT:    [[B3:%.*]] = getelementptr inbounds float, float* [[B]], i64 3
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[B]] to <4 x float>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float* [[B:%.*]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], <4 x float>* [[TMP2]], align 4
-; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds float, float* [[C:%.*]], i64 1
-; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds float, float* [[C]], i64 2
-; CHECK-NEXT:    [[C3:%.*]] = getelementptr inbounds float, float* [[C]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[C]] to <4 x float>*
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float* [[C:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x float>, <4 x float>* [[TMP3]], align 4
-; CHECK-NEXT:    [[D1:%.*]] = getelementptr inbounds float, float* [[D:%.*]], i64 1
-; CHECK-NEXT:    [[D2:%.*]] = getelementptr inbounds float, float* [[D]], i64 2
-; CHECK-NEXT:    [[D3:%.*]] = getelementptr inbounds float, float* [[D]], i64 3
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[D]] to <4 x float>*
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast float* [[D:%.*]] to <4 x float>*
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], <4 x float>* [[TMP5]], align 4
 ; CHECK-NEXT:    ret void
 ;

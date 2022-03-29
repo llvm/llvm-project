@@ -829,7 +829,7 @@ int main(int argc, char const *argv[]) {
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
   signal(SIGINT, sigint_handler);
-#if !defined(_MSC_VER)
+#if !defined(_WIN32)
   signal(SIGPIPE, SIG_IGN);
   signal(SIGWINCH, sigwinch_handler);
   signal(SIGTSTP, sigtstp_handler);

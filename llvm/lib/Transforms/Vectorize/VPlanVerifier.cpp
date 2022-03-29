@@ -157,7 +157,7 @@ bool VPlanVerifier::verifyPlanIsValid(const VPlan &Plan) {
     }
   }
 
-  const VPRegionBlock *TopRegion = cast<VPRegionBlock>(Plan.getEntry());
+  const VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   const VPBasicBlock *Entry = dyn_cast<VPBasicBlock>(TopRegion->getEntry());
   if (!Entry) {
     errs() << "VPlan entry block is not a VPBasicBlock\n";

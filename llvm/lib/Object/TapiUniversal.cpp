@@ -48,7 +48,7 @@ TapiUniversal::~TapiUniversal() = default;
 Expected<std::unique_ptr<TapiFile>>
 TapiUniversal::ObjectForArch::getAsObjectFile() const {
   return std::unique_ptr<TapiFile>(new TapiFile(Parent->getMemoryBufferRef(),
-                                                *Parent->ParsedFile.get(),
+                                                *Parent->ParsedFile,
                                                 Parent->Libraries[Index].Arch));
 }
 

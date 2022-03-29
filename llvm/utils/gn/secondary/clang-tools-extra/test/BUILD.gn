@@ -32,7 +32,7 @@ write_lit_config("lit_site_cfg") {
   output = clang_tools_extra_lit_site_cfg_file
 
   extra_values = [
-    "CLANG_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
+    "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin"),
     "CLANG_PLUGIN_SUPPORT=0",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_INSTALL_TOOLCHAIN_ONLY=0",

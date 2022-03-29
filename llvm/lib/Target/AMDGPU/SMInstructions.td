@@ -891,7 +891,7 @@ class SMEM_Real_gfx10<bits<8> op, SM_Pseudo ps>
   let DecoderNamespace = "GFX10";
   let Inst{14}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, ?);
   let Inst{16}    = !if(ps.has_glc, cpol{CPolBit.GLC}, ?);
-  let Inst{63-57} = !if(ps.offset_is_imm, !cast<int>(SGPR_NULL_gfxpre11.HWEncoding),
+  let Inst{63-57} = !if(ps.offset_is_imm, !cast<int>(SGPR_NULL_gfxpre11.HWEncoding){7-1},
                                           !if(ps.has_offset, offset{6-0}, ?));
 }
 
@@ -1086,7 +1086,7 @@ class SMEM_Real_gfx11<bits<8> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
   let DecoderNamespace = "GFX11";
   let Inst{13}    = !if(ps.has_dlc, cpol{CPolBit.DLC}, 0);
   let Inst{14}    = !if(ps.has_glc, cpol{CPolBit.GLC}, 0);
-  let Inst{63-57} = !if(ps.offset_is_imm, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding),
+  let Inst{63-57} = !if(ps.offset_is_imm, !cast<int>(SGPR_NULL_gfx11plus.HWEncoding){7-1},
                                           !if(ps.has_offset, offset{6-0}, ?));
 }
 

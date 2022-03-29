@@ -349,10 +349,11 @@ public:
     }
 
     SectionRange R(MachOContainerBlock->getSection());
-    G.allocActions().push_back({cantFail(shared::WrapperFunctionCall::Create<
-                                         SPSArgList<SPSExecutorAddrRange>>(
-                                    RegisterActionAddr, R.getRange())),
-                                {}});
+    G.allocActions().push_back(
+        {cantFail(shared::WrapperFunctionCall::Create<
+                  shared::SPSArgList<shared::SPSExecutorAddrRange>>(
+             RegisterActionAddr, R.getRange())),
+         {}});
     return Error::success();
   }
 

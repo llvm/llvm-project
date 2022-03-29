@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIRegisterInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -197,7 +198,7 @@ GCNNSAReassign::CheckNSA(const MachineInstr &MI, bool Fast) const {
       // parts of an address and it is either already consecutive or cannot
       // be reassigned if not. If needed it is better to rely on register
       // coalescer to process such address tuples.
-      if (MRI->getRegClass(Reg) != &AMDGPU::VGPR_32RegClass || Op.getSubReg())
+      if (TRI->getRegSizeInBits(*MRI->getRegClass(Reg)) != 32 || Op.getSubReg())
         return NSA_Status::FIXED;
 
       // InlineSpiller does not call LRM::assign() after an LI split leaving

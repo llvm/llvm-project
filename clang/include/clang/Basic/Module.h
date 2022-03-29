@@ -109,6 +109,9 @@ public:
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
+    /// This is a C++ 20 header unit.
+    ModuleHeaderUnit,
+
     /// This is a C++ 20 module partition interface.
     ModulePartitionInterface,
 
@@ -523,6 +526,9 @@ public:
     return Kind == ModulePartitionInterface ||
            Kind == ModulePartitionImplementation;
   }
+
+  /// Is this module a header unit.
+  bool isHeaderUnit() const { return Kind == ModuleHeaderUnit; }
 
   /// Get the primary module interface name from a partition.
   StringRef getPrimaryModuleInterfaceName() const {

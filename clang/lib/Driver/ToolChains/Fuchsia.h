@@ -75,24 +75,27 @@ public:
 
   RuntimeLibType
   GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
-  CXXStdlibType
-  GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+  CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
 
-  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args,
-                             Action::OffloadKind DeviceOffloadKind) const override;
+  bool IsAArch64OutlineAtomicsDefault(
+      const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
+
+  void
+  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
+                        llvm::opt::ArgStringList &CC1Args,
+                        Action::OffloadKind DeviceOffloadKind) const override;
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-  void
-  AddClangCXXStdlibIncludeArgs(const llvm::opt::ArgList &DriverArgs,
-                               llvm::opt::ArgStringList &CC1Args) const override;
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &DriverArgs,
+      llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
-  const char *getDefaultLinker() const override {
-    return "ld.lld";
-  }
+  const char *getDefaultLinker() const override { return "ld.lld"; }
 
 protected:
   Tool *buildLinker() const override;

@@ -151,13 +151,14 @@ public:
   /// Return a reference to the set of argument tracked functions.
   SmallPtrSetImpl<Function *> &getArgumentTrackedFunctions();
 
-  /// Mark the constant argument of a new function specialization. \p F points
-  /// to the cloned function and \p Arg represents the constant argument as a
-  /// pair of {formal,actual} values (the formal argument is associated with the
-  /// original function definition). All other arguments of the specialization
-  /// inherit the lattice state of their corresponding values in the original
-  /// function.
-  void markArgInFuncSpecialization(Function *F, const ArgInfo &Arg);
+  /// Mark the constant arguments of a new function specialization. \p F points
+  /// to the cloned function and \p Args contains a list of constant arguments
+  /// represented as pairs of {formal,actual} values (the formal argument is
+  /// associated with the original function definition). All other arguments of
+  /// the specialization inherit the lattice state of their corresponding values
+  /// in the original function.
+  void markArgInFuncSpecialization(Function *F,
+                                   const SmallVectorImpl<ArgInfo> &Args);
 
   /// Mark all of the blocks in function \p F non-executable. Clients can used
   /// this method to erase a function from the module (e.g., if it has been

@@ -68,7 +68,7 @@ declare void @destructor()
 declare dso_local i32 @__gxx_personality_v0(...)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone speculatable willreturn }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "<stdin>", directory: "/")

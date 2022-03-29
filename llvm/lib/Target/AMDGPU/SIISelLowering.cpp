@@ -888,56 +888,56 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i16, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i8, Custom);
 
-  setTargetDAGCombine(ISD::ADD);
-  setTargetDAGCombine(ISD::ADDCARRY);
-  setTargetDAGCombine(ISD::SUB);
-  setTargetDAGCombine(ISD::SUBCARRY);
-  setTargetDAGCombine(ISD::FADD);
-  setTargetDAGCombine(ISD::FSUB);
-  setTargetDAGCombine(ISD::FMINNUM);
-  setTargetDAGCombine(ISD::FMAXNUM);
-  setTargetDAGCombine(ISD::FMINNUM_IEEE);
-  setTargetDAGCombine(ISD::FMAXNUM_IEEE);
-  setTargetDAGCombine(ISD::FMA);
-  setTargetDAGCombine(ISD::SMIN);
-  setTargetDAGCombine(ISD::SMAX);
-  setTargetDAGCombine(ISD::UMIN);
-  setTargetDAGCombine(ISD::UMAX);
-  setTargetDAGCombine(ISD::SETCC);
-  setTargetDAGCombine(ISD::AND);
-  setTargetDAGCombine(ISD::OR);
-  setTargetDAGCombine(ISD::XOR);
-  setTargetDAGCombine(ISD::SINT_TO_FP);
-  setTargetDAGCombine(ISD::UINT_TO_FP);
-  setTargetDAGCombine(ISD::FCANONICALIZE);
-  setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
-  setTargetDAGCombine(ISD::ZERO_EXTEND);
-  setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
-  setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
-  setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
+  setTargetDAGCombine({ISD::ADD,
+                       ISD::ADDCARRY,
+                       ISD::SUB,
+                       ISD::SUBCARRY,
+                       ISD::FADD,
+                       ISD::FSUB,
+                       ISD::FMINNUM,
+                       ISD::FMAXNUM,
+                       ISD::FMINNUM_IEEE,
+                       ISD::FMAXNUM_IEEE,
+                       ISD::FMA,
+                       ISD::SMIN,
+                       ISD::SMAX,
+                       ISD::UMIN,
+                       ISD::UMAX,
+                       ISD::SETCC,
+                       ISD::AND,
+                       ISD::OR,
+                       ISD::XOR,
+                       ISD::SINT_TO_FP,
+                       ISD::UINT_TO_FP,
+                       ISD::FCANONICALIZE,
+                       ISD::SCALAR_TO_VECTOR,
+                       ISD::ZERO_EXTEND,
+                       ISD::SIGN_EXTEND_INREG,
+                       ISD::EXTRACT_VECTOR_ELT,
+                       ISD::INSERT_VECTOR_ELT});
 
   // All memory operations. Some folding on the pointer operand is done to help
   // matching the constant offsets in the addressing modes.
-  setTargetDAGCombine(ISD::LOAD);
-  setTargetDAGCombine(ISD::STORE);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD);
-  setTargetDAGCombine(ISD::ATOMIC_STORE);
-  setTargetDAGCombine(ISD::ATOMIC_CMP_SWAP);
-  setTargetDAGCombine(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS);
-  setTargetDAGCombine(ISD::ATOMIC_SWAP);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_ADD);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_SUB);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_AND);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_OR);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_XOR);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_NAND);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_MIN);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_MAX);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_UMIN);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_UMAX);
-  setTargetDAGCombine(ISD::ATOMIC_LOAD_FADD);
-  setTargetDAGCombine(ISD::INTRINSIC_VOID);
-  setTargetDAGCombine(ISD::INTRINSIC_W_CHAIN);
+  setTargetDAGCombine({ISD::LOAD,
+                       ISD::STORE,
+                       ISD::ATOMIC_LOAD,
+                       ISD::ATOMIC_STORE,
+                       ISD::ATOMIC_CMP_SWAP,
+                       ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
+                       ISD::ATOMIC_SWAP,
+                       ISD::ATOMIC_LOAD_ADD,
+                       ISD::ATOMIC_LOAD_SUB,
+                       ISD::ATOMIC_LOAD_AND,
+                       ISD::ATOMIC_LOAD_OR,
+                       ISD::ATOMIC_LOAD_XOR,
+                       ISD::ATOMIC_LOAD_NAND,
+                       ISD::ATOMIC_LOAD_MIN,
+                       ISD::ATOMIC_LOAD_MAX,
+                       ISD::ATOMIC_LOAD_UMIN,
+                       ISD::ATOMIC_LOAD_UMAX,
+                       ISD::ATOMIC_LOAD_FADD,
+                       ISD::INTRINSIC_VOID,
+                       ISD::INTRINSIC_W_CHAIN});
 
   // FIXME: In other contexts we pretend this is a per-function property.
   setStackPointerRegisterToSaveRestore(AMDGPU::SGPR32);

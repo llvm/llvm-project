@@ -3074,5 +3074,5 @@ define void @test68(i8* %a, i8* %b) {
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 
 ; CHECK: attributes [[NUW]] = { nounwind }
-; CHECK: attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 ; CHECK: ![[RELEASE]] = !{}

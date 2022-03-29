@@ -54,6 +54,10 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
+  void getMachineOpValueT16(const MCInst &MI, unsigned OpNo, APInt &Op,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const override;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -78,6 +82,10 @@ public:
 
 private:
   uint64_t getImplicitOpSelHiEncoding(int Opcode) const;
+  void getMachineOpValueCommon(const MCInst &MI, const MCOperand &MO,
+                               unsigned OpNo, APInt &Op,
+                               SmallVectorImpl<MCFixup> &Fixups,
+                               const MCSubtargetInfo &STI) const;
 };
 
 } // end anonymous namespace
@@ -429,7 +437,7 @@ void SIMCCodeEmitter::getSDWASrcEncoding(const MCInst &MI, unsigned OpNo,
 
   if (MO.isReg()) {
     unsigned Reg = MO.getReg();
-    RegEnc |= MRI.getEncodingValue(Reg);
+    RegEnc |= MRI.getEncodingValue(Reg) >> 1;
     RegEnc &= SDWA9EncValues::SRC_VGPR_MASK;
     if (AMDGPU::isSGPR(AMDGPU::mc2PseudoReg(Reg), &MRI)) {
       RegEnc |= SDWA9EncValues::SRC_SGPR_MASK;
@@ -460,7 +468,7 @@ void SIMCCodeEmitter::getSDWAVopcDstEncoding(const MCInst &MI, unsigned OpNo,
 
   unsigned Reg = MO.getReg();
   if (Reg != AMDGPU::VCC && Reg != AMDGPU::VCC_LO) {
-    RegEnc |= MRI.getEncodingValue(Reg);
+    RegEnc |= MRI.getEncodingValue(Reg) >> 1;
     RegEnc &= SDWA9EncValues::VOPC_DST_SGPR_MASK;
     RegEnc |= SDWA9EncValues::VOPC_DST_VCC_MASK;
   }
@@ -472,7 +480,7 @@ void SIMCCodeEmitter::getAVOperandEncoding(const MCInst &MI, unsigned OpNo,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
   unsigned Reg = MI.getOperand(OpNo).getReg();
-  uint64_t Enc = MRI.getEncodingValue(Reg);
+  uint64_t Enc = MRI.getEncodingValue(Reg) >> 1;
 
   // VGPR and AGPR have the same encoding, but SrcA and SrcB operands of mfma
   // instructions use acc[0:1] modifier bits to distinguish. These bits are
@@ -515,14 +523,35 @@ static bool needsPCRel(const MCExpr *Expr) {
   llvm_unreachable("invalid kind");
 }
 
+/// \returns the encoding for a 16 bit operand in a True 16 bit instruction,
+/// which has a suffix bit as LSB
+void SIMCCodeEmitter::getMachineOpValueT16(const MCInst &MI, unsigned OpNo,
+                                           APInt &Op,
+                                           SmallVectorImpl<MCFixup> &Fixups,
+                                           const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isReg()) {
+    Op = MRI.getEncodingValue(MO.getReg());
+    return;
+  }
+  getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+}
+
 void SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
                                         const MCOperand &MO, APInt &Op,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
   if (MO.isReg()){
-    Op = MRI.getEncodingValue(MO.getReg());
+    Op = MRI.getEncodingValue(MO.getReg()) >> 1;
     return;
   }
+  unsigned OpNo = &MO - MI.begin();
+  getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
+}
+
+void SIMCCodeEmitter::getMachineOpValueCommon(
+    const MCInst &MI, const MCOperand &MO, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
 
   if (MO.isExpr() && MO.getExpr()->getKind() != MCExpr::Constant) {
     // FIXME: If this is expression is PCRel or not should not depend on what
@@ -545,15 +574,7 @@ void SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
 
-    Fixups.push_back(
-      MCFixup::create(Offset, MO.getExpr(), Kind, MI.getLoc()));
-  }
-
-  // Figure out the operand number, needed for isSrcOperand check
-  unsigned OpNo = 0;
-  for (unsigned e = MI.getNumOperands(); OpNo < e; ++OpNo) {
-    if (&MO == &MI.getOperand(OpNo))
-      break;
+    Fixups.push_back(MCFixup::create(Offset, MO.getExpr(), Kind, MI.getLoc()));
   }
 
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
@@ -564,7 +585,7 @@ void SIMCCodeEmitter::getMachineOpValue(const MCInst &MI,
       return;
     }
   } else if (MO.isImm()) {
-    Op =  MO.getImm();
+    Op = MO.getImm();
     return;
   }
 

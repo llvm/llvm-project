@@ -9,4 +9,4 @@
 // RUN:   2>&1 | FileCheck %s --check-prefix=RELOCATABLE
 // RELOCATABLE:     "-r"
 // RELOCATABLE-NOT: "-l
-// RELOCATABLE-NOT: {{.*}}crt{{[^.]+}}.o
+// RELOCATABLE-NOT: {{.*}}crt{{[^./]+}}.o

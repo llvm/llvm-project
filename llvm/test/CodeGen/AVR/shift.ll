@@ -301,6 +301,17 @@ define i16 @lsr_i16_13(i16 %a) {
   ret i16 %result
 }
 
+define i16 @asr_i16_7(i16 %a) {
+; CHECK-LABEL: asr_i16_7
+; CHECK:       lsl r24
+; CHECK-NEXT:  mov r24, r25
+; CHECK-NEXT:  rol r24
+; CHECK-NEXT:  sbc r25, r25
+; CHECK-NEXT:  ret
+  %result = ashr i16 %a, 7
+  ret i16 %result
+}
+
 define i16 @asr_i16_9(i16 %a) {
 ; CHECK-LABEL: asr_i16_9
 ; CHECK:       mov r24, r25
@@ -323,5 +334,27 @@ define i16 @asr_i16_12(i16 %a) {
 ; CHECK-NEXT:  asr r24
 ; CHECK-NEXT:  ret
   %result = ashr i16 %a, 12
+  ret i16 %result
+}
+
+define i16 @asr_i16_14(i16 %a) {
+; CHECK-LABEL: asr_i16_14
+; CHECK:      lsl r25
+; CHECK-NEXT: sbc r24, r24
+; CHECK-NEXT: lsl r25
+; CHECK-NEXT: mov r25, r24
+; CHECK-NEXT: rol r24
+; CHECK-NEXT: ret
+  %result = ashr i16 %a, 14
+  ret i16 %result
+}
+
+define i16 @asr_i16_15(i16 %a) {
+; CHECK-LABEL: asr_i16_15
+; CHECK:      lsl r25
+; CHECK-NEXT: sbc r25, r25
+; CHECK-NEXT: mov r24, r25
+; CHECK-NEXT: ret
+  %result = ashr i16 %a, 15
   ret i16 %result
 }

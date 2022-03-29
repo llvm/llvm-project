@@ -867,6 +867,11 @@ Decl *TemplateDeclInstantiator::VisitMSGuidDecl(MSGuidDecl *D) {
   llvm_unreachable("GUID declaration cannot be instantiated");
 }
 
+Decl *TemplateDeclInstantiator::VisitUnnamedGlobalConstantDecl(
+    UnnamedGlobalConstantDecl *D) {
+  llvm_unreachable("UnnamedGlobalConstantDecl cannot be instantiated");
+}
+
 Decl *TemplateDeclInstantiator::VisitTemplateParamObjectDecl(
     TemplateParamObjectDecl *D) {
   llvm_unreachable("template parameter objects cannot be instantiated");
@@ -1853,7 +1858,7 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   if (D->isLambda())
     Record = CXXRecordDecl::CreateLambda(
         SemaRef.Context, Owner, D->getLambdaTypeInfo(), D->getLocation(),
-        D->isDependentLambda(), D->isGenericLambda(),
+        D->getLambdaDependencyKind(), D->isGenericLambda(),
         D->getLambdaCaptureDefault());
   else
     Record = CXXRecordDecl::Create(SemaRef.Context, D->getTagKind(), Owner,

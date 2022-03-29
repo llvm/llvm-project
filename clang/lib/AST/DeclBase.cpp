@@ -838,6 +838,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case ExternCContext:
     case Decomposition:
     case MSGuid:
+    case UnnamedGlobalConstant:
     case TemplateParamObject:
 
     case UsingDirective:
@@ -1161,6 +1162,8 @@ bool DeclContext::isDependentContext() const {
 
     if (Record->isDependentLambda())
       return true;
+    if (Record->isNeverDependentLambda())
+      return false;
   }
 
   if (const auto *Function = dyn_cast<FunctionDecl>(this)) {

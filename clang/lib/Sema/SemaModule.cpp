@@ -97,6 +97,46 @@ Sema::ActOnGlobalModuleFragmentDecl(SourceLocation ModuleLoc) {
   return nullptr;
 }
 
+void Sema::HandleStartOfHeaderUnit() {
+  assert(getLangOpts().CPlusPlusModules &&
+         "Header units are only valid for C++20 modules");
+  SourceLocation StartOfTU =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+
+  StringRef HUName = getLangOpts().CurrentModule;
+  if (HUName.empty()) {
+    HUName = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())->getName();
+    const_cast<LangOptions &>(getLangOpts()).CurrentModule = HUName.str();
+  }
+
+  // TODO: Make the C++20 header lookup independent.
+  // When the input is pre-processed source, we need a file ref to the original
+  // file for the header map.
+  auto F = SourceMgr.getFileManager().getFile(HUName);
+  // For the sake of error recovery (if someone has moved the original header
+  // after creating the pre-processed output) fall back to obtaining the file
+  // ref for the input file, which must be present.
+  if (!F)
+    F = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID());
+  assert(F && "failed to find the header unit source?");
+  Module::Header H{HUName.str(), HUName.str(), *F};
+  auto &Map = PP.getHeaderSearchInfo().getModuleMap();
+  Module *Mod = Map.createHeaderUnit(StartOfTU, HUName, H);
+  assert(Mod && "module creation should not fail");
+  ModuleScopes.push_back({}); // No GMF
+  ModuleScopes.back().BeginLoc = StartOfTU;
+  ModuleScopes.back().Module = Mod;
+  ModuleScopes.back().ModuleInterface = true;
+  ModuleScopes.back().IsPartition = false;
+  VisibleModules.setVisible(Mod, StartOfTU);
+
+  // From now on, we have an owning module for all declarations we see.
+  // All of these are implicitly exported.
+  auto *TU = Context.getTranslationUnitDecl();
+  TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::Visible);
+  TU->setLocalOwningModule(Mod);
+}
+
 Sema::DeclGroupPtrTy
 Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
                       ModuleDeclKind MDK, ModuleIdPath Path,
@@ -149,6 +189,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
     return nullptr;
 
   case LangOptions::CMK_HeaderModule:
+  case LangOptions::CMK_HeaderUnit:
     Diag(ModuleLoc, diag::err_module_decl_in_header_module);
     return nullptr;
   }
@@ -173,7 +214,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
       ModuleScopes.back().Module->Kind == Module::GlobalModuleFragment)
     GlobalModuleFragment = ModuleScopes.back().Module;
 
-  assert((!getLangOpts().CPlusPlusModules ||
+  assert((!getLangOpts().CPlusPlusModules || getLangOpts().ModulesTS ||
           SeenGMF == (bool)GlobalModuleFragment) &&
          "mismatched global module state");
 
@@ -310,6 +351,7 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
   case Module::GlobalModuleFragment:
   case Module::ModulePartitionImplementation:
   case Module::ModulePartitionInterface:
+  case Module::ModuleHeaderUnit:
     Diag(PrivateLoc, diag::err_private_module_fragment_not_module);
     return nullptr;
 
@@ -480,7 +522,13 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
       Mod->Kind == Module::ModuleKind::ModulePartitionImplementation) {
     Diag(ExportLoc, diag::err_export_partition_impl)
         << SourceRange(ExportLoc, Path.back().second);
-  } else if (!ModuleScopes.empty() && ModuleScopes.back().ModuleInterface) {
+  } else if (!ModuleScopes.empty() &&
+             (ModuleScopes.back().ModuleInterface ||
+              (getLangOpts().CPlusPlusModules &&
+               ModuleScopes.back().Module->isGlobalModule()))) {
+    assert((!ModuleScopes.back().Module->isGlobalModule() ||
+            Mod->Kind == Module::ModuleKind::ModuleHeaderUnit) &&
+           "should only be importing a header unit into the GMF");
     // Re-export the module if the imported module is exported.
     // Note that we don't need to add re-exported module to Imports field
     // since `Exports` implies the module is imported already.
