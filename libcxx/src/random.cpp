@@ -210,7 +210,7 @@ random_device::entropy() const noexcept
     return std::numeric_limits<result_type>::digits;
 
   return ent;
-#elif defined(__OpenBSD__) || defined(_LIBCPP_USING_FUCHSIA_CPRNG)
+#elif defined(_LIBCPP_USING_ARC4_RANDOM) || defined(_LIBCPP_USING_FUCHSIA_CPRNG)
   return std::numeric_limits<result_type>::digits;
 #else
   return 0;
