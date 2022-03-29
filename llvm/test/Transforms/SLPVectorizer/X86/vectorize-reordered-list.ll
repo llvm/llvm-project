@@ -4,9 +4,7 @@
 define void @test(double* %isec) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds double, double* [[ISEC:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, double* [[ISEC]], i64 0
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[ISEC]], i64 3
+; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds double, double* [[ISEC:%.*]], i64 0
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, double* [[ISEC]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[ARRAYIDX10]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* [[TMP0]], align 8

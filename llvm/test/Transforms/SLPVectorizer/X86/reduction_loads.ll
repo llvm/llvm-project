@@ -22,17 +22,10 @@
 define i32 @test(i32* nocapture readonly %p) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
-; CHECK-NEXT:    [[ARRAYIDX_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul <8 x i32> [[TMP1]], <i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42, i32 42>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP2]])
@@ -102,26 +95,12 @@ for.end:
 define i32 @test2(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX_P_1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX_P_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX_P_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX_P_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
-; CHECK-NEXT:    [[ARRAYIDX_P_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX_P_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX_P_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
-; CHECK-NEXT:    [[ARRAYIDX_Q_1:%.*]] = getelementptr inbounds i32, i32* [[Q:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX_Q_2:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX_Q_3:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX_Q_4:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 4
-; CHECK-NEXT:    [[ARRAYIDX_Q_5:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX_Q_6:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX_Q_7:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 7
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q]] to <8 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q:%.*]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
@@ -207,27 +186,13 @@ for.end:
 define i32 @test3(i32* nocapture readonly %p, i32* nocapture readonly %q) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX_P_1:%.*]] = getelementptr inbounds i32, i32* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX_P_2:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX_P_3:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX_P_4:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 4
-; CHECK-NEXT:    [[ARRAYIDX_P_5:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX_P_6:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX_P_7:%.*]] = getelementptr inbounds i32, i32* [[P]], i64 7
-; CHECK-NEXT:    [[ARRAYIDX_Q_1:%.*]] = getelementptr inbounds i32, i32* [[Q:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX_Q_2:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX_Q_3:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 3
-; CHECK-NEXT:    [[ARRAYIDX_Q_4:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 4
-; CHECK-NEXT:    [[ARRAYIDX_Q_5:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX_Q_6:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 6
-; CHECK-NEXT:    [[ARRAYIDX_Q_7:%.*]] = getelementptr inbounds i32, i32* [[Q]], i64 7
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[OP_EXTRA:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P]] to <8 x i32>*
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[P:%.*]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, <8 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q]] to <8 x i32>*
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[Q:%.*]] to <8 x i32>*
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, <8 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <8 x i32> [[SHUFFLE]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])

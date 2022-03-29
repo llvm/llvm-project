@@ -4,14 +4,8 @@
 define void @foo(i8* %c, float* %d) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[C:%.*]], i64 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[C]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds i8, i8* [[C]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i8, i8* [[C]], i64 3
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds float, float* [[D:%.*]], i64 -1
-; CHECK-NEXT:    [[ADD_PTR37:%.*]] = getelementptr inbounds float, float* [[D]], i64 -2
-; CHECK-NEXT:    [[ADD_PTR45:%.*]] = getelementptr inbounds float, float* [[D]], i64 -3
-; CHECK-NEXT:    [[ADD_PTR53:%.*]] = getelementptr inbounds float, float* [[D]], i64 -4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds i8, i8* [[C:%.*]], i64 1
+; CHECK-NEXT:    [[ADD_PTR53:%.*]] = getelementptr inbounds float, float* [[D:%.*]], i64 -4
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[ARRAYIDX4]] to <4 x i8>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, <4 x i8>* [[TMP0]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>

@@ -19,9 +19,6 @@ define void @test() {
 ; CHECK:       for.cond.preheader:
 ; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 2
 ; CHECK-NEXT:    [[I1:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 3
-; CHECK-NEXT:    [[I2:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 4
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 5
-; CHECK-NEXT:    [[I4:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* undef, i64 0, i64 6
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[I]] to <4 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, <4 x i32>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[I5:%.*]] = add i32 undef, undef

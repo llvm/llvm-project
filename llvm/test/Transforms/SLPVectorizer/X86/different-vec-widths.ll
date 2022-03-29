@@ -13,17 +13,11 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @PR28457(double* noalias nocapture align 32 %q, double* noalias nocapture readonly align 32 %p) {
 ; SSE-LABEL: @PR28457(
 ; SSE-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 0
-; SSE-NEXT:    [[P1:%.*]] = getelementptr inbounds double, double* [[P]], i64 1
 ; SSE-NEXT:    [[P2:%.*]] = getelementptr inbounds double, double* [[P]], i64 2
-; SSE-NEXT:    [[P3:%.*]] = getelementptr inbounds double, double* [[P]], i64 3
 ; SSE-NEXT:    [[P4:%.*]] = getelementptr inbounds double, double* [[P]], i64 4
-; SSE-NEXT:    [[P5:%.*]] = getelementptr inbounds double, double* [[P]], i64 5
 ; SSE-NEXT:    [[Q0:%.*]] = getelementptr inbounds double, double* [[Q:%.*]], i64 0
-; SSE-NEXT:    [[Q1:%.*]] = getelementptr inbounds double, double* [[Q]], i64 1
 ; SSE-NEXT:    [[Q2:%.*]] = getelementptr inbounds double, double* [[Q]], i64 2
-; SSE-NEXT:    [[Q3:%.*]] = getelementptr inbounds double, double* [[Q]], i64 3
 ; SSE-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, double* [[Q]], i64 4
-; SSE-NEXT:    [[Q5:%.*]] = getelementptr inbounds double, double* [[Q]], i64 5
 ; SSE-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <2 x double>*
 ; SSE-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
 ; SSE-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00>
@@ -43,17 +37,9 @@ define void @PR28457(double* noalias nocapture align 32 %q, double* noalias noca
 ;
 ; AVX-LABEL: @PR28457(
 ; AVX-NEXT:    [[P0:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 0
-; AVX-NEXT:    [[P1:%.*]] = getelementptr inbounds double, double* [[P]], i64 1
-; AVX-NEXT:    [[P2:%.*]] = getelementptr inbounds double, double* [[P]], i64 2
-; AVX-NEXT:    [[P3:%.*]] = getelementptr inbounds double, double* [[P]], i64 3
 ; AVX-NEXT:    [[P4:%.*]] = getelementptr inbounds double, double* [[P]], i64 4
-; AVX-NEXT:    [[P5:%.*]] = getelementptr inbounds double, double* [[P]], i64 5
 ; AVX-NEXT:    [[Q0:%.*]] = getelementptr inbounds double, double* [[Q:%.*]], i64 0
-; AVX-NEXT:    [[Q1:%.*]] = getelementptr inbounds double, double* [[Q]], i64 1
-; AVX-NEXT:    [[Q2:%.*]] = getelementptr inbounds double, double* [[Q]], i64 2
-; AVX-NEXT:    [[Q3:%.*]] = getelementptr inbounds double, double* [[Q]], i64 3
 ; AVX-NEXT:    [[Q4:%.*]] = getelementptr inbounds double, double* [[Q]], i64 4
-; AVX-NEXT:    [[Q5:%.*]] = getelementptr inbounds double, double* [[Q]], i64 5
 ; AVX-NEXT:    [[TMP1:%.*]] = bitcast double* [[P0]] to <4 x double>*
 ; AVX-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* [[TMP1]], align 8
 ; AVX-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>

@@ -340,10 +340,7 @@ define void @fmaxnum_16f32() #0 {
 
 define float @reduction_v4f32_fast(float* %p) {
 ; CHECK-LABEL: @reduction_v4f32_fast(
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
@@ -363,10 +360,7 @@ define float @reduction_v4f32_fast(float* %p) {
 
 define float @reduction_v4f32_nnan(float* %p) {
 ; CHECK-LABEL: @reduction_v4f32_nnan(
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <4 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <4 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, <4 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
@@ -415,14 +409,7 @@ define float @reduction_v4f32_not_fast(float* %p) {
 
 define float @reduction_v8f32_fast(float* %p) {
 ; CHECK-LABEL: @reduction_v8f32_fast(
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds float, float* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds float, float* [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds float, float* [[P]], i64 3
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr inbounds float, float* [[P]], i64 4
-; CHECK-NEXT:    [[G5:%.*]] = getelementptr inbounds float, float* [[P]], i64 5
-; CHECK-NEXT:    [[G6:%.*]] = getelementptr inbounds float, float* [[P]], i64 6
-; CHECK-NEXT:    [[G7:%.*]] = getelementptr inbounds float, float* [[P]], i64 7
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P]] to <8 x float>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P:%.*]] to <8 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, <8 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fmax.v8f32(<8 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
@@ -469,10 +456,7 @@ define double @reduction_v2f64_fast(double* %p) {
 
 define double @reduction_v4f64_fast(double* %p) {
 ; CHECK-LABEL: @reduction_v4f64_fast(
-; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds double, double* [[P:%.*]], i64 1
-; CHECK-NEXT:    [[G2:%.*]] = getelementptr inbounds double, double* [[P]], i64 2
-; CHECK-NEXT:    [[G3:%.*]] = getelementptr inbounds double, double* [[P]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P]] to <4 x double>*
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[P:%.*]] to <4 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x double>, <4 x double>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fmax.v4f64(<4 x double> [[TMP2]])
 ; CHECK-NEXT:    ret double [[TMP3]]

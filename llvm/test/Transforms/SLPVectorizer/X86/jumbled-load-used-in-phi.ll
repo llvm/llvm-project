@@ -44,75 +44,48 @@ define void @phiUsingLoads(i32* noalias nocapture readonly %A, i32* noalias noca
 ; CHECK-NEXT:    [[ARRAYIDX44:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 75
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
-; CHECK-NEXT:    [[ARRAYIDX64:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX65:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 2
-; CHECK-NEXT:    [[ARRAYIDX66:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 3
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[B]] to <4 x i32>*
-; CHECK-NEXT:    store <4 x i32> [[TMP26:%.*]], <4 x i32>* [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[B:%.*]] to <4 x i32>*
+; CHECK-NEXT:    store <4 x i32> [[TMP14:%.*]], <4 x i32>* [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ poison, [[ENTRY]] ], [ [[TMP26]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ poison, [[ENTRY]] ], [ [[TMP14]], [[FOR_INC]] ]
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ARRAYIDX2]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i32>, <4 x i32>* [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[ARRAYIDX2]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX12]], align 4
-; CHECK-NEXT:    [[CMP13:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX12]], align 4
+; CHECK-NEXT:    [[CMP13:%.*]] = icmp eq i32 [[TMP5]], 0
 ; CHECK-NEXT:    br i1 [[CMP13]], label [[IF_THEN14:%.*]], label [[IF_ELSE27:%.*]]
 ; CHECK:       if.then14:
 ; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX23:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[ARRAYIDX17]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP13:%.*]] = load <4 x i32>, <4 x i32>* [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[ARRAYIDX17]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i32>, <4 x i32>* [[TMP6]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       if.else27:
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, i32* [[ARRAYIDX28]], align 4
-; CHECK-NEXT:    [[CMP29:%.*]] = icmp eq i32 [[TMP14]], 0
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, i32* [[ARRAYIDX28]], align 4
+; CHECK-NEXT:    [[CMP29:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[CMP29]], label [[IF_THEN30:%.*]], label [[IF_ELSE43:%.*]]
 ; CHECK:       if.then30:
 ; CHECK-NEXT:    [[ARRAYIDX33:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP15:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX36:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP15]]
-; CHECK-NEXT:    [[TMP16:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX39:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP16]]
-; CHECK-NEXT:    [[TMP17:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX42:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast i32* [[ARRAYIDX33]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP19:%.*]] = load <4 x i32>, <4 x i32>* [[TMP18]], align 4
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[ARRAYIDX33]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP10:%.*]] = load <4 x i32>, <4 x i32>* [[TMP9]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       if.else43:
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[ARRAYIDX44]], align 4
-; CHECK-NEXT:    [[CMP45:%.*]] = icmp eq i32 [[TMP20]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[ARRAYIDX44]], align 4
+; CHECK-NEXT:    [[CMP45:%.*]] = icmp eq i32 [[TMP11]], 0
 ; CHECK-NEXT:    br i1 [[CMP45]], label [[IF_THEN46:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then46:
 ; CHECK-NEXT:    [[ARRAYIDX49:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP21:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[ARRAYIDX52:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP21]]
-; CHECK-NEXT:    [[TMP22:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 3
-; CHECK-NEXT:    [[ARRAYIDX55:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP22]]
-; CHECK-NEXT:    [[TMP23:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 2
-; CHECK-NEXT:    [[ARRAYIDX58:%.*]] = getelementptr inbounds i32, i32* [[A]], i64 [[TMP23]]
-; CHECK-NEXT:    [[TMP24:%.*]] = bitcast i32* [[ARRAYIDX49]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP25:%.*]] = load <4 x i32>, <4 x i32>* [[TMP24]], align 4
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP25]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[ARRAYIDX49]] to <4 x i32>*
+; CHECK-NEXT:    [[TMP13:%.*]] = load <4 x i32>, <4 x i32>* [[TMP12]], align 4
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP13]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 3, i32 2>
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
-; CHECK-NEXT:    [[TMP26]] = phi <4 x i32> [ [[TMP7]], [[IF_THEN]] ], [ [[TMP13]], [[IF_THEN14]] ], [ [[TMP19]], [[IF_THEN30]] ], [ [[SHUFFLE]], [[IF_THEN46]] ], [ [[TMP2]], [[IF_ELSE43]] ]
+; CHECK-NEXT:    [[TMP14]] = phi <4 x i32> [ [[TMP4]], [[IF_THEN]] ], [ [[TMP7]], [[IF_THEN14]] ], [ [[TMP10]], [[IF_THEN30]] ], [ [[SHUFFLE]], [[IF_THEN46]] ], [ [[TMP2]], [[IF_ELSE43]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]

@@ -9,13 +9,6 @@ define void @fextr(i16* %ptr) {
 ; CHECK-NEXT:    br label [[T:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 3
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 4
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 5
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 6
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i16, i16* [[PTR]], i64 7
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <8 x i16> [[LD]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>

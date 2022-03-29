@@ -8,9 +8,6 @@ declare void @llvm.sideeffect()
 define void @test_sideeffect(float* %p) {
 ; CHECK-LABEL: @test_sideeffect(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
 ; CHECK-NEXT:    call void @llvm.sideeffect()
 ; CHECK-NEXT:    call void @llvm.sideeffect()
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P0]] to <4 x float>*
@@ -41,9 +38,6 @@ declare void @foo()
 define void @test_inaccessiblememonly(float* %p) {
 ; CHECK-LABEL: @test_inaccessiblememonly(
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr float, float* [[P:%.*]], i64 0
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr float, float* [[P]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr float, float* [[P]], i64 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr float, float* [[P]], i64 3
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @foo() #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[P0]] to <4 x float>*

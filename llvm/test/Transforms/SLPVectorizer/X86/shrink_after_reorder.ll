@@ -4,12 +4,8 @@
 define void @wombat(i32* %ptr, i32* %ptr1) {
 ; CHECK-LABEL: @wombat(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[PTR]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, i32* [[PTR:%.*]], i64 0
 ; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, i32* [[PTR1:%.*]], i32 3
-; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i32, i32* [[PTR1]], i32 4
-; CHECK-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i32, i32* [[PTR1]], i32 5
-; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i32, i32* [[PTR1]], i32 6
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[TMP8]] to <2 x i32>*
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
@@ -70,13 +66,6 @@ define internal i32 @ipvideo_decode_block_opcode_0xD_16() {
 ; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[ARRAYIDX11_1:%.*]] = getelementptr inbounds i16, i16* undef, i32 1
-; CHECK-NEXT:    [[ARRAYIDX11_2:%.*]] = getelementptr inbounds i16, i16* undef, i32 2
-; CHECK-NEXT:    [[ARRAYIDX11_3:%.*]] = getelementptr inbounds i16, i16* undef, i32 3
-; CHECK-NEXT:    [[ARRAYIDX11_4:%.*]] = getelementptr inbounds i16, i16* undef, i32 4
-; CHECK-NEXT:    [[ARRAYIDX11_5:%.*]] = getelementptr inbounds i16, i16* undef, i32 5
-; CHECK-NEXT:    [[ARRAYIDX11_6:%.*]] = getelementptr inbounds i16, i16* undef, i32 6
-; CHECK-NEXT:    [[ARRAYIDX11_7:%.*]] = getelementptr inbounds i16, i16* undef, i32 7
 ; CHECK-NEXT:    store <8 x i16> [[SHUFFLE]], <8 x i16>* undef, align 2
 ; CHECK-NEXT:    [[SHRINK_SHUFFLE]] = shufflevector <8 x i16> [[SHUFFLE]], <8 x i16> poison, <2 x i32> <i32 0, i32 4>
 ; CHECK-NEXT:    br label [[FOR_BODY]]

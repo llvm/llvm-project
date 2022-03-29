@@ -19,41 +19,36 @@ target triple = "x86_64-apple-macosx10.9.0"
 define void @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[TMP0:%.*]], %0* undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[TMP0]], %0* undef, i64 0, i32 1, i32 1
-; CHECK-NEXT:    br label [[TMP7:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x double> [ <double 1.800000e+01, double 2.800000e+01>, [[TMP0]] ], [ [[TMP11:%.*]], [[TMP21:%.*]] ], [ [[TMP11]], [[TMP18:%.*]] ], [ [[TMP11]], [[TMP18]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[TMP1]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast double* [[TMP3]] to <2 x double>*
-; CHECK-NEXT:    [[TMP11]] = load <2 x double>, <2 x double>* [[TMP10]], align 8
+; CHECK-NEXT:    br label [[TMP4:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x double> [ <double 1.800000e+01, double 2.800000e+01>, [[TMP0]] ], [ [[TMP8:%.*]], [[TMP16:%.*]] ], [ [[TMP8]], [[TMP15:%.*]] ], [ [[TMP8]], [[TMP15]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[TMP1]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast double* [[TMP2]] to <2 x double>*
+; CHECK-NEXT:    [[TMP8]] = load <2 x double>, <2 x double>* [[TMP7]], align 8
+; CHECK-NEXT:    br i1 undef, label [[TMP9:%.*]], label [[TMP10:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    ret void
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP11:%.*]] = bitcast double* [[TMP3]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP11]], align 8
 ; CHECK-NEXT:    br i1 undef, label [[TMP12:%.*]], label [[TMP13:%.*]]
 ; CHECK:       12:
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    br label [[TMP13]]
 ; CHECK:       13:
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast double* [[TMP5]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP11]], <2 x double>* [[TMP14]], align 8
-; CHECK-NEXT:    br i1 undef, label [[TMP15:%.*]], label [[TMP16:%.*]]
-; CHECK:       15:
-; CHECK-NEXT:    br label [[TMP16]]
-; CHECK:       16:
-; CHECK-NEXT:    br i1 undef, label [[TMP17:%.*]], label [[TMP18]]
-; CHECK:       17:
+; CHECK-NEXT:    br i1 undef, label [[TMP14:%.*]], label [[TMP15]]
+; CHECK:       14:
 ; CHECK-NEXT:    unreachable
-; CHECK:       18:
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x double> [[TMP11]], i32 0
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x double> [[TMP11]], i32 1
-; CHECK-NEXT:    switch i32 undef, label [[TMP21]] [
-; CHECK-NEXT:    i32 32, label [[TMP7]]
-; CHECK-NEXT:    i32 103, label [[TMP7]]
+; CHECK:       15:
+; CHECK-NEXT:    switch i32 undef, label [[TMP16]] [
+; CHECK-NEXT:    i32 32, label [[TMP4]]
+; CHECK-NEXT:    i32 103, label [[TMP4]]
 ; CHECK-NEXT:    ]
-; CHECK:       21:
-; CHECK-NEXT:    br i1 undef, label [[TMP7]], label [[TMP22:%.*]]
-; CHECK:       22:
+; CHECK:       16:
+; CHECK-NEXT:    br i1 undef, label [[TMP4]], label [[TMP17:%.*]]
+; CHECK:       17:
 ; CHECK-NEXT:    unreachable
 ;
   %1 = getelementptr inbounds %0, %0* undef, i64 0, i32 1, i32 0

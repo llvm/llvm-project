@@ -16,10 +16,6 @@ define dso_local void @j() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32*, i32** @b, align 8
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 12
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 5
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 13
-; CHECK-NEXT:    [[ARRAYIDX15:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 14
-; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr inbounds i32, i32* [[TMP0]], i64 15
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* @a, align 4
 ; CHECK-NEXT:    [[CONV19:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[ARRAYIDX]] to <2 x i32>*

@@ -5,7 +5,6 @@ define i32 @test(float* %isec, float %0) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, float* [[ISEC:%.*]], i64 0
-; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds float, float* [[ISEC]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float* [[ARRAYIDX5]] to <2 x float>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, <2 x float>* [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float 0.000000e+00, float poison>, float [[TMP0:%.*]], i32 1

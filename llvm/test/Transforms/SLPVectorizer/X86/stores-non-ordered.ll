@@ -36,10 +36,8 @@ define i32 @non-ordered-stores(i32* noalias nocapture %in, i32* noalias nocaptur
 ; CHECK-NEXT:    br label [[BLOCK2:%.*]]
 ; CHECK:       block2:
 ; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds i32, i32* [[OUT:%.*]], i64 0
-; CHECK-NEXT:    [[GEP_8:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 1
 ; CHECK-NEXT:    [[GEP_9:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 2
 ; CHECK-NEXT:    [[GEP_10:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 3
-; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds i32, i32* [[OUT]], i64 4
 ; CHECK-NEXT:    store i32 [[LOAD_9]], i32* [[GEP_9]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = bitcast i32* [[GEP_10]] to <2 x i32>*
 ; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP11]], align 4
