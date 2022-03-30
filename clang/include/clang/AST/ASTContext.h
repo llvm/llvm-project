@@ -677,6 +677,9 @@ public:
     ~CUDAConstantEvalContextRAII() { Ctx.CUDAConstantEvalCtx = SavedCtx; }
   };
 
+  /// Current CUDA name mangling is for device name in host compilation.
+  bool CUDAMangleDeviceNameInHostCompilation = false;
+
   /// Returns the dynamic AST node parent map context.
   ParentMapContext &getParentMapContext();
 

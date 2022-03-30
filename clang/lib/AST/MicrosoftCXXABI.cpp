@@ -76,6 +76,20 @@ public:
   unsigned getDeviceManglingNumber(const CXXMethodDecl *CallOperator) override {
     return DeviceCtx->getManglingNumber(CallOperator);
   }
+
+  unsigned getManglingNumber(const TagDecl *TD,
+                             unsigned MSLocalManglingNumber) override {
+    unsigned DeviceN = DeviceCtx->getManglingNumber(TD, MSLocalManglingNumber);
+    unsigned HostN =
+        MicrosoftNumberingContext::getManglingNumber(TD, MSLocalManglingNumber);
+    if (DeviceN > 0xFFFF || HostN > 0xFFFF) {
+      DiagnosticsEngine &Diags = TD->getASTContext().getDiagnostics();
+      unsigned DiagID = Diags.getCustomDiagID(
+          DiagnosticsEngine::Error, "Mangling number exceeds limit (65535)");
+      Diags.Report(TD->getLocation(), DiagID);
+    }
+    return (DeviceN << 16) | HostN;
+  }
 };
 
 class MSSYCLNumberingContext : public MicrosoftNumberingContext {
