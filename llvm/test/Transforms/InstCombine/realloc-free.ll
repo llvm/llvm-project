@@ -11,8 +11,8 @@ define dso_local void @_Z3fooPv(i8* nocapture %0) local_unnamed_addr #0 {
   ret void
 }
 
-declare dso_local noalias noundef i8* @realloc(i8* nocapture, i64 noundef) local_unnamed_addr #1
-declare dso_local void @free(i8* nocapture noundef) local_unnamed_addr #2
+declare dso_local noalias noundef i8* @realloc(i8* allocptr nocapture, i64 noundef) local_unnamed_addr #1
+declare dso_local void @free(i8* allocptr nocapture noundef) local_unnamed_addr #2
 
 attributes #0 = { mustprogress nounwind uwtable willreturn }
 attributes #1 = { inaccessiblemem_or_argmemonly mustprogress nounwind willreturn allockind("realloc") }
