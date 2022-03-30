@@ -74,6 +74,22 @@ def ConvertAffineToStandard : Pass<"lower-affine"> {
 }
 
 //===----------------------------------------------------------------------===//
+// AMDGPUToROCDL
+//===----------------------------------------------------------------------===//
+
+def ConvertAMDGPUToROCDL : Pass<"convert-amdgpu-to-rocdl"> {
+  let summary = "Convert AMDGPU dialect to ROCDL dialect";
+  let description = [{
+    This pass converts supported AMDGPU ops to ROCDL dialect intrinsics.
+  }];
+  let constructor = "mlir::createConvertAMDGPUToROCDLPass()";
+  let dependentDialects = [
+    "LLVM::LLVMDialect",
+    "ROCDL::ROCDLDialect",
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithmeticToLLVM
 //===----------------------------------------------------------------------===//
 

@@ -1149,6 +1149,69 @@ gentbl_cc_library(
 )
 
 ##---------------------------------------------------------------------------##
+# AMDGPU dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "AMDGPUTdFiles",
+    srcs = ["include/mlir/Dialect/AMDGPU/AMDGPU.td"],
+    includes = ["include"],
+    deps = [
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "AMDGPUIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=amdgpu",
+            ],
+            "include/mlir/Dialect/AMDGPU/AMDGPUDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=amdgpu",
+            ],
+            "include/mlir/Dialect/AMDGPU/AMDGPUDialect.cpp.inc",
+        ),
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/AMDGPU/AMDGPU.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/AMDGPU/AMDGPU.cpp.inc",
+        ),
+        (
+            ["-gen-op-doc"],
+            "g3doc/Dialects/AMDGPU/AMDGPU.md",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/AMDGPU/AMDGPU.td",
+    deps = [":AMDGPUTdFiles"],
+)
+
+cc_library(
+    name = "AMDGPU",
+    srcs = ["lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp"],
+    hdrs = ["include/mlir/Dialect/AMDGPU/AMDGPUDialect.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":AMDGPUIncGen",
+        ":SideEffectInterfaces",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+##---------------------------------------------------------------------------##
 # EmitC dialect.
 ##---------------------------------------------------------------------------##
 
@@ -2385,6 +2448,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":AffineToStandard",
+        ":AMDGPUToROCDL",
         ":ArithmeticToLLVM",
         ":ArithmeticToSPIRV",
         ":ArmNeon2dToIntr",
@@ -3611,6 +3675,28 @@ cc_library(
         ":MemRefDialect",
         ":MemRefToLLVM",
         ":NVVMDialect",
+        ":Pass",
+        ":Transforms",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "AMDGPUToROCDL",
+    srcs = glob([
+        "lib/Conversion/AMDGPUToROCDL/*.cpp",
+        "lib/Conversion/AMDGPUToROCDL/*.h",
+    ]) + [":ConversionPassDetail"],
+    hdrs = glob([
+        "include/mlir/Conversion/AMDGPUToROCDL/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":AMDGPU",
+        ":ROCDLDialect",
         ":Pass",
         ":Transforms",
         "//llvm:Support",
@@ -6050,6 +6136,8 @@ cc_library(
         ":AffinePassIncGen",
         ":AffineToStandard",
         ":AffineTransforms",
+        ":AMDGPU",
+        ":AMDGPUToROCDL",
         ":ArithmeticDialect",
         ":ArithmeticToLLVM",
         ":ArithmeticToSPIRV",
