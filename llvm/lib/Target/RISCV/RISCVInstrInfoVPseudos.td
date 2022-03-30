@@ -1192,9 +1192,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasMergeOp = 1;
-  // FIXME: In current design, we would not change the mask policy, so
-  // UsesMaskPolicy is false. We could fix after add the policy operand.
-  let UsesMaskPolicy = 0;
+  let UsesMaskPolicy = 1;
   let BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
 }
 
