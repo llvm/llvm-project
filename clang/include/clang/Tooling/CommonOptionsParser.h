@@ -84,7 +84,7 @@ public:
   static llvm::Expected<CommonOptionsParser>
   create(int &argc, const char **argv, llvm::cl::OptionCategory &Category,
          llvm::cl::NumOccurrencesFlag OccurrencesFlag = llvm::cl::OneOrMore,
-         const char *Overview = nullptr);
+         const char *Overview = nullptr, bool OutputError = true);
 
   /// Returns a reference to the loaded compilations database.
   CompilationDatabase &getCompilations() {
@@ -108,7 +108,7 @@ private:
   llvm::Error init(int &argc, const char **argv,
                    llvm::cl::OptionCategory &Category,
                    llvm::cl::NumOccurrencesFlag OccurrencesFlag,
-                   const char *Overview);
+                   const char *Overview, bool OutputError = true);
 
   std::unique_ptr<CompilationDatabase> Compilations;
   std::vector<std::string> SourcePathList;

@@ -82,7 +82,8 @@ std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
 
 llvm::Error CommonOptionsParser::init(
     int &argc, const char **argv, cl::OptionCategory &Category,
-    llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
+                          llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+                          const char *Overview, bool OutputError/* = true*/) {
 
   static cl::opt<std::string> BuildPath("p", cl::desc("Build path"),
                                         cl::Optional, cl::cat(Category),
@@ -134,8 +135,10 @@ llvm::Error CommonOptionsParser::init(
                                                                ErrorMessage);
     }
     if (!Compilations) {
-      llvm::errs() << "Error while trying to load a compilation database:\n"
-                   << ErrorMessage << "Running without flags.\n";
+      if (OutputError) {
+        llvm::errs() << "Error while trying to load a compilation database:\n"
+                     << ErrorMessage << "Running without flags.\n";
+      }
       Compilations.reset(
           new FixedCompilationDatabase(".", std::vector<std::string>()));
     }
@@ -155,10 +158,11 @@ llvm::Error CommonOptionsParser::init(
 
 llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
     int &argc, const char **argv, llvm::cl::OptionCategory &Category,
-    llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
+                            llvm::cl::NumOccurrencesFlag OccurrencesFlag,
+                            const char *Overview, bool OutputError/* = true*/) {
   CommonOptionsParser Parser;
   llvm::Error Err =
-      Parser.init(argc, argv, Category, OccurrencesFlag, Overview);
+      Parser.init(argc, argv, Category, OccurrencesFlag, Overview, OutputError);
   if (Err)
     return std::move(Err);
   return std::move(Parser);
