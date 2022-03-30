@@ -1575,6 +1575,13 @@ let IntrProperties = [IntrNoMem, IntrNoSync, IntrWillReturn] in {
                                   llvm_metadata_ty,
                                   LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
                                   llvm_i32_ty]>;
+
+  def int_vp_icmp : DefaultAttrsIntrinsic<[ LLVMScalarOrSameVectorWidth<0, llvm_i1_ty> ],
+                                [ llvm_anyvector_ty,
+                                  LLVMMatchType<0>,
+                                  llvm_metadata_ty,
+                                  LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
+                                  llvm_i32_ty]>;
 }
 
 // Reductions
