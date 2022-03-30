@@ -57,14 +57,14 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 // implement thunks. TODO: Adding support for branch islands!
 //
 // Internally -- as expressed in LLD's data structures -- a
-// branch-range-extension thunk comprises ...
+// branch-range-extension thunk consists of:
 //
-// (1) new Defined privateExtern symbol for the thunk named
+// (1) new Defined symbol for the thunk named
 //     <FUNCTION>.thunk.<SEQUENCE>, which references ...
 // (2) new InputSection, which contains ...
 // (3.1) new data for the instructions to load & branch to the far address +
 // (3.2) new Relocs on instructions to load the far address, which reference ...
-// (4.1) existing Defined extern symbol for the real function in __text, or
+// (4.1) existing Defined symbol for the real function in __text, or
 // (4.2) existing DylibSymbol for the real function in a dylib
 //
 // Nearly-optimal thunk-placement algorithm features:
@@ -89,8 +89,8 @@ void ConcatOutputSection::addInput(ConcatInputSection *input) {
 //   goes out of range, we increment the sequence number and create a new
 //   thunk named <FUNCTION>.thunk.<SEQUENCE>.
 //
-// * A thunk incarnation comprises (a) private-extern Defined symbol pointing
-//   to (b) an InputSection holding machine instructions (similar to a MachO
+// * A thunk consists of (a) a Defined symbol pointing to
+//   (b) an InputSection holding machine instructions (similar to a MachO
 //   stub), and (c) Reloc(s) that reference the real function for fixing-up
 //   the stub code.
 //
@@ -323,11 +323,20 @@ void ConcatOutputSection::finalize() {
 
       StringRef thunkName = saver().save(funcSym->getName() + ".thunk." +
                                          std::to_string(thunkInfo.sequence++));
-      r.referent = thunkInfo.sym = symtab->addDefined(
-          thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
-          /*size=*/thunkSize, /*isWeakDef=*/false, /*isPrivateExtern=*/true,
-          /*isThumb=*/false, /*isReferencedDynamically=*/false,
-          /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
+      if (!isa<Defined>(funcSym) || cast<Defined>(funcSym)->isExternal()) {
+        r.referent = thunkInfo.sym = symtab->addDefined(
+            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
+            thunkSize, /*isWeakDef=*/false, /*isPrivateExtern=*/true,
+            /*isThumb=*/false, /*isReferencedDynamically=*/false,
+            /*noDeadStrip=*/false, /*isWeakDefCanBeHidden=*/false);
+      } else {
+        r.referent = thunkInfo.sym = make<Defined>(
+            thunkName, /*file=*/nullptr, thunkInfo.isec, /*value=*/0,
+            thunkSize, /*isWeakDef=*/false, /*isExternal=*/false,
+            /*isPrivateExtern=*/true, /*isThumb=*/false,
+            /*isReferencedDynamically=*/false, /*noDeadStrip=*/false,
+            /*isWeakDefCanBeHidden=*/false);
+      }
       thunkInfo.sym->used = true;
       target->populateThunk(thunkInfo.isec, funcSym);
       finalizeOne(thunkInfo.isec);
