@@ -102,4 +102,10 @@ void func_16(void) {
   _Atomic(struct { int val; }) z;
   z.val = 12;       // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
   int zval = z.val; // expected-error {{accessing a member of an atomic structure or union is undefined behavior}}
+
+  // Don't diagnose in an unevaluated context, however.
+  (void)sizeof(x.val);
+  (void)sizeof(xp->val);
+  (void)sizeof(y.ival);
+  (void)sizeof(yp->ival);
 }
