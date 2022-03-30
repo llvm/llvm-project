@@ -1657,6 +1657,15 @@ bool is_contained(R &&Range, const E &Element) {
   return std::find(adl_begin(Range), adl_end(Range), Element) != adl_end(Range);
 }
 
+template <typename T>
+constexpr bool is_contained(std::initializer_list<T> Set, T Value) {
+  // TODO: Use std::find when we switch to C++20.
+  for (T V : Set)
+    if (V == Value)
+      return true;
+  return false;
+}
+
 /// Wrapper function around std::is_sorted to check if elements in a range \p R
 /// are sorted with respect to a comparator \p C.
 template <typename R, typename Compare> bool is_sorted(R &&Range, Compare C) {

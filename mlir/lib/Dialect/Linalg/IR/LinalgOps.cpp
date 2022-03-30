@@ -836,9 +836,13 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
             sparse_tensor::getSparseTensorEncoding(resultType))
           returnedArg = rewriter.create<sparse_tensor::ConvertOp>(
               genericOp.getLoc(), resultType, returnedArg);
-        else
+        else {
+          if (!tensor::CastOp::areCastCompatible(returnedArg.getType(),
+                                                 resultType))
+            return failure();
           returnedArg = rewriter.create<tensor::CastOp>(
               genericOp.getLoc(), resultType, returnedArg);
+        }
       }
       returnedArgs.push_back(returnedArg);
     }

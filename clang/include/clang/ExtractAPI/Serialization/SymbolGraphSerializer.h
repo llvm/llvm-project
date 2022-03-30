@@ -62,6 +62,13 @@ public:
     /// For example enum constants are members of the enum, class/instance
     /// methods are members of the class, etc.
     MemberOf,
+
+    /// The source symbol is inherited from the target symbol.
+    InheritsFrom,
+
+    /// The source symbol conforms to the target symbol.
+    /// For example Objective-C protocol conformances.
+    ConformsTo,
   };
 
   /// Get the string representation of the relationship kind.
@@ -101,8 +108,8 @@ private:
   ///
   /// Record the relationship between the two symbols in
   /// SymbolGraphSerializer::Relationships.
-  void serializeRelationship(RelationshipKind Kind, const APIRecord &Source,
-                             const APIRecord &Target);
+  void serializeRelationship(RelationshipKind Kind, SymbolReference Source,
+                             SymbolReference Target);
 
   /// Serialize a global record.
   void serializeGlobalRecord(const GlobalRecord &Record);
@@ -112,6 +119,9 @@ private:
 
   /// Serialize a struct record.
   void serializeStructRecord(const StructRecord &Record);
+
+  /// Serialize an Objective-C container record.
+  void serializeObjCContainerRecord(const ObjCContainerRecord &Record);
 
 public:
   SymbolGraphSerializer(const APISet &API, StringRef ProductName,

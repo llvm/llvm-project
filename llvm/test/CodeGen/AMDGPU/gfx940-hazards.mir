@@ -1,0 +1,217 @@
+# RUN: llc -march=amdgcn -mcpu=gfx940 -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: trans32_write_non_trans32_read
+# GCN:      V_RCP_F32
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_MUL_F32
+name:            trans32_write_non_trans32_read
+body:             |
+  bb.0:
+    $vgpr1 = V_RCP_F32_e32 $vgpr0, implicit $mode, implicit $exec
+    $vgpr2 = V_MUL_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: trans32_write_trans_read
+# GCN:      V_SIN_F32
+# GCN-NEXT: V_COS_F32
+name:            trans32_write_trans_read
+body:             |
+  bb.0:
+    $vgpr0 = V_SIN_F32_e32 $vgpr1, implicit $mode, implicit $exec
+    $vgpr2 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: trans64_write_non_trans_read
+# GCN:      V_RCP_F64
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_OR_B32
+name:            trans64_write_non_trans_read
+body:             |
+  bb.0:
+    $vgpr0_vgpr1 = V_RCP_F64_e32 $vgpr2_vgpr3, implicit $mode, implicit $exec
+    $vgpr4 = V_OR_B32_e32 $vgpr1, $vgpr5, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: trans32_write_non_trans64_read
+# GCN:      V_EXP_F32
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_MUL_F64
+name:            trans32_write_non_trans64_read
+body:             |
+  bb.0:
+    $vgpr1 = V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
+    $vgpr2_vgpr3 = V_MUL_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: opsel_hi16_write_valu_read
+# GCN:      V_ADD_I16
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_MUL_F64
+name:            opsel_hi16_write_valu_read
+body:             |
+  bb.0:
+    $vgpr0 = V_ADD_I16_e64 8, $vgpr1, 0, $vgpr2, 0, 0, implicit $exec
+    $vgpr4_vgpr5 = V_MUL_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: opsel_lo16_write_valu_read
+# GCN:      V_ADD_I16
+# GCN-NEXT: V_MUL_F64
+name:            opsel_lo16_write_valu_read
+body:             |
+  bb.0:
+    $vgpr0 = V_ADD_I16_e64 0, $vgpr1, 0, $vgpr2, 0, 0, implicit $exec
+    $vgpr4_vgpr5 = V_MUL_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+...
+
+# GCN-LABEL: name: sdwa_hi16_write_valu_read
+# GCN:      V_MOV_B32_sdwa
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_MOV_B32_e32
+name:            sdwa_hi16_write_valu_read
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_sdwa 0, $vgpr1, 0, 5, 2, 5, implicit $vgpr0(tied-def 0), implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: sdwa_lo16_write_valu_read
+# GCN:      V_MOV_B32_sdwa
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_MOV_B32_e32
+name:            sdwa_lo16_write_valu_read
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_sdwa 0, $vgpr1, 0, 4, 2, 5, implicit $vgpr0(tied-def 0), implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: sdwa_dword_write_valu_read
+# GCN:      V_MOV_B32_sdwa
+# GCN-NEXT: V_MOV_B32_e32
+name:            sdwa_dword_write_valu_read
+body:             |
+  bb.0:
+    $vgpr0 = V_MOV_B32_sdwa 0, $vgpr1, 0, 6, 2, 5, implicit $vgpr0(tied-def 0), implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: sdwa_lo16_no_write_valu_read
+# GCN:      V_CMP_EQ_U32_sdwa
+# GCN-NEXT: V_MOV_B32_e32
+name:            sdwa_lo16_no_write_valu_read
+body:             |
+  bb.0:
+    $vcc = V_CMP_EQ_U32_sdwa 0, $vgpr1, 0, $vgpr0, 0, 5, 2, implicit $exec
+    $vgpr3 = V_MOV_B32_e32 $vgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: valu_write_sgpr_valu_read_as_constant
+# GCN:      V_READFIRSTLANE_B32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_MOV_B32_e32
+name:            valu_write_sgpr_valu_read_as_constant
+body:             |
+  bb.0:
+    $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: valu_write_vcc_valu_read_as_constant
+# GCN:      V_CMP_NE_U32_e32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_ADDC_U32_e32
+name:            valu_write_vcc_valu_read_as_constant
+body:             |
+  bb.0:
+    V_CMP_NE_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $exec
+    $vgpr1 = V_ADDC_U32_e32 0, $vgpr1, implicit-def $vcc, implicit $vcc, implicit $exec
+...
+
+# GCN-LABEL: name: valu_write_sgpr_readlane_read_as_laneselect
+# GCN:      V_READFIRSTLANE_B32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_READLANE_B32
+name:            valu_write_sgpr_readlane_read_as_laneselect
+body:             |
+  bb.0:
+    $sgpr0 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
+    $sgpr1 = V_READLANE_B32 $vgpr1, $sgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: valu_write_sgpr_writelane_read_as_laneselect
+# GCN:      V_ADD_CO_U32_e64
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_WRITELANE_B32
+name:            valu_write_sgpr_writelane_read_as_laneselect
+body:             |
+  bb.0:
+    $vgpr0, $sgpr0_sgpr1 = V_ADD_CO_U32_e64 $vgpr0, 1, 0, implicit $exec
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr0, $vgpr1, implicit $exec
+...
+
+# GCN-LABEL: name: vcmpx_write_exec_valu_read_as_constant
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_MOV_B32_e32
+name:            vcmpx_write_exec_valu_read_as_constant
+body:             |
+  bb.0:
+    implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr1 = V_MOV_B32_e32 $exec_lo, implicit $exec
+...
+
+# GCN-LABEL: name: vcmpx_write_exec_readlane
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_READLANE_B32
+name:            vcmpx_write_exec_readlane
+body:             |
+  bb.0:
+    implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
+    $sgpr1 = V_READLANE_B32 $vgpr1, 0, implicit $exec
+...
+
+# GCN-LABEL: name: vcmpx_write_exec_readfirstlane
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_READFIRSTLANE_B32
+name:            vcmpx_write_exec_readfirstlane
+body:             |
+  bb.0:
+    implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
+    $sgpr1 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
+...
+
+# GCN-LABEL: name: vcmpx_write_exec_writelane
+# GCN:      V_CMPX_EQ_I32_e32
+# GCN-NEXT: S_NOP 3
+# GCN-NEXT: V_WRITELANE_B32
+name:            vcmpx_write_exec_writelane
+body:             |
+  bb.0:
+    implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
+    $vgpr1 = V_WRITELANE_B32 0, $sgpr0, $vgpr1, implicit $exec
+...
+
+# GCN-LABEL: name: valu_write_vgpr_readlane_read
+# GCN:      V_ADD_CO_U32_e32
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_READLANE_B32
+name:            valu_write_vgpr_readlane_read
+body:             |
+  bb.0:
+    $vgpr1 = V_ADD_CO_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $exec
+    $sgpr1 = V_READLANE_B32 $vgpr1, $sgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: valu_write_vgpr_readfirstlane_read
+# GCN:      V_ADD_CO_U32_e32
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_READFIRSTLANE_B32
+name:            valu_write_vgpr_readfirstlane_read
+body:             |
+  bb.0:
+    $vgpr1 = V_ADD_CO_U32_e32 $vgpr0, $vgpr0, implicit-def $vcc, implicit $exec
+    $sgpr1 = V_READFIRSTLANE_B32 $vgpr1, implicit $exec
+...

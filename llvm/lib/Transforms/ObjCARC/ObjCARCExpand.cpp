@@ -22,7 +22,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ObjCARC.h"
+#include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"

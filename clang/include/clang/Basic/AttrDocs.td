@@ -6368,3 +6368,14 @@ flag.
 .. _Return-Oriented Programming: https://en.wikipedia.org/wiki/Return-oriented_programming
   }];
 }
+
+def NumThreadsDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``numthreads`` attribute applies to HLSL shaders where explcit thread counts
+are required. The ``X``, ``Y``, and ``Z`` values provided to the attribute
+dictate the thread id. Total number of threads executed is ``X * Y * Z``.
+
+The full documentation is available here: https://docs.microsoft.com/en-us/windows/win32/direct3dhlsl/sm5-attributes-numthreads
+  }];
+}

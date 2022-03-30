@@ -347,9 +347,18 @@ def ixlenimm_li : Operand<XLenVT> {
 
 // Standalone (codegen-only) immleaf patterns.
 
-// A 12-bit signed immediate plus one where the imm range will be -2047~2048.
+// A 12-bit signed immediate plus one where the imm range will be [-2047, 2048].
 def simm12_plus1 : ImmLeaf<XLenVT,
   [{return (isInt<12>(Imm) && Imm != -2048) || Imm == 2048;}]>;
+
+// A 12-bit signed immediate sub one and exclude zero
+def simm12_sub1_nonzero : PatLeaf<(imm), [{
+  if (!N->hasOneUse())
+    return false;
+  // The immediate operand must be in range [-2049, 0) or (0, 2046].
+  int64_t Imm = N->getSExtValue();
+  return (Imm >= -2049 && Imm < 0) || (Imm > 0 && Imm <= 2046);
+}]>;
 
 // A 6-bit constant greater than 32.
 def uimm6gt32 : ImmLeaf<XLenVT, [{
@@ -373,9 +382,9 @@ def ImmSub32 : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
-// Return an immediate value plus 32.
-def ImmPlus32 : SDNodeXForm<imm, [{
-  return CurDAG->getTargetConstant(N->getSExtValue() + 32, SDLoc(N),
+// Return an immediate value plus 1.
+def ImmPlus1 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(N->getSExtValue() + 1, SDLoc(N),
                                    N->getValueType(0));
 }]>;
 
@@ -1208,6 +1217,10 @@ def : Pat<(setule GPR:$rs1, GPR:$rs2), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
 def : Pat<(setgt GPR:$rs1, GPR:$rs2), (SLT GPR:$rs2, GPR:$rs1)>;
 def : Pat<(setge GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs1, GPR:$rs2), 1)>;
 def : Pat<(setle GPR:$rs1, GPR:$rs2), (XORI (SLT GPR:$rs2, GPR:$rs1), 1)>;
+def : Pat<(setgt GPR:$rs1, simm12_sub1_nonzero:$imm),
+          (XORI (SLTI GPR:$rs1, (ImmPlus1 simm12_sub1_nonzero:$imm)), 1)>;
+def : Pat<(setugt GPR:$rs1, simm12_sub1_nonzero:$imm),
+          (XORI (SLTIU GPR:$rs1, (ImmPlus1 simm12_sub1_nonzero:$imm)), 1)>;
 
 def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();

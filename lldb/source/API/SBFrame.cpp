@@ -637,9 +637,9 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
             for (uint32_t set_idx = 0; set_idx < num_sets; ++set_idx) {
               const RegisterSet *reg_set = reg_ctx->GetRegisterSet(set_idx);
               if (reg_set &&
-                  ((reg_set->name && strcasecmp(reg_set->name, name) == 0) ||
-                   (reg_set->short_name &&
-                    strcasecmp(reg_set->short_name, name) == 0))) {
+                  (llvm::StringRef(reg_set->name).equals_insensitive(name) ||
+                   llvm::StringRef(reg_set->short_name)
+                       .equals_insensitive(name))) {
                 value_sp =
                     ValueObjectRegisterSet::Create(frame, reg_ctx, set_idx);
                 sb_value.SetSP(value_sp);
