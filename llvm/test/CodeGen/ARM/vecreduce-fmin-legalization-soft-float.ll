@@ -9,33 +9,44 @@ declare fp128 @llvm.vector.reduce.fmin.v2f128(<2 x fp128>)
 define half @test_v4f16(<4 x half> %a) nounwind {
 ; CHECK-LABEL: test_v4f16:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    mov r4, #255
-; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    orr r4, r4, #65280
-; CHECK-NEXT:    mov r5, r2
-; CHECK-NEXT:    and r0, r3, r4
-; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, r8, r9, r11, lr}
+; CHECK-NEXT:    mov r9, #255
+; CHECK-NEXT:    mov r8, r3
+; CHECK-NEXT:    orr r9, r9, #65280
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    and r0, r0, r9
+; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r8, r0
-; CHECK-NEXT:    and r0, r5, r4
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    and r0, r5, r9
 ; CHECK-NEXT:    bl __aeabi_h2f
 ; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    and r0, r7, r4
-; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    and r0, r6, r4
-; CHECK-NEXT:    bl __aeabi_h2f
-; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    bl fminf
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    bl fminf
-; CHECK-NEXT:    mov r1, r8
-; CHECK-NEXT:    bl fminf
+; CHECK-NEXT:    bl __aeabi_fcmplt
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    and r0, r6, r9
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    mov r6, r0
+; CHECK-NEXT:    movne r5, r7
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    bl __aeabi_fcmplt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    and r0, r8, r9
+; CHECK-NEXT:    moveq r5, r6
+; CHECK-NEXT:    bl __aeabi_h2f
+; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    bl __aeabi_fcmplt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    moveq r5, r4
+; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    bl __aeabi_f2h
-; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, r9, r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast half @llvm.vector.reduce.fmin.v4f16(<4 x half> %a)
   ret half %b
@@ -44,16 +55,27 @@ define half @test_v4f16(<4 x half> %a) nounwind {
 define float @test_v4f32(<4 x float> %a) nounwind {
 ; CHECK-LABEL: test_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r11, lr}
-; CHECK-NEXT:    push {r4, r5, r11, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r11, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEXT:    mov r4, r3
-; CHECK-NEXT:    mov r5, r2
-; CHECK-NEXT:    bl fminf
-; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    bl fminf
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    bl __aeabi_fcmplt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    movne r5, r7
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    bl __aeabi_fcmplt
+; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    bl fminf
-; CHECK-NEXT:    pop {r4, r5, r11, lr}
+; CHECK-NEXT:    moveq r5, r6
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    bl __aeabi_fcmplt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    moveq r5, r4
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    pop {r4, r5, r6, r7, r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast float @llvm.vector.reduce.fmin.v4f32(<4 x float> %a)
   ret float %b
@@ -62,10 +84,26 @@ define float @test_v4f32(<4 x float> %a) nounwind {
 define double @test_v2f64(<2 x double> %a) nounwind {
 ; CHECK-LABEL: test_v2f64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    bl fmin
-; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    mov r4, r3
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r8, r1
+; CHECK-NEXT:    mov r7, r0
+; CHECK-NEXT:    bl __aeabi_dcmplt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r5, r6
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    mov r1, r8
+; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    mov r3, r4
+; CHECK-NEXT:    movne r5, r7
+; CHECK-NEXT:    bl __aeabi_dcmplt
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    movne r4, r8
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast double @llvm.vector.reduce.fmin.v2f64(<2 x double> %a)
   ret double %b
@@ -74,21 +112,65 @@ define double @test_v2f64(<2 x double> %a) nounwind {
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
 ; CHECK-LABEL: test_v2f128:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    .pad #16
-; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    ldr r12, [sp, #36]
-; CHECK-NEXT:    str r12, [sp, #12]
-; CHECK-NEXT:    ldr r12, [sp, #32]
-; CHECK-NEXT:    str r12, [sp, #8]
-; CHECK-NEXT:    ldr r12, [sp, #28]
-; CHECK-NEXT:    str r12, [sp, #4]
-; CHECK-NEXT:    ldr r12, [sp, #24]
-; CHECK-NEXT:    str r12, [sp]
-; CHECK-NEXT:    bl fminl
-; CHECK-NEXT:    add sp, sp, #16
-; CHECK-NEXT:    pop {r11, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    .pad #28
+; CHECK-NEXT:    sub sp, sp, #28
+; CHECK-NEXT:    ldr r5, [sp, #76]
+; CHECK-NEXT:    mov r8, r3
+; CHECK-NEXT:    ldr r6, [sp, #72]
+; CHECK-NEXT:    mov r9, r2
+; CHECK-NEXT:    ldr r4, [sp, #68]
+; CHECK-NEXT:    mov r10, r1
+; CHECK-NEXT:    ldr r7, [sp, #64]
+; CHECK-NEXT:    mov r11, r0
+; CHECK-NEXT:    str r5, [sp, #12]
+; CHECK-NEXT:    str r6, [sp, #8]
+; CHECK-NEXT:    str r4, [sp, #4]
+; CHECK-NEXT:    str r7, [sp]
+; CHECK-NEXT:    bl __lttf2
+; CHECK-NEXT:    str r0, [sp, #24] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    mov r1, r10
+; CHECK-NEXT:    mov r2, r9
+; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    str r7, [sp]
+; CHECK-NEXT:    stmib sp, {r4, r6}
+; CHECK-NEXT:    str r5, [sp, #12]
+; CHECK-NEXT:    bl __lttf2
+; CHECK-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    mov r1, r10
+; CHECK-NEXT:    mov r2, r9
+; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    str r7, [sp]
+; CHECK-NEXT:    stmib sp, {r4, r6}
+; CHECK-NEXT:    str r5, [sp, #12]
+; CHECK-NEXT:    bl __lttf2
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
+; CHECK-NEXT:    str r7, [sp]
+; CHECK-NEXT:    movmi r7, r11
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
+; CHECK-NEXT:    stmib sp, {r4, r6}
+; CHECK-NEXT:    movmi r4, r10
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r11
+; CHECK-NEXT:    mov r1, r10
+; CHECK-NEXT:    mov r2, r9
+; CHECK-NEXT:    mov r3, r8
+; CHECK-NEXT:    str r5, [sp, #12]
+; CHECK-NEXT:    movmi r6, r9
+; CHECK-NEXT:    bl __lttf2
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    mov r0, r7
+; CHECK-NEXT:    movmi r5, r8
+; CHECK-NEXT:    mov r1, r4
+; CHECK-NEXT:    mov r2, r6
+; CHECK-NEXT:    mov r3, r5
+; CHECK-NEXT:    add sp, sp, #28
+; CHECK-NEXT:    pop {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    mov pc, lr
   %b = call fast fp128 @llvm.vector.reduce.fmin.v2f128(<2 x fp128> %a)
   ret fp128 %b
