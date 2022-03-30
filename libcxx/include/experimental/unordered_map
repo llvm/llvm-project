@@ -9,6 +9,7 @@
 
 #ifndef _LIBCPP_EXPERIMENTAL_UNORDERED_MAP
 #define _LIBCPP_EXPERIMENTAL_UNORDERED_MAP
+
 /*
     experimental/unordered_map synopsis
 
@@ -39,6 +40,7 @@ namespace pmr {
 
  */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <experimental/__config>
 #include <experimental/memory_resource>
 #include <unordered_map>

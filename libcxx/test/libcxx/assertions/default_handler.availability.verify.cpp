@@ -13,7 +13,7 @@
 
 // REQUIRES: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11|12}}
 
-#include <__assert>
+#include <version> // any header would work
 
 void f() {
   _LIBCPP_ASSERT(true, "message"); // expected-error {{'__libcpp_assertion_handler' is unavailable}}
