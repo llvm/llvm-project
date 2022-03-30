@@ -105,6 +105,16 @@ C++ Language Changes in Clang
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
+- Support capturing structured bindings in lambdas
+  (`P1091R3 <https://wg21.link/p1091r3>`_ and `P1381R1 <https://wg21.link/P1381R1>`).
+  This fixes issues `GH52720 <https://github.com/llvm/llvm-project/issues/52720>`_,
+  `GH54300 <https://github.com/llvm/llvm-project/issues/54300>`_,
+  `GH54301 <https://github.com/llvm/llvm-project/issues/54301>`_,
+  and `GH49430 <https://github.com/llvm/llvm-project/issues/49430>`_.
+
+
+
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

@@ -1087,7 +1087,7 @@ CXXConstructExpr::CXXConstructExpr(StmtClass SC, EmptyShell Empty,
     : Expr(SC, Empty), NumArgs(NumArgs) {}
 
 LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
-                             LambdaCaptureKind Kind, VarDecl *Var,
+                             LambdaCaptureKind Kind, ValueDecl *Var,
                              SourceLocation EllipsisLoc)
     : DeclAndBits(Var, 0), Loc(Loc), EllipsisLoc(EllipsisLoc) {
   unsigned Bits = 0;
@@ -1211,8 +1211,8 @@ const CompoundStmt *LambdaExpr::getCompoundStmtBody() const {
 }
 
 bool LambdaExpr::isInitCapture(const LambdaCapture *C) const {
-  return (C->capturesVariable() && C->getCapturedVar()->isInitCapture() &&
-          (getCallOperator() == C->getCapturedVar()->getDeclContext()));
+  return C->capturesVariable() && C->getCapturedVar()->isInitCapture() &&
+         getCallOperator() == C->getCapturedVar()->getDeclContext();
 }
 
 LambdaExpr::capture_iterator LambdaExpr::capture_begin() const {

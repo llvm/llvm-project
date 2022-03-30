@@ -2082,9 +2082,8 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
                        NestedNameSpecifierLoc NNS, NamedDecl *FoundD,
                        SourceLocation TemplateKWLoc,
                        const TemplateArgumentListInfo *TemplateArgs) {
-  bool RefersToCapturedVariable =
-      isa<VarDecl>(D) &&
-      NeedToCaptureVariable(cast<VarDecl>(D), NameInfo.getLoc());
+  bool RefersToCapturedVariable = isa<VarDecl, BindingDecl>(D) &&
+                                  NeedToCaptureVariable(D, NameInfo.getLoc());
 
   DeclRefExpr *E = DeclRefExpr::Create(
       Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
@@ -3252,8 +3251,9 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
   return ULE;
 }
 
-static void diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
-                                               ValueDecl *var);
+static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
+                                                        SourceLocation loc,
+                                                        ValueDecl *var);
 
 /// Complete semantic analysis for a reference to the given declaration.
 ExprResult Sema::BuildDeclarationNameExpr(
@@ -3411,20 +3411,11 @@ ExprResult Sema::BuildDeclarationNameExpr(
     break;
   }
 
-  case Decl::Binding: {
+  case Decl::Binding:
     // These are always lvalues.
     valueKind = VK_LValue;
     type = type.getNonReferenceType();
-    // FIXME: Support lambda-capture of BindingDecls, once CWG actually
-    // decides how that's supposed to work.
-    auto *BD = cast<BindingDecl>(VD);
-    if (BD->getDeclContext() != CurContext) {
-      auto *DD = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
-      if (DD && DD->hasLocalStorage())
-        diagnoseUncapturableValueReference(*this, Loc, BD);
-    }
     break;
-  }
 
   case Decl::Function: {
     if (unsigned BID = cast<FunctionDecl>(VD)->getBuiltinID()) {
@@ -16411,8 +16402,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   for (Capture &Cap : BSI->Captures) {
     if (Cap.isInvalid() || Cap.isThisCapture())
       continue;
-
-    VarDecl *Var = Cap.getVariable();
+    // Cap.getVariable() is always a VarDecl because
+    // blocks cannot capture structured bindings or other ValueDecl kinds.
+    auto *Var = cast<VarDecl>(Cap.getVariable());
     Expr *CopyExpr = nullptr;
     if (getLangOpts().CPlusPlus && Cap.isCopyCapture()) {
       if (const RecordType *Record =
@@ -18243,8 +18235,8 @@ void Sema::MarkCaptureUsedInEnclosingContext(VarDecl *Capture,
   MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
 }
 
-static void diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
-                                               ValueDecl *var) {
+void diagnoseUncapturableValueReferenceOrBinding(Sema &S, SourceLocation loc,
+                                                 ValueDecl *var) {
   DeclContext *VarDC = var->getDeclContext();
 
   //  If the parameter still belongs to the translation unit, then
@@ -18284,12 +18276,12 @@ static void diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
   // capture.
 }
 
-
-static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI, VarDecl *Var,
-                                      bool &SubCapturesAreNested,
-                                      QualType &CaptureType,
-                                      QualType &DeclRefType) {
-   // Check whether we've already captured it.
+static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI,
+                                                 ValueDecl *Var,
+                                                 bool &SubCapturesAreNested,
+                                                 QualType &CaptureType,
+                                                 QualType &DeclRefType) {
+  // Check whether we've already captured it.
   if (CSI->CaptureMap.count(Var)) {
     // If we found a capture, any subcaptures are nested.
     SubCapturesAreNested = true;
@@ -18316,14 +18308,22 @@ static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI, VarDec
 
 // Only block literals, captured statements, and lambda expressions can
 // capture; other scopes don't work.
-static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC, VarDecl *Var,
-                                 SourceLocation Loc,
-                                 const bool Diagnose, Sema &S) {
+static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC,
+                                                      ValueDecl *Var,
+                                                      SourceLocation Loc,
+                                                      const bool Diagnose,
+                                                      Sema &S) {
   if (isa<BlockDecl>(DC) || isa<CapturedDecl>(DC) || isLambdaCallOperator(DC))
     return getLambdaAwareParentOfDeclContext(DC);
-  else if (Var->hasLocalStorage()) {
-    if (Diagnose)
-       diagnoseUncapturableValueReference(S, Loc, Var);
+
+  ValueDecl *Underlying = Var;
+  auto *BD = dyn_cast_or_null<BindingDecl>(Var);
+  if (BD)
+    Underlying = BD->getDecomposedDecl();
+
+  if (auto *VD = dyn_cast<VarDecl>(Underlying)) {
+    if (VD->hasLocalStorage() && Diagnose)
+      diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
   }
   return nullptr;
 }
@@ -18331,9 +18331,12 @@ static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC, VarDecl *
 // Certain capturing entities (lambdas, blocks etc.) are not allowed to capture
 // certain types of variables (unnamed, variably modified types etc.)
 // so check for eligibility.
-static bool isVariableCapturable(CapturingScopeInfo *CSI, VarDecl *Var,
-                                 SourceLocation Loc,
-                                 const bool Diagnose, Sema &S) {
+static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
+                                 SourceLocation Loc, const bool Diagnose,
+                                 Sema &S) {
+
+  assert((isa<VarDecl, BindingDecl>(Var)) &&
+         "Only variables and structured bindings can be captured");
 
   bool IsBlock = isa<BlockScopeInfo>(CSI);
   bool IsLambda = isa<LambdaScopeInfo>(CSI);
@@ -18390,17 +18393,28 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, VarDecl *Var,
     return false;
   }
 
+  if (isa<BindingDecl>(Var)) {
+    if (!IsLambda || !S.getLangOpts().CPlusPlus) {
+      if (Diagnose)
+        diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
+      return false;
+    } else if (Diagnose && S.getLangOpts().CPlusPlus) {
+      S.Diag(Loc, S.LangOpts.CPlusPlus20
+                      ? diag::warn_cxx17_compat_capture_binding
+                      : diag::ext_capture_binding)
+          << Var;
+      S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+    }
+  }
+
   return true;
 }
 
 // Returns true if the capture by block was successful.
-static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
-                                 SourceLocation Loc,
-                                 const bool BuildAndDiagnose,
-                                 QualType &CaptureType,
-                                 QualType &DeclRefType,
-                                 const bool Nested,
-                                 Sema &S, bool Invalid) {
+static bool captureInBlock(BlockScopeInfo *BSI, ValueDecl *Var,
+                           SourceLocation Loc, const bool BuildAndDiagnose,
+                           QualType &CaptureType, QualType &DeclRefType,
+                           const bool Nested, Sema &S, bool Invalid) {
   bool ByRef = false;
 
   // Blocks are not allowed to capture arrays, excepting OpenCL.
@@ -18464,10 +18478,9 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
   return !Invalid;
 }
 
-
 /// Capture the given variable in the captured region.
 static bool captureInCapturedRegion(
-    CapturedRegionScopeInfo *RSI, VarDecl *Var, SourceLocation Loc,
+    CapturedRegionScopeInfo *RSI, ValueDecl *Var, SourceLocation Loc,
     const bool BuildAndDiagnose, QualType &CaptureType, QualType &DeclRefType,
     const bool RefersToCapturedVariable, Sema::TryCaptureKind Kind,
     bool IsTopScope, Sema &S, bool Invalid) {
@@ -18506,16 +18519,12 @@ static bool captureInCapturedRegion(
 }
 
 /// Capture the given variable in the lambda.
-static bool captureInLambda(LambdaScopeInfo *LSI,
-                            VarDecl *Var,
-                            SourceLocation Loc,
-                            const bool BuildAndDiagnose,
-                            QualType &CaptureType,
-                            QualType &DeclRefType,
+static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
+                            SourceLocation Loc, const bool BuildAndDiagnose,
+                            QualType &CaptureType, QualType &DeclRefType,
                             const bool RefersToCapturedVariable,
                             const Sema::TryCaptureKind Kind,
-                            SourceLocation EllipsisLoc,
-                            const bool IsTopScope,
+                            SourceLocation EllipsisLoc, const bool IsTopScope,
                             Sema &S, bool Invalid) {
   // Determine whether we are capturing by reference or by value.
   bool ByRef = false;
@@ -18523,6 +18532,42 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
     ByRef = (Kind == Sema::TryCapture_ExplicitByRef);
   } else {
     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
+  }
+  // C++20 : [expr.prim.lambda.capture]p12
+  // A bit-field or a member of an anonymous union shall
+  // not be captured by reference.
+  MemberExpr *ME = nullptr;
+  BindingDecl *BD = nullptr;
+  if (auto *V = dyn_cast<VarDecl>(Var)) {
+    if (V->getInit())
+      ME = dyn_cast<MemberExpr>(V->getInit()->IgnoreImplicit());
+  } else if ((BD = dyn_cast<BindingDecl>(Var))) {
+    ME = dyn_cast_or_null<MemberExpr>(BD->getBinding());
+  }
+
+  // Capturing a bitfield by reference is not allowed except in OpenMP.
+  if (ByRef && ME &&
+      (isa<BindingDecl>(Var) || !S.LangOpts.OpenMP ||
+       !S.isOpenMPCapturedDecl(Var))) {
+    const auto *FD = dyn_cast_or_null<FieldDecl>(ME->getMemberDecl());
+    if (FD &&
+        (FD->isBitField() || (FD->getParent()->isAnonymousStructOrUnion() &&
+                              FD->getParent()->isUnion()))) {
+      if (BuildAndDiagnose) {
+        S.Diag(Loc, diag::err_bitfield_capture_by_ref) << Var;
+        S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+        S.Diag(FD->getLocation(), diag::note_bitfield_decl) << FD;
+      }
+      Invalid = true;
+    }
+  }
+  // FIXME: We should support capturing structured bindings in OpenMP.
+  if (!Invalid && BD && S.LangOpts.OpenMP) {
+    if (BuildAndDiagnose) {
+      S.Diag(Loc, diag::err_capture_binding_openmp) << Var;
+      S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+    }
+    Invalid = true;
   }
 
   // Compute the type of the field that will capture this variable.
@@ -18605,7 +18650,8 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
   return !Invalid;
 }
 
-static bool canCaptureVariableByCopy(VarDecl *Var, const ASTContext &Context) {
+static bool canCaptureVariableByCopy(ValueDecl *Var,
+                                     const ASTContext &Context) {
   // Offer a Copy fix even if the type is dependent.
   if (Var->getType()->isDependentType())
     return true;
@@ -18631,7 +18677,7 @@ static bool canCaptureVariableByCopy(VarDecl *Var, const ASTContext &Context) {
 /// standard, for example we can't emit a default copy capture fix-it if we
 /// already explicitly copy capture capture another variable.
 static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
-                                    VarDecl *Var) {
+                                    ValueDecl *Var) {
   assert(LSI->ImpCaptureStyle == CapturingScopeInfo::ImpCap_None);
   // Don't offer Capture by copy of default capture by copy fixes if Var is
   // known not to be copy constructible.
@@ -18707,14 +18753,21 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
 }
 
 bool Sema::tryCaptureVariable(
-    VarDecl *Var, SourceLocation ExprLoc, TryCaptureKind Kind,
+    ValueDecl *Var, SourceLocation ExprLoc, TryCaptureKind Kind,
     SourceLocation EllipsisLoc, bool BuildAndDiagnose, QualType &CaptureType,
     QualType &DeclRefType, const unsigned *const FunctionScopeIndexToStopAt) {
   // An init-capture is notionally from the context surrounding its
   // declaration, but its parent DC is the lambda class.
   DeclContext *VarDC = Var->getDeclContext();
-  if (Var->isInitCapture())
-    VarDC = VarDC->getParent();
+  const auto *VD = dyn_cast<VarDecl>(Var);
+  if (VD) {
+    if (VD->isInitCapture())
+      VarDC = VarDC->getParent();
+  } else {
+    VD = dyn_cast<DecompositionDecl>(
+        cast<BindingDecl>(Var)->getDecomposedDecl());
+  }
+  assert(VD && "Cannot capture a null variable");
 
   DeclContext *DC = CurContext;
   const unsigned MaxFunctionScopesIndex = FunctionScopeIndexToStopAt
@@ -18736,12 +18789,14 @@ bool Sema::tryCaptureVariable(
 
   // Capture global variables if it is required to use private copy of this
   // variable.
-  bool IsGlobal = !Var->hasLocalStorage();
+  bool IsGlobal = !VD->hasLocalStorage();
   if (IsGlobal &&
       !(LangOpts.OpenMP && isOpenMPCapturedDecl(Var, /*CheckScopeInfo=*/true,
                                                 MaxFunctionScopesIndex)))
     return true;
-  Var = Var->getCanonicalDecl();
+
+  if (isa<VarDecl>(Var))
+    Var = cast<VarDecl>(Var->getCanonicalDecl());
 
   // Walk up the stack to determine whether we can capture the variable,
   // performing the "simple" checks that don't depend on type. We stop when
@@ -18797,7 +18852,7 @@ bool Sema::tryCaptureVariable(
           Diag(LSI->Lambda->getBeginLoc(), diag::note_lambda_decl);
           buildLambdaCaptureFixit(*this, LSI, Var);
         } else
-          diagnoseUncapturableValueReference(*this, ExprLoc, Var);
+          diagnoseUncapturableValueReferenceOrBinding(*this, ExprLoc, Var);
       }
       return true;
     }
@@ -18945,7 +19000,7 @@ bool Sema::tryCaptureVariable(
   return Invalid;
 }
 
-bool Sema::tryCaptureVariable(VarDecl *Var, SourceLocation Loc,
+bool Sema::tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
                               TryCaptureKind Kind, SourceLocation EllipsisLoc) {
   QualType CaptureType;
   QualType DeclRefType;
@@ -18954,7 +19009,7 @@ bool Sema::tryCaptureVariable(VarDecl *Var, SourceLocation Loc,
                             DeclRefType, nullptr);
 }
 
-bool Sema::NeedToCaptureVariable(VarDecl *Var, SourceLocation Loc) {
+bool Sema::NeedToCaptureVariable(ValueDecl *Var, SourceLocation Loc) {
   QualType CaptureType;
   QualType DeclRefType;
   return !tryCaptureVariable(Var, Loc, TryCapture_Implicit, SourceLocation(),
@@ -18962,7 +19017,7 @@ bool Sema::NeedToCaptureVariable(VarDecl *Var, SourceLocation Loc) {
                              DeclRefType, nullptr);
 }
 
-QualType Sema::getCapturedDeclRefType(VarDecl *Var, SourceLocation Loc) {
+QualType Sema::getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc) {
   QualType CaptureType;
   QualType DeclRefType;
 
@@ -19558,6 +19613,24 @@ static void DoMarkVarDeclReferenced(
   }
 }
 
+static void DoMarkBindingDeclReferenced(Sema &SemaRef, SourceLocation Loc,
+                                        BindingDecl *BD) {
+  BD->setReferenced();
+
+  if (BD->isInvalidDecl())
+    return;
+
+  OdrUseContext OdrUse = isOdrUseContext(SemaRef);
+  if (OdrUse == OdrUseContext::Used) {
+    QualType CaptureType, DeclRefType;
+    SemaRef.tryCaptureVariable(BD, Loc, Sema::TryCapture_Implicit,
+                               /*EllipsisLoc*/ SourceLocation(),
+                               /*BuildAndDiagnose*/ true, CaptureType,
+                               DeclRefType,
+                               /*FunctionScopeIndexToStopAt*/ nullptr);
+  }
+}
+
 /// Mark a variable referenced, and check whether it is odr-used
 /// (C++ [basic.def.odr]p2, C99 6.9p3).  Note that this should not be
 /// used directly for normal expressions referring to VarDecl.
@@ -19574,6 +19647,11 @@ MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
 
   if (VarDecl *Var = dyn_cast<VarDecl>(D)) {
     DoMarkVarDeclReferenced(SemaRef, Loc, Var, E, RefsMinusAssignments);
+    return;
+  }
+
+  if (BindingDecl *Decl = dyn_cast<BindingDecl>(D)) {
+    DoMarkBindingDeclReferenced(SemaRef, Loc, Decl);
     return;
   }
 
