@@ -504,7 +504,7 @@ public:
   // Treat local variables captured by reference in C++ lambdas as escaped.
   void findLambdaReferenceCaptures(const LambdaExpr *LE)  {
     const CXXRecordDecl *LambdaClass = LE->getLambdaClass();
-    llvm::DenseMap<const VarDecl *, FieldDecl *> CaptureFields;
+    llvm::DenseMap<const ValueDecl *, FieldDecl *> CaptureFields;
     FieldDecl *ThisCaptureField;
     LambdaClass->getCaptureFields(CaptureFields, ThisCaptureField);
 
@@ -512,14 +512,14 @@ public:
       if (!C.capturesVariable())
         continue;
 
-      VarDecl *VD = C.getCapturedVar();
+      ValueDecl *VD = C.getCapturedVar();
       const FieldDecl *FD = CaptureFields[VD];
-      if (!FD)
+      if (!FD || !isa<VarDecl>(VD))
         continue;
 
       // If the capture field is a reference type, it is capture-by-reference.
       if (FD->getType()->isReferenceType())
-        Escaped.insert(VD);
+        Escaped.insert(cast<VarDecl>(VD));
     }
   }
 };

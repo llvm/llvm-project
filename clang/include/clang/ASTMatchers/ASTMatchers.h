@@ -4722,7 +4722,7 @@ AST_MATCHER_P(LambdaExpr, hasAnyCapture, internal::Matcher<LambdaCapture>,
 /// In the matcher
 /// lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(hasName("x")))),
 /// capturesVar(hasName("x")) matches `x` and `x = 1`.
-AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<VarDecl>,
+AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<ValueDecl>,
               InnerMatcher) {
   auto *capturedVar = Node.getCapturedVar();
   return capturedVar && InnerMatcher.matches(*capturedVar, Finder, Builder);
