@@ -1038,6 +1038,8 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   case MCContext::IsXCOFF:
     initXCOFFMCObjectFileInfo(TheTriple);
     break;
+  case MCContext::IsDXContainer:
+    break;
   }
 }
 
@@ -1054,6 +1056,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   case Triple::COFF:
   case Triple::GOFF:
   case Triple::XCOFF:
+  case Triple::DXContainer:
   case Triple::UnknownObjectFormat:
     report_fatal_error("Cannot get DWARF comdat section for this object file "
                        "format: not implemented.");

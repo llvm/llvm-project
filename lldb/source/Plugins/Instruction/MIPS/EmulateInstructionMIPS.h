@@ -93,7 +93,7 @@ protected:
     const char *insn_name;
   } MipsOpcode;
 
-  static MipsOpcode *GetOpcodeForInstruction(const char *op_name);
+  static MipsOpcode *GetOpcodeForInstruction(llvm::StringRef name);
 
   uint32_t GetSizeOfInstruction(lldb_private::DataExtractor &data,
                                 uint64_t inst_addr);

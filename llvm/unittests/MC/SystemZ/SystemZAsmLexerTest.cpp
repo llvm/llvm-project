@@ -554,9 +554,11 @@ TEST_F(SystemZAsmLexerZOS, CheckPrintAcceptableSymbol) {
 }
 
 TEST_F(SystemZAsmLexerLinux, CheckPrintAcceptableSymbol) {
-  std::string AsmStr = "ab13_$.@";
+  std::string AsmStr = "ab13_$.";
   EXPECT_EQ(true, MAI->isValidUnquotedName(AsmStr));
-  AsmStr += "#";
+  AsmStr = "ab13_$.@";
+  EXPECT_EQ(false, MAI->isValidUnquotedName(AsmStr));
+  AsmStr = "ab13_$.#";
   EXPECT_EQ(false, MAI->isValidUnquotedName(AsmStr));
 }
 

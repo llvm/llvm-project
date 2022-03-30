@@ -8,6 +8,7 @@
 
 #include "checksum.h"
 #include "atomic_helpers.h"
+#include "chunk.h"
 
 #if defined(__x86_64__) || defined(__i386__)
 #include <cpuid.h>

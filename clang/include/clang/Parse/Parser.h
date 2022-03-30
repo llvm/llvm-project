@@ -2783,7 +2783,8 @@ private:
       const IdentifierInfo *EnclosingScope = nullptr);
 
   void MaybeParseMicrosoftAttributes(ParsedAttributes &Attrs) {
-    if (getLangOpts().MicrosoftExt && Tok.is(tok::l_square)) {
+    if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
+        Tok.is(tok::l_square)) {
       ParsedAttributes AttrsWithRange(AttrFactory);
       ParseMicrosoftAttributes(AttrsWithRange);
       Attrs.takeAllFrom(AttrsWithRange);

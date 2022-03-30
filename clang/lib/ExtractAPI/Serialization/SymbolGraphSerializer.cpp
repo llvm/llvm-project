@@ -151,11 +151,9 @@ Optional<Object> serializeAvailability(const AvailabilityInfo &Avail) {
   return Availbility;
 }
 
-/// Get the short language name string for interface language references.
-StringRef getLanguageName(const LangOptions &LangOpts) {
-  auto LanguageKind =
-      LangStandard::getLangStandardForKind(LangOpts.LangStd).getLanguage();
-  switch (LanguageKind) {
+/// Get the language name string for interface language references.
+StringRef getLanguageName(Language Lang) {
+  switch (Lang) {
   case Language::C:
     return "c";
   case Language::ObjC:
@@ -185,11 +183,10 @@ StringRef getLanguageName(const LangOptions &LangOpts) {
 ///
 /// The identifier property of a symbol contains the USR for precise and unique
 /// references, and the interface language name.
-Object serializeIdentifier(const APIRecord &Record,
-                           const LangOptions &LangOpts) {
+Object serializeIdentifier(const APIRecord &Record, Language Lang) {
   Object Identifier;
   Identifier["precise"] = Record.USR;
-  Identifier["interfaceLanguage"] = getLanguageName(LangOpts);
+  Identifier["interfaceLanguage"] = getLanguageName(Lang);
 
   return Identifier;
 }
@@ -335,10 +332,9 @@ Object serializeNames(const APIRecord &Record) {
 /// The Symbol Graph symbol kind property contains a shorthand \c identifier
 /// which is prefixed by the source language name, useful for tooling to parse
 /// the kind, and a \c displayName for rendering human-readable names.
-Object serializeSymbolKind(const APIRecord &Record,
-                           const LangOptions &LangOpts) {
-  auto AddLangPrefix = [&LangOpts](StringRef S) -> std::string {
-    return (getLanguageName(LangOpts) + "." + S).str();
+Object serializeSymbolKind(const APIRecord &Record, Language Lang) {
+  auto AddLangPrefix = [&Lang](StringRef S) -> std::string {
+    return (getLanguageName(Lang) + "." + S).str();
   };
 
   Object Kind;
@@ -375,6 +371,31 @@ Object serializeSymbolKind(const APIRecord &Record,
   case APIRecord::RK_Struct:
     Kind["identifier"] = AddLangPrefix("struct");
     Kind["displayName"] = "Structure";
+    break;
+  case APIRecord::RK_ObjCIvar:
+    Kind["identifier"] = AddLangPrefix("ivar");
+    Kind["displayName"] = "Instance Variable";
+    break;
+  case APIRecord::RK_ObjCMethod:
+    if (dyn_cast<ObjCMethodRecord>(&Record)->IsInstanceMethod) {
+      Kind["identifier"] = AddLangPrefix("method");
+      Kind["displayName"] = "Instance Method";
+    } else {
+      Kind["identifier"] = AddLangPrefix("type.method");
+      Kind["displayName"] = "Type Method";
+    }
+    break;
+  case APIRecord::RK_ObjCProperty:
+    Kind["identifier"] = AddLangPrefix("property");
+    Kind["displayName"] = "Instance Property";
+    break;
+  case APIRecord::RK_ObjCInterface:
+    Kind["identifier"] = AddLangPrefix("class");
+    Kind["displayName"] = "Class";
+    break;
+  case APIRecord::RK_ObjCProtocol:
+    Kind["identifier"] = AddLangPrefix("protocol");
+    Kind["displayName"] = "Protocol";
     break;
   }
 
@@ -420,8 +441,8 @@ SymbolGraphSerializer::serializeAPIRecord(const APIRecord &Record) const {
 
   Object Obj;
   serializeObject(Obj, "identifier",
-                  serializeIdentifier(Record, API.getLangOpts()));
-  serializeObject(Obj, "kind", serializeSymbolKind(Record, API.getLangOpts()));
+                  serializeIdentifier(Record, API.getLanguage()));
+  serializeObject(Obj, "kind", serializeSymbolKind(Record, API.getLanguage()));
   serializeObject(Obj, "names", serializeNames(Record));
   serializeObject(
       Obj, "location",
@@ -439,13 +460,17 @@ StringRef SymbolGraphSerializer::getRelationshipString(RelationshipKind Kind) {
   switch (Kind) {
   case RelationshipKind::MemberOf:
     return "memberOf";
+  case RelationshipKind::InheritsFrom:
+    return "inheritsFrom";
+  case RelationshipKind::ConformsTo:
+    return "conformsTo";
   }
   llvm_unreachable("Unhandled relationship kind");
 }
 
 void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
-                                                  const APIRecord &Source,
-                                                  const APIRecord &Target) {
+                                                  SymbolReference Source,
+                                                  SymbolReference Target) {
   Object Relationship;
   Relationship["source"] = Source.USR;
   Relationship["target"] = Target.USR;
@@ -500,6 +525,57 @@ void SymbolGraphSerializer::serializeStructRecord(const StructRecord &Record) {
   }
 }
 
+void SymbolGraphSerializer::serializeObjCContainerRecord(
+    const ObjCContainerRecord &Record) {
+  auto ObjCContainer = serializeAPIRecord(Record);
+  if (!ObjCContainer)
+    return;
+
+  Symbols.emplace_back(std::move(*ObjCContainer));
+
+  // Record instance variables and that the instance variables are members of
+  // the container.
+  for (const auto &Ivar : Record.Ivars) {
+    auto ObjCIvar = serializeAPIRecord(*Ivar);
+    if (!ObjCIvar)
+      continue;
+
+    Symbols.emplace_back(std::move(*ObjCIvar));
+    serializeRelationship(RelationshipKind::MemberOf, *Ivar, Record);
+  }
+
+  // Record methods and that the methods are members of the container.
+  for (const auto &Method : Record.Methods) {
+    auto ObjCMethod = serializeAPIRecord(*Method);
+    if (!ObjCMethod)
+      continue;
+
+    Symbols.emplace_back(std::move(*ObjCMethod));
+    serializeRelationship(RelationshipKind::MemberOf, *Method, Record);
+  }
+
+  // Record properties and that the properties are members of the container.
+  for (const auto &Property : Record.Properties) {
+    auto ObjCProperty = serializeAPIRecord(*Property);
+    if (!ObjCProperty)
+      continue;
+
+    Symbols.emplace_back(std::move(*ObjCProperty));
+    serializeRelationship(RelationshipKind::MemberOf, *Property, Record);
+  }
+
+  for (const auto &Protocol : Record.Protocols)
+    // Record that Record conforms to Protocol.
+    serializeRelationship(RelationshipKind::ConformsTo, Record, Protocol);
+
+  if (auto *ObjCInterface = dyn_cast<ObjCInterfaceRecord>(&Record))
+    if (!ObjCInterface->SuperClass.empty())
+      // If Record is an Objective-C interface record and it has a super class,
+      // record that Record is inherited from SuperClass.
+      serializeRelationship(RelationshipKind::InheritsFrom, Record,
+                            ObjCInterface->SuperClass);
+}
+
 Object SymbolGraphSerializer::serialize() {
   Object Root;
   serializeObject(Root, "metadata", serializeMetadata());
@@ -516,6 +592,14 @@ Object SymbolGraphSerializer::serialize() {
   // Serialize struct records in the API set.
   for (const auto &Struct : API.getStructs())
     serializeStructRecord(*Struct.second);
+
+  // Serialize Objective-C interface records in the API set.
+  for (const auto &ObjCInterface : API.getObjCInterfaces())
+    serializeObjCContainerRecord(*ObjCInterface.second);
+
+  // Serialize Objective-C protocol records in the API set.
+  for (const auto &ObjCProtocol : API.getObjCProtocols())
+    serializeObjCContainerRecord(*ObjCProtocol.second);
 
   Root["symbols"] = std::move(Symbols);
   Root["relationhips"] = std::move(Relationships);

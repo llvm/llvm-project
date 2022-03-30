@@ -232,7 +232,7 @@ public:
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
     bool Found = false;
     CachedBlock Entry;
-    uptr HeaderPos;
+    uptr HeaderPos = 0;
     {
       ScopedLock L(Mutex);
       if (EntriesCount == 0)
@@ -459,7 +459,7 @@ public:
     }
   }
 
-  uptr canCache(uptr Size) { return Cache.canCache(Size); }
+  bool canCache(uptr Size) { return Cache.canCache(Size); }
 
   bool setOption(Option O, sptr Value) { return Cache.setOption(O, Value); }
 

@@ -909,7 +909,7 @@ public:
   explicit VectorCreateMaskOpRewritePattern(MLIRContext *context,
                                             bool enableIndexOpt)
       : OpRewritePattern<vector::CreateMaskOp>(context),
-        indexOptimizations(enableIndexOpt) {}
+        force32BitVectorIndices(enableIndexOpt) {}
 
   LogicalResult matchAndRewrite(vector::CreateMaskOp op,
                                 PatternRewriter &rewriter) const override {
@@ -917,7 +917,7 @@ public:
     if (dstType.getRank() != 1 || !dstType.cast<VectorType>().isScalable())
       return failure();
     IntegerType idxType =
-        indexOptimizations ? rewriter.getI32Type() : rewriter.getI64Type();
+        force32BitVectorIndices ? rewriter.getI32Type() : rewriter.getI64Type();
     auto loc = op->getLoc();
     Value indices = rewriter.create<LLVM::StepVectorOp>(
         loc, LLVM::getVectorType(idxType, dstType.getShape()[0],
@@ -932,7 +932,7 @@ public:
   }
 
 private:
-  const bool indexOptimizations;
+  const bool force32BitVectorIndices;
 };
 
 class VectorPrintOpConversion : public ConvertOpToLLVMPattern<vector::PrintOp> {
@@ -1192,15 +1192,14 @@ struct VectorSplatNdOpLowering : public ConvertOpToLLVMPattern<SplatOp> {
 } // namespace
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
-void mlir::populateVectorToLLVMConversionPatterns(LLVMTypeConverter &converter,
-                                                  RewritePatternSet &patterns,
-                                                  bool reassociateFPReductions,
-                                                  bool indexOptimizations) {
+void mlir::populateVectorToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns,
+    bool reassociateFPReductions, bool force32BitVectorIndices) {
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorFMAOpNDRewritePattern>(ctx);
   populateVectorInsertExtractStridedSliceTransforms(patterns);
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
-  patterns.add<VectorCreateMaskOpRewritePattern>(ctx, indexOptimizations);
+  patterns.add<VectorCreateMaskOpRewritePattern>(ctx, force32BitVectorIndices);
   patterns
       .add<VectorBitCastOpConversion, VectorShuffleOpConversion,
            VectorExtractElementOpConversion, VectorExtractOpConversion,
