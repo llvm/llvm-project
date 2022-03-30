@@ -4701,12 +4701,24 @@ void Parser::ParseMicrosoftAttributes(ParsedAttributes &Attrs) {
         IdentifierInfo *II = Tok.getIdentifierInfo();
         SourceLocation NameLoc = Tok.getLocation();
         ConsumeToken();
-        if (Tok.is(tok::l_paren)) {
-          CachedTokens OpenMPTokens;
-          ParseCXX11AttributeArgs(II, NameLoc, Attrs, &EndLoc, nullptr,
-                                  SourceLocation(), OpenMPTokens);
-          ReplayOpenMPAttributeTokens(OpenMPTokens);
-        } // FIXME: handle attributes that don't have arguments
+        ParsedAttr::Kind AttrKind =
+            ParsedAttr::getParsedKind(II, nullptr, ParsedAttr::AS_Microsoft);
+        // For HLSL we want to handle all attributes, but for MSVC compat, we
+        // silently ignore unknown Microsoft attributes.
+        if (getLangOpts().HLSL || AttrKind != ParsedAttr::UnknownAttribute) {
+          bool AttrParsed = false;
+          if (Tok.is(tok::l_paren)) {
+            CachedTokens OpenMPTokens;
+            AttrParsed =
+                ParseCXX11AttributeArgs(II, NameLoc, Attrs, &EndLoc, nullptr,
+                                        SourceLocation(), OpenMPTokens);
+            ReplayOpenMPAttributeTokens(OpenMPTokens);
+          }
+          if (!AttrParsed) {
+            Attrs.addNew(II, NameLoc, nullptr, SourceLocation(), nullptr, 0,
+                         ParsedAttr::AS_Microsoft);
+          }
+        }
       }
     }
 
