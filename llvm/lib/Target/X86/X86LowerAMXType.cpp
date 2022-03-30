@@ -947,6 +947,10 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     //                                                  i64 60)
     // call void @llvm.x86.tilestored64.internal(i16 15, i16 60,
     //                                           i8* %addr3, i64 60, x86_amx %2)
+    if (AMXCast->use_empty()) {
+      AMXCast->eraseFromParent();
+      return true;
+    }
     Use &U = *(AMXCast->use_begin());
     unsigned OpNo = U.getOperandNo();
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
