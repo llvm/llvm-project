@@ -35,8 +35,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/VASPrintf.h"
 #include "lldb/lldb-private.h"
-
 #include <memory>
 
 using namespace lldb;
@@ -2326,44 +2326,34 @@ bool RegisterContextUnwind::ReadPC(addr_t &pc) {
 
 void RegisterContextUnwind::UnwindLogMsg(const char *fmt, ...) {
   Log *log = GetLog(LLDBLog::Unwind);
-  if (log) {
-    va_list args;
-    va_start(args, fmt);
+  if (!log)
+    return;
 
-    char *logmsg;
-    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == nullptr) {
-      if (logmsg)
-        free(logmsg);
-      va_end(args);
-      return;
-    }
-    va_end(args);
+  va_list args;
+  va_start(args, fmt);
 
+  llvm::SmallString<0> logmsg;
+  if (VASprintf(logmsg, fmt, args)) {
     LLDB_LOGF(log, "%*sth%d/fr%u %s",
               m_frame_number < 100 ? m_frame_number : 100, "",
-              m_thread.GetIndexID(), m_frame_number, logmsg);
-    free(logmsg);
+              m_thread.GetIndexID(), m_frame_number, logmsg.c_str());
   }
+  va_end(args);
 }
 
 void RegisterContextUnwind::UnwindLogMsgVerbose(const char *fmt, ...) {
   Log *log = GetLog(LLDBLog::Unwind);
-  if (log && log->GetVerbose()) {
-    va_list args;
-    va_start(args, fmt);
+  if (!log || !log->GetVerbose())
+    return;
 
-    char *logmsg;
-    if (vasprintf(&logmsg, fmt, args) == -1 || logmsg == nullptr) {
-      if (logmsg)
-        free(logmsg);
-      va_end(args);
-      return;
-    }
-    va_end(args);
+  va_list args;
+  va_start(args, fmt);
 
+  llvm::SmallString<0> logmsg;
+  if (VASprintf(logmsg, fmt, args)) {
     LLDB_LOGF(log, "%*sth%d/fr%u %s",
               m_frame_number < 100 ? m_frame_number : 100, "",
-              m_thread.GetIndexID(), m_frame_number, logmsg);
-    free(logmsg);
+              m_thread.GetIndexID(), m_frame_number, logmsg.c_str());
   }
+  va_end(args);
 }

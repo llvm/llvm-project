@@ -23,17 +23,17 @@
 #include <unistd.h>
 #endif
 
-#include "llvm/Support/ConvertUTF.h"
-#include "llvm/Support/Errno.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Process.h"
-
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/VASPrintf.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Errno.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Process.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -215,18 +215,13 @@ size_t File::Printf(const char *format, ...) {
 }
 
 size_t File::PrintfVarArg(const char *format, va_list args) {
-  size_t result = 0;
-  char *s = nullptr;
-  result = vasprintf(&s, format, args);
-  if (s != nullptr) {
-    if (result > 0) {
-      size_t s_len = result;
-      Write(s, s_len);
-      result = s_len;
-    }
-    free(s);
+  llvm::SmallString<0> s;
+  if (VASprintf(s, format, args)) {
+    size_t written = s.size();;
+    Write(s.data(), written);
+    return written;
   }
-  return result;
+  return 0;
 }
 
 Expected<File::OpenOptions> File::GetOptions() const {

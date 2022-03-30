@@ -86,10 +86,6 @@ typedef uint32_t pid_t;
 
 #endif // _MSC_VER
 
-// Various useful posix functions that are not present in Windows.  We provide
-// custom implementations.
-int vasprintf(char **ret, const char *fmt, va_list ap);
-
 // empty functions
 inline int posix_openpt(int flag) { LLVM_BUILTIN_UNREACHABLE; }
 
