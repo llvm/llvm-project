@@ -948,6 +948,8 @@ def : Pat<(i64 (riscv_grev GPR:$rs1, 56)), (REV8_RV64 GPR:$rs1)>;
 let Predicates = [HasStdExtZbt] in {
 def : Pat<(or (and (not GPR:$rs2), GPR:$rs3), (and GPR:$rs2, GPR:$rs1)),
           (CMIX GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
+def : Pat<(xor (and (xor GPR:$rs1, GPR:$rs3), GPR:$rs2), GPR:$rs3),
+          (CMIX GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
 
 def : Pat<(select (XLenVT (setne GPR:$rs2, 0)), GPR:$rs1, GPR:$rs3),
           (CMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;
