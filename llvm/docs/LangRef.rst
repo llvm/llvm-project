@@ -20338,7 +20338,7 @@ Examples:
       ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
 
       %t = fcmp oeq <4 x float> %a, %b
-      %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
+      %also.r = select <4 x i1> %mask, <4 x i1> %t, <4 x i1> undef
 
 
 .. _int_mload_mstore:
