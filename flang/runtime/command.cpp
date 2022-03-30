@@ -28,7 +28,7 @@ std::int32_t RTNAME(ArgumentCount)() {
 // Returns the length of the \p string. Assumes \p string is valid.
 static std::int64_t StringLength(const char *string) {
   std::size_t length{std::strlen(string)};
-  if constexpr (sizeof(std::size_t) <= sizeof(std::int64_t)) {
+  if constexpr (sizeof(std::size_t) < sizeof(std::int64_t)) {
     return static_cast<std::int64_t>(length);
   } else {
     std::size_t max{std::numeric_limits<std::int64_t>::max()};
