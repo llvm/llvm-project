@@ -761,166 +761,53 @@ public:
         D);
   }
 
-private:
-  bool TraversingASTNodeNotSpelledInSource = false;
-  bool TraversingASTNodeNotAsIs = false;
-  bool TraversingASTChildrenNotSpelledInSource = false;
-
-  class CurMatchData {
-  public:
-    CurMatchData() = default;
-
-    template <typename NodeType>
-    void SetCallbackAndRawNode(const MatchCallback *CB, const NodeType &N) {
-      assertEmpty();
-      Callback = CB;
-      MatchingNode = &N;
-    }
-
-    const MatchCallback *getCallback() const { return Callback; }
-
-    void SetBoundNodes(const BoundNodes &BN) {
-      assertHoldsState();
-      BNodes = &BN;
-    }
-
-    void clearBoundNodes() {
-      assertHoldsState();
-      BNodes = nullptr;
-    }
-
-    template <typename T> const T *getNode() const {
-      assertHoldsState();
-      return MatchingNode.dyn_cast<const T *>();
-    }
-
-    const BoundNodes *getBoundNodes() const {
-      assertHoldsState();
-      return BNodes;
-    }
-
-    void reset() {
-      assertHoldsState();
-      Callback = nullptr;
-      MatchingNode = nullptr;
-    }
-
-  private:
-    void assertHoldsState() const {
-      assert(Callback != nullptr && !MatchingNode.isNull());
-    }
-
-    void assertEmpty() const {
-      assert(Callback == nullptr && MatchingNode.isNull() && BNodes == nullptr);
-    }
-
-    const MatchCallback *Callback = nullptr;
-    const BoundNodes *BNodes = nullptr;
-
-    llvm::PointerUnion<
-        const QualType *, const TypeLoc *, const NestedNameSpecifier *,
-        const NestedNameSpecifierLoc *, const CXXCtorInitializer *,
-        const TemplateArgumentLoc *, const Attr *, const DynTypedNode *>
-        MatchingNode;
-  } CurMatchState;
-
-  struct CurMatchRAII {
-    template <typename NodeType>
-    CurMatchRAII(MatchASTVisitor &MV, const MatchCallback *CB,
-                 const NodeType &NT)
-        : MV(MV) {
-      MV.CurMatchState.SetCallbackAndRawNode(CB, NT);
-    }
-
-    ~CurMatchRAII() { MV.CurMatchState.reset(); }
-
-  private:
-    MatchASTVisitor &MV;
-  };
-
-public:
   class TraceReporter : llvm::PrettyStackTraceEntry {
-    static void dumpNode(const ASTContext &Ctx, const DynTypedNode &Node,
-                         raw_ostream &OS) {
-      if (const auto *D = Node.get<Decl>()) {
-        OS << D->getDeclKindName() << "Decl ";
-        if (const auto *ND = dyn_cast<NamedDecl>(D)) {
-          ND->printQualifiedName(OS);
-          OS << " : ";
-        } else
-          OS << ": ";
-        D->getSourceRange().print(OS, Ctx.getSourceManager());
-      } else if (const auto *S = Node.get<Stmt>()) {
-        OS << S->getStmtClassName() << " : ";
-        S->getSourceRange().print(OS, Ctx.getSourceManager());
-      } else if (const auto *T = Node.get<Type>()) {
-        OS << T->getTypeClassName() << "Type : ";
-        QualType(T, 0).print(OS, Ctx.getPrintingPolicy());
-      } else if (const auto *QT = Node.get<QualType>()) {
-        OS << "QualType : ";
-        QT->print(OS, Ctx.getPrintingPolicy());
-      } else {
-        OS << Node.getNodeKind().asStringRef() << " : ";
-        Node.getSourceRange().print(OS, Ctx.getSourceManager());
-      }
-    }
-
-    static void dumpNodeFromState(const ASTContext &Ctx,
-                                  const CurMatchData &State, raw_ostream &OS) {
-      if (const DynTypedNode *MatchNode = State.getNode<DynTypedNode>()) {
-        dumpNode(Ctx, *MatchNode, OS);
-      } else if (const auto *QT = State.getNode<QualType>()) {
-        dumpNode(Ctx, DynTypedNode::create(*QT), OS);
-      } else if (const auto *TL = State.getNode<TypeLoc>()) {
-        dumpNode(Ctx, DynTypedNode::create(*TL), OS);
-      } else if (const auto *NNS = State.getNode<NestedNameSpecifier>()) {
-        dumpNode(Ctx, DynTypedNode::create(*NNS), OS);
-      } else if (const auto *NNSL = State.getNode<NestedNameSpecifierLoc>()) {
-        dumpNode(Ctx, DynTypedNode::create(*NNSL), OS);
-      } else if (const auto *CtorInit = State.getNode<CXXCtorInitializer>()) {
-        dumpNode(Ctx, DynTypedNode::create(*CtorInit), OS);
-      } else if (const auto *TAL = State.getNode<TemplateArgumentLoc>()) {
-        dumpNode(Ctx, DynTypedNode::create(*TAL), OS);
-      } else if (const auto *At = State.getNode<Attr>()) {
-        dumpNode(Ctx, DynTypedNode::create(*At), OS);
-      }
-    }
-
   public:
     TraceReporter(const MatchASTVisitor &MV) : MV(MV) {}
     void print(raw_ostream &OS) const override {
-      const CurMatchData &State = MV.CurMatchState;
-      const MatchCallback *CB = State.getCallback();
-      if (!CB) {
+      if (!MV.CurMatched) {
         OS << "ASTMatcher: Not currently matching\n";
         return;
       }
-
       assert(MV.ActiveASTContext &&
              "ActiveASTContext should be set if there is a matched callback");
 
-      ASTContext &Ctx = MV.getASTContext();
-
-      if (const BoundNodes *Nodes = State.getBoundNodes()) {
-        OS << "ASTMatcher: Processing '" << CB->getID() << "' against:\n\t";
-        dumpNodeFromState(Ctx, State, OS);
-        const BoundNodes::IDToNodeMap &Map = Nodes->getMap();
-        if (Map.empty()) {
-          OS << "\nNo bound nodes\n";
-          return;
-        }
-        OS << "\n--- Bound Nodes Begin ---\n";
-        for (const auto &Item : Map) {
-          OS << "    " << Item.first << " - { ";
-          dumpNode(Ctx, Item.second, OS);
-          OS << " }\n";
-        }
-        OS << "--- Bound Nodes End ---\n";
-      } else {
-        OS << "ASTMatcher: Matching '" << CB->getID() << "' against:\n\t";
-        dumpNodeFromState(Ctx, State, OS);
-        OS << '\n';
+      OS << "ASTMatcher: Processing '" << MV.CurMatched->getID() << "'\n";
+      const BoundNodes::IDToNodeMap &Map = MV.CurBoundNodes->getMap();
+      if (Map.empty()) {
+        OS << "No bound nodes\n";
+        return;
       }
+      OS << "--- Bound Nodes Begin ---\n";
+      for (const auto &Item : Map) {
+        OS << "    " << Item.first << " - { ";
+        if (const auto *D = Item.second.get<Decl>()) {
+          OS << D->getDeclKindName() << "Decl ";
+          if (const auto *ND = dyn_cast<NamedDecl>(D)) {
+            ND->printQualifiedName(OS);
+            OS << " : ";
+          } else
+            OS << ": ";
+          D->getSourceRange().print(OS,
+                                    MV.ActiveASTContext->getSourceManager());
+        } else if (const auto *S = Item.second.get<Stmt>()) {
+          OS << S->getStmtClassName() << " : ";
+          S->getSourceRange().print(OS,
+                                    MV.ActiveASTContext->getSourceManager());
+        } else if (const auto *T = Item.second.get<Type>()) {
+          OS << T->getTypeClassName() << "Type : ";
+          QualType(T, 0).print(OS, MV.ActiveASTContext->getPrintingPolicy());
+        } else if (const auto *QT = Item.second.get<QualType>()) {
+          OS << "QualType : ";
+          QT->print(OS, MV.ActiveASTContext->getPrintingPolicy());
+        } else {
+          OS << Item.second.getNodeKind().asStringRef() << " : ";
+          Item.second.getSourceRange().print(
+              OS, MV.ActiveASTContext->getSourceManager());
+        }
+        OS << " }\n";
+      }
+      OS << "--- Bound Nodes End ---\n";
     }
 
   private:
@@ -928,6 +815,13 @@ public:
   };
 
 private:
+  bool TraversingASTNodeNotSpelledInSource = false;
+  bool TraversingASTNodeNotAsIs = false;
+  bool TraversingASTChildrenNotSpelledInSource = false;
+
+  const MatchCallback *CurMatched = nullptr;
+  const BoundNodes *CurBoundNodes = nullptr;
+
   struct ASTNodeNotSpelledInSourceScope {
     ASTNodeNotSpelledInSourceScope(MatchASTVisitor *V, bool B)
         : MV(V), MB(V->TraversingASTNodeNotSpelledInSource) {
@@ -993,7 +887,6 @@ private:
       if (EnableCheckProfiling)
         Timer.setBucket(&TimeByBucket[MP.second->getID()]);
       BoundNodesTreeBuilder Builder;
-      CurMatchRAII RAII(*this, MP.second, Node);
       if (MP.first.matches(Node, this, &Builder)) {
         MatchVisitor Visitor(*this, ActiveASTContext, MP.second);
         Builder.visitMatches(&Visitor);
@@ -1026,7 +919,6 @@ private:
           continue;
       }
 
-      CurMatchRAII RAII(*this, MP.second, DynNode);
       if (MP.first.matches(DynNode, this, &Builder)) {
         MatchVisitor Visitor(*this, ActiveASTContext, MP.second);
         Builder.visitMatches(&Visitor);
@@ -1215,30 +1107,35 @@ private:
   // the aggregated bound nodes for each match.
   class MatchVisitor : public BoundNodesTreeBuilder::Visitor {
     struct CurBoundScope {
-      CurBoundScope(MatchASTVisitor::CurMatchData &State, const BoundNodes &BN)
-          : State(State) {
-        State.SetBoundNodes(BN);
+      CurBoundScope(MatchASTVisitor &MV, const BoundNodes &BN) : MV(MV) {
+        assert(MV.CurMatched && !MV.CurBoundNodes);
+        MV.CurBoundNodes = &BN;
       }
 
-      ~CurBoundScope() { State.clearBoundNodes(); }
+      ~CurBoundScope() { MV.CurBoundNodes = nullptr; }
 
     private:
-      MatchASTVisitor::CurMatchData &State;
+      MatchASTVisitor &MV;
     };
 
   public:
     MatchVisitor(MatchASTVisitor &MV, ASTContext *Context,
                  MatchFinder::MatchCallback *Callback)
-        : State(MV.CurMatchState), Context(Context), Callback(Callback) {}
+        : MV(MV), Context(Context), Callback(Callback) {
+      assert(!MV.CurMatched && !MV.CurBoundNodes);
+      MV.CurMatched = Callback;
+    }
+
+    ~MatchVisitor() { MV.CurMatched = nullptr; }
 
     void visitMatch(const BoundNodes& BoundNodesView) override {
       TraversalKindScope RAII(*Context, Callback->getCheckTraversalKind());
-      CurBoundScope RAII2(State, BoundNodesView);
+      CurBoundScope RAII2(MV, BoundNodesView);
       Callback->run(MatchFinder::MatchResult(BoundNodesView, Context));
     }
 
   private:
-    MatchASTVisitor::CurMatchData &State;
+    MatchASTVisitor &MV;
     ASTContext* Context;
     MatchFinder::MatchCallback* Callback;
   };
