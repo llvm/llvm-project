@@ -1,4 +1,5 @@
-// RUN: cir-tool %s
+// RUN: cir-tool %s | FileCheck %s
+// XFAIL: *
 
 func.func @s0() {
   %1 = cir.cst(2 : i32) : i32
@@ -15,3 +16,15 @@ func.func @s0() {
   ]
   cir.return
 }
+
+// CHECK: cir.switch (%0 : i32) [
+// CHECK-NEXT: case (default, 0 : i32)  {
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: },
+// CHECK-NEXT: case (equal, 3 : i32)  {
+// CHECK-NEXT:   cir.yield fallthrough
+// CHECK-NEXT: },
+// CHECK-NEXT: case (equal, 5 : i32)  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: ]

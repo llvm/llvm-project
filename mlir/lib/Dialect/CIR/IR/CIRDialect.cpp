@@ -492,10 +492,13 @@ Block *BrOp::getSuccessorForOperands(ArrayRef<Attribute>) { return getDest(); }
 ParseResult
 parseSwitchOp(OpAsmParser &parser,
               llvm::SmallVectorImpl<std::unique_ptr<::mlir::Region>> &regions,
-              ::mlir::ArrayAttr &casesAttr) {
-
+              ::mlir::ArrayAttr &casesAttr,
+              mlir::OpAsmParser::UnresolvedOperand &cond,
+              mlir::Type &condType) {
+  ::mlir::IntegerType intCondType;
   SmallVector<mlir::Attribute, 4> cases;
-  auto parseRegion = [&]() -> ParseResult {
+
+  auto parseAndCheckRegion = [&]() -> ParseResult {
     // Parse region attached to case
     regions.emplace_back(new Region);
     Region &currRegion = *regions.back().get();
@@ -503,6 +506,23 @@ parseSwitchOp(OpAsmParser &parser,
       regions.clear();
       return failure();
     }
+
+    if (currRegion.empty()) {
+      return parser.emitError(
+          parser.getCurrentLocation(),
+          "case regions expected to have one terminated block");
+    }
+
+    // Region trait in CIROps.td already verifies that, but make sure not
+    // mistakes happen.
+    assert(currRegion.hasOneBlock() && "expected only one block");
+    Block &block = currRegion.back();
+    if (block.empty() || !block.back().hasTrait<OpTrait::IsTerminator>()) {
+      return parser.emitError(
+          parser.getCurrentLocation(),
+          "blocks are expected to be explicitly terminated");
+    }
+
     return success();
   };
 
@@ -549,10 +569,7 @@ parseSwitchOp(OpAsmParser &parser,
     if (!attrOptional)
       return parser.emitError(loc, "invalid ")
              << "kind attribute specification: \"" << attrStr << '"';
-    ;
 
-    mlir::Type intType = mlir::IntegerType::get(parser.getContext(), 64,
-                                                mlir::IntegerType::Signed);
     auto kindAttr = ::mlir::cir::CaseOpKindAttr::get(
         parser.getBuilder().getContext(), attrOptional.value());
 
@@ -562,7 +579,7 @@ parseSwitchOp(OpAsmParser &parser,
         return parser.emitError(parser.getCurrentLocation(), "expected ')'");
       cases.push_back(cir::CaseAttr::get(
           parser.getContext(), parser.getBuilder().getArrayAttr({}), kindAttr));
-      return parseRegion();
+      return parseAndCheckRegion();
     }
 
     // `,` value comes next (in the future perhaps a list?)
@@ -572,12 +589,25 @@ parseSwitchOp(OpAsmParser &parser,
     cases.push_back(
         cir::CaseAttr::get(parser.getContext(),
                            parser.getBuilder().getArrayAttr(
-                               {mlir::IntegerAttr::get(intType, val)}),
+                               {mlir::IntegerAttr::get(intCondType, val)}),
                            kindAttr));
     if (parser.parseRParen().failed())
       return parser.emitError(parser.getCurrentLocation(), "expected ')'");
-    return parseRegion();
+    return parseAndCheckRegion();
   };
+
+  if (parser.parseLParen())
+    return ::mlir::failure();
+
+  if (parser.parseOperand(cond))
+    return ::mlir::failure();
+  if (parser.parseColon())
+    return ::mlir::failure();
+  if (parser.parseCustomTypeWithFallback(intCondType))
+    return ::mlir::failure();
+  condType = intCondType;
+  if (parser.parseRParen())
+    return ::mlir::failure();
 
   if (parser
           .parseCommaSeparatedList(OpAsmParser::Delimiter::Square, parseCase,
@@ -591,7 +621,47 @@ parseSwitchOp(OpAsmParser &parser,
 
 void printSwitchOp(OpAsmPrinter &p, SwitchOp op,
                    mlir::MutableArrayRef<::mlir::Region> regions,
-                   ::mlir::ArrayAttr casesAttr) {}
+                   mlir::ArrayAttr casesAttr, mlir::Value condition,
+                   mlir::Type condType) {
+  int idx = 0, lastIdx = regions.size() - 1;
+
+  p << "(";
+  p << condition;
+  p << " : ";
+  p.printStrippedAttrOrType(condType);
+  p << ") [";
+  // FIXME: ideally we want some extra indentation for "cases" but too
+  // cumbersome to pull it out now, since most handling is private. Perhaps
+  // better improve overall mechanism.
+  p.printNewline();
+  for (auto &r : regions) {
+    p << "case (";
+
+    auto attr = casesAttr[idx].cast<CaseAttr>();
+    auto kind = attr.getKind().getValue();
+    assert((kind == CaseOpKind::Default || kind == CaseOpKind::Equal) &&
+           "unknown case");
+
+    // Case kind
+    auto caseValueStr = stringifyCaseOpKind(kind);
+    std::string attrString = caseValueStr.str();
+    attrString[0] = attrString[0] + 'a' - 'A';
+    caseValueStr = attrString;
+    p << caseValueStr << ", ";
+
+    // Case value
+    p.printStrippedAttrOrType(attr.getValue());
+
+    p << ") ";
+    p.printRegion(r, /*printEntryBLockArgs=*/false,
+                  /*printBlockTerminators=*/true);
+    if (idx < lastIdx)
+      p << ",";
+    p.printNewline();
+    idx++;
+  }
+  p << "]";
+}
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
@@ -626,6 +696,8 @@ void SwitchOp::getSuccessorRegions(mlir::RegionBranchPoint point,
   for (auto &r : this->getRegions())
     regions.push_back(RegionSuccessor(&r));
 }
+
+LogicalResult SwitchOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
