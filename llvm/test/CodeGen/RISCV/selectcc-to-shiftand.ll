@@ -31,8 +31,8 @@ define i32 @neg_sel_constants(i32 signext %a) {
 define i32 @neg_sel_special_constant(i32 signext %a) {
 ; RV32-LABEL: neg_sel_special_constant:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a0, a0, 22
-; RV32-NEXT:    andi a0, a0, 512
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    slli a0, a0, 9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: neg_sel_special_constant:
@@ -100,8 +100,8 @@ define i32 @pos_sel_special_constant(i32 signext %a) {
 ; RV32-LABEL: pos_sel_special_constant:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    not a0, a0
-; RV32-NEXT:    srli a0, a0, 22
-; RV32-NEXT:    andi a0, a0, 512
+; RV32-NEXT:    srli a0, a0, 31
+; RV32-NEXT:    slli a0, a0, 9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: pos_sel_special_constant:
