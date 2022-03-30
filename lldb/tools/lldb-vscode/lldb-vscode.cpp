@@ -3246,7 +3246,6 @@ int main(int argc, char *argv[]) {
     g_vsc.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
   }
 
-  uint32_t packet_idx = 0;
   while (!g_vsc.sent_terminated_event) {
     llvm::json::Object object;
     lldb_vscode::PacketStatus status = g_vsc.GetNextObject(object);
@@ -3257,7 +3256,6 @@ int main(int argc, char *argv[]) {
 
     if (!g_vsc.HandleObject(object))
       return 1;
-    ++packet_idx;
   }
 
   return EXIT_SUCCESS;
