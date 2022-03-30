@@ -913,6 +913,8 @@ class sve_int_count<bits<3> opc, string asm>
   let Inst{10}    = opc{0};
   let Inst{9-5}   = pattern;
   let Inst{4-0}   = Rd;
+
+  let isReMaterializable = 1;
 }
 
 multiclass sve_int_count<bits<3> opc, string asm, SDPatternOperator op> {
@@ -2539,6 +2541,8 @@ class sve_int_read_vl_a<bit op, bits<5> opc2, string asm, bit streaming_sve = 0b
   let Inst{11}    = streaming_sve;
   let Inst{10-5}  = imm6;
   let Inst{4-0}   = Rd;
+
+  let isReMaterializable = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5190,6 +5194,8 @@ class sve_int_index_ii<bits<2> sz8_64, string asm, ZPRRegOp zprty,
   let Inst{15-10} = 0b010000;
   let Inst{9-5}   = imm5;
   let Inst{4-0}   = Zd;
+
+  let isReMaterializable = 1;
 }
 
 multiclass sve_int_index_ii<string asm> {
