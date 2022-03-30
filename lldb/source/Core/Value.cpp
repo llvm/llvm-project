@@ -662,13 +662,6 @@ void Value::ConvertToLoadAddress(Module *module, Target *target) {
   GetScalar() = load_addr;
 }
 
-ValueList::ValueList(const ValueList &rhs) { m_values = rhs.m_values; }
-
-const ValueList &ValueList::operator=(const ValueList &rhs) {
-  m_values = rhs.m_values;
-  return *this;
-}
-
 void ValueList::PushValue(const Value &value) { m_values.push_back(value); }
 
 size_t ValueList::GetSize() { return m_values.size(); }

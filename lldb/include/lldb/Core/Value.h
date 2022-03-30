@@ -156,13 +156,11 @@ protected:
 
 class ValueList {
 public:
-  ValueList() {}
-
-  ValueList(const ValueList &rhs);
-
+  ValueList() = default;
   ~ValueList() = default;
 
-  const ValueList &operator=(const ValueList &rhs);
+  ValueList(const ValueList &rhs) = default;
+  ValueList &operator=(const ValueList &rhs) = default;
 
   // void InsertValue (Value *value, size_t idx);
   void PushValue(const Value &value);
