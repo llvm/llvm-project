@@ -1574,7 +1574,7 @@ void DwarfDebug::collectVariableInfoFromMF(
       ensureAbstractEntityIsCreatedIfScoped(TheCU, Var.first, Scope->getScopeNode());
       auto RegVar = std::make_unique<NewDbgVariable>(
                         cast<DILocalVariable>(Var.first), Var.second);
-      RegVar->initializeLifetime(LT);
+      RegVar->initializeDbgDefProxy(*LT, MI.getDebugReferrer());
       LLVM_DEBUG(dbgs() << "Created DbgVariable for " << LV->getName()
                         << "\n");
 

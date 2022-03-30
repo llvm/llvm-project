@@ -500,6 +500,9 @@ private:
   DwarfCompileUnit &CU;
   DIELoc &OutDIE;
   const DILifetime &Lifetime;
+  // An `Optional<MachineOperand>` where `nullptr` represents `None`.
+  // Only present when in a function context.
+  const MachineOperand *Referrer;
   // An `Optional<const DenseMap<_, _>&>` where `nullptr` represents `None`.
   // Only present and applicable as part of an optimization for DIFragments
   // which refer to global variable fragments.
@@ -558,15 +561,26 @@ private:
   void emitDwarfSigned(int64_t SignedValue);
   void emitDwarfUnsigned(uint64_t UnsignedValue);
 
-public:
-  DIEDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo *TRI,
-                  DwarfCompileUnit &CU, DIELoc &DIE, const DILifetime &Lifetime,
-                  const DenseMap<DIFragment *, const GlobalVariable *>
-                      *GVFragmentMap = nullptr)
+  DIEDwarfExprAST(
+      const AsmPrinter &AP, const TargetRegisterInfo *TRI, DwarfCompileUnit &CU,
+      DIELoc &DIE, const DILifetime &Lifetime, const MachineOperand *Referrer,
+      const DenseMap<DIFragment *, const GlobalVariable *> *GVFragmentMap)
       : AP(AP), TRI(TRI), CU(CU), OutDIE(DIE), Lifetime(Lifetime),
-        GVFragmentMap(GVFragmentMap) {
+        Referrer(Referrer), GVFragmentMap(GVFragmentMap) {
     buildDIExprAST();
   }
+
+public:
+  DIEDwarfExprAST(const AsmPrinter &AP, const TargetRegisterInfo &TRI,
+                  DwarfCompileUnit &CU, DIELoc &DIE, const DILifetime &Lifetime,
+                  const MachineOperand &Referrer)
+      : DIEDwarfExprAST(AP, &TRI, CU, DIE, Lifetime, &Referrer, nullptr) {}
+  DIEDwarfExprAST(
+      const AsmPrinter &AP, DwarfCompileUnit &CU, DIELoc &DIE,
+      const DILifetime &Lifetime,
+      const DenseMap<DIFragment *, const GlobalVariable *> &GVFragmentMap)
+      : DIEDwarfExprAST(AP, nullptr, CU, DIE, Lifetime, nullptr,
+                        &GVFragmentMap) {}
   DIEDwarfExprAST(const DIEDwarfExprAST &) = delete;
 
   DIELoc *finalize() {

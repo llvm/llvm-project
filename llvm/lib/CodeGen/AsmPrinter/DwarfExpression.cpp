@@ -934,13 +934,23 @@ void DIEDwarfExprAST::lowerDIOpReferrer(DIEDwarfExprAST::Node *OpNode) {
   const DIOp::Variant &Element = OpNode->getElement();
   assert(Element.holdsAlternative<DIOp::Referrer>() &&
          "Expected DIOp::Referrer, but got something else");
+  assert(Referrer && "Cannot lower DIOp::Referrer without referrer operand");
 
-  auto LLVMFrameRegister = TRI->getFrameRegister(*AP.MF);
-  auto DWARFFrameRegister = TRI->getDwarfRegNum(LLVMFrameRegister, false);
-
-  // FIXME(KZHURAVL): This is fine at -O0. Need to record the actual Value which
-  // is acting as the referrer for each lifetime when we walk the MF.
-  emitReg(DWARFFrameRegister);
+  if (Referrer->isReg() && Referrer->getReg()) {
+    auto DWARFRegister = TRI->getDwarfRegNum(Referrer->getReg(), false);
+    assert(DWARFRegister != -1 && "No DWARF register for referrer");
+    emitReg(DWARFRegister);
+  } else if (Referrer->isImm()) {
+    auto I = Referrer->getImm();
+    if (I >= 0)
+      emitUnsigned(static_cast<uint64_t>(I));
+    else
+      emitSigned(I);
+    emitDwarfOp(dwarf::DW_OP_stack_value);
+  } else {
+    IsImplemented = false;
+    return;
+  }
 
   OpNode->setIsLowered();
   // FIXME(KZHURAVL): Is the following result type correct?

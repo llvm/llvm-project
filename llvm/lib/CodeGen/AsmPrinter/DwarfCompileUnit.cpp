@@ -448,8 +448,7 @@ void DwarfCompileUnit::addLocationAttribute(
   bool AddToAccelTable = true;
   DIELoc *ActualLoc = new (DIEValueAllocator) DIELoc;
   DIELoc *EmptyLoc = new (DIEValueAllocator) DIELoc;
-  DIEDwarfExprAST ExprAST(*Asm, nullptr, *this, *ActualLoc, Lifetime,
-                          &GVFragmentMap);
+  DIEDwarfExprAST ExprAST(*Asm, *this, *ActualLoc, Lifetime, GVFragmentMap);
   addBlock(*VariableDIE, dwarf::DW_AT_location,
            ExprAST.finalize() ? ActualLoc : EmptyLoc);
 
@@ -969,15 +968,16 @@ DIE *DwarfCompileUnit::constructVariableDIEImpl(const DbgVariable &DV,
 
   // Check if it is a heterogeneous dwarf.
   if (const auto *NDV = dyn_cast<NewDbgVariable>(&DV)) {
-    for (auto &Lifetime : NDV->getLifetimes()) {
+    for (auto &DbgDefProxy : NDV->getDbgDefProxies()) {
       DIELoc *ActualLoc = new (DIEValueAllocator) DIELoc;
       // FIXME(KZHURAVL): Remove EmptyLoc once we implement full lowering
       // support.
       DIELoc *EmptyLoc = new (DIEValueAllocator) DIELoc;
-      DIEDwarfExprAST ExprAST(*Asm, Asm->MF->getSubtarget().getRegisterInfo(),
-                              *this, *ActualLoc, *Lifetime);
-      addBlock(*VariableDie, dwarf::DW_AT_location, ExprAST.finalize() ?
-                                                    ActualLoc : EmptyLoc);
+      DIEDwarfExprAST ExprAST(*Asm, *Asm->MF->getSubtarget().getRegisterInfo(),
+                              *this, *ActualLoc, DbgDefProxy.Lifetime,
+                              DbgDefProxy.Referrer);
+      addBlock(*VariableDie, dwarf::DW_AT_location,
+               ExprAST.finalize() ? ActualLoc : EmptyLoc);
     }
     return VariableDie;
   }

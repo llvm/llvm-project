@@ -1374,8 +1374,12 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         unsigned FrameIdx = Op.getIndex();
         StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
 
-        Op.ChangeToRegister(Reg, false /*isDef*/);
-        Op.setIsDebug();
+        if (Reg) {
+          Op.ChangeToRegister(Reg, false /*isDef*/);
+          Op.setIsDebug();
+        } else {
+          Op.ChangeToImmediate(0);
+        }
 
         DILifetime *Lifetime = MI.getDebugLifetime();
         DIExprBuilder Builder = Lifetime->getLocation()->builder();

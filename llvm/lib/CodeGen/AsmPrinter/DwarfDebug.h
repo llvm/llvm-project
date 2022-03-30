@@ -104,6 +104,12 @@ public:
   }
 };
 
+// A pair to capture the arguments of a call to DBG_DEF
+struct DbgDefProxy {
+  const DILifetime &Lifetime;
+  const MachineOperand &Referrer;
+};
+
 //===----------------------------------------------------------------------===//
 // FIXME(KZHURAVL): Write documentation for DbgVariable.
 class DbgVariable : public DbgEntity {
@@ -162,9 +168,10 @@ public:
   virtual void addMMIEntry(const DbgVariable &V) = 0;
   virtual bool hasComplexAddress() const = 0;
 
-  virtual void initializeLifetime(const DILifetime *LT) = 0;
-  virtual ArrayRef<const DILifetime*> getLifetimes() const = 0;
-  virtual bool hasLifetimes() const = 0;
+  virtual void initializeDbgDefProxy(const DILifetime &LT,
+                                     const MachineOperand &Referrer) = 0;
+  virtual ArrayRef<DbgDefProxy> getDbgDefProxies() const = 0;
+  virtual bool hasDbgDefProxies() const = 0;
 
   static bool classof(const DbgEntity *N) {
     switch (N->getDbgEntityID()) {
@@ -260,13 +267,14 @@ public:
     return !FrameIndexExprs.empty();
   }
 
-  void initializeLifetime(const DILifetime *LT) override {
+  void initializeDbgDefProxy(const DILifetime &LT,
+                             const MachineOperand &Referrer) override {
     llvm_unreachable("OldDbgVariable::initializeLifetime is not supported");
   }
-  ArrayRef<const DILifetime*> getLifetimes() const override {
+  ArrayRef<DbgDefProxy> getDbgDefProxies() const override {
     llvm_unreachable("OldDbgVariable::getLifetimes is not supported");
   }
-  bool hasLifetimes() const override {
+  bool hasDbgDefProxies() const override {
     return false; // FIXME(KZHURAVL).
   }
 
@@ -278,7 +286,7 @@ public:
 //===----------------------------------------------------------------------===//
 // FIXME(KZHURAVL): Write documentation for NewDbgVariable.
 class NewDbgVariable : public DbgVariable {
-  mutable SmallVector<const DILifetime*, 1> Lifetimes;
+  mutable SmallVector<DbgDefProxy, 1> DbgDefProxies;
 
 public:
   NewDbgVariable(const DILocalVariable *V, const DILocation *IA)
@@ -324,19 +332,18 @@ public:
     llvm_unreachable("NewDbgVariable::hasComplexAddress is not supported");
   }
 
-  void initializeLifetime(const DILifetime *LT) override {
-    assert(Lifetimes.empty() && "Already initialized?");
-    assert(LT && "Expected valid lifetime");
-    assert(LT->getLocation() && "Expected valid location (expr)");
+  void initializeDbgDefProxy(const DILifetime &LT,
+                             const MachineOperand &Referrer) override {
+    // FIXME: Support more than one DbgDef pair per variable
+    assert(DbgDefProxies.empty() && "Already initialized?");
+    assert(LT.getLocation() && "Expected valid location (expr)");
 
-    Lifetimes.push_back(LT);
+    DbgDefProxies.push_back({LT, Referrer});
   }
-  ArrayRef<const DILifetime*> getLifetimes() const override {
-    return Lifetimes;
+  ArrayRef<DbgDefProxy> getDbgDefProxies() const override {
+    return DbgDefProxies;
   }
-  bool hasLifetimes() const override {
-    return !Lifetimes.empty();
-  }
+  bool hasDbgDefProxies() const override { return !DbgDefProxies.empty(); }
 
   static bool classof(const DbgEntity *N) {
     return N->getDbgEntityID() == NewDbgVariableKind;
