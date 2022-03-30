@@ -1767,6 +1767,9 @@ example:
     This function attribute indicates that the function does not call itself
     either directly or indirectly down any possible call path. This produces
     undefined behavior at runtime if the function ever does recurse.
+
+.. _langref_willreturn:
+
 ``willreturn``
     This function attribute indicates that a call of this function will
     either exhibit undefined behavior or comes back and continues execution
@@ -2144,6 +2147,9 @@ example:
     the function. The instrumentation checks that the return address for the
     function has not changed between the function prolog and epilog. It is
     currently x86_64-specific.
+
+.. _langref_mustprogress:
+
 ``mustprogress``
     This attribute indicates that the function is required to return, unwind,
     or interact with the environment in an observable way e.g. via a volatile
@@ -6868,6 +6874,8 @@ It is also possible to have nested parallel loops:
    !3 = distinct !{} ; access group for instructions in the inner loop (which are implicitly contained in outer loop as well)
    !4 = distinct !{} ; access group for instructions in the outer, but not the inner loop
 
+.. _langref_llvm_loop_mustprogress:
+
 '``llvm.loop.mustprogress``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -11118,6 +11126,8 @@ The '``icmp``' instruction takes three operands. The first operand is
 the condition code indicating the kind of comparison to perform. It is
 not a value, just a keyword. The possible condition codes are:
 
+.. _icmp_md_cc:
+
 #. ``eq``: equal
 #. ``ne``: not equal
 #. ``ugt``: unsigned greater than
@@ -11139,6 +11149,8 @@ Semantics:
 The '``icmp``' compares ``op1`` and ``op2`` according to the condition
 code given as ``cond``. The comparison performed always yields either an
 :ref:`i1 <t_integer>` or vector of ``i1`` result, as follows:
+
+.. _icmp_md_cc_sem:
 
 #. ``eq``: yields ``true`` if the operands are equal, ``false``
    otherwise. No sign interpretation is necessary or performed.
@@ -20275,6 +20287,122 @@ Examples:
       %also.r = select <4 x i1> %mask, <4 x float> %t, <4 x float> undef
 
 
+.. _int_vp_fcmp:
+
+'``llvm.vp.fcmp.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <16 x i1> @llvm.vp.fcmp.v16f32(<16 x float> <left_op>, <16 x float> <right_op>, metadata <condition code>, <16 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 4 x i1> @llvm.vp.fcmp.nxv4f32(<vscale x 4 x float> <left_op>, <vscale x 4 x float> <right_op>, metadata <condition code>, <vscale x 4 x i1> <mask>, i32 <vector_length>)
+      declare <256 x i1> @llvm.vp.fcmp.v256f64(<256 x double> <left_op>, <256 x double> <right_op>, metadata <condition code>, <256 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.fcmp``' intrinsic returns a vector of boolean values based on
+the comparison of its operands. The operation has a mask and an explicit vector
+length parameter.
+
+
+Arguments:
+""""""""""
+
+The '``llvm.vp.fcmp``' intrinsic takes the two values to compare as its first
+and second operands. These two values must be vectors of :ref:`floating-point
+<t_floating>` types.
+The return type is the result of the comparison. The return type must be a
+vector of :ref:`i1 <t_integer>` type. The fourth operand is the vector mask.
+The return type, the values to compare, and the vector mask have the same
+number of elements. The third operand is the condition code indicating the kind
+of comparison to perform. It must be a metadata string with :ref:`one of the
+supported floating-point condition code values <fcmp_md_cc>`. The fifth operand
+is the explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.fcmp``' compares its first two operands according to the
+condition code given as the third operand. The operands are compared element by
+element on each enabled lane, where the the semantics of the comparison are
+defined :ref:`according to the condition code <fcmp_md_cc_sem>`. Masked-off
+lanes are undefined.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i1> @llvm.vp.fcmp.v4f32(<4 x float> %a, <4 x float> %b, metadata !"oeq", <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = fcmp oeq <4 x float> %a, %b
+      %also.r = select <4 x i1> %mask, <4 x i1> %t, <4 x i1> undef
+
+
+.. _int_vp_icmp:
+
+'``llvm.vp.icmp.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic.
+
+::
+
+      declare <32 x i1> @llvm.vp.icmp.v32i32(<32 x i32> <left_op>, <32 x i32> <right_op>, metadata <condition code>, <32 x i1> <mask>, i32 <vector_length>)
+      declare <vscale x 2 x i1> @llvm.vp.icmp.nxv2i32(<vscale x 2 x i32> <left_op>, <vscale x 2 x i32> <right_op>, metadata <condition code>, <vscale x 2 x i1> <mask>, i32 <vector_length>)
+      declare <128 x i1> @llvm.vp.icmp.v128i8(<128 x i8> <left_op>, <128 x i8> <right_op>, metadata <condition code>, <128 x i1> <mask>, i32 <vector_length>)
+
+Overview:
+"""""""""
+
+The '``llvm.vp.icmp``' intrinsic returns a vector of boolean values based on
+the comparison of its operands. The operation has a mask and an explicit vector
+length parameter.
+
+
+Arguments:
+""""""""""
+
+The '``llvm.vp.icmp``' intrinsic takes the two values to compare as its first
+and second operands. These two values must be vectors of :ref:`integer
+<t_integer>` types.
+The return type is the result of the comparison. The return type must be a
+vector of :ref:`i1 <t_integer>` type. The fourth operand is the vector mask.
+The return type, the values to compare, and the vector mask have the same
+number of elements. The third operand is the condition code indicating the kind
+of comparison to perform. It must be a metadata string with :ref:`one of the
+supported integer condition code values <icmp_md_cc>`. The fifth operand is the
+explicit vector length of the operation.
+
+Semantics:
+""""""""""
+
+The '``llvm.vp.icmp``' compares its first two operands according to the
+condition code given as the third operand. The operands are compared element by
+element on each enabled lane, where the the semantics of the comparison are
+defined :ref:`according to the condition code <icmp_md_cc_sem>`. Masked-off
+lanes are undefined.
+
+Examples:
+"""""""""
+
+.. code-block:: llvm
+
+      %r = call <4 x i1> @llvm.vp.icmp.v4i32(<4 x i32> %a, <4 x i32> %b, metadata !"ne", <4 x i1> %mask, i32 %evl)
+      ;; For all lanes below %evl, %r is lane-wise equivalent to %also.r
+
+      %t = icmp ne <4 x i32> %a, %b
+      %also.r = select <4 x i1> %mask, <4 x i1> %t, <4 x i1> undef
+
+
 .. _int_mload_mstore:
 
 Masked Vector Load and Store Intrinsics
@@ -21415,6 +21543,8 @@ of floating-point values. Both arguments must have identical types.
 The third argument is the condition code indicating the kind of comparison
 to perform. It must be a metadata string with one of the following values:
 
+.. _fcmp_md_cc:
+
 - "``oeq``": ordered and equal
 - "``ogt``": ordered and greater than
 - "``oge``": ordered and greater than or equal
@@ -21442,6 +21572,8 @@ Semantics:
 as the third argument. If the operands are vectors, then the
 vectors are compared element by element. Each comparison performed
 always yields an :ref:`i1 <t_integer>` result, as follows:
+
+.. _fcmp_md_cc_sem:
 
 - "``oeq``": yields ``true`` if both operands are not a NAN and ``op1``
   is equal to ``op2``.

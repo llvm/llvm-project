@@ -874,11 +874,14 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder::AtomicReductionGenTy atomicGen = nullptr;
     if (owningAtomicReductionGens[i])
       atomicGen = owningAtomicReductionGens[i];
+    auto reductionType =
+        loop.reduction_vars()[i].getType().cast<LLVM::LLVMPointerType>();
     llvm::Value *variable =
         moduleTranslation.lookupValue(loop.reduction_vars()[i]);
-    reductionInfos.push_back({variable->getType()->getPointerElementType(),
-                              variable, privateReductionVariables[i],
-                              owningReductionGens[i], atomicGen});
+    reductionInfos.push_back(
+        {moduleTranslation.convertType(reductionType.getElementType()),
+         variable, privateReductionVariables[i], owningReductionGens[i],
+         atomicGen});
   }
 
   // The call to createReductions below expects the block to have a
@@ -1219,14 +1222,13 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
   };
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
-  llvm::UnreachableInst *unreachableInst;
   if (allocaIP.getPoint() == ompLoc.IP.getPoint()) {
     // Same point => split basic block and make them unambigous.
-    unreachableInst = builder.CreateUnreachable();
+    llvm::UnreachableInst *unreachableInst = builder.CreateUnreachable();
     builder.SetInsertPoint(builder.GetInsertBlock()->splitBasicBlock(
         unreachableInst, "alloca_split"));
     ompLoc.IP = builder.saveIP();
-    unreachableInst->removeFromParent();
+    unreachableInst->eraseFromParent();
   }
   builder.restoreIP(ompBuilder->createAtomicCapture(
       ompLoc, findAllocaInsertPoint(builder, moduleTranslation), llvmAtomicX,

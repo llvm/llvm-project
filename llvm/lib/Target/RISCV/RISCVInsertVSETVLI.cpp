@@ -505,9 +505,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // If the instruction has policy argument, use the argument.
   // If there is no policy argument, default to tail agnostic unless the
   // destination is tied to a source. Unless the source is undef. In that case
-  // the user would have some control over the policy values. Some pseudo
-  // instructions force a tail agnostic policy despite having a tied def.
-  bool ForceTailAgnostic = RISCVII::doesForceTailAgnostic(TSFlags);
+  // the user would have some control over the policy values.
   bool TailAgnostic = true;
   bool UsesMaskPolicy = RISCVII::UsesMaskPolicy(TSFlags);
   // FIXME: Could we look at the above or below instructions to choose the
@@ -528,7 +526,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     // have set the policy value explicitly, so compiler would not fix it.
     TailAgnostic = Policy & RISCVII::TAIL_AGNOSTIC;
     MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
-  } else if (!ForceTailAgnostic && MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+  } else if (MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
     TailAgnostic = false;
     if (UsesMaskPolicy)
       MaskAgnostic = false;
@@ -543,6 +541,10 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
           MaskAgnostic = true;
       }
     }
+    // Some pseudo instructions force a tail agnostic policy despite having a
+    // tied def.
+    if (RISCVII::doesForceTailAgnostic(TSFlags))
+      TailAgnostic = true;
   }
 
   // Remove the tail policy so we can find the SEW and VL.

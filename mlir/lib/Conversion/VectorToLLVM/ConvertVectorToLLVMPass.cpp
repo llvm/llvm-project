@@ -34,7 +34,7 @@ struct LowerVectorToLLVMPass
     : public ConvertVectorToLLVMBase<LowerVectorToLLVMPass> {
   LowerVectorToLLVMPass(const LowerVectorToLLVMOptions &options) {
     this->reassociateFPReductions = options.reassociateFPReductions;
-    this->indexOptimizations = options.indexOptimizations;
+    this->force32BitVectorIndices = options.force32BitVectorIndices;
     this->armNeon = options.armNeon;
     this->armSVE = options.armSVE;
     this->amx = options.amx;
@@ -77,11 +77,11 @@ void LowerVectorToLLVMPass::runOnOperation() {
   // Convert to the LLVM IR dialect.
   LLVMTypeConverter converter(&getContext());
   RewritePatternSet patterns(&getContext());
-  populateVectorMaskMaterializationPatterns(patterns, indexOptimizations);
+  populateVectorMaskMaterializationPatterns(patterns, force32BitVectorIndices);
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(
-      converter, patterns, reassociateFPReductions, indexOptimizations);
+      converter, patterns, reassociateFPReductions, force32BitVectorIndices);
   populateVectorToLLVMMatrixConversionPatterns(converter, patterns);
 
   // Architecture specific augmentations.

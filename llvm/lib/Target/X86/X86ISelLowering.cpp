@@ -44717,8 +44717,6 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
       SDValue Carry = EFLAGS.getOperand(0);
       while (Carry.getOpcode() == ISD::TRUNCATE ||
              Carry.getOpcode() == ISD::ZERO_EXTEND ||
-             Carry.getOpcode() == ISD::SIGN_EXTEND ||
-             Carry.getOpcode() == ISD::ANY_EXTEND ||
              (Carry.getOpcode() == ISD::AND &&
               isOneConstant(Carry.getOperand(1))))
         Carry = Carry.getOperand(0);
@@ -52305,6 +52303,17 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
                     DAG.getTargetConstant(X86::COND_B, DL, MVT::i8), CarryIn),
         DAG.getConstant(1, DL, VT));
     return DCI.CombineTo(N, Res1, CarryOut);
+  }
+
+  // Fold ADC(C1,C2,Carry) -> ADC(0,C1+C2,Carry)
+  // iff the flag result is dead.
+  // TODO: Allow flag result if C1+C2 doesn't signed/unsigned overflow.
+  if (LHSC && RHSC && !LHSC->isZero() && !N->hasAnyUseOfValue(1)) {
+    SDLoc DL(N);
+    APInt Sum = LHSC->getAPIntValue() + RHSC->getAPIntValue();
+    return DAG.getNode(X86ISD::ADC, DL, N->getVTList(),
+                       DAG.getConstant(0, DL, LHS.getValueType()),
+                       DAG.getConstant(Sum, DL, LHS.getValueType()), CarryIn);
   }
 
   if (SDValue Flags = combineCarryThroughADD(CarryIn, DAG)) {

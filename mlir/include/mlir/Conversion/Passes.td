@@ -819,10 +819,10 @@ def ConvertVectorToLLVM : Pass<"convert-vector-to-llvm", "ModuleOp"> {
     Option<"reassociateFPReductions", "reassociate-fp-reductions",
            "bool", /*default=*/"false",
            "Allows llvm to reassociate floating-point reductions for speed">,
-    Option<"indexOptimizations", "enable-index-optimizations",
+    Option<"force32BitVectorIndices", "force-32bit-vector-indices",
            "bool", /*default=*/"true",
-           "Allows compiler to assume indices fit in 32-bit if that yields "
-	   "faster code">,
+           "Allows compiler to assume vector indices fit in 32-bit if that "
+     "yields faster code">,
     Option<"amx", "enable-amx",
            "bool", /*default=*/"false",
            "Enables the use of AMX dialect while lowering the vector "

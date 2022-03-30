@@ -211,8 +211,8 @@ MaybeOptimum<SmallVector<int64_t, 8>> LexSimplex::findIntegerLexMin() {
     assert(!sample.isEmpty() && "If we reached here the sample should exist!");
     if (sample.isUnbounded())
       return OptimumKind::Unbounded;
-    return llvm::to_vector<8>(llvm::map_range(
-        *sample, [](const Fraction &f) { return f.getAsInteger(); }));
+    return llvm::to_vector<8>(
+        llvm::map_range(*sample, std::mem_fn(&Fraction::getAsInteger)));
   }
 
   // Polytope is integer empty.
@@ -1213,9 +1213,8 @@ public:
   /// First pushes a snapshot for the current simplex state to the stack so
   /// that this can be rolled back later.
   void addEqualityForDirection(ArrayRef<int64_t> dir) {
-    assert(
-        std::any_of(dir.begin(), dir.end(), [](int64_t x) { return x != 0; }) &&
-        "Direction passed is the zero vector!");
+    assert(llvm::any_of(dir, [](int64_t x) { return x != 0; }) &&
+           "Direction passed is the zero vector!");
     snapshotStack.push_back(simplex.getSnapshot());
     simplex.addEquality(getCoeffsForDirection(dir));
   }

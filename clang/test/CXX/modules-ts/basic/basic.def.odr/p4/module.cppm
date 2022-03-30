@@ -5,25 +5,26 @@
 // CHECK-DAG: @_ZL24static_var_global_module = internal global
 // CHECK-DAG: @_ZL23const_var_global_module = internal constant
 //
-// For ABI compatibility, these symbols do not include the module name.
-// CHECK-DAG: @extern_var_exported = external {{(dso_local )?}}global
+// With strong-ownership, the module is mangled into exported symbols
+// that are attached to a named module.
+// CHECK-DAG: @_ZW6Module19extern_var_exported = external {{(dso_local )?}}global
 // FIXME: Should this be 'weak_odr global'? Presumably it must be, since we
 // can discard this global and its initializer (if any), and other TUs are not
 // permitted to run the initializer for this variable.
-// CHECK-DAG: @inline_var_exported = linkonce_odr {{(dso_local )?}}global
-// CHECK-DAG: @const_var_exported = {{(dso_local )?}}constant
+// CHECK-DAG: @_ZW6Module19inline_var_exported = linkonce_odr {{(dso_local )?}}global
+// CHECK-DAG: @_ZW6Module18const_var_exported = {{(dso_local )?}}constant
 //
-// CHECK-DAG: @_ZW6ModuleE25extern_var_module_linkage = external {{(dso_local )?}}global
+// CHECK-DAG: @_ZW6Module25extern_var_module_linkage = external {{(dso_local )?}}global
 // FIXME: Should this be 'weak_odr global'? Presumably it must be, since we
 // can discard this global and its initializer (if any), and other TUs are not
 // permitted to run the initializer for this variable.
-// CHECK-DAG: @_ZW6ModuleE25inline_var_module_linkage = linkonce_odr {{(dso_local )?}}global
-// CHECK-DAG: @_ZW6ModuleE25static_var_module_linkage = {{(dso_local )?}}global
-// CHECK-DAG: @_ZW6ModuleE24const_var_module_linkage = {{(dso_local )?}}constant
+// CHECK-DAG: @_ZW6Module25inline_var_module_linkage = linkonce_odr {{(dso_local )?}}global
+// CHECK-DAG: @_ZW6Module25static_var_module_linkage = {{(dso_local )?}}global
+// CHECK-DAG: @_ZW6Module24const_var_module_linkage = {{(dso_local )?}}constant
 //
-// CHECK-DAG: @_ZW6ModuleE25unused_var_module_linkage = {{(dso_local )?}}global i32 4
-// CHECK-DAG: @_ZW6ModuleE32unused_static_var_module_linkage = {{(dso_local )?}}global i32 5
-// CHECK-DAG: @_ZW6ModuleE31unused_const_var_module_linkage = {{(dso_local )?}}constant i32 7
+// CHECK-DAG: @_ZW6Module25unused_var_module_linkage = {{(dso_local )?}}global i32 4
+// CHECK-DAG: @_ZW6Module32unused_static_var_module_linkage = {{(dso_local )?}}global i32 5
+// CHECK-DAG: @_ZW6Module31unused_const_var_module_linkage = {{(dso_local )?}}constant i32 7
 
 static void unused_static_global_module() {}
 static void used_static_global_module() {}
@@ -64,7 +65,7 @@ export {
   inline int inline_var_exported;
   const int const_var_exported = 3;
 
-  // CHECK: define {{(dso_local )?}}void {{.*}}@_Z18noninline_exportedv
+  // CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6Module18noninline_exportedv
   void noninline_exported() {
     (void)&extern_var_exported;
     (void)&inline_var_exported;
@@ -75,9 +76,9 @@ export {
 // FIXME: Ideally we wouldn't emit this as its name is not visible outside this
 // TU, but this module interface might contain a template that can use this
 // function so we conservatively emit it for now.
-// CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6ModuleE28unused_static_module_linkagev
+// CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6Module28unused_static_module_linkagev
 static void unused_static_module_linkage() {}
-// CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6ModuleE26used_static_module_linkagev
+// CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6Module26used_static_module_linkagev
 static void used_static_module_linkage() {}
 
 inline void unused_inline_module_linkage() {}
@@ -88,10 +89,10 @@ inline int inline_var_module_linkage;
 static int static_var_module_linkage;
 const int const_var_module_linkage = 3;
 
-// CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6ModuleE24noninline_module_linkagev
+// CHECK: define {{(dso_local )?}}void {{.*}}@_ZW6Module24noninline_module_linkagev
 void noninline_module_linkage() {
   used_static_module_linkage();
-  // CHECK: define linkonce_odr {{.*}}@_ZW6ModuleE26used_inline_module_linkagev
+  // CHECK: define linkonce_odr {{.*}}@_ZW6Module26used_inline_module_linkagev
   used_inline_module_linkage();
 
   (void)&extern_var_module_linkage;
@@ -109,5 +110,5 @@ struct a {
   struct b {};
   struct c {};
 };
-// CHECK: define {{(dso_local )?}}void @_ZW6ModuleE1fW_0EN1a1bEW_0ENS_1cE(
+// CHECK: define {{(dso_local )?}}void @_ZW6Module1fNS_1a1bENS0_1cE(
 void f(a::b, a::c) {}

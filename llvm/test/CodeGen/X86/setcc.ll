@@ -46,10 +46,10 @@ define i64 @t3(i64 %x) nounwind readnone ssp {
 define i32 @t4(i32 %a) {
 ; CHECK-LABEL: t4:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movq _v4@GOTPCREL(%rip), %rax
-; CHECK-NEXT:    cmpl $1, (%rax)
-; CHECK-NEXT:    movw $1, %ax
-; CHECK-NEXT:    adcw $0, %ax
+; CHECK-NEXT:    movq _v4@GOTPCREL(%rip), %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    cmpl $1, (%rcx)
+; CHECK-NEXT:    adcw $1, %ax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    retq
   %t0 = load i32, i32* @v4, align 4
