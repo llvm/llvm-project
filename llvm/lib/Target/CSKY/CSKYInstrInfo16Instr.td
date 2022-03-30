@@ -441,6 +441,137 @@ let mayLoad = 1, Size = 2, isCodeGenOnly = 0 in
 def PseudoLRW16 : CSKYPseudo<(outs mGPR:$rz),
   (ins bare_symbol:$src), "lrw16 $rz, $src", []>;
 
+//===----------------------------------------------------------------------===//
+// Instruction Patterns.
+//===----------------------------------------------------------------------===//
+
+def : Pat<(sext_inreg mGPR:$src, i1), (ASRI16 (LSLI16 mGPR:$src, 7), 7)>;
+def : Pat<(sext_inreg sGPR:$src, i8), (SEXTB16 sGPR:$src)>;
+def : Pat<(sext_inreg sGPR:$src, i16), (SEXTH16 sGPR:$src)>;
+
+// Load & Store Patterns
+
+defm : LdPat<extloadi8, uimm5, LD16B, i32>;
+defm : LdPat<zextloadi8, uimm5, LD16B, i32>;
+
+defm : LdPat<extloadi16, uimm5_1, LD16H, i32>;
+defm : LdPat<zextloadi16, uimm5_1, LD16H, i32>;
+
+defm : LdPat<load, uimm5_2, LD16W, i32>;
+
+
+defm : StPat<truncstorei8, i32, uimm5, ST16B>;
+defm : StPat<truncstorei16, i32, uimm5_1, ST16H>;
+defm : StPat<store, i32, uimm5_2, ST16W>;
+
+def : Pat<(CSKY_CALLReg sGPR:$src), (JSR16 sGPR:$src)>;
+def : Pat<(CSKY_TAILReg sGPR:$src), (JMP16 sGPR:$src)>;
+
+// Symbol address Patterns
+def : Pat<(CSKY_LOAD_ADDR tglobaladdr, tconstpool:$src2), (LRW16 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tblockaddress, tconstpool:$src2), (LRW16 tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR tjumptable:$src1, tconstpool:$src2), (LRW16_Gen tjumptable:$src1, tconstpool:$src2)>;
+def : Pat<(CSKY_LOAD_ADDR texternalsym, tconstpool:$src2), (LRW16 tconstpool:$src2)>;
+
+def : Pat<(i32 (load constpool:$src)), (LRW16 (to_tconstpool tconstpool:$src))>;
+
+// Branch Patterns.
+
+def : Pat<(brcond CARRY:$ca, bb:$offset),
+          (BT16 CARRY:$ca, bb:$offset)>;
+
+def : Pat<(br bb:$offset), (BR16 bb:$offset)>;
+
+def : Pat<(brcond (i32 (setne mGPR:$rs1, uimm5:$rs2)), bb:$offset),
+          (BT16 (CMPNEI16 mGPR:$rs1, uimm5:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (seteq mGPR:$rs1, uimm5:$rs2)), bb:$offset),
+          (BF16 (CMPNEI16 mGPR:$rs1, uimm5:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setuge mGPR:$rs1, oimm5:$rs2)), bb:$offset),
+          (BT16 (CMPHSI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setult mGPR:$rs1, oimm5:$rs2)), bb:$offset),
+          (BF16 (CMPHSI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setlt mGPR:$rs1, oimm5:$rs2)), bb:$offset),
+          (BT16 (CMPLTI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setge mGPR:$rs1, oimm5:$rs2)), bb:$offset),
+          (BF16 (CMPLTI16 mGPR:$rs1, oimm5:$rs2), bb:$offset)>;
+
+def : Pat<(brcond (i32 (setne sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BT16 (CMPNE16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (seteq sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BF16 (CMPNE16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setuge sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BT16 (CMPHS16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setule sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BT16 (CMPHS16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
+def : Pat<(brcond (i32 (setult sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BF16 (CMPHS16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setugt sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BF16 (CMPHS16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
+def : Pat<(brcond (i32 (setlt sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BT16 (CMPLT16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setgt sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BT16 (CMPLT16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
+def : Pat<(brcond (i32 (setge sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BF16 (CMPLT16 sGPR:$rs1, sGPR:$rs2), bb:$offset)>;
+def : Pat<(brcond (i32 (setle sGPR:$rs1, sGPR:$rs2)), bb:$offset),
+          (BF16 (CMPLT16 sGPR:$rs2, sGPR:$rs1), bb:$offset)>;
+
+// Compare Patterns.
+def : Pat<(setne sGPR:$rs1, sGPR:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPNE16 sGPR:$rs1, sGPR:$rs2)))>;
+def : Pat<(seteq sGPR:$rs1, sGPR:$rs2),
+          (MVCV16 (CMPNE16 sGPR:$rs1, sGPR:$rs2))>;
+def : Pat<(setuge sGPR:$rs1, sGPR:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPHS16 sGPR:$rs1, sGPR:$rs2)))>;
+def : Pat<(setule sGPR:$rs1, sGPR:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPHS16 sGPR:$rs2, sGPR:$rs1)))>;
+def : Pat<(setult sGPR:$rs1, sGPR:$rs2),
+          (MVCV16 (CMPHS16 sGPR:$rs1, sGPR:$rs2))>;
+def : Pat<(setugt sGPR:$rs1, sGPR:$rs2),
+          (MVCV16 (CMPHS16 sGPR:$rs2, sGPR:$rs1))>;
+def : Pat<(setlt sGPR:$rs1, sGPR:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPLT16 sGPR:$rs1, sGPR:$rs2)))>;
+def : Pat<(setgt sGPR:$rs1, sGPR:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPLT16 sGPR:$rs2, sGPR:$rs1)))>;
+def : Pat<(setge sGPR:$rs1, sGPR:$rs2),
+          (MVCV16 (CMPLT16 sGPR:$rs1, sGPR:$rs2))>;
+def : Pat<(setle sGPR:$rs1, sGPR:$rs2),
+          (MVCV16 (CMPLT16 sGPR:$rs2, sGPR:$rs1))>;
+
+
+def : Pat<(setne mGPR:$rs1, uimm5:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPNEI16 mGPR:$rs1, uimm5:$rs2)))>;
+def : Pat<(seteq mGPR:$rs1, uimm5:$rs2),
+          (MVCV16 (CMPNEI16 mGPR:$rs1, uimm5:$rs2))>;
+def : Pat<(setuge mGPR:$rs1, oimm5:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPHSI16 mGPR:$rs1, oimm5:$rs2)))>;
+def : Pat<(setult mGPR:$rs1, oimm5:$rs2),
+          (MVCV16 (CMPHSI16 mGPR:$rs1, oimm5:$rs2))>;
+def : Pat<(setlt mGPR:$rs1, oimm5:$rs2),
+          (SUBU16XZ (MOVI16 1), (MVCV16 (CMPLTI16 mGPR:$rs1, oimm5:$rs2)))>;
+def : Pat<(setge mGPR:$rs1, oimm5:$rs2),
+          (MVCV16 (CMPLTI16 mGPR:$rs1, oimm5:$rs2))>;
+
+def : Pat<(select CARRY:$ca, sGPR:$rx, sGPR:$false),
+          (ISEL16 CARRY:$ca, sGPR:$rx, sGPR:$false)>;
+def : Pat<(select (and CARRY:$ca, 1), sGPR:$rx, sGPR:$false),
+          (ISEL16 CARRY:$ca, sGPR:$rx, sGPR:$false)>;
+
+def : Pat<(rotl sGPR:$rs1, sGPR:$rs2),
+          (ROTL16 sGPR:$rs1, (AND16 sGPR:$rs2, (MOVI16 0x1f)))>;
+
+
+// FIXME: This is a temporary treatment for the e801.
+def : Pat<(i32 imm:$imm),
+          (OR16 (MOVI16 (uimm8SRL_0 imm:$imm)),
+	              (OR16 (LSLI16 (MOVI16 (uimm8SRL_8 imm:$imm)), 8),
+	                    (OR16 (LSLI16 (MOVI16 (uimm8SRL_16 imm:$imm)), 16),
+                            (LSLI16 (MOVI16 (uimm8SRL_24 imm:$imm)), 24))))>;
+
+// Other operations.
+let Predicates = [iHasE2] in {
+  def : Pat<(bswap sGPR:$rx), (REVB16 sGPR:$rx)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Compress Instruction tablegen backend.

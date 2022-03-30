@@ -91,8 +91,6 @@ public:
   /// Creates an affine constraint system from an IntegerSet.
   explicit FlatAffineConstraints(IntegerSet set);
 
-  FlatAffineConstraints(const MutableAffineMap &map);
-
   ~FlatAffineConstraints() override = default;
 
   /// Return the kind of this FlatAffineConstraints.

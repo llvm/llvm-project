@@ -165,6 +165,7 @@ Use-after-destruction detection
 You can enable experimental use-after-destruction detection in MemorySanitizer.
 After invocation of the destructor, the object will be considered no longer
 readable, and using underlying memory will lead to error reports in runtime.
+Refer to the standard for `lifetime <https://eel.is/c++draft/basic.life#1>`_ definition.
 
 This feature is still experimental, in order to enable it at runtime you need
 to:

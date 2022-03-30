@@ -32,7 +32,8 @@ nodes represent basic blocks) with the following properties:
    remain the same.
 
 In computer science literature, this is often called a *natural loop*.
-In LLVM, this is the only definition of a loop.
+In LLVM, a more generalized definition is called a
+:ref:`cycle <cycle-terminology>`.
 
 
 Terminology
@@ -139,8 +140,8 @@ detect the loop and ensure separate headers for the outer and inner loop.
 
 The term reducible results from the ability to collapse the CFG into a
 single node by successively replacing one of three base structures with
-a single node: A sequential execution of basic blocks, a conditional
-branching (or switch) with re-joining, and a basic block looping on itself.
+a single node: A sequential execution of basic blocks, acyclic conditional
+branches (or switches), and a basic block looping on itself.
 `Wikipedia <https://en.wikipedia.org/wiki/Control-flow_graph#Reducibility>`_
 has a more formal definition, which basically says that every cycle has
 a dominating header.
@@ -151,6 +152,14 @@ a dominating header.
   cyclic control flow in its body; a loop that is not nested inside
   another loop can still be part of an outer cycle; and there can be
   additional cycles between any two loops where one is contained in the other.
+  However, an LLVM :ref:`cycle<cycle-terminology>` covers both, loops and
+  irreducible control flow.
+
+
+* The `FixIrreducible <https://llvm.org/doxygen/FixIrreducible_8h.html>`_
+  pass can transform irreducible control flow into loops by inserting
+  new loop headers. It is not inlcuded in any default optimization pass
+  pipeline, but is required for some back-end targets.
 
 
 * Exiting edges are not the only way to break out of a loop. Other
@@ -206,14 +215,17 @@ exiting condition is always false. Because the exiting edge is never
 taken, the optimizer can change the conditional branch into an
 unconditional one.
 
-Note that under some circumstances the compiler may assume that a loop will
-eventually terminate without proving it. For instance, it may remove a loop
-that does not do anything in its body. If the loop was infinite, this
-optimization resulted in an "infinite" performance speed-up. A call
-to the intrinsic :ref:`llvm.sideeffect<llvm_sideeffect>` can be added
-into the loop to ensure that the optimizer does not make this assumption
-without proof.
-
+If a is loop is annotated with
+:ref:`llvm.loop.mustprogress <langref_llvm_loop_mustprogress>` metadata,
+the compiler is allowed to assume that it will eventually terminate, even
+if it cannot prove it. For instance, it may remove a mustprogress-loop
+that does not have any side-effect in its body even though the program
+could be stuck in that loop forever. Languages such as C and
+`C++ <https://eel.is/c++draft/intro.progress#1>`_ have such
+forward-progress guarantees for some loops. Also see the
+:ref:`mustprogress <langref_mustprogress>` and
+:ref:`willreturn <langref_willreturn>` function attributes, as well as
+the older :ref:`llvm.sideeffect <llvm_sideeffect>` intrinsic.
 
 * The number of executions of the loop header before leaving the loop is
   the **loop trip count** (or **iteration count**). If the loop should

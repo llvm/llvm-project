@@ -673,14 +673,13 @@ let SubtargetPredicate = HasPackedFP32Ops, isCommutable = 1 in {
 def : MnemonicAlias<"v_accvgpr_read",  "v_accvgpr_read_b32">;
 def : MnemonicAlias<"v_accvgpr_write", "v_accvgpr_write_b32">;
 
-class VOPProfileWMMA<VOPProfile P, string Suffix, RegisterOperand _Src01RC64, bit _HasClamp, bit _HasOpSel, bit TwoDest> : VOP3P_Profile<P> {
+class VOPProfileWMMA<VOPProfile P, string Suffix, RegisterOperand _Src01RC64, bit _HasClamp, bit _HasOpSel> : VOP3P_Profile<P> {
   let DstRC = !if(!eq(Suffix, "_w32"), VDst_256, VDst_128);
   let Src0RC64 = _Src01RC64;
   let Src1RC64 = _Src01RC64;
   let Src2RC64 = !if(!eq(Suffix, "_w32"), VISrc_256_f64, VISrc_128_f32);
   let HasClamp = _HasClamp;
   let HasOpSel = _HasOpSel;
-  let Outs64 = !if(!eq(TwoDest, 1),(outs DstRC:$vdst, DstRC:$vdst2), (outs DstRC:$vdst));
   let IsWMMA = 1;
 }
 
@@ -760,31 +759,29 @@ def WMMAOpcode3AddrMappingTable : WMMAMappingTable {
   let PrimaryKeyName = "getWMMAMappingInfoFrom3AddrOpcode";
 }
 
-// The WMMA instruction has an extra constraint: any overlap of an (A, B) matrix
-// with a (C, D) matrix is not allowed (e.g. B may not overlap with C).
+// The WMMA instruction has extra constraints:
+// Matrices A and B cannot overlap with D. C cannot partially overlap with D,
+// but it is OK for them to be the same (which is a typical case).
+//
 // We implement it as follows:
 // 1) Map the intrinsic to the pseudo where D is tied to C ($vdst = $src2).
 // 2) The pass twoaddressinstruction checks if src2 is live and if that is the case
-//    it converts the default pseudo to the pseudo with an extra, fake destination
-//    ($vdst2), where ($vdst2 = $src2).
-// 3) @earlyclobber on the destination(s) satisfies the constraint during RA.
-// 4) The fake destination gets skipped when lowering MachineInstr to its corresponding MCInst.
+//    it converts the default pseudo to the pseudo where src2 is not the same as vdst.
+// 3) @earlyclobber on the destination satisfies the constraint during RA.
 
 multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator node = null_frag, RegisterOperand _Src01RC64 = VRegSrc_256, WMMAType Type> {
 
-  defvar WMMAProfile2Addr = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel, 0>;
   defvar WMMAConstraints2Addr = "@earlyclobber $vdst,$vdst = $src2";
+  defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
-  defvar WMMAProfile3Addr = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel, 1>;
-  defvar WMMAConstraints3Addr = "@earlyclobber $vdst,@earlyclobber $vdst2,$vdst2 = $src2";
-
+  defvar WMMAProfile = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel>;
   if !eq(Suffix, "_w32") then {
     let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
       let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in {
-        def _twoaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile2Addr>;
+        def _twoaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
       }
       let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
-        def _threeaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile3Addr>;
+        def _threeaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
       }
     }
     def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr_w32),
@@ -792,10 +789,10 @@ multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator
   } else if !eq(Suffix, "_w64") then {
     let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
       let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in {
-        def _twoaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile2Addr>;
+        def _twoaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
       }
       let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
-        def _threeaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile3Addr>;
+        def _threeaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
       }
     }
     def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr_w64),

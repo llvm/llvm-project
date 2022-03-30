@@ -333,10 +333,8 @@ bool PresburgerRelation::isEqual(const PresburgerRelation &set) const {
 /// false otherwise.
 bool PresburgerRelation::isIntegerEmpty() const {
   // The set is empty iff all of the disjuncts are empty.
-  return std::all_of(integerRelations.begin(), integerRelations.end(),
-                     [](const IntegerRelation &disjunct) {
-                       return disjunct.isIntegerEmpty();
-                     });
+  return llvm::all_of(integerRelations,
+                      std::mem_fn(&IntegerRelation::isIntegerEmpty));
 }
 
 bool PresburgerRelation::findIntegerSample(SmallVectorImpl<int64_t> &sample) {

@@ -173,6 +173,9 @@ struct DumpVisitor {
       return printStr("TemplateParamKind::Template");
     }
   }
+  void print(Node::Prec) {
+    // FIXME: Print Prec enumerator
+  }
 
   void newLine() {
     printStr("\n");

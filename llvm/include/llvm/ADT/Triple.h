@@ -246,6 +246,12 @@ public:
     Domain,
     Compute,
     Library,
+    RayGeneration,
+    Intersection,
+    AnyHit,
+    ClosestHit,
+    Miss,
+    Callable,
     Mesh,
     Amplification,
 
@@ -255,6 +261,7 @@ public:
     UnknownObjectFormat,
 
     COFF,
+    DXContainer,
     ELF,
     GOFF,
     MachO,

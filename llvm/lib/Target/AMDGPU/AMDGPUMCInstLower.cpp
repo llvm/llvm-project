@@ -117,24 +117,6 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo*>(ST.getInstrInfo());
 
-  if (TII->isWMMA(Opcode) && MI->getNumExplicitDefs() == 2) {
-
-    int MCOpcode =
-        TII->pseudoToMCOpcode(AMDGPU::mapWMMA3AddrTo2AddrOpcode(Opcode));
-    OutMI.setOpcode(MCOpcode);
-
-    for (const MachineOperand &MO : MI->explicit_operands()) {
-      // Skip extra destination added by TwoAddressInstructionPass.
-      if (MI->getOperandNo(&MO) == 1)
-        continue;
-
-      MCOperand MCOp;
-      lowerOperand(MO, MCOp);
-      OutMI.addOperand(MCOp);
-    }
-    return;
-  }
-
   // FIXME: Should be able to handle this with emitPseudoExpansionLowering. We
   // need to select it to the subtarget specific version, and there's no way to
   // do that with a single pseudo source operation.
