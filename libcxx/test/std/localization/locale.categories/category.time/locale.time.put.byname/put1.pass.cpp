@@ -11,6 +11,7 @@
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
+// REQUIRES: locale.ja_JP.UTF-8
 
 // <locale>
 
@@ -75,6 +76,18 @@ int main(int, char**)
                (ex == "Today is samedi which is abbreviated 'sam'." )||
                (ex == "Today is samedi which is abbreviated 'sam.'."));
     }
-
+    {
+        const my_facet f(LOCALE_ja_JP_UTF_8, 1);
+        std::string pat("Today is %A which is the %uth day or alternatively %Ou.");
+        cpp17_output_iterator<char*> iter =
+            f.put(cpp17_output_iterator<char*>(str), ios, '*', &t, pat.data(), pat.data() + pat.size());
+        std::string ex(str, base(iter));
+#if defined(_WIN32) ||  defined(__APPLE__)
+		// These platforms have no alternative
+        assert(ex == "Today is \xE5\x9C\x9F\xE6\x9B\x9C\xE6\x97\xA5 which is the 6th day or alternatively 6.");
+#else
+        assert(ex == "Today is \xE5\x9C\x9F\xE6\x9B\x9C\xE6\x97\xA5 which is the 6th day or alternatively \xE5\x85\xAD.");
+#endif
+    }
   return 0;
 }
