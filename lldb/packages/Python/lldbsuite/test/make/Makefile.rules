@@ -699,7 +699,7 @@ ifeq "$(OS)" "Darwin"
 DYLIB_SWIFT_FLAGS=  \
 	 -Xlinker -dylib \
 	 -Xlinker -install_name -Xlinker @executable_path/$(shell basename $@) \
-	 $(LD_EXTRAS) $(LD_SWIFTFLAGS)
+	 $(LD_EXTRAS)
 ifeq "$(DYLIB_HIDE_SWIFTMODULE)" ""
 DYLIB_SWIFT_FLAGS+= -Xlinker -add_ast_path -Xlinker $(DYLIB_NAME).swiftmodule
 endif
