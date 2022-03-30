@@ -14,4 +14,5 @@ add_clang_library(clangExtractAPI
   clangBasic
   clangFrontend
   clangIndex
+  clangLex
   )
