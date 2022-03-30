@@ -38,6 +38,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -155,6 +156,8 @@ void Platform::Terminate() {
     }
   }
 }
+
+void Platform::Clear() { GetPlatformList().clear(); }
 
 PlatformProperties &Platform::GetGlobalPlatformProperties() {
   static PlatformProperties g_settings;
@@ -1214,6 +1217,61 @@ Platform::GetPlatformForArchitecture(const ArchSpec &arch,
     platform_sp =
         Platform::Create(arch, process_host_arch, platform_arch_ptr, error);
   return platform_sp;
+}
+
+lldb::PlatformSP Platform::GetPlatformForArchitectures(
+    std::vector<ArchSpec> archs, const ArchSpec &process_host_arch,
+    lldb::PlatformSP selected_platform_sp,
+    std::vector<lldb::PlatformSP> &candidates) {
+  candidates.clear();
+  candidates.reserve(archs.size());
+
+  if (archs.empty())
+    return nullptr;
+
+  PlatformSP host_platform_sp = Platform::GetHostPlatform();
+
+  // Prefer the selected platform if it matches at least one architecture.
+  if (selected_platform_sp) {
+    for (const ArchSpec &arch : archs) {
+      if (selected_platform_sp->IsCompatibleArchitecture(
+              arch, process_host_arch, false, nullptr))
+        return selected_platform_sp;
+    }
+  }
+
+  // Prefer the host platform if it matches at least one architecture.
+  if (host_platform_sp) {
+    for (const ArchSpec &arch : archs) {
+      if (host_platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
+                                                     false, nullptr))
+        return host_platform_sp;
+    }
+  }
+
+  // Collect a list of candidate platforms for the architectures.
+  for (const ArchSpec &arch : archs) {
+    if (PlatformSP platform =
+            Platform::GetPlatformForArchitecture(arch, process_host_arch))
+      candidates.push_back(platform);
+  }
+
+  // The selected or host platform didn't match any of the architectures. If
+  // the same platform supports all architectures then that's the obvious next
+  // best thing.
+  if (candidates.size() == archs.size()) {
+    if (std::all_of(candidates.begin(), candidates.end(),
+                    [&](const PlatformSP &p) -> bool {
+                      return p->GetName() == candidates.front()->GetName();
+                    })) {
+      return candidates.front();
+    }
+  }
+
+  // At this point we either have no platforms that match the given
+  // architectures or multiple platforms with no good way to disambiguate
+  // between them.
+  return nullptr;
 }
 
 std::vector<ArchSpec>
