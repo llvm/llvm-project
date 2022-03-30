@@ -117,6 +117,7 @@ Non-comprehensive list of changes in this release
   - Support bitfields in struct and union.
   - Improve the dump format, dump both bitwidth(if its a bitfield) and field value.
   - Remove anonymous tag locations.
+  - Beautify dump format, add indent for nested struct and struct members.
 
 New Compiler Flags
 ------------------
