@@ -1109,11 +1109,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       // Otherwise use
       // vmslt{u}.vx vd, va, x, v0.t; vmxor.mm vd, vd, v0
-      SDValue Policy = Node->getOperand(6);
-      SDValue Cmp = SDValue(CurDAG->getMachineNode(VMSLTMaskOpcode, DL, VT,
-                                                   {MaskedOff, Src1, Src2, V0,
-                                                    VL, SEW, Policy, Glue}),
-                            0);
+      SDValue Cmp = SDValue(
+          CurDAG->getMachineNode(VMSLTMaskOpcode, DL, VT,
+                                 {MaskedOff, Src1, Src2, V0, VL, SEW, Glue}),
+          0);
       ReplaceNode(Node, CurDAG->getMachineNode(VMXOROpcode, DL, VT,
                                                {Cmp, Mask, VL, MaskSEW}));
       return;
