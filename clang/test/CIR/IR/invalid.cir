@@ -47,3 +47,26 @@ func.func @yieldfallthrough() {
   }
   cir.return
 }
+
+// -----
+
+func.func @s0() {
+  %1 = cir.cst(2 : i32) : i32
+  cir.switch (%1 : i32) [
+    case (equal, 5) {
+      %2 = cir.cst(3 : i32) : i32
+    }
+  ] // expected-error {{blocks are expected to be explicitly terminated}}
+  cir.return
+}
+
+// -----
+
+func.func @s1() {
+  %1 = cir.cst(2 : i32) : i32
+  cir.switch (%1 : i32) [
+    case (equal, 5) {
+    }
+  ] // expected-error {{case regions expected to have one terminated block}}
+  cir.return
+}

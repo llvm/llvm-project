@@ -554,6 +554,8 @@ def CaseEltValueListAttr :
 }
 
 def CaseAttr : AttrDef<CIR_Dialect, "Case"> {
+  // FIXME: value should probably be optional for more clear "default"
+  // representation.
   let parameters = (ins "ArrayAttr":$value, "CaseOpKindAttr":$kind);
   let mnemonic = "case";
   let assemblyFormat = "`<` struct(params) `>`";
@@ -597,12 +599,11 @@ def SwitchOp : CIR_Op<"switch",
                        OptionalAttr<CaseArrayAttr>:$cases);
   let regions = (region VariadicRegion<SizedRegion<1>>:$regions);
 
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 
   let assemblyFormat = [{
-    `(` $condition `:` type($condition) `)`
     custom<SwitchOp>(
-      $regions, $cases
+      $regions, $cases, $condition, type($condition)
     )
     attr-dict
   }];
