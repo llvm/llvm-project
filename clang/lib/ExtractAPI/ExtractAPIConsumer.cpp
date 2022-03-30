@@ -617,16 +617,12 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
     HeaderContents += "\"\n";
   }
 
-  auto Buffer = llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
-                                                     getInputBufferName());
+  Buffer = llvm::MemoryBuffer::getMemBufferCopy(HeaderContents,
+                                                getInputBufferName());
 
   // Set that buffer up as our "real" input in the CompilerInstance.
   Inputs.clear();
   Inputs.emplace_back(Buffer->getMemBufferRef(), Kind, /*IsSystem*/ false);
-
-  // Tell the processor about the input file.
-  CI.getPreprocessorOpts().addRemappedFile(Buffer->getBufferIdentifier(),
-                                           Buffer.release());
 
   return true;
 }
