@@ -74,6 +74,24 @@ static bool isAMXCast(Instruction *II) {
          match(II, m_Intrinsic<Intrinsic::x86_cast_tile_to_vector>(m_Value()));
 }
 
+static bool isAMXInstrinsic(User *I) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  if (isAMXCast(II))
+    return false;
+  // Check if return type or parameter is x86_amx. If it is x86_amx
+  // the intrinsic must be x86 amx intrinsics.
+  if (II->getType()->isX86_AMXTy())
+    return true;
+  for (Value *V : II->args()) {
+    if (V->getType()->isX86_AMXTy())
+      return true;
+  }
+
+  return false;
+}
+
 static AllocaInst *createAllocaInstAtEntry(IRBuilder<> &Builder, BasicBlock *BB,
                                            Type *Ty) {
   Function &F = *BB->getParent();
@@ -160,6 +178,36 @@ static std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   }
 
   return std::make_pair(Row, Col);
+}
+
+static std::pair<Value *, Value *> getShape(PHINode *Phi) {
+  Use &U = *(Phi->use_begin());
+  unsigned OpNo = U.getOperandNo();
+  User *V = U.getUser();
+  // TODO We don't traverse all users. To make the algorithm simple, here we
+  // just traverse the first user. If we can find shape, then return the shape,
+  // otherwise just return nullptr and the optimization for undef/zero will be
+  // abandoned.
+  while (V) {
+    if (isAMXCast(dyn_cast<Instruction>(V))) {
+      if (V->use_empty())
+        break;
+      Use &U = *(V->use_begin());
+      OpNo = U.getOperandNo();
+      V = U.getUser();
+    } else if (isAMXInstrinsic(V)) {
+      return getShape(cast<IntrinsicInst>(V), OpNo);
+    } else if (isa<PHINode>(V)) {
+      if (V->use_empty())
+        break;
+      Use &U = *(Phi->use_begin());
+      V = U.getUser();
+    } else {
+      break;
+    }
+  }
+
+  return std::make_pair(nullptr, nullptr);
 }
 
 namespace {
@@ -720,11 +768,33 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
   OldPhiNodes.insert(PN);
   while (!PhiWorklist.empty()) {
     auto *OldPN = PhiWorklist.pop_back_val();
-    for (Value *IncValue : OldPN->incoming_values()) {
+    for (unsigned I = 0; I < OldPN->getNumOperands(); ++I) {
+      Value *IncValue = OldPN->getIncomingValue(I);
       // TODO: currently, We ignore cases where it is a const. In the future, we
       // might support const.
-      if (isa<Constant>(IncValue))
-        return false;
+      if (isa<Constant>(IncValue)) {
+        auto *IncConst = dyn_cast<Constant>(IncValue);
+        if (!isa<UndefValue>(IncValue) && !IncConst->isZeroValue())
+          return false;
+        Value *Row = nullptr, *Col = nullptr;
+        std::tie(Row, Col) = getShape(OldPN);
+        // TODO: If it is not constant the Row and Col must domoniate tilezero
+        // that we are going to create.
+        if (!Row || !Col || !isa<Constant>(Row) || !isa<Constant>(Col))
+          return false;
+        // Create tilezero at the end of incoming block.
+        auto *Block = OldPN->getIncomingBlock(I);
+        BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
+        Instruction *NewInst = Builder.CreateIntrinsic(
+            Intrinsic::x86_tilezero_internal, None, {Row, Col});
+        NewInst->moveBefore(&*Iter);
+        NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
+                                          {IncValue->getType()}, {NewInst});
+        NewInst->moveBefore(&*Iter);
+        // Replace InValue with new Value.
+        OldPN->setIncomingValue(I, NewInst);
+        IncValue = NewInst;
+      }
 
       if (auto *PNode = dyn_cast<PHINode>(IncValue)) {
         if (OldPhiNodes.insert(PNode))

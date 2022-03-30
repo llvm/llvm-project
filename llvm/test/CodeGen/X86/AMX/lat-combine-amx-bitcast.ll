@@ -187,33 +187,26 @@ exit:
 define void @fail_to_combine_amx_cast_and_phi_due_to_const_value() {
 ; CHECK-LABEL: @fail_to_combine_amx_cast_and_phi_due_to_const_value(
 ; CHECK-NEXT:  wrapper_entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca <110 x i32>, align 64
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca <110 x i32>, align 64
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca <560 x i8>, align 64
-; CHECK-NEXT:    [[TMP3:%.*]] = alloca <616 x i8>, align 64
-; CHECK-NEXT:    [[TMP4:%.*]] = alloca <110 x i32>, align 64
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca <560 x i8>, align 64
+; CHECK-NEXT:    [[TMP1:%.*]] = alloca <616 x i8>, align 64
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca <110 x i32>, align 64
+; CHECK-NEXT:    [[TMP3:%.*]] = call x86_amx @llvm.x86.tilezero.internal(i16 11, i16 40)
 ; CHECK-NEXT:    br i1 undef, label [[FOR_COND_CLEANUP_I_I:%.*]], label [[FOR_BODY_I_LR_PH_I:%.*]]
 ; CHECK:       for.body.i.lr.ph.i:
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <110 x i32>* [[TMP4]] to i8*
-; CHECK-NEXT:    store <110 x i32> undef, <110 x i32>* [[TMP4]], align 512
-; CHECK-NEXT:    [[TMP6:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, i8* [[TMP5]], i64 40)
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <616 x i8>* [[TMP3]] to i8*
-; CHECK-NEXT:    store <616 x i8> undef, <616 x i8>* [[TMP3]], align 1024
-; CHECK-NEXT:    [[TMP8:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 56, i8* [[TMP7]], i64 56)
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast <560 x i8>* [[TMP2]] to i8*
-; CHECK-NEXT:    store <560 x i8> undef, <560 x i8>* [[TMP2]], align 1024
-; CHECK-NEXT:    [[TMP10:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 14, i16 40, i8* [[TMP9]], i64 40)
-; CHECK-NEXT:    [[TMP11:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx [[TMP6]], x86_amx [[TMP8]], x86_amx [[TMP10]])
-; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <110 x i32>* [[TMP1]] to i8*
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, i8* [[TMP12]], i64 40, x86_amx [[TMP11]])
-; CHECK-NEXT:    [[TMP13:%.*]] = load <110 x i32>, <110 x i32>* [[TMP1]], align 512
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <110 x i32>* [[TMP2]] to i8*
+; CHECK-NEXT:    store <110 x i32> undef, <110 x i32>* [[TMP2]], align 512
+; CHECK-NEXT:    [[TMP5:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, i8* [[TMP4]], i64 40)
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <616 x i8>* [[TMP1]] to i8*
+; CHECK-NEXT:    store <616 x i8> undef, <616 x i8>* [[TMP1]], align 1024
+; CHECK-NEXT:    [[TMP7:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 56, i8* [[TMP6]], i64 56)
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <560 x i8>* [[TMP0]] to i8*
+; CHECK-NEXT:    store <560 x i8> undef, <560 x i8>* [[TMP0]], align 1024
+; CHECK-NEXT:    [[TMP9:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 14, i16 40, i8* [[TMP8]], i64 40)
+; CHECK-NEXT:    [[TMP10:%.*]] = call x86_amx @llvm.x86.tdpbssd.internal(i16 11, i16 40, i16 56, x86_amx [[TMP5]], x86_amx [[TMP7]], x86_amx [[TMP9]])
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_I_I]]
 ; CHECK:       for.cond.cleanup.i.i:
-; CHECK-NEXT:    [[EVILPHI:%.*]] = phi <110 x i32> [ undef, [[WRAPPER_ENTRY:%.*]] ], [ [[TMP13]], [[FOR_BODY_I_LR_PH_I]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <110 x i32>* [[TMP0]] to i8*
-; CHECK-NEXT:    store <110 x i32> [[EVILPHI]], <110 x i32>* [[TMP0]], align 512
-; CHECK-NEXT:    [[TMP15:%.*]] = call x86_amx @llvm.x86.tileloadd64.internal(i16 11, i16 40, i8* [[TMP14]], i64 40)
-; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, i8* undef, i64 undef, x86_amx [[TMP15]])
+; CHECK-NEXT:    [[TMP11:%.*]] = phi x86_amx [ [[TMP3]], [[WRAPPER_ENTRY:%.*]] ], [ [[TMP10]], [[FOR_BODY_I_LR_PH_I]] ]
+; CHECK-NEXT:    call void @llvm.x86.tilestored64.internal(i16 11, i16 40, i8* undef, i64 undef, x86_amx [[TMP11]])
 ; CHECK-NEXT:    ret void
 ;
 wrapper_entry:
