@@ -1031,7 +1031,7 @@ void VPlan::execute(VPTransformState *State) {
 
   // We do not attempt to preserve DT for outer loop vectorization currently.
   if (!EnableVPlanNativePath)
-    updateDominatorTree(State->DT, VectorPreHeaderBB, VectorLatchBB,
+    updateDominatorTree(State->DT, VectorHeaderBB, VectorLatchBB,
                         L->getExitBlock());
 }
 
@@ -1071,11 +1071,9 @@ LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
 #endif
 
-void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
+void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopHeaderBB,
                                 BasicBlock *LoopLatchBB,
                                 BasicBlock *LoopExitBB) {
-  BasicBlock *LoopHeaderBB = LoopPreHeaderBB->getSingleSuccessor();
-  assert(LoopHeaderBB && "Loop preheader does not have a single successor.");
   // The vector body may be more than a single basic-block by this point.
   // Update the dominator tree information inside the vector body by propagating
   // it from header to latch, expecting only triangular control-flow, if any.
