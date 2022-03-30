@@ -348,35 +348,6 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// LLVMVectorType.
-//===----------------------------------------------------------------------===//
-
-/// LLVM dialect vector type, represents a sequence of elements that can be
-/// processed as one, typically in SIMD context. This is a base class for fixed
-/// and scalable vectors.
-class LLVMVectorType : public Type {
-public:
-  /// Inherit base constructor.
-  using Type::Type;
-
-  /// Support type casting functionality.
-  static bool classof(Type type);
-
-  /// Checks if the given type can be used in a vector type.
-  static bool isValidElementType(Type type);
-
-  /// Returns the element type of the vector.
-  Type getElementType();
-
-  /// Returns the number of elements in the vector.
-  llvm::ElementCount getElementCount();
-
-  /// Verifies that the type about to be constructed is well-formed.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type elementType, unsigned numElements);
-};
-
-//===----------------------------------------------------------------------===//
 // LLVMFixedVectorType.
 //===----------------------------------------------------------------------===//
 
