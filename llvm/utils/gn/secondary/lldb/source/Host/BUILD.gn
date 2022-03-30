@@ -70,7 +70,6 @@ static_library("Host") {
       "windows/PipeWindows.cpp",
       "windows/ProcessLauncherWindows.cpp",
       "windows/ProcessRunLock.cpp",
-      "windows/Windows.cpp",
     ]
   } else {
     sources += [
