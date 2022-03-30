@@ -41,16 +41,16 @@ inline uint8_t extractTag(uptr Ptr) { return (Ptr >> 56) & 0xf; }
 
 inline constexpr bool archSupportsMemoryTagging() { return false; }
 
-inline NORETURN uptr archMemoryTagGranuleSize() {
+inline uptr archMemoryTagGranuleSize() {
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN uptr untagPointer(uptr Ptr) {
+inline uptr untagPointer(uptr Ptr) {
   (void)Ptr;
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN uint8_t extractTag(uptr Ptr) {
+inline uint8_t extractTag(uptr Ptr) {
   (void)Ptr;
   UNREACHABLE("memory tagging not supported");
 }
@@ -109,11 +109,11 @@ inline void enableSystemMemoryTaggingTestOnly() {
 
 inline bool systemSupportsMemoryTagging() { return false; }
 
-inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
+inline bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN void enableSystemMemoryTaggingTestOnly() {
+inline void enableSystemMemoryTaggingTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
@@ -255,15 +255,15 @@ inline uptr loadTag(uptr Ptr) {
 
 #else
 
-inline NORETURN bool systemSupportsMemoryTagging() {
+inline bool systemSupportsMemoryTagging() {
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
+inline bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN void enableSystemMemoryTaggingTestOnly() {
+inline void enableSystemMemoryTaggingTestOnly() {
   UNREACHABLE("memory tagging not supported");
 }
 
@@ -271,46 +271,41 @@ struct ScopedDisableMemoryTagChecks {
   ScopedDisableMemoryTagChecks() {}
 };
 
-inline NORETURN uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {
+inline uptr selectRandomTag(uptr Ptr, uptr ExcludeMask) {
   (void)Ptr;
   (void)ExcludeMask;
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN uptr addFixedTag(uptr Ptr, uptr Tag) {
+inline uptr addFixedTag(uptr Ptr, uptr Tag) {
   (void)Ptr;
   (void)Tag;
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN uptr storeTags(uptr Begin, uptr End) {
+inline uptr storeTags(uptr Begin, uptr End) {
   (void)Begin;
   (void)End;
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN void storeTag(uptr Ptr) {
+inline void storeTag(uptr Ptr) {
   (void)Ptr;
   UNREACHABLE("memory tagging not supported");
 }
 
-inline NORETURN uptr loadTag(uptr Ptr) {
+inline uptr loadTag(uptr Ptr) {
   (void)Ptr;
   UNREACHABLE("memory tagging not supported");
 }
 
 #endif
 
-#if __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
 inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
                          uptr *TaggedBegin, uptr *TaggedEnd) {
   *TaggedBegin = selectRandomTag(reinterpret_cast<uptr>(Ptr), ExcludeMask);
   *TaggedEnd = storeTags(*TaggedBegin, *TaggedBegin + Size);
 }
-#pragma clang diagnostic pop
-#endif
 
 inline void *untagPointer(void *Ptr) {
   return reinterpret_cast<void *>(untagPointer(reinterpret_cast<uptr>(Ptr)));
