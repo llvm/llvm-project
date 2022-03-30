@@ -1149,6 +1149,8 @@ std::pair<unsigned, unsigned> GVNHoist::hoist(HoistingPointList &HPL) {
       DFSNumber[Repl] = DFSNumber[Last]++;
     }
 
+    // Drop debug location as per debug info update guide.
+    Repl->dropLocation();
     NR += removeAndReplace(InstructionsToHoist, Repl, DestBB, MoveAccess);
 
     if (isa<LoadInst>(Repl))
