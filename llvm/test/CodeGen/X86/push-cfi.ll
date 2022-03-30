@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=i686-pc-linux | FileCheck %s -check-prefix=LINUX -check-prefix=CHECK
 ; RUN: llc < %s -mtriple=i686-apple-darwin | FileCheck %s -check-prefix=DARWIN -check-prefix=CHECK
+; RUN: llc < %s -mtriple=i686-pc-linux -stop-after=prologepilog | FileCheck %s --check-prefix=PEI
 
 declare i32 @__gxx_personality_v0(...)
 declare void @good(i32 %a, i32 %b, i32 %c, i32 %d)
@@ -25,6 +26,12 @@ declare void @empty()
 ; LINUX: .cfi_adjust_cfa_offset -16
 ; DARWIN-NOT: .cfi_escape
 ; DARWIN-NOT: pushl
+
+; PEI-LABEL: name: test1_nofp
+; PEI:         $esp = frame-setup SUB32ri8 $esp, 12, implicit-def dead $eflags
+; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION def_cfa_offset 16
+; PEI-NOT:     frame-setup CFI_INSTRUCTION
+; PEI:         ...
 define void @test1_nofp() #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
 entry:
   invoke void @good(i32 1, i32 2, i32 3, i32 4)
