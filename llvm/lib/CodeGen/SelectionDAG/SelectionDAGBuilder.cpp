@@ -129,11 +129,7 @@ static cl::opt<unsigned> SwitchPeelThreshold(
              "switch statement. A value greater than 100 will void this "
              "optimization"));
 
-static cl::opt<bool> YkNoFallThrough(
-    "yk-no-fallthrough", cl::Hidden, cl::init(false),
-    cl::desc("Always emit a branch even if fallthrough is possible. This "
-             "is required for the yk JIT, so that the machine IR has the "
-             "same block structure as the high-level IR"));
+extern cl::opt<bool> YkNoFallThrough;
 
 // Limit the width of DAG chains. This is important in general to prevent
 // DAG-based analysis from blowing up. For example, alias analysis and
