@@ -1276,3 +1276,47 @@ func @shuffle_1d() -> vector<4xi32> {
   %shuffle = vector.shuffle %v0, %v1 [3, 2, 5, 1] : vector<3xi32>, vector<3xi32>
   return %shuffle : vector<4xi32>
 }
+
+// CHECK-LABEL: func @shuffle_fold1
+//       CHECK:   %arg0 : vector<4xi32>
+func @shuffle_fold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3] : vector<4xi32>, vector<2xi32>
+  return %shuffle : vector<4xi32>
+}
+
+// CHECK-LABEL: func @shuffle_fold2
+//       CHECK:   %arg1 : vector<2xi32>
+func @shuffle_fold2(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<2xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4xi32>, vector<2xi32>
+  return %shuffle : vector<2xi32>
+}
+
+// CHECK-LABEL: func @shuffle_fold3
+//       CHECK:   return %arg0 : vector<4x5x6xi32>
+func @shuffle_fold3(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> vector<4x5x6xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3] : vector<4x5x6xi32>, vector<2x5x6xi32>
+  return %shuffle : vector<4x5x6xi32>
+}
+
+// CHECK-LABEL: func @shuffle_fold4
+//       CHECK:   return %arg1 : vector<2x5x6xi32>
+func @shuffle_fold4(%v0 : vector<4x5x6xi32>, %v1 : vector<2x5x6xi32>) -> vector<2x5x6xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [4, 5] : vector<4x5x6xi32>, vector<2x5x6xi32>
+  return %shuffle : vector<2x5x6xi32>
+}
+
+// CHECK-LABEL: func @shuffle_nofold1
+//       CHECK:   %[[V:.+]] = vector.shuffle %arg0, %arg1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
+//       CHECK:   return %[[V]]
+func @shuffle_nofold1(%v0 : vector<4xi32>, %v1 : vector<2xi32>) -> vector<5xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3, 4] : vector<4xi32>, vector<2xi32>
+  return %shuffle : vector<5xi32>
+}
+
+// CHECK-LABEL: func @shuffle_nofold2
+//       CHECK:   %[[V:.+]] = vector.shuffle %arg0, %arg1 [0, 1, 2, 3] : vector<[4]xi32>, vector<[2]xi32>
+//       CHECK:   return %[[V]]
+func @shuffle_nofold2(%v0 : vector<[4]xi32>, %v1 : vector<[2]xi32>) -> vector<4xi32> {
+  %shuffle = vector.shuffle %v0, %v1 [0, 1, 2, 3] : vector<[4]xi32>, vector<[2]xi32>
+  return %shuffle : vector<4xi32>
+}
