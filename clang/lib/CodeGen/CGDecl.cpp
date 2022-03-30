@@ -2491,14 +2491,17 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   }
 
   Address DeclPtr = Address::invalid();
-  Address AllocaPtr = Address::invalid();
+  Address DebugPtr = Address::invalid();
   bool DoStore = false;
   bool IsScalar = hasScalarEvaluationKind(Ty);
   // If we already have a pointer to the argument, reuse the input pointer.
   if (Arg.isIndirect()) {
     // If we have a prettier pointer type at this point, bitcast to that.
     DeclPtr = Arg.getIndirectAddress();
-    AllocaPtr = DeclPtr;
+    if (auto DebugAddr = Arg.getDebugAddr())
+      DebugPtr = *DebugAddr;
+    else
+      DebugPtr = DeclPtr;
     DeclPtr = Builder.CreateElementBitCast(DeclPtr, ConvertTypeForMem(Ty),
                                            D.getName());
     // Indirect argument is in alloca address space, which may be different
@@ -2539,12 +2542,11 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
             ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
             : Address::invalid();
     if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
-      DeclPtr = OpenMPLocalAddr;
-      AllocaPtr = DeclPtr;
+      DeclPtr = DebugPtr = OpenMPLocalAddr;
     } else {
       // Otherwise, create a temporary to hold the value.
       DeclPtr = CreateMemTemp(Ty, getContext().getDeclAlign(&D),
-                              D.getName() + ".addr", &AllocaPtr);
+                              D.getName() + ".addr", &DebugPtr);
     }
     DoStore = true;
   }
@@ -2621,7 +2623,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     if (CGM.getCodeGenOpts().hasReducedDebugInfo() && !CurFuncIsThunk &&
         !NoDebugInfo) {
       llvm::DILocalVariable *DILocalVar = DI->EmitDeclareOfArgVariable(
-          &D, AllocaPtr.getPointer(), ArgNo, Builder);
+          &D, DebugPtr.getPointer(), ArgNo, Builder);
       if (const auto *Var = dyn_cast_or_null<ParmVarDecl>(&D))
         DI->getParamDbgMappings().insert({Var, DILocalVar});
     }
