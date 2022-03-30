@@ -30,6 +30,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
+#include <type_traits>
 
 namespace clang {
 namespace extractapi {
@@ -49,6 +50,9 @@ namespace extractapi {
 /// \endcode
 using DocComment = std::vector<RawComment::CommentLine>;
 
+// Classes deriving from APIRecord need to have Name be the first constructor
+// argument. This is so that they are compatible with `addTopLevelRecord`
+// defined in API.cpp
 /// The base representation of an API record. Holds common symbol information.
 struct APIRecord {
   StringRef Name;
@@ -83,6 +87,7 @@ struct APIRecord {
     RK_ObjCMethod,
     RK_ObjCInterface,
     RK_ObjCProtocol,
+    RK_MacroDefinition,
   };
 
 private:
@@ -119,10 +124,11 @@ struct GlobalRecord : APIRecord {
   /// The function signature of the record if it is a function.
   FunctionSignature Signature;
 
-  GlobalRecord(GVKind Kind, StringRef Name, StringRef USR, PresumedLoc Loc,
+  GlobalRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
                const AvailabilityInfo &Availability, LinkageInfo Linkage,
                const DocComment &Comment, DeclarationFragments Declaration,
-               DeclarationFragments SubHeading, FunctionSignature Signature)
+               DeclarationFragments SubHeading, GVKind Kind,
+               FunctionSignature Signature)
       : APIRecord(RK_Global, Name, USR, Loc, Availability, Linkage, Comment,
                   Declaration, SubHeading),
         GlobalKind(Kind), Signature(Signature) {}
@@ -374,6 +380,21 @@ private:
   virtual void anchor();
 };
 
+struct MacroDefinitionRecord : APIRecord {
+  MacroDefinitionRecord(StringRef Name, StringRef USR, PresumedLoc Loc,
+                        DeclarationFragments Declaration,
+                        DeclarationFragments SubHeading)
+      : APIRecord(RK_MacroDefinition, Name, USR, Loc, AvailabilityInfo(),
+                  LinkageInfo(), {}, Declaration, SubHeading) {}
+
+  static bool classof(const APIRecord *Record) {
+    return Record->getKind() == RK_MacroDefinition;
+  }
+
+private:
+  virtual void anchor();
+};
+
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
 public:
@@ -530,29 +551,24 @@ public:
                                       DeclarationFragments Declaration,
                                       DeclarationFragments SubHeading);
 
-  /// A map to store the set of GlobalRecord%s with the declaration name as the
-  /// key.
-  using GlobalRecordMap =
-      llvm::MapVector<StringRef, std::unique_ptr<GlobalRecord>>;
+  /// Create a macro definition record into the API set.
+  ///
+  /// Note: the caller is responsible for keeping the StringRef \p Name and
+  /// \p USR alive. APISet::copyString provides a way to copy strings into
+  /// APISet itself, and APISet::recordUSRForMacro(StringRef Name,
+  /// SourceLocation SL, const SourceManager &SM) is a helper method to generate
+  /// the USR for the macro and keep it alive in APISet.
+  MacroDefinitionRecord *addMacroDefinition(StringRef Name, StringRef USR,
+                                            PresumedLoc Loc,
+                                            DeclarationFragments Declaration,
+                                            DeclarationFragments SubHeading);
 
-  /// A map to store the set of EnumRecord%s with the declaration name as the
-  /// key.
-  using EnumRecordMap = llvm::MapVector<StringRef, std::unique_ptr<EnumRecord>>;
-
-  /// A map to store the set of StructRecord%s with the declaration name as the
-  /// key.
-  using StructRecordMap =
-      llvm::MapVector<StringRef, std::unique_ptr<StructRecord>>;
-
-  /// A map to store the set of ObjCInterfaceRecord%s with the declaration name
-  /// as the key.
-  using ObjCInterfaceRecordMap =
-      llvm::MapVector<StringRef, std::unique_ptr<ObjCInterfaceRecord>>;
-
-  /// A map to store the set of ObjCProtocolRecord%s with the declaration name
-  /// as the key.
-  using ObjCProtocolRecordMap =
-      llvm::MapVector<StringRef, std::unique_ptr<ObjCProtocolRecord>>;
+  /// A mapping type to store a set of APIRecord%s with the declaration name as
+  /// the key.
+  template <typename RecordTy,
+            typename =
+                std::enable_if_t<std::is_base_of<APIRecord, RecordTy>::value>>
+  using RecordMap = llvm::MapVector<StringRef, std::unique_ptr<RecordTy>>;
 
   /// Get the target triple for the ExtractAPI invocation.
   const llvm::Triple &getTarget() const { return Target; }
@@ -560,15 +576,16 @@ public:
   /// Get the language used by the APIs.
   Language getLanguage() const { return Lang; }
 
-  const GlobalRecordMap &getGlobals() const { return Globals; }
-  const EnumRecordMap &getEnums() const { return Enums; }
-  const StructRecordMap &getStructs() const { return Structs; }
-  const ObjCInterfaceRecordMap &getObjCInterfaces() const {
+  const RecordMap<GlobalRecord> &getGlobals() const { return Globals; }
+  const RecordMap<EnumRecord> &getEnums() const { return Enums; }
+  const RecordMap<StructRecord> &getStructs() const { return Structs; }
+  const RecordMap<ObjCInterfaceRecord> &getObjCInterfaces() const {
     return ObjCInterfaces;
   }
-  const ObjCProtocolRecordMap &getObjCProtocols() const {
+  const RecordMap<ObjCProtocolRecord> &getObjCProtocols() const {
     return ObjCProtocols;
   }
+  const RecordMap<MacroDefinitionRecord> &getMacros() const { return Macros; }
 
   /// Generate and store the USR of declaration \p D.
   ///
@@ -576,6 +593,14 @@ public:
   ///
   /// \returns a StringRef of the generated USR string.
   StringRef recordUSR(const Decl *D);
+
+  /// Generate and store the USR for a macro \p Name.
+  ///
+  /// Note: The USR string is stored in and owned by Allocator.
+  ///
+  /// \returns a StringRef to the generate USR string.
+  StringRef recordUSRForMacro(StringRef Name, SourceLocation SL,
+                              const SourceManager &SM);
 
   /// Copy \p String into the Allocator in this APISet.
   ///
@@ -594,11 +619,12 @@ private:
   const llvm::Triple Target;
   const Language Lang;
 
-  GlobalRecordMap Globals;
-  EnumRecordMap Enums;
-  StructRecordMap Structs;
-  ObjCInterfaceRecordMap ObjCInterfaces;
-  ObjCProtocolRecordMap ObjCProtocols;
+  RecordMap<GlobalRecord> Globals;
+  RecordMap<EnumRecord> Enums;
+  RecordMap<StructRecord> Structs;
+  RecordMap<ObjCInterfaceRecord> ObjCInterfaces;
+  RecordMap<ObjCProtocolRecord> ObjCProtocols;
+  RecordMap<MacroDefinitionRecord> Macros;
 };
 
 } // namespace extractapi

@@ -123,6 +123,9 @@ private:
   /// Serialize an Objective-C container record.
   void serializeObjCContainerRecord(const ObjCContainerRecord &Record);
 
+  /// Serialize a macro defintion record.
+  void serializeMacroDefinitionRecord(const MacroDefinitionRecord &Record);
+
 public:
   SymbolGraphSerializer(const APISet &API, StringRef ProductName,
                         APISerializerOption Options = {})

@@ -576,6 +576,24 @@ bool VPCmpIntrinsic::isVPCmp(Intrinsic::ID ID) {
   return false;
 }
 
+static ICmpInst::Predicate getIntPredicateFromMD(const Value *Op) {
+  Metadata *MD = cast<MetadataAsValue>(Op)->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return ICmpInst::BAD_ICMP_PREDICATE;
+  return StringSwitch<ICmpInst::Predicate>(cast<MDString>(MD)->getString())
+      .Case("eq", ICmpInst::ICMP_EQ)
+      .Case("ne", ICmpInst::ICMP_NE)
+      .Case("ugt", ICmpInst::ICMP_UGT)
+      .Case("uge", ICmpInst::ICMP_UGE)
+      .Case("ult", ICmpInst::ICMP_ULT)
+      .Case("ule", ICmpInst::ICMP_ULE)
+      .Case("sgt", ICmpInst::ICMP_SGT)
+      .Case("sge", ICmpInst::ICMP_SGE)
+      .Case("slt", ICmpInst::ICMP_SLT)
+      .Case("sle", ICmpInst::ICMP_SLE)
+      .Default(ICmpInst::BAD_ICMP_PREDICATE);
+}
+
 CmpInst::Predicate VPCmpIntrinsic::getPredicate() const {
   bool IsFP = true;
   Optional<unsigned> CCArgIdx;
@@ -590,9 +608,9 @@ CmpInst::Predicate VPCmpIntrinsic::getPredicate() const {
 #define END_REGISTER_VP_INTRINSIC(VPID) break;
 #include "llvm/IR/VPIntrinsics.def"
   }
-  assert(CCArgIdx.hasValue() && IsFP &&
-         "Unexpected vector-predicated comparison");
-  return getFPPredicateFromMD(getArgOperand(*CCArgIdx));
+  assert(CCArgIdx.hasValue() && "Unexpected vector-predicated comparison");
+  return IsFP ? getFPPredicateFromMD(getArgOperand(*CCArgIdx))
+              : getIntPredicateFromMD(getArgOperand(*CCArgIdx));
 }
 
 unsigned VPReductionIntrinsic::getVectorParamPos() const {

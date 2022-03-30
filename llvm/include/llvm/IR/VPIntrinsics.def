@@ -267,6 +267,12 @@ VP_PROPERTY_CMP(2, true)
 VP_PROPERTY_CONSTRAINEDFP(0, 1, experimental_constrained_fcmp)
 END_REGISTER_VP(vp_fcmp, VP_FCMP)
 
+// llvm.vp.icmp(x,y,cc,mask,vlen)
+BEGIN_REGISTER_VP(vp_icmp, 3, 4, VP_ICMP, -1)
+VP_PROPERTY_FUNCTIONAL_OPC(ICmp)
+VP_PROPERTY_CMP(2, false)
+END_REGISTER_VP(vp_icmp, VP_ICMP)
+
 ///// } Comparisons
 
 ///// Memory Operations {

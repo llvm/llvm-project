@@ -1,4 +1,5 @@
 ; RUN: llc %s -o - | FileCheck %s
+; RUN: llc < %s -stop-after=prologepilog | FileCheck %s --check-prefix=PEI
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -18,6 +19,22 @@ define void @_Z6throwsv() #0 personality i8* bitcast (i32 (...)* @__gxx_personal
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:    .LBB0_1:
 ; CHECK-NEXT:    .cfi_def_cfa %rbp, 16
+
+; PEI-LABEL: name: _Z6throwsv
+; PEI:         frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION def_cfa_offset 16
+; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION offset $rbp, -16
+; PEI-NEXT:    $rbp = frame-setup MOV64rr $rsp
+; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION def_cfa_register $rbp
+; PEI-NEXT:    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+; PEI-NEXT:    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+; PEI-NEXT:    {{^ +}}CFI_INSTRUCTION offset $rbx, -24
+; PEI:         bb.4.try.cont:
+; PEI-NEXT:      $rsp = frame-destroy ADD64ri8 $rsp, 8, implicit-def dead $eflags
+; PEI-NEXT:      $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+; PEI-NEXT:      $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+; PEI-NEXT:      {{^ +}}CFI_INSTRUCTION def_cfa $rsp, 8
+; PEI-NEXT:      RET 0
 
 entry:
   %.b5 = load i1, i1* @_ZL11ShouldThrow, align 1
