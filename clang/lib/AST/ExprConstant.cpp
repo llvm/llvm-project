@@ -8423,7 +8423,8 @@ bool LValueExprEvaluator::VisitMemberExpr(const MemberExpr *E) {
 
 bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
   // FIXME: Deal with vectors as array subscript bases.
-  if (E->getBase()->getType()->isVectorType())
+  if (E->getBase()->getType()->isVectorType() ||
+      E->getBase()->getType()->isVLSTBuiltinType())
     return Error(E);
 
   APSInt Index;

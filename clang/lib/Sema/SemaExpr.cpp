@@ -27,11 +27,13 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/Preprocessor.h"
@@ -5683,6 +5685,33 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
       OK = OK_VectorComponent;
 
     ResultType = VTy->getElementType();
+    QualType BaseType = BaseExpr->getType();
+    Qualifiers BaseQuals = BaseType.getQualifiers();
+    Qualifiers MemberQuals = ResultType.getQualifiers();
+    Qualifiers Combined = BaseQuals + MemberQuals;
+    if (Combined != MemberQuals)
+      ResultType = Context.getQualifiedType(ResultType, Combined);
+  } else if (LHSTy->isBuiltinType() &&
+             LHSTy->getAs<BuiltinType>()->isVLSTBuiltinType()) {
+    const BuiltinType *BTy = LHSTy->getAs<BuiltinType>();
+    if (BTy->isSVEBool())
+      return ExprError(Diag(LLoc, diag::err_subscript_svbool_t)
+                       << LHSExp->getSourceRange() << RHSExp->getSourceRange());
+
+    BaseExpr = LHSExp;
+    IndexExpr = RHSExp;
+    if (getLangOpts().CPlusPlus11 && LHSExp->isPRValue()) {
+      ExprResult Materialized = TemporaryMaterializationConversion(LHSExp);
+      if (Materialized.isInvalid())
+        return ExprError();
+      LHSExp = Materialized.get();
+    }
+    VK = LHSExp->getValueKind();
+    if (VK != VK_PRValue)
+      OK = OK_VectorComponent;
+
+    ResultType = BTy->getSveEltType(Context);
+
     QualType BaseType = BaseExpr->getType();
     Qualifiers BaseQuals = BaseType.getQualifiers();
     Qualifiers MemberQuals = ResultType.getQualifiers();
