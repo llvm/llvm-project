@@ -132,8 +132,7 @@ prepareValuesForPrinting(PollyIRBuilder &Builder, ArrayRef<Value *> Values) {
         assert(Ty->getIntegerBitWidth() &&
                "Integer types larger 64 bit not supported");
     } else if (isa<PointerType>(Ty)) {
-      if (Ty->getPointerElementType() == Builder.getInt8Ty() &&
-          Ty->getPointerAddressSpace() == 4) {
+      if (Ty == Builder.getInt8PtrTy(4)) {
         Val = Builder.CreateGEP(Builder.getInt8Ty(), Val, Builder.getInt64(0));
       } else {
         Val = Builder.CreatePtrToInt(Val, Builder.getInt64Ty());
@@ -207,11 +206,10 @@ void RuntimeDebugBuilder::createGPUPrinterT(PollyIRBuilder &Builder,
                "Integer types larger 64 bit not supported");
         // fallthrough
       }
-    } else if (auto PtTy = dyn_cast<PointerType>(Ty)) {
-      if (PtTy->getAddressSpace() == 4) {
+    } else if (isa<PointerType>(Ty)) {
+      if (Ty == Builder.getInt8PtrTy(4)) {
         // Pointers in constant address space are printed as strings
-        Val = Builder.CreateGEP(Ty->getPointerElementType(), Val,
-                                Builder.getInt64(0));
+        Val = Builder.CreateGEP(Builder.getInt8Ty(), Val, Builder.getInt64(0));
         auto F = RuntimeDebugBuilder::getAddressSpaceCast(Builder, 4, 0);
         Val = Builder.CreateCall(F, Val);
       } else {
