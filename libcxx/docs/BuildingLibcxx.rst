@@ -95,10 +95,11 @@ it is the simplest way to build.
 
 .. code-block:: batch
 
-  > cmake -G "Visual Studio 16 2019" -S libcxx -B build ^
-          -T "ClangCL"                                  ^
-          -DLIBCXX_ENABLE_SHARED=YES                    ^
-          -DLIBCXX_ENABLE_STATIC=NO                     ^
+  > cmake -G "Visual Studio 16 2019" -S runtimes -B build ^
+          -T "ClangCL"                                    ^
+          -DLLVM_ENABLE_RUNTIMES=libcxx                   ^
+          -DLIBCXX_ENABLE_SHARED=YES                      ^
+          -DLIBCXX_ENABLE_STATIC=NO                       ^
           -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
   > cmake --build build
 
@@ -127,9 +128,10 @@ In either case, then run:
 
 .. code-block:: batch
 
-  > cmake -G Ninja -S libcxx -B build                                                 ^
+  > cmake -G Ninja -S runtimes -B build                                               ^
           -DCMAKE_C_COMPILER=clang-cl                                                 ^
           -DCMAKE_CXX_COMPILER=clang-cl                                               ^
+          -DLLVM_ENABLE_RUNTIMES=libcxx                                               ^
           -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=NO
   > ninja -C build cxx
   > ninja -C build check-cxx
@@ -153,9 +155,10 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
 
 .. code-block:: bash
 
-  > cmake -G Ninja -S libcxx -B build                                                 \
+  > cmake -G Ninja -S runtimes -B build                                               \
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
+          -DLLVM_ENABLE_RUNTIMES=libcxx                                               \
           -DLIBCXX_HAS_WIN32_THREAD_API=ON                                            \
           -DLIBCXX_CXX_ABI=libstdc++                                                  \
           -DLIBCXX_TARGET_INFO="libcxx.test.target_info.MingwLocalTI"
