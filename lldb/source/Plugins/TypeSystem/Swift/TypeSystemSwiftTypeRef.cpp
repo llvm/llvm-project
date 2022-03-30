@@ -1646,25 +1646,6 @@ static bool ContainsSugaredParen(swift::Demangle::NodePointer node) {
   return false;
 }
 
-swift::Demangle::NodePointer
-StripPrivateIDs(swift::Demangle::Demangler &dem,
-                swift::Demangle::NodePointer node) {
-  using namespace swift::Demangle;
-  return TypeSystemSwiftTypeRef::Transform(dem, node, [&](NodePointer node) {
-    if (node->getKind() != Node::Kind::PrivateDeclName ||
-        node->getNumChildren() != 2)
-      return node;
-
-    assert(node->getFirstChild()->getKind() == Node::Kind::Identifier);
-    assert(node->getLastChild()->getKind() == Node::Kind::Identifier);
-    auto *new_node = dem.createNode(Node::Kind::PrivateDeclName);
-    auto *ident = dem.createNodeWithAllocatedText(
-        Node::Kind::Identifier, node->getLastChild()->getText());
-    new_node->addChild(ident, dem);
-    return new_node;
-  });
-}
-
 /// Compare two swift types from different type systems by comparing their
 /// (canonicalized) mangled name.
 template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
@@ -1697,10 +1678,10 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
   if (ContainsUnresolvedTypeAlias(r_node) ||
       ContainsGenericTypeParameter(r_node) || ContainsSugaredParen(r_node))
     return true;
-  auto l_mangling = swift::Demangle::mangleNode(StripPrivateIDs(
-      dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node)));
-  auto r_mangling = swift::Demangle::mangleNode(StripPrivateIDs(
-      dem, TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node)));
+  auto l_mangling = swift::Demangle::mangleNode(
+      TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, l_node));
+  auto r_mangling = swift::Demangle::mangleNode(
+      TypeSystemSwiftTypeRef::CanonicalizeSugar(dem, r_node));
   if (!l_mangling.isSuccess() || !r_mangling.isSuccess())
     return false;
 
