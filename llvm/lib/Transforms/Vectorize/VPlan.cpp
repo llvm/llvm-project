@@ -319,8 +319,7 @@ void VPBasicBlock::execute(VPTransformState *State) {
     UnreachableInst *Terminator = State->Builder.CreateUnreachable();
     State->Builder.SetInsertPoint(Terminator);
     // Register NewBB in its loop. In innermost loops its the same for all BB's.
-    Loop *L = State->LI->getLoopFor(State->CFG.PrevBB);
-    L->addBasicBlockToLoop(NewBB, *State->LI);
+    State->CurrentVectorLoop->addBasicBlockToLoop(NewBB, *State->LI);
     State->CFG.PrevBB = NewBB;
   }
 
@@ -909,6 +908,7 @@ void VPlan::execute(VPTransformState *State) {
   assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
 
   Loop *L = State->LI->getLoopFor(VectorHeaderBB);
+  State->CurrentVectorLoop = L;
   State->CFG.ExitBB = L->getExitBlock();
 
   // Remove the edge between Header and Latch to allow other connections.
@@ -1543,7 +1543,7 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
       ScalarPHI ? PN->getType() : VectorType::get(PN->getType(), State.VF);
 
   BasicBlock *HeaderBB = State.CFG.PrevBB;
-  assert(State.LI->getLoopFor(HeaderBB)->getHeader() == HeaderBB &&
+  assert(State.CurrentVectorLoop->getHeader() == HeaderBB &&
          "recipe must be in the vector loop header");
   unsigned LastPartForNewPhi = isOrdered() ? 1 : State.UF;
   for (unsigned Part = 0; Part < LastPartForNewPhi; ++Part) {
