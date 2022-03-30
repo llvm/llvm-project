@@ -28,6 +28,10 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Lex/MacroInfo.h"
+#include "clang/Lex/PPCallbacks.h"
+#include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,8 +45,8 @@ namespace {
 /// information.
 class ExtractAPIVisitor : public RecursiveASTVisitor<ExtractAPIVisitor> {
 public:
-  ExtractAPIVisitor(ASTContext &Context, Language Lang)
-      : Context(Context), API(Context.getTargetInfo().getTriple(), Lang) {}
+  ExtractAPIVisitor(ASTContext &Context, APISet &API)
+      : Context(Context), API(API) {}
 
   const APISet &getAPI() const { return API; }
 
@@ -489,43 +493,109 @@ private:
   }
 
   ASTContext &Context;
-  APISet API;
+  APISet &API;
 };
 
 class ExtractAPIConsumer : public ASTConsumer {
 public:
-  ExtractAPIConsumer(ASTContext &Context, StringRef ProductName, Language Lang,
-                     std::unique_ptr<raw_pwrite_stream> OS)
-      : Visitor(Context, Lang), ProductName(ProductName), OS(std::move(OS)) {}
+  ExtractAPIConsumer(ASTContext &Context, APISet &API)
+      : Visitor(Context, API) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     // Use ExtractAPIVisitor to traverse symbol declarations in the context.
     Visitor.TraverseDecl(Context.getTranslationUnitDecl());
-
-    // Setup a SymbolGraphSerializer to write out collected API information in
-    // the Symbol Graph format.
-    // FIXME: Make the kind of APISerializer configurable.
-    SymbolGraphSerializer SGSerializer(Visitor.getAPI(), ProductName);
-    SGSerializer.serialize(*OS);
   }
 
 private:
   ExtractAPIVisitor Visitor;
-  std::string ProductName;
-  std::unique_ptr<raw_pwrite_stream> OS;
+};
+
+class MacroCallback : public PPCallbacks {
+public:
+  MacroCallback(const SourceManager &SM, APISet &API) : SM(SM), API(API) {}
+
+  void MacroDefined(const Token &MacroNameToken,
+                    const MacroDirective *MD) override {
+    auto *MacroInfo = MD->getMacroInfo();
+
+    if (MacroInfo->isBuiltinMacro())
+      return;
+
+    auto SourceLoc = MacroNameToken.getLocation();
+    if (SM.isWrittenInBuiltinFile(SourceLoc) ||
+        SM.isWrittenInCommandLineFile(SourceLoc))
+      return;
+
+    PendingMacros.emplace_back(MacroNameToken, MD);
+  }
+
+  // If a macro gets undefined at some point during preprocessing of the inputs
+  // it means that it isn't an exposed API and we should therefore not add a
+  // macro definition for it.
+  void MacroUndefined(const Token &MacroNameToken, const MacroDefinition &MD,
+                      const MacroDirective *Undef) override {
+    llvm::erase_if(PendingMacros, [&MD](const PendingMacro &PM) {
+      return MD.getMacroInfo()->getDefinitionLoc() ==
+             PM.MD->getMacroInfo()->getDefinitionLoc();
+    });
+  }
+
+  void EndOfMainFile() override {
+    for (auto &PM : PendingMacros) {
+      // `isUsedForHeaderGuard` is only set when the preprocessor leaves the
+      // file so check for it here.
+      if (PM.MD->getMacroInfo()->isUsedForHeaderGuard())
+        continue;
+
+      StringRef Name = PM.MacroNameToken.getIdentifierInfo()->getName();
+      PresumedLoc Loc = SM.getPresumedLoc(PM.MacroNameToken.getLocation());
+      StringRef USR =
+          API.recordUSRForMacro(Name, PM.MacroNameToken.getLocation(), SM);
+
+      API.addMacroDefinition(
+          Name, USR, Loc,
+          DeclarationFragmentsBuilder::getFragmentsForMacro(Name, PM.MD),
+          DeclarationFragmentsBuilder::getSubHeadingForMacro(Name));
+    }
+
+    PendingMacros.clear();
+  }
+
+private:
+  struct PendingMacro {
+    Token MacroNameToken;
+    const MacroDirective *MD;
+
+    PendingMacro(const Token &MacroNameToken, const MacroDirective *MD)
+        : MacroNameToken(MacroNameToken), MD(MD) {}
+  };
+
+  const SourceManager &SM;
+  APISet &API;
+  llvm::SmallVector<PendingMacro> PendingMacros;
 };
 
 } // namespace
 
 std::unique_ptr<ASTConsumer>
 ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  std::unique_ptr<raw_pwrite_stream> OS = CreateOutputFile(CI, InFile);
+  OS = CreateOutputFile(CI, InFile);
   if (!OS)
     return nullptr;
-  return std::make_unique<ExtractAPIConsumer>(
-      CI.getASTContext(), CI.getInvocation().getFrontendOpts().ProductName,
-      CI.getFrontendOpts().Inputs.back().getKind().getLanguage(),
-      std::move(OS));
+
+  ProductName = CI.getFrontendOpts().ProductName;
+
+  // Now that we have enough information about the language options and the
+  // target triple, let's create the APISet before anyone uses it.
+  API = std::make_unique<APISet>(
+      CI.getTarget().getTriple(),
+      CI.getFrontendOpts().Inputs.back().getKind().getLanguage());
+
+  // Register preprocessor callbacks that will add macro definitions to API.
+  CI.getPreprocessor().addPPCallbacks(
+      std::make_unique<MacroCallback>(CI.getSourceManager(), *API));
+
+  return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(), *API);
 }
 
 bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
@@ -555,6 +625,18 @@ bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
   Inputs.emplace_back(Buffer->getMemBufferRef(), Kind, /*IsSystem*/ false);
 
   return true;
+}
+
+void ExtractAPIAction::EndSourceFileAction() {
+  if (!OS)
+    return;
+
+  // Setup a SymbolGraphSerializer to write out collected API information in
+  // the Symbol Graph format.
+  // FIXME: Make the kind of APISerializer configurable.
+  SymbolGraphSerializer SGSerializer(*API, ProductName);
+  SGSerializer.serialize(*OS);
+  OS->flush();
 }
 
 std::unique_ptr<raw_pwrite_stream>

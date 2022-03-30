@@ -12,7 +12,6 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_ASSERTIONS=0
 
-#include <__assert>
 #include <cassert>
 
 bool executed_condition = false;

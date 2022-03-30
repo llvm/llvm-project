@@ -1,7 +1,8 @@
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected,cxx2a %s -fcxx-exceptions -triple=x86_64-linux-gnu -Wno-c++2b-extensions
 // RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected,cxx2b %s -fcxx-exceptions -triple=x86_64-linux-gnu -Wpre-c++2b-compat
 
-struct NonLiteral { // cxx2a-note {{'NonLiteral' is not literal}}
+struct NonLiteral { // cxx2a-note {{'NonLiteral' is not literal}} \
+                    // cxx2b-note 2{{'NonLiteral' is not literal}}
   NonLiteral() {}
 };
 
@@ -96,7 +97,7 @@ constexpr int thread_local_constexpr() { // expected-error {{constexpr function 
 constexpr int non_literal(bool b) {
   if (!b)
     return 0;
-  NonLiteral n;
+  NonLiteral n; // cxx2b-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++2b}}
 }
 
 constexpr int non_literal_1 = non_literal(false);
@@ -164,7 +165,8 @@ int test_in_lambdas() {
   auto non_literal = [](bool b) constexpr {
     if (!b)
       NonLiteral n; // cxx2b-note {{non-literal type 'NonLiteral' cannot be used in a constant expression}} \
-                    // cxx2a-error {{variable of non-literal type 'NonLiteral' cannot be defined in a constexpr function before C++2b}}
+                    // cxx2a-error {{variable of non-literal type 'NonLiteral' cannot be defined in a constexpr function before C++2b}} \
+                    // cxx2b-warning {{definition of a variable of non-literal type in a constexpr function is incompatible with C++ standards before C++2b}}
     return 0;
   };
 
@@ -227,7 +229,7 @@ int test_lambdas_implicitly_constexpr() {
 }
 
 template <typename T>
-constexpr auto dependent_var_def_lambda(void) {
+constexpr auto dependent_var_def_lambda() {
   return [](bool b) { // cxx2a-note {{declared here}}
     if (!b)
       T t;
@@ -237,4 +239,4 @@ constexpr auto dependent_var_def_lambda(void) {
 
 constexpr auto non_literal_valid_in_cxx2b = dependent_var_def_lambda<NonLiteral>()(true); // \
     // cxx2a-error {{constexpr variable 'non_literal_valid_in_cxx2b' must be initialized by a constant expression}} \
-    // cxx2a-note  {{non-constexpr function}}
+    // cxx2a-note {{non-constexpr function}}

@@ -63,6 +63,12 @@ define void @test_vp_int_fp_conversions(<8 x i32> %i0, <8 x float> %f0, <8 x i1>
   ret void
 }
 
+define void @test_vp_comparisons(<8 x float> %f0, <8 x float> %f1, <8 x i32> %i0, <8 x i32> %i1, <8 x i1> %mask, i32 %evl) {
+  %r0 = call <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float> %f0, <8 x float> %f1, metadata !"oeq", <8 x i1> %mask, i32 %evl)
+  %r1 = call <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32> %i0, <8 x i32> %i1, metadata !"eq", <8 x i1> %mask, i32 %evl)
+  ret void
+}
+
 ; integer arith
 declare <8 x i32> @llvm.vp.add.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.sub.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
@@ -101,6 +107,9 @@ declare float @llvm.vp.reduce.fmul.v8f32(float, <8 x float>, <8 x i1>, i32)
 ; casts
 declare <8 x float> @llvm.vp.sitofp.v8f32.v8i32(<8 x i32>, <8 x i1>, i32)
 declare <8 x i32> @llvm.vp.fptosi.v8i32.v8f32(<8 x float>, <8 x i1>, i32)
+; compares
+declare <8 x i1> @llvm.vp.fcmp.v8f32(<8 x float>, <8 x float>, metadata, <8 x i1>, i32)
+declare <8 x i1> @llvm.vp.icmp.v8i32(<8 x i32>, <8 x i32>, metadata, <8 x i1>, i32)
 ; shuffles
 declare <8 x i32> @llvm.experimental.vp.splice.v8i32(<8 x i32>, <8 x i32>, i32, <8 x i1>, i32, i32)
 declare <vscale x 8 x i32> @llvm.experimental.vp.splice.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, i32, <vscale x 8 x i1>, i32, i32)
