@@ -301,6 +301,7 @@ inline NORETURN uptr loadTag(uptr Ptr) {
 
 #endif
 
+#if __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-noreturn"
 inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
@@ -309,6 +310,7 @@ inline void setRandomTag(void *Ptr, uptr Size, uptr ExcludeMask,
   *TaggedEnd = storeTags(*TaggedBegin, *TaggedBegin + Size);
 }
 #pragma clang diagnostic pop
+#endif
 
 inline void *untagPointer(void *Ptr) {
   return reinterpret_cast<void *>(untagPointer(reinterpret_cast<uptr>(Ptr)));
