@@ -201,6 +201,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["gfx9-insts"] = true;
       Features["gfx10-insts"] = true;
       Features["gfx10-3-insts"] = true;
+      Features["gfx11-insts"] = true;
       break;
     case GK_GFX1036:
     case GK_GFX1035:
