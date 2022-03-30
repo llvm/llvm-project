@@ -109,6 +109,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__utility/forward.h>
 #include <memory>

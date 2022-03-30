@@ -34,6 +34,7 @@ int toupper(int c);
 }  // std
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <ctype.h>
 

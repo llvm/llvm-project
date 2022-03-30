@@ -123,8 +123,8 @@ define i16 @test_bswap_shli_7_bswap_i16(i16 %a) nounwind {
 ; RV32ZB-LABEL: test_bswap_shli_7_bswap_i16:
 ; RV32ZB:       # %bb.0:
 ; RV32ZB-NEXT:    rev8 a0, a0
-; RV32ZB-NEXT:    srli a0, a0, 9
-; RV32ZB-NEXT:    andi a0, a0, -128
+; RV32ZB-NEXT:    srli a0, a0, 16
+; RV32ZB-NEXT:    slli a0, a0, 7
 ; RV32ZB-NEXT:    rev8 a0, a0
 ; RV32ZB-NEXT:    srli a0, a0, 16
 ; RV32ZB-NEXT:    ret
@@ -132,8 +132,8 @@ define i16 @test_bswap_shli_7_bswap_i16(i16 %a) nounwind {
 ; RV64ZB-LABEL: test_bswap_shli_7_bswap_i16:
 ; RV64ZB:       # %bb.0:
 ; RV64ZB-NEXT:    rev8 a0, a0
-; RV64ZB-NEXT:    srli a0, a0, 41
-; RV64ZB-NEXT:    andi a0, a0, -128
+; RV64ZB-NEXT:    srli a0, a0, 48
+; RV64ZB-NEXT:    slli a0, a0, 7
 ; RV64ZB-NEXT:    rev8 a0, a0
 ; RV64ZB-NEXT:    srli a0, a0, 48
 ; RV64ZB-NEXT:    ret
