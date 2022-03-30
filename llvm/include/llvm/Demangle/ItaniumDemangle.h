@@ -2885,7 +2885,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseUnqualifiedName(
     Result = getDerived().parseOperatorName(State);
   }
 
-  if (Module)
+  if (Result != nullptr && Module != nullptr)
     Result = make<ModuleEntity>(Module, Result);
   if (Result != nullptr)
     Result = getDerived().parseAbiTags(Result);
