@@ -116,6 +116,92 @@ define i64 @xor_sminval_i64(i64 %x) {
 }
 
 ;
+; XOR(ADD/SUB(X,C),MIN_SIGNED_VALUE)
+;
+
+define i8 @xor_add_sminval_i8(i8 %x, i8 %y) {
+; X86-LABEL: xor_add_sminval_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    addb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    xorb $-128, %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_add_sminval_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rsi), %eax
+; X64-NEXT:    xorb $-128, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+  %s = add i8 %x, %y
+  %r = xor i8 %s, 128
+  ret i8 %r
+}
+
+define i16 @xor_sub_sminval_i16(i16 %x) {
+; X86-LABEL: xor_sub_sminval_i16:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $-2, %eax
+; X86-NEXT:    xorl $32768, %eax # imm = 0x8000
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_sub_sminval_i16:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal -2(%rdi), %eax
+; X64-NEXT:    xorl $32768, %eax # imm = 0x8000
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+  %s = sub i16 %x, 2
+  %r = xor i16 %s, 32768
+  ret i16 %r
+}
+
+define i32 @xor_add_sminval_i32(i32 %x) {
+; X86-LABEL: xor_add_sminval_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $512, %eax # imm = 0x200
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_add_sminval_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal 512(%rdi), %eax
+; X64-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
+; X64-NEXT:    retq
+  %s = add i32 %x, 512
+  %r = xor i32 %s, 2147483648
+  ret i32 %r
+}
+
+define i64 @xor_add_sminval_i64(i64 %x, i64 %y) {
+; X86-LABEL: xor_add_sminval_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    xorl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    retl
+;
+; X64-LABEL: xor_add_sminval_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    leaq (%rdi,%rsi), %rcx
+; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-NEXT:    xorq %rcx, %rax
+; X64-NEXT:    retq
+  %s = add i64 %x, %y
+  %r = xor i64 %s, -9223372036854775808
+  ret i64 %r
+}
+
+;
 ; XOR(SHL(X,C),MIN_SIGNED_VALUE)
 ;
 
@@ -164,17 +250,17 @@ define i32 @xor_shl_sminval_i32(i32 %x) {
 ; X86-LABEL: xor_shl_sminval_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    shll $3, %eax
 ; X86-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_shl_sminval_i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shll $4, %eax
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (,%rdi,8), %eax
 ; X64-NEXT:    xorl $-2147483648, %eax # imm = 0x80000000
 ; X64-NEXT:    retq
-  %s = shl i32 %x, 4
+  %s = shl i32 %x, 3
   %r = xor i32 %s, 2147483648
   ret i32 %r
 }
@@ -204,18 +290,18 @@ define i64 @xor_shl_sminval_i64(i64 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    shldl $4, %eax, %edx
-; X86-NEXT:    shll $4, %eax
+; X86-NEXT:    shldl $2, %eax, %edx
+; X86-NEXT:    shll $2, %eax
 ; X86-NEXT:    xorl $-2147483648, %edx # imm = 0x80000000
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_shl_sminval_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    shlq $4, %rdi
+; X64-NEXT:    leaq (,%rdi,4), %rcx
 ; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
-; X64-NEXT:    xorq %rdi, %rax
+; X64-NEXT:    xorq %rcx, %rax
 ; X64-NEXT:    retq
-  %s = shl i64 %x, 4
+  %s = shl i64 %x, 2
   %r = xor i64 %s, -9223372036854775808
   ret i64 %r
 }
