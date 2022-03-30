@@ -189,6 +189,8 @@ function(darwin_filter_host_archs input output)
 
   if(ARM_HOST)
     list(REMOVE_ITEM tmp_var i386)
+    list(REMOVE_ITEM tmp_var x86_64)
+    list(REMOVE_ITEM tmp_var x86_64h)
   else()
     list(REMOVE_ITEM tmp_var arm64)
     list(REMOVE_ITEM tmp_var arm64e)
