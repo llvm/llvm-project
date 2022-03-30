@@ -1803,6 +1803,27 @@ static Value *simplifyAndOrOfICmpsWithLimitConst(ICmpInst *Cmp0, ICmpInst *Cmp1,
   return nullptr;
 }
 
+/// Try to simplify and/or of icmp with ctpop intrinsic.
+static Value *simplifyAndOrOfICmpsWithCtpop(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                            bool IsAnd) {
+  ICmpInst::Predicate Pred0, Pred1;
+  Value *X;
+  const APInt *C;
+  if (!match(Cmp0, m_ICmp(Pred0, m_Intrinsic<Intrinsic::ctpop>(m_Value(X)),
+                          m_APInt(C))) ||
+      !match(Cmp1, m_ICmp(Pred1, m_Specific(X), m_ZeroInt())) || C->isZero())
+    return nullptr;
+
+  // (ctpop(X) == C) || (X != 0) --> X != 0 where C > 0
+  if (!IsAnd && Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_NE)
+    return Cmp1;
+  // (ctpop(X) != C) && (X == 0) --> X == 0 where C > 0
+  if (IsAnd && Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_EQ)
+    return Cmp1;
+
+  return nullptr;
+}
+
 static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
                                  const SimplifyQuery &Q) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true, Q))
@@ -1822,6 +1843,11 @@ static Value *simplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, true))
+    return X;
+
+  if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op0, Op1, true))
+    return X;
+  if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op1, Op0, true))
     return X;
 
   if (Value *X = simplifyAndOfICmpsWithAdd(Op0, Op1, Q.IIQ))
@@ -1898,6 +1924,11 @@ static Value *simplifyOrOfICmps(ICmpInst *Op0, ICmpInst *Op1,
     return X;
 
   if (Value *X = simplifyAndOrOfICmpsWithZero(Op0, Op1, false))
+    return X;
+
+  if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op0, Op1, false))
+    return X;
+  if (Value *X = simplifyAndOrOfICmpsWithCtpop(Op1, Op0, false))
     return X;
 
   if (Value *X = simplifyOrOfICmpsWithAdd(Op0, Op1, Q.IIQ))
