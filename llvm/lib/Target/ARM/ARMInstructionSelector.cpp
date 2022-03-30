@@ -624,12 +624,12 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
 
   bool UseMovt = STI.useMovt();
 
-  unsigned Size = TM.getPointerSize(0);
+  LLT PtrTy = MRI.getType(MIB->getOperand(0).getReg());
   const Align Alignment(4);
 
-  auto addOpsForConstantPoolLoad = [&MF, Alignment,
-                                    Size](MachineInstrBuilder &MIB,
-                                          const GlobalValue *GV, bool IsSBREL) {
+  auto addOpsForConstantPoolLoad = [&MF, Alignment, PtrTy](
+                                       MachineInstrBuilder &MIB,
+                                       const GlobalValue *GV, bool IsSBREL) {
     assert((MIB->getOpcode() == ARM::LDRi12 ||
             MIB->getOpcode() == ARM::t2LDRpci) &&
            "Unsupported instruction");
@@ -644,7 +644,7 @@ bool ARMInstructionSelector::selectGlobal(MachineInstrBuilder &MIB,
     MIB.addConstantPoolIndex(CPIndex, /*Offset*/ 0, /*TargetFlags*/ 0)
         .addMemOperand(MF.getMachineMemOperand(
             MachinePointerInfo::getConstantPool(MF), MachineMemOperand::MOLoad,
-            Size, Alignment));
+            PtrTy, Alignment));
     if (MIB->getOpcode() == ARM::LDRi12)
       MIB.addImm(0);
     MIB.add(predOps(ARMCC::AL));
