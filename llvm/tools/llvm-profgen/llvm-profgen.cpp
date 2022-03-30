@@ -50,6 +50,12 @@ static cl::alias UPA("up", cl::desc("Alias for --unsymbolized-profile"),
                      cl::aliasopt(UnsymbolizedProfFilename));
 
 static cl::opt<std::string>
+    SampleProfFilename("llvm-sample-profile",
+                       cl::value_desc("llvm sample profile"), cl::ZeroOrMore,
+                       cl::desc("Path of the LLVM sample profile"),
+                       cl::cat(ProfGenCategory));
+
+static cl::opt<std::string>
     BinaryPath("binary", cl::value_desc("binary"), cl::Required,
                cl::desc("Path of profiled executable binary."),
                cl::cat(ProfGenCategory));
@@ -76,7 +82,9 @@ static void validateCommandLine() {
     uint16_t HasPerfScript = PerfScriptFilename.getNumOccurrences();
     uint16_t HasUnsymbolizedProfile =
         UnsymbolizedProfFilename.getNumOccurrences();
-    uint16_t S = HasPerfData + HasPerfScript + HasUnsymbolizedProfile;
+    uint16_t HasSampleProfile = SampleProfFilename.getNumOccurrences();
+    uint16_t S =
+        HasPerfData + HasPerfScript + HasUnsymbolizedProfile + HasSampleProfile;
     if (S != 1) {
       std::string Msg =
           S > 1
@@ -97,6 +105,7 @@ static void validateCommandLine() {
     CheckFileExists(HasPerfData, PerfDataFilename);
     CheckFileExists(HasPerfScript, PerfScriptFilename);
     CheckFileExists(HasUnsymbolizedProfile, UnsymbolizedProfFilename);
+    CheckFileExists(HasSampleProfile, SampleProfFilename);
   }
 
   if (!llvm::sys::fs::exists(BinaryPath)) {
@@ -146,20 +155,34 @@ int main(int argc, const char *argv[]) {
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;
 
-  PerfInputFile PerfFile = getPerfInputFile();
-  std::unique_ptr<PerfReaderBase> Reader =
-      PerfReaderBase::create(Binary.get(), PerfFile);
-  // Parse perf events and samples
-  Reader->parsePerfTraces();
+  if (SampleProfFilename.getNumOccurrences()) {
+    LLVMContext Context;
+    auto ReaderOrErr = SampleProfileReader::create(SampleProfFilename, Context);
+    std::unique_ptr<sampleprof::SampleProfileReader> Reader =
+        std::move(ReaderOrErr.get());
+    Reader->read();
+    std::unique_ptr<ProfileGeneratorBase> Generator =
+        ProfileGeneratorBase::create(Binary.get(),
+                                     std::move(Reader->getProfiles()),
+                                     Reader->profileIsCSFlat());
+    Generator->generateProfile();
+    Generator->write();
+  } else {
+    PerfInputFile PerfFile = getPerfInputFile();
+    std::unique_ptr<PerfReaderBase> Reader =
+        PerfReaderBase::create(Binary.get(), PerfFile);
+    // Parse perf events and samples
+    Reader->parsePerfTraces();
 
-  if (SkipSymbolization)
-    return EXIT_SUCCESS;
+    if (SkipSymbolization)
+      return EXIT_SUCCESS;
 
-  std::unique_ptr<ProfileGeneratorBase> Generator =
-      ProfileGeneratorBase::create(Binary.get(), Reader->getSampleCounters(),
-                                   Reader->profileIsCSFlat());
-  Generator->generateProfile();
-  Generator->write();
+    std::unique_ptr<ProfileGeneratorBase> Generator =
+        ProfileGeneratorBase::create(Binary.get(), &Reader->getSampleCounters(),
+                                     Reader->profileIsCSFlat());
+    Generator->generateProfile();
+    Generator->write();
+  }
 
   return EXIT_SUCCESS;
 }
