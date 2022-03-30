@@ -77,7 +77,7 @@
 # RUN: llvm-ar rcs %tcomm.a %tcomm.o
 # RUN: llvm-ar rcs %tstrong.a %tstrong.o
 # RUN: ld.lld --warn-backrefs %tcomm.a %t1.o %t5.o 2>&1 -o /dev/null | FileCheck --check-prefix=COMM %s
-# RUN: ld.lld --fatal-warnings --warn-backrefs %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null
+# RUN: ld.lld --fatal-warnings --fortran-common --warn-backrefs %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null
 # RUN: ld.lld --warn-backrefs --no-fortran-common %tcomm.a %t1.o %t5.o %tstrong.a 2>&1 -o /dev/null | FileCheck --check-prefix=COMM %s
 
 # COMM: ld.lld: warning: backward reference detected: obj in {{.*}}5.o refers to {{.*}}comm.a
