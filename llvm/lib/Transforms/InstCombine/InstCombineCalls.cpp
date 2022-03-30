@@ -3292,7 +3292,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
         !ParamTy->isOpaquePointerTy()) {
       AttrBuilder AB(Ctx, CallerPAL.getParamAttrs(i).removeAttributes(
                               Ctx, IncompatibleAttrs));
-      AB.addByValAttr(NewArg->getType()->getPointerElementType());
+      AB.addByValAttr(ParamTy->getNonOpaquePointerElementType());
       ArgAttrs.push_back(AttributeSet::get(Ctx, AB));
     } else {
       ArgAttrs.push_back(

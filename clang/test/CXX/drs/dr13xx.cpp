@@ -13,6 +13,16 @@ namespace std {
   };
 }
 
+#if __cplusplus >= 201103L
+namespace dr1305 { // dr1305: yes
+struct Incomplete; // expected-note {{forward declaration of 'dr1305::Incomplete'}}
+struct Complete {};
+
+int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'dr1305::Incomplete'}}
+int complete = alignof(Complete(&)[]);
+}
+#endif
+
 namespace dr1310 { // dr1310: 5
   struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
   void f() {

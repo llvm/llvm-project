@@ -325,6 +325,7 @@ public:
   SmallVector<EhSectionPiece, 0> pieces;
 
   SyntheticSection *getParent() const;
+  uint64_t getParentOffset(uint64_t offset) const;
 };
 
 // This is a section that is added directly to an output section

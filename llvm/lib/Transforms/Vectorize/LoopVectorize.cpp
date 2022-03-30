@@ -5695,6 +5695,18 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
       !(InterleaveSmallLoopScalarReduction && HasReductions && VF.isScalar()))
     return 1;
 
+  // If we did not calculate the cost for VF (because the user selected the VF)
+  // then we calculate the cost of VF here.
+  if (LoopCost == 0) {
+    InstructionCost C = expectedCost(VF).first;
+    assert(C.isValid() && "Expected to have chosen a VF with valid cost");
+    LoopCost = *C.getValue();
+
+    // Loop body is free and there is no need for interleaving.
+    if (LoopCost == 0)
+      return 1;
+  }
+
   RegisterUsage R = calculateRegisterUsage({VF})[0];
   // We divide by these constants so assume that we have at least one
   // instruction that uses at least one register.
@@ -5785,16 +5797,6 @@ unsigned LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     IC = std::max(1u, IC);
 
   assert(IC > 0 && "Interleave count must be greater than 0.");
-
-  // If we did not calculate the cost for VF (because the user selected the VF)
-  // then we calculate the cost of VF here.
-  if (LoopCost == 0) {
-    InstructionCost C = expectedCost(VF).first;
-    assert(C.isValid() && "Expected to have chosen a VF with valid cost");
-    LoopCost = *C.getValue();
-  }
-
-  assert(LoopCost && "Non-zero loop cost expected");
 
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
@@ -9599,11 +9601,9 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   NewPointerPhi->addIncoming(ScalarStartValue, State.CFG.VectorPreHeader);
 
   // A pointer induction, performed by using a gep
-  BasicBlock *LoopLatch =
-      State.LI->getLoopFor(State.CFG.PrevBB)->getLoopLatch();
+  const DataLayout &DL = NewPointerPhi->getModule()->getDataLayout();
+  Instruction *InductionLoc = &*State.Builder.GetInsertPoint();
 
-  const DataLayout &DL = LoopLatch->getModule()->getDataLayout();
-  Instruction *InductionLoc = LoopLatch->getTerminator();
   const SCEV *ScalarStep = IndDesc.getStep();
   SCEVExpander Exp(SE, DL, "induction");
   Value *ScalarStepValue = Exp.expandCodeFor(ScalarStep, PhiType, InductionLoc);
@@ -9614,7 +9614,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
       IndDesc.getElementType(), NewPointerPhi,
       State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
       InductionLoc);
-  NewPointerPhi->addIncoming(InductionGEP, LoopLatch);
+  // Add induction update using an incorrect block temporarily. The phi node
+  // will be fixed after VPlan execution. Note that at this point the latch
+  // block cannot be used, as it does not exist yet.
+  // TODO: Model increment value in VPlan, by turning the recipe into a
+  // multi-def and a subclass of VPHeaderPHIRecipe.
+  NewPointerPhi->addIncoming(InductionGEP, State.CFG.VectorPreHeader);
 
   // Create UF many actual address geps that use the pointer
   // phi as base and a vectorized version of the step value
