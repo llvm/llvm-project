@@ -9753,6 +9753,21 @@ SDValue DAGCombiner::visitBSWAP(SDNode *N) {
     }
   }
 
+  // Try to canonicalize bswap-of-logical-shift-by-8-bit-multiple as
+  // inverse-shift-of-bswap:
+  // bswap (X u<< C) --> (bswap X) u>> C
+  // bswap (X u>> C) --> (bswap X) u<< C
+  if ((N0.getOpcode() == ISD::SHL || N0.getOpcode() == ISD::SRL) &&
+      N0.hasOneUse()) {
+    auto *ShAmt = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+    if (ShAmt && ShAmt->getAPIntValue().ult(BW) &&
+        ShAmt->getZExtValue() % 8 == 0) {
+      SDValue NewSwap = DAG.getNode(ISD::BSWAP, DL, VT, N0.getOperand(0));
+      unsigned InverseShift = N0.getOpcode() == ISD::SHL ? ISD::SRL : ISD::SHL;
+      return DAG.getNode(InverseShift, DL, VT, NewSwap, N0.getOperand(1));
+    }
+  }
+
   return SDValue();
 }
 

@@ -39,19 +39,18 @@ define i32 @test_bswap_bswap(i32 %a0) nounwind {
   ret i32 %c
 }
 
-; TODO: fold (bswap(srl (bswap c), x)) -> (shl c, x)
 define i16 @test_bswap_srli_8_bswap_i16(i16 %a) nounwind {
 ; X86-LABEL: test_bswap_srli_8_bswap_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    rolw $8, %ax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_srli_8_bswap_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    rolw $8, %ax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    shll $8, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
     %1 = call i16 @llvm.bswap.i16(i16 %a)
@@ -64,17 +63,13 @@ define i32 @test_bswap_srli_8_bswap_i32(i32 %a) nounwind {
 ; X86-LABEL: test_bswap_srli_8_bswap_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    shrl $8, %eax
-; X86-NEXT:    bswapl %eax
+; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_srli_8_bswap_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    bswapl %eax
-; X64-NEXT:    shrl $8, %eax
-; X64-NEXT:    bswapl %eax
+; X64-NEXT:    shll $8, %eax
 ; X64-NEXT:    retq
     %1 = call i32 @llvm.bswap.i32(i32 %a)
     %2 = lshr i32 %1, 8
@@ -87,20 +82,13 @@ define i64 @test_bswap_srli_16_bswap_i64(i64 %a) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    bswapl %edx
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    shrdl $16, %eax, %edx
-; X86-NEXT:    shrl $16, %eax
-; X86-NEXT:    bswapl %edx
-; X86-NEXT:    bswapl %eax
+; X86-NEXT:    shll $16, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_srli_16_bswap_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    bswapq %rax
-; X64-NEXT:    shrq $16, %rax
-; X64-NEXT:    bswapq %rax
+; X64-NEXT:    shlq $16, %rax
 ; X64-NEXT:    retq
     %1 = call i64 @llvm.bswap.i64(i64 %a)
     %2 = lshr i64 %1, 16
@@ -108,21 +96,17 @@ define i64 @test_bswap_srli_16_bswap_i64(i64 %a) nounwind {
     ret i64 %3
 }
 
-; TODO: fold (bswap(shl (bswap c), x)) -> (srl c, x)
 define i16 @test_bswap_shli_8_bswap_i16(i16 %a) nounwind {
 ; X86-LABEL: test_bswap_shli_8_bswap_i16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shll $8, %eax
-; X86-NEXT:    rolw $8, %ax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_shli_8_bswap_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl $65280, %eax # imm = 0xFF00
-; X64-NEXT:    rolw $8, %ax
+; X64-NEXT:    movzbl %ah, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
     %1 = call i16 @llvm.bswap.i16(i16 %a)
@@ -135,17 +119,13 @@ define i32 @test_bswap_shli_8_bswap_i32(i32 %a) nounwind {
 ; X86-LABEL: test_bswap_shli_8_bswap_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    shll $8, %eax
-; X86-NEXT:    bswapl %eax
+; X86-NEXT:    shrl $8, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_shli_8_bswap_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    bswapl %eax
-; X64-NEXT:    shll $8, %eax
-; X64-NEXT:    bswapl %eax
+; X64-NEXT:    shrl $8, %eax
 ; X64-NEXT:    retq
     %1 = call i32 @llvm.bswap.i32(i32 %a)
     %2 = shl i32 %1, 8
@@ -157,21 +137,13 @@ define i64 @test_bswap_shli_16_bswap_i64(i64 %a) nounwind {
 ; X86-LABEL: test_bswap_shli_16_bswap_i64:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    bswapl %ecx
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    shldl $16, %ecx, %eax
-; X86-NEXT:    bswapl %eax
-; X86-NEXT:    rolw $8, %cx
-; X86-NEXT:    movzwl %cx, %edx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_bswap_shli_16_bswap_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    bswapq %rax
-; X64-NEXT:    shlq $16, %rax
-; X64-NEXT:    bswapq %rax
+; X64-NEXT:    shrq $16, %rax
 ; X64-NEXT:    retq
     %1 = call i64 @llvm.bswap.i64(i64 %a)
     %2 = shl i64 %1, 16

@@ -499,8 +499,7 @@ define i32 @zext_load_i32_by_i8_bswap(i32* %arg) {
 ; CHECK-LABEL: zext_load_i32_by_i8_bswap:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    rev w0, w8
+; CHECK-NEXT:    rev16 w0, w8
 ; CHECK-NEXT:    ret
 
   %tmp = bitcast i32* %arg to i8*
