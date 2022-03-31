@@ -1701,11 +1701,11 @@ void CodeExtractor::emitFunctionBody(
       BasicBlock *NewTarget = ExitBlockMap[OldTarget];
       assert(NewTarget && "Unknown target block!");
 
-      if (!KeepOldBlocks) {
+      if (KeepOldBlocks) {
+          VMap[OldTarget] = NewTarget;
+      } else {
         // rewrite the original branch instruction with this new target
         TI->setSuccessor(i, NewTarget);
-      } else {
-        VMap[OldTarget] = NewTarget;
       }
     }
   }
@@ -1756,11 +1756,6 @@ void CodeExtractor::emitFunctionBody(
   // result restore will be placed in the outlined function.
   ScalarAI = newFunction->arg_begin();
   unsigned AggIdx = 0;
-
-   if (KeepOldBlocks)
-      OutI = cast<Instruction>(VMap.lookup(OutI));
-
-  
   for (Value *Input : inputs) {
     if (StructValues.contains(Input))
       ++AggIdx;
@@ -1768,7 +1763,10 @@ void CodeExtractor::emitFunctionBody(
       ++ScalarAI;
   }
 
-  for (Value *Output : outputs) {
+  for (Value* Output : outputs) {
+      if (KeepOldBlocks) 
+          Output = VMap.lookup(Output);
+
     // Find proper insertion point.
     // In case Output is an invoke, we insert the store at the beginning in the
     // 'normal destination' BB. Otherwise we insert the store right after
