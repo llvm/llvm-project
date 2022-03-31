@@ -120,8 +120,8 @@ define i8 @test_bitreverse_shli_bitreverse_i8(i8 %a) nounwind {
 ; RV32ZBKB:       # %bb.0:
 ; RV32ZBKB-NEXT:    rev8 a0, a0
 ; RV32ZBKB-NEXT:    brev8 a0, a0
-; RV32ZBKB-NEXT:    srli a0, a0, 21
-; RV32ZBKB-NEXT:    andi a0, a0, 2040
+; RV32ZBKB-NEXT:    srli a0, a0, 24
+; RV32ZBKB-NEXT:    slli a0, a0, 3
 ; RV32ZBKB-NEXT:    rev8 a0, a0
 ; RV32ZBKB-NEXT:    brev8 a0, a0
 ; RV32ZBKB-NEXT:    srli a0, a0, 24
@@ -131,8 +131,8 @@ define i8 @test_bitreverse_shli_bitreverse_i8(i8 %a) nounwind {
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 53
-; RV64ZBKB-NEXT:    andi a0, a0, 2040
+; RV64ZBKB-NEXT:    srli a0, a0, 56
+; RV64ZBKB-NEXT:    slli a0, a0, 3
 ; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
 ; RV64ZBKB-NEXT:    srli a0, a0, 56
@@ -148,8 +148,8 @@ define i16 @test_bitreverse_shli_bitreverse_i16(i16 %a) nounwind {
 ; RV32ZBKB:       # %bb.0:
 ; RV32ZBKB-NEXT:    rev8 a0, a0
 ; RV32ZBKB-NEXT:    brev8 a0, a0
-; RV32ZBKB-NEXT:    srli a0, a0, 9
-; RV32ZBKB-NEXT:    andi a0, a0, -128
+; RV32ZBKB-NEXT:    srli a0, a0, 16
+; RV32ZBKB-NEXT:    slli a0, a0, 7
 ; RV32ZBKB-NEXT:    rev8 a0, a0
 ; RV32ZBKB-NEXT:    brev8 a0, a0
 ; RV32ZBKB-NEXT:    srli a0, a0, 16
@@ -159,8 +159,8 @@ define i16 @test_bitreverse_shli_bitreverse_i16(i16 %a) nounwind {
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
-; RV64ZBKB-NEXT:    srli a0, a0, 41
-; RV64ZBKB-NEXT:    andi a0, a0, -128
+; RV64ZBKB-NEXT:    srli a0, a0, 48
+; RV64ZBKB-NEXT:    slli a0, a0, 7
 ; RV64ZBKB-NEXT:    rev8 a0, a0
 ; RV64ZBKB-NEXT:    brev8 a0, a0
 ; RV64ZBKB-NEXT:    srli a0, a0, 48

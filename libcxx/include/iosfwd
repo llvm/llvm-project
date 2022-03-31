@@ -94,6 +94,7 @@ using u32streampos = fpos<char_traits<char32_t>::state_type>;
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__mbstate_t.h>
 #include <version>

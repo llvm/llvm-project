@@ -348,6 +348,7 @@ template <class T> unspecified2 end(const valarray<T>& v);
 #include <__algorithm/min.h>
 #include <__algorithm/min_element.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <cmath>
 #include <cstddef>

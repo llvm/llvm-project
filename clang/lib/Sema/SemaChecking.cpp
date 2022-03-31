@@ -4098,6 +4098,30 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
   case RISCVVector::BI__builtin_rvv_vsetvlimax:
     return SemaBuiltinConstantArgRange(TheCall, 0, 0, 3) ||
            CheckRISCVLMUL(TheCall, 1);
+  case RISCVVector::BI__builtin_rvv_vget_v: {
+    ASTContext::BuiltinVectorTypeInfo ResVecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getType().getCanonicalType().getTypePtr()));
+    ASTContext::BuiltinVectorTypeInfo VecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getArg(0)->getType().getCanonicalType().getTypePtr()));
+    unsigned MaxIndex =
+        (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors) /
+        (ResVecInfo.EC.getKnownMinValue() * ResVecInfo.NumVectors);
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, MaxIndex - 1);
+  }
+  case RISCVVector::BI__builtin_rvv_vset_v: {
+    ASTContext::BuiltinVectorTypeInfo ResVecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getType().getCanonicalType().getTypePtr()));
+    ASTContext::BuiltinVectorTypeInfo VecInfo =
+        Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
+            TheCall->getArg(2)->getType().getCanonicalType().getTypePtr()));
+    unsigned MaxIndex =
+        (ResVecInfo.EC.getKnownMinValue() * ResVecInfo.NumVectors) /
+        (VecInfo.EC.getKnownMinValue() * VecInfo.NumVectors);
+    return SemaBuiltinConstantArgRange(TheCall, 1, 0, MaxIndex - 1);
+  }
   // Check if byteselect is in [0, 3]
   case RISCV::BI__builtin_riscv_aes32dsi_32:
   case RISCV::BI__builtin_riscv_aes32dsmi_32:

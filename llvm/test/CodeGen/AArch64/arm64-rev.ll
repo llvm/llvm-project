@@ -653,8 +653,7 @@ define void @test_bswap32_narrow(i32* %p0, i16* %p1) nounwind {
 ; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
 ; CHECK-NEXT:    ldrh w8, [x0, #2]
 ; CHECK-NEXT:    mov x19, x1
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    rev w0, w8
+; CHECK-NEXT:    rev16 w0, w8
 ; CHECK-NEXT:    bl gid_tbl_len
 ; CHECK-NEXT:    strh wzr, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload

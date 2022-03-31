@@ -874,11 +874,14 @@ convertOmpWsLoop(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::OpenMPIRBuilder::AtomicReductionGenTy atomicGen = nullptr;
     if (owningAtomicReductionGens[i])
       atomicGen = owningAtomicReductionGens[i];
+    auto reductionType =
+        loop.reduction_vars()[i].getType().cast<LLVM::LLVMPointerType>();
     llvm::Value *variable =
         moduleTranslation.lookupValue(loop.reduction_vars()[i]);
-    reductionInfos.push_back({variable->getType()->getPointerElementType(),
-                              variable, privateReductionVariables[i],
-                              owningReductionGens[i], atomicGen});
+    reductionInfos.push_back(
+        {moduleTranslation.convertType(reductionType.getElementType()),
+         variable, privateReductionVariables[i], owningReductionGens[i],
+         atomicGen});
   }
 
   // The call to createReductions below expects the block to have a

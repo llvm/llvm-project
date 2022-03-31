@@ -13,6 +13,12 @@
 #if __SHADER_TARGET_STAGE == __SHADER_STAGE_COMPUTE || __SHADER_TARGET_STAGE == __SHADER_STAGE_MESH || __SHADER_TARGET_STAGE == __SHADER_STAGE_AMPLIFICATION || __SHADER_TARGET_STAGE == __SHADER_STAGE_LIBRARY
 #ifdef FAIL
 #if __SHADER_TARGET_MAJOR == 6
+// expected-error@+1 {{'numthreads' attribute requires exactly 3 arguments}}
+[numthreads]
+// expected-error@+1 {{'numthreads' attribute requires exactly 3 arguments}}
+[numthreads()]
+// expected-error@+1 {{'numthreads' attribute requires exactly 3 arguments}}
+[numthreads(1,2,3,4)]
 // expected-error@+1 {{'numthreads' attribute requires an integer constant}}
 [numthreads("1",2,3)]
 // expected-error@+1 {{argument 'X' to numthreads attribute cannot exceed 1024}}
@@ -38,6 +44,15 @@
 int entry() {
  return 1;
 }
+
+// expected-warning@+1 {{'numthreads' attribute only applies to global functions}}
+[numthreads(1,1,1)]
+struct Fido {
+  // expected-warning@+1 {{'numthreads' attribute only applies to global functions}}
+  [numthreads(1,1,1)]
+  void wag() {}
+};
+
 #else
 // expected-error-re@+1 {{attribute 'numthreads' is unsupported in {{[A-Za-z]+}} shaders, requires Compute, Amplification, Mesh or Library}}
 [numthreads(1,1,1)]

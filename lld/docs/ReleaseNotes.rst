@@ -28,6 +28,7 @@ ELF Improvements
 
 * ``-z pack-relative-relocs`` is now available to support ``DT_RELR`` for glibc 2.36+.
   (`D120701 <https://reviews.llvm.org/D120701>`_)
+* ``--no-fortran-common`` (pre 12.0.0 behavior) is now the default.
 
 Breaking changes
 ----------------

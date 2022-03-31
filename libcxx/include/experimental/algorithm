@@ -31,6 +31,7 @@ ForwardIterator search(ForwardIterator first, ForwardIterator last,
 
 */
 
+#include <__assert> // all public C++ headers provide the assertion handler
 #include <__debug>
 #include <algorithm>
 #include <experimental/__config>
