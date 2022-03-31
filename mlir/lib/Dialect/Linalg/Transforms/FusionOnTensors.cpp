@@ -163,7 +163,8 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   erase_value(tileIvs, nullptr);
   SmallVector<Value> tiledOperands = producerOp.getInputAndOutputOperands();
   tiledOperands = makeTiledShapes(b, loc, producerOp, tiledOperands, tileIvs,
-                                  tileSizes, producerLoopBounds);
+                                  tileSizes, producerLoopBounds,
+                                  /**omitPartialTileCheck=*/false);
 
   // Output fusion has to update the iteration arguments of the tile loop nest.
   // In particular, the iteration argument of the outermost tile loop needs to
