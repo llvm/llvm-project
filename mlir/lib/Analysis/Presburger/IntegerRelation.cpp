@@ -142,7 +142,7 @@ void IntegerRelation::truncate(const CountsSnapshot &counts) {
   truncateIdKind(IdKind::Symbol, counts);
   truncateIdKind(IdKind::Local, counts);
   removeInequalityRange(counts.getNumIneqs(), getNumInequalities());
-  removeInequalityRange(counts.getNumEqs(), getNumEqualities());
+  removeEqualityRange(counts.getNumEqs(), getNumEqualities());
 }
 
 unsigned IntegerRelation::insertId(IdKind kind, unsigned pos, unsigned num) {
