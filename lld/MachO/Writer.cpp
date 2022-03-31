@@ -1075,7 +1075,8 @@ void Writer::writeUuid() {
   // Round-up integer division
   size_t chunkSize = (data.size() + chunkCount - 1) / chunkCount;
   std::vector<ArrayRef<uint8_t>> chunks = split(data, chunkSize);
-  std::vector<uint64_t> hashes(chunks.size());
+  // Leave one slot for filename
+  std::vector<uint64_t> hashes(chunks.size() + 1);
   SmallVector<std::shared_future<void>> threadFutures;
   threadFutures.reserve(chunks.size());
   for (size_t i = 0; i < chunks.size(); ++i)
@@ -1083,7 +1084,9 @@ void Writer::writeUuid() {
         [&](size_t j) { hashes[j] = xxHash64(chunks[j]); }, i));
   for (std::shared_future<void> &future : threadFutures)
     future.wait();
-
+  // Append the output filename so that identical binaries with different names
+  // don't get the same UUID.
+  hashes[chunks.size()] = xxHash64(sys::path::filename(config->finalOutput));
   uint64_t digest = xxHash64({reinterpret_cast<uint8_t *>(hashes.data()),
                               hashes.size() * sizeof(uint64_t)});
   uuidCommand->writeUuid(digest);
