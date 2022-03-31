@@ -13,9 +13,6 @@
 /// to provide useful warnings in most popular scenarios but not 1:1 exact
 /// feature compatibility.
 ///
-/// FIXME(kirillbobyrev): Add support for IWYU pragmas.
-/// FIXME(kirillbobyrev): Add support for standard library headers.
-///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INCLUDECLEANER_H
@@ -23,10 +20,12 @@
 
 #include "Headers.h"
 #include "ParsedAST.h"
+#include "index/CanonicalIncludes.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringSet.h"
 #include <vector>
 
 namespace clang {
@@ -58,6 +57,11 @@ ReferencedLocations findReferencedLocations(ParsedAST &AST);
 struct ReferencedFiles {
   llvm::DenseSet<FileID> User;
   llvm::DenseSet<tooling::stdlib::Header> Stdlib;
+  /// Files responsible for the symbols referenced in the main file and defined
+  /// in private headers (private headers have IWYU pragma: private, include
+  /// "public.h"). We store spelling of the public header (with quotes or angle
+  /// brackets) files here to avoid dealing with full filenames and visibility.
+  llvm::StringSet<> SpelledUmbrellas;
 };
 
 /// Retrieves IDs of all files containing SourceLocations from \p Locs.
@@ -66,11 +70,16 @@ struct ReferencedFiles {
 /// \p HeaderResponsible returns the public header that should be included given
 /// symbols from a file with the given FileID (example: public headers should be
 /// preferred to non self-contained and private headers).
-ReferencedFiles
-findReferencedFiles(const ReferencedLocations &Locs, const SourceManager &SM,
-                    llvm::function_ref<FileID(FileID)> HeaderResponsible);
+/// \p UmbrellaHeader returns the public public header is responsible for
+/// providing symbols from a file with the given FileID (example: MyType.h
+/// should be included instead of MyType_impl.h).
+ReferencedFiles findReferencedFiles(
+    const ReferencedLocations &Locs, const SourceManager &SM,
+    llvm::function_ref<FileID(FileID)> HeaderResponsible,
+    llvm::function_ref<Optional<StringRef>(FileID)> UmbrellaHeader);
 ReferencedFiles findReferencedFiles(const ReferencedLocations &Locs,
                                     const IncludeStructure &Includes,
+                                    const CanonicalIncludes &CanonIncludes,
                                     const SourceManager &SM);
 
 /// Maps FileIDs to the internal IncludeStructure representation (HeaderIDs).
@@ -83,7 +92,8 @@ translateToHeaderIDs(const ReferencedFiles &Files,
 /// In unclear cases, headers are not marked as unused.
 std::vector<const Inclusion *>
 getUnused(ParsedAST &AST,
-          const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles);
+          const llvm::DenseSet<IncludeStructure::HeaderID> &ReferencedFiles,
+          const llvm::StringSet<> &ReferencedPublicHeaders);
 
 std::vector<const Inclusion *> computeUnusedIncludes(ParsedAST &AST);
 
