@@ -1202,3 +1202,13 @@ TEST(IntegerPolyhedronTest, containsPointNoLocal) {
   EXPECT_TRUE(poly3.containsPointNoLocal({0, 0}));
   EXPECT_FALSE(poly3.containsPointNoLocal({1, 0}));
 }
+
+TEST(IntegerPolyhedronTest, truncateEqualityRegressionTest) {
+  // IntegerRelation::truncate was truncating inequalities to the number of
+  // equalities.
+  IntegerRelation set(1);
+  IntegerRelation::CountsSnapshot snapshot = set.getCounts();
+  set.addEquality({1, 0});
+  set.truncate(snapshot);
+  EXPECT_EQ(set.getNumEqualities(), 0u);
+}
