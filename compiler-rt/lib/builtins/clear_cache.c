@@ -130,7 +130,10 @@ void __clear_cache(void *start, void *end) {
     __asm __volatile("dsb ish");
   }
   __asm __volatile("isb sy");
-#elif defined(__powerpc64__)
+#elif defined(__powerpc__)
+  // Newer CPUs have a bigger line size made of multiple blocks, so the
+  // following value is a minimal common denominator for what used to be
+  // a single block cache line and is therefore inneficient.
   const size_t line_size = 32;
   const size_t len = (uintptr_t)end - (uintptr_t)start;
 
