@@ -13,6 +13,7 @@
 #include "include/sys/syscall.h"          // For syscall numbers.
 #include "include/threads.h"              // For thrd_* type definitions.
 #include "src/__support/OSUtil/syscall.h" // For syscall function.
+#include "src/__support/architectures.h"
 #include "src/__support/common.h"
 #include "src/errno/llvmlibc_errno.h"
 #include "src/sys/mman/mmap.h"
@@ -25,11 +26,30 @@
 
 namespace __llvm_libc {
 
-struct StartArgs {
+// We align the start args to 16-byte boundary as we adjust the allocated
+// stack memory with its size. We want the adjusted address to be at a
+// 16-byte boundary to satisfy the x86_64 and aarch64 ABI requirements.
+// If different architecture in future requires higher alignment, then we
+// can add a platform specific alignment spec.
+struct alignas(16) StartArgs {
   thrd_t *thread;
   thrd_start_t func;
   void *arg;
 };
+
+__attribute__((always_inline)) inline uintptr_t get_start_args_addr() {
+  // NOTE: For __builtin_frame_address to work reliably across compilers,
+  // architectures and various optimization levels, the TU including this file
+  // should be compiled with -fno-omit-frame-pointer.
+  return reinterpret_cast<uintptr_t>(__builtin_frame_address(0))
+         // The x86_64 call instruction pushes resume address on to the stack.
+         // Next, The x86_64 SysV ABI requires that the frame pointer be pushed
+         // on to the stack. Similarly on aarch64, previous frame pointer and
+         // the value of the link register are pushed on to the stack. So, in
+         // both these cases, we have to step past two 64-bit values to get
+         // to the start args.
+         + sizeof(uintptr_t) * 2;
+}
 
 static __attribute__((noinline)) void start_thread() {
   StartArgs *start_args = reinterpret_cast<StartArgs *>(get_start_args_addr());
@@ -79,13 +99,29 @@ LLVM_LIBC_FUNCTION(int, thrd_create,
   start_args->func = func;
   start_args->arg = arg;
 
-  // TODO: The arguments to the clone syscall below is correct for x86_64
-  // but it might differ for other architectures. So, make this call
-  // architecture independent. May be implement a glibc like wrapper for clone
-  // and use it here.
+  // The clone syscall takes arguments in an architecture specific order.
+  // Also, we want the result of the syscall to be in a register as the child
+  // thread gets a completely different stack after it is created. The stack
+  // variables from this function will not be availalbe to the child thread.
+#ifdef LLVM_LIBC_ARCH_X86_64
   long register clone_result asm("rax");
-  clone_result = __llvm_libc::syscall(SYS_clone, clone_flags, adjusted_stack,
-                                      &thread->__tid, clear_tid_address, 0);
+  clone_result = __llvm_libc::syscall(
+      SYS_clone, clone_flags, adjusted_stack,
+      &thread->__tid,    // The address where the child tid is written
+      clear_tid_address, // The futex where the child thread status is signalled
+      0                  // Set TLS to null for now.
+  );
+#elif defined(LLVM_LIBC_ARCH_AARCH64)
+  long register clone_result asm("x0");
+  clone_result = __llvm_libc::syscall(
+      SYS_clone, clone_flags, adjusted_stack,
+      &thread->__tid,   // The address where the child tid is written
+      0,                // Set TLS to null for now.
+      clear_tid_address // The futex where the child thread status is signalled
+  );
+#else
+#error "Unsupported architecture for the clone syscall."
+#endif
 
   if (clone_result == 0) {
     start_thread();
