@@ -19,7 +19,6 @@
 // Current limitations:
 // - It does not yet handle integer ranges. We do support "literal constants",
 //   but that's off by default under an option.
-// - Only 1 argument per function is specialised,
 // - The cost-model could be further looked into (it mainly focuses on inlining
 //   benefits),
 // - We are not yet caching analysis results, but profiling and checking where
@@ -210,35 +209,39 @@ static void constantArgPropagation(FuncList &WorkList, Module &M,
   // are any new constant values for the call instruction via
   // stack variables.
   for (auto *F : WorkList) {
-    // TODO: Generalize for any read only arguments.
-    if (F->arg_size() != 1)
-      continue;
-
-    auto &Arg = *F->arg_begin();
-    if (!Arg.onlyReadsMemory() || !Arg.getType()->isPointerTy())
-      continue;
 
     for (auto *User : F->users()) {
+
       auto *Call = dyn_cast<CallInst>(User);
       if (!Call)
-        break;
-      auto *ArgOp = Call->getArgOperand(0);
-      auto *ArgOpType = ArgOp->getType();
-      auto *ConstVal = getConstantStackValue(Call, ArgOp, Solver);
-      if (!ConstVal)
-        break;
+        continue;
 
-      Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
-                                     GlobalValue::InternalLinkage, ConstVal,
-                                     "funcspec.arg");
+      bool Changed = false;
+      for (const Use &U : Call->args()) {
+        unsigned Idx = Call->getArgOperandNo(&U);
+        Value *ArgOp = Call->getArgOperand(Idx);
+        Type *ArgOpType = ArgOp->getType();
 
-      if (ArgOpType != ConstVal->getType())
-        GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOp->getType());
+        if (!Call->onlyReadsMemory(Idx) || !ArgOpType->isPointerTy())
+          continue;
 
-      Call->setArgOperand(0, GV);
+        auto *ConstVal = getConstantStackValue(Call, ArgOp, Solver);
+        if (!ConstVal)
+          continue;
+
+        Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
+                                       GlobalValue::InternalLinkage, ConstVal,
+                                       "funcspec.arg");
+        if (ArgOpType != ConstVal->getType())
+          GV = ConstantExpr::getBitCast(cast<Constant>(GV), ArgOpType);
+
+        Call->setArgOperand(Idx, GV);
+        Changed = true;
+      }
 
       // Add the changed CallInst to Solver Worklist
-      Solver.visitCall(*Call);
+      if (Changed)
+        Solver.visitCall(*Call);
     }
   }
 }
