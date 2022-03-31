@@ -147,8 +147,7 @@ public:
                   AssumptionCache *AC = nullptr, bool AllowVarArgs = false,
                   bool AllowAlloca = false,
                   BasicBlock *AllocationBlock = nullptr,
-                  std::string Suffix = "",
-                  bool KeepOldBlocks = false);
+                  std::string Suffix = "", bool KeepOldBlocks = false);
 
     /// Create a code extractor for a loop body.
     ///

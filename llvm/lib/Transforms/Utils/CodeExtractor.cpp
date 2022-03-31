@@ -253,7 +253,8 @@ CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              bool AllowVarArgs, bool AllowAlloca,
-                             BasicBlock *AllocationBlock, std::string Suffix, bool KeepOldBlocks)
+                             BasicBlock *AllocationBlock, std::string Suffix,
+                             bool KeepOldBlocks)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AC(AC), AllocationBlock(AllocationBlock),
       AllowVarArgs(AllowVarArgs), KeepOldBlocks(KeepOldBlocks),
@@ -266,7 +267,8 @@ CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BranchProbabilityInfo *BPI, AssumptionCache *AC,
                              std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
-      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false), KeepOldBlocks(false),
+      BPI(BPI), AC(AC), AllocationBlock(nullptr), AllowVarArgs(false),
+      KeepOldBlocks(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
                                      /* AllowAlloca */ false,
@@ -1702,7 +1704,7 @@ void CodeExtractor::emitFunctionBody(
       assert(NewTarget && "Unknown target block!");
 
       if (KeepOldBlocks) {
-          VMap[OldTarget] = NewTarget;
+        VMap[OldTarget] = NewTarget;
       } else {
         // rewrite the original branch instruction with this new target
         TI->setSuccessor(i, NewTarget);
@@ -1763,9 +1765,9 @@ void CodeExtractor::emitFunctionBody(
       ++ScalarAI;
   }
 
-  for (Value* Output : outputs) {
-      if (KeepOldBlocks) 
-          Output = VMap.lookup(Output);
+  for (Value *Output : outputs) {
+    if (KeepOldBlocks)
+      Output = VMap.lookup(Output);
 
     // Find proper insertion point.
     // In case Output is an invoke, we insert the store at the beginning in the
