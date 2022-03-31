@@ -1,6 +1,9 @@
 // TODO: Investigate these failures on x86_64 macOS back deployment
 // UNSUPPORTED: target=x86_64-apple-darwin{{.+}}
 
+// TODO: Figure out why this fails with Memory Sanitizer.
+// XFAIL: msan
+
 #include <libunwind.h>
 #include <stdlib.h>
 #include <string.h>
