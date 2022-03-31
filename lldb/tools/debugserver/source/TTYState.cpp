@@ -18,7 +18,7 @@
 TTYState::TTYState()
     : m_fd(-1), m_tflags(-1), m_ttystateErr(-1), m_processGroup(-1) {}
 
-TTYState::~TTYState() {}
+TTYState::~TTYState() = default;
 
 bool TTYState::GetTTYState(int fd, bool saveProcessGroup) {
   if (fd >= 0 && ::isatty(fd)) {
@@ -62,7 +62,7 @@ bool TTYState::SetTTYState() const {
 
 TTYStateSwitcher::TTYStateSwitcher() : m_currentState(~0) {}
 
-TTYStateSwitcher::~TTYStateSwitcher() {}
+TTYStateSwitcher::~TTYStateSwitcher() = default;
 
 bool TTYStateSwitcher::GetState(uint32_t idx, int fd, bool saveProcessGroup) {
   if (ValidStateIndex(idx))

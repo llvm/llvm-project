@@ -108,12 +108,27 @@ struct CollapseShapeOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto collapseShapeOp = cast<tensor::CollapseShapeOp>(op);
+    RankedTensorType tensorResultType = collapseShapeOp.getResultType();
     Value buffer =
         *state.getBuffer(rewriter, collapseShapeOp->getOpOperand(0) /*src*/);
-    Type resultType =
-        getMemRefType(collapseShapeOp.getResultType(), state.getOptions());
+
+    if (tensorResultType.getRank() == 0) {
+      // 0-d collapses must go through a different op builder.
+      auto bufferType = buffer.getType().cast<MemRefType>();
+      // Assume identity layout: No offset.
+      assert(bufferType.getLayout().isIdentity() &&
+             "non-zero offset for 0-d collapse not supported");
+      MemRefLayoutAttrInterface layout;
+      auto resultType = MemRefType::get({}, tensorResultType.getElementType(),
+                                        layout, bufferType.getMemorySpace());
+      replaceOpWithNewBufferizedOp<memref::CollapseShapeOp>(
+          rewriter, op, resultType, buffer, collapseShapeOp.reassociation());
+      return success();
+    }
+
+    // Result type is inferred by the builder.
     replaceOpWithNewBufferizedOp<memref::CollapseShapeOp>(
-        rewriter, op, resultType, buffer, collapseShapeOp.reassociation());
+        rewriter, op, buffer, collapseShapeOp.getReassociationIndices());
     return success();
   }
 };
@@ -175,12 +190,15 @@ struct ExpandShapeOpInterface
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           BufferizationState &state) const {
     auto expandShapeOp = cast<tensor::ExpandShapeOp>(op);
+    auto tensorResultType = expandShapeOp.getResultType();
     Value buffer =
         *state.getBuffer(rewriter, expandShapeOp->getOpOperand(0) /*src*/);
-    Type resultType =
-        getMemRefType(expandShapeOp.getResultType(), state.getOptions());
+
+    // Memref result type is inferred by the builder based on reassociation
+    // indices and result shape.
     replaceOpWithNewBufferizedOp<memref::ExpandShapeOp>(
-        rewriter, op, resultType, buffer, expandShapeOp.reassociation());
+        rewriter, op, tensorResultType.getShape(), buffer,
+        expandShapeOp.getReassociationIndices());
     return success();
   }
 };

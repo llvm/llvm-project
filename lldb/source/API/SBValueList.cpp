@@ -19,9 +19,9 @@ using namespace lldb_private;
 
 class ValueListImpl {
 public:
-  ValueListImpl() {}
+  ValueListImpl() = default;
 
-  ValueListImpl(const ValueListImpl &rhs) : m_values(rhs.m_values) {}
+  ValueListImpl(const ValueListImpl &rhs) = default;
 
   ValueListImpl &operator=(const ValueListImpl &rhs) {
     if (this == &rhs)
