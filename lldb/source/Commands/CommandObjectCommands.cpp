@@ -206,7 +206,7 @@ class CommandObjectCommandsAlias : public CommandObjectRaw {
 protected:
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1022,7 +1022,7 @@ private:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1267,7 +1267,7 @@ public:
 protected:
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1422,7 +1422,7 @@ public:
 protected:
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1880,7 +1880,7 @@ public:
 protected:
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 

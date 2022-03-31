@@ -179,7 +179,7 @@ public:
 
 class BreakpointDummyOptionGroup : public OptionGroup {
 public:
-  BreakpointDummyOptionGroup() {}
+  BreakpointDummyOptionGroup() = default;
 
   ~BreakpointDummyOptionGroup() override = default;
 
@@ -252,7 +252,7 @@ public:
 
   class CommandOptions : public OptionGroup {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1123,7 +1123,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1254,7 +1254,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1406,7 +1406,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -1623,7 +1623,7 @@ public:
 
 class BreakpointAccessOptionGroup : public OptionGroup {
 public:
-  BreakpointAccessOptionGroup() {}
+  BreakpointAccessOptionGroup() = default;
 
   ~BreakpointAccessOptionGroup() override = default;
 
@@ -2064,7 +2064,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -2260,7 +2260,7 @@ public:
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
