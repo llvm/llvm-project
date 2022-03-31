@@ -2723,8 +2723,12 @@ def TargetClones : InheritableAttr {
     StringRef getFeatureStr(unsigned Index) const {
       return *(featuresStrs_begin() + Index);
     }
-    // 'default' is always moved to the end, so it isn't considered
-    // when mangling the index.
+    // Given an index into the 'featuresStrs' sequence, compute a unique
+    // ID to be used with function name mangling for the associated variant.
+    // This mapping is necessary due to a requirement that the mangling ID
+    // used for the "default" variant be the largest mangling ID in the
+    // variant set. Duplicate variants present in 'featuresStrs' are also
+    // assigned their own unique ID (the mapping is bijective).
     unsigned getMangledIndex(unsigned Index) const {
       if (getFeatureStr(Index) == "default")
         return std::count_if(featuresStrs_begin(), featuresStrs_end(),
@@ -2734,9 +2738,10 @@ def TargetClones : InheritableAttr {
                            [](StringRef S) { return S != "default"; });
     }
 
-    // True if this is the first of this version to appear in the config string.
-    // This is used to make sure we don't try to emit this function multiple
-    // times.
+    // Given an index into the 'featuresStrs' sequence, determine if the
+    // index corresponds to the first instance of the named variant. This
+    // is used to skip over duplicate variant instances when iterating over
+    // 'featuresStrs'.
     bool isFirstOfVersion(unsigned Index) const {
       StringRef FeatureStr(getFeatureStr(Index));
       return 0 == std::count_if(
