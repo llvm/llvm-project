@@ -4,7 +4,7 @@
 
 // Confirm CL2.0 Clang builtins are not available in earlier versions and in OpenCL C 3.0 without required features.
 
-kernel void dse_builtins() {
+kernel void dse_builtins(void) {
   int tmp;
   enqueue_kernel(tmp, tmp, tmp, ^(void) { // expected-error{{implicit declaration of function 'enqueue_kernel' is invalid in OpenCL}}
     return;
@@ -22,7 +22,7 @@ kernel void dse_builtins() {
 #endif
 }
 
-void pipe_builtins() {
+void pipe_builtins(void) {
   int tmp;
 
   foo(void); // expected-error{{implicit declaration of function 'foo' is invalid in OpenCL}}

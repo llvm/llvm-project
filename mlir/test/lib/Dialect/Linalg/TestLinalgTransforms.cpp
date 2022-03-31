@@ -132,6 +132,11 @@ struct TestLinalgTransforms
       llvm::cl::desc("Specify the type of loops to generate: for, parallel or "
                      "tiled_loop"),
       llvm::cl::init("for")};
+  Option<bool> testBubbleUpExtractSliceOpPattern{
+      *this, "test-bubble-up-extract-slice-op-pattern",
+      llvm::cl::desc("Test rewrite of linalgOp + extract_slice into "
+                     "extract_slice + linalgOp"),
+      llvm::cl::init(false)};
 };
 } // namespace
 
@@ -635,6 +640,12 @@ static void applySplitReduction(FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
+static void applyBubbleUpExtractSliceOpPattern(FuncOp funcOp) {
+  RewritePatternSet patterns(funcOp.getContext());
+  populateBubbleUpExtractSliceOpPatterns(patterns);
+  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+}
+
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
   auto lambda = [&](void *) {
@@ -686,6 +697,8 @@ void TestLinalgTransforms::runOnOperation() {
                             /*peeledLoops=*/{}, /*scalarizeDynamicDims=*/true);
   if (testSplitReduction)
     return applySplitReduction(getOperation());
+  if (testBubbleUpExtractSliceOpPattern)
+    return applyBubbleUpExtractSliceOpPattern(getOperation());
 }
 
 namespace mlir {

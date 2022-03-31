@@ -20,8 +20,6 @@
 namespace mlir {
 namespace presburger {
 
-class PresburgerLocalSpace;
-
 /// Kind of identifier. Implementation wise SetDims are treated as Range
 /// ids, and spaces with no distinction between dimension ids are treated
 /// as relations with zero domain ids.

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Rewrite/PatternApplicator.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -140,8 +141,18 @@ bool GreedyPatternRewriteDriver::simplify(MutableArrayRef<Region> regions) {
 
     if (!config.useTopDownTraversal) {
       // Add operations to the worklist in postorder.
-      for (auto &region : regions)
-        region.walk([this](Operation *op) { addToWorklist(op); });
+      for (auto &region : regions) {
+        region.walk([this](Operation *op) {
+          // If we aren't processing top-down, check for existing constants when
+          // populating the worklist. This avoids accidentally reversing the
+          // constant order during processing.
+          Attribute constValue;
+          if (matchPattern(op, m_Constant(&constValue)))
+            if (!folder.insertKnownConstant(op, constValue))
+              return;
+          addToWorklist(op);
+        });
+      }
     } else {
       // Add all nested operations to the worklist in preorder.
       for (auto &region : regions)

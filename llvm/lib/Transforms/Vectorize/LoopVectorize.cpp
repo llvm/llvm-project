@@ -5222,8 +5222,8 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
   }
 
   ElementCount MaxVF = MaxVectorElementCount;
-  if (TTI.shouldMaximizeVectorBandwidth() ||
-      (MaximizeBandwidth && isScalarEpilogueAllowed())) {
+  if (MaximizeBandwidth || (MaximizeBandwidth.getNumOccurrences() == 0 &&
+                            TTI.shouldMaximizeVectorBandwidth())) {
     auto MaxVectorElementCountMaxBW = ElementCount::get(
         PowerOf2Floor(WidestRegister.getKnownMinSize() / SmallestType),
         ComputeScalableMaxVF);
@@ -5261,6 +5261,11 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
         MaxVF = MinVF;
       }
     }
+
+    // Invalidate any widening decisions we might have made, in case the loop
+    // requires prediction (decided later), but we have already made some
+    // load/store widening decisions.
+    invalidateCostModelingDecisions();
   }
   return MaxVF;
 }
