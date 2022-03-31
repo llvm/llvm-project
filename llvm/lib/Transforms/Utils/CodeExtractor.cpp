@@ -1559,12 +1559,9 @@ void CodeExtractor::emitFunctionBody(
     BasicBlock *OldTarget = P.value();
     size_t SuccNum = P.index();
 
-    BasicBlock *&NewTarget = ExitBlockMap[OldTarget];
-
-    // If we don't already have an exit stub for this non-extracted
-    // destination, create one now!
-    NewTarget = BasicBlock::Create(Context, OldTarget->getName() + ".exitStub",
-                                   newFunction);
+    BasicBlock *NewTarget = BasicBlock::Create(
+        Context, OldTarget->getName() + ".exitStub", newFunction);
+    ExitBlockMap[OldTarget] = NewTarget;
 
     Value *brVal = nullptr;
     assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
@@ -1573,8 +1570,7 @@ void CodeExtractor::emitFunctionBody(
     case 1:
       break; // No value needed.
     case 2:  // Conditional branch, return a bool
-      brVal = ConstantInt::get(Type::getInt1Ty(Context),
-                               !SuccNum); // MK: why the invert?
+      brVal = ConstantInt::get(Type::getInt1Ty(Context), !SuccNum);
       break;
     default:
       brVal = ConstantInt::get(Type::getInt16Ty(Context), SuccNum);
@@ -1824,9 +1820,11 @@ CallInst *CodeExtractor::emitReplacerCall(
     TheSwitch->eraseFromParent();
     break;
   case 2:
-    BranchInst::Create(
-        TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2), call,
-        TheSwitch); // MK: tight order (branch is switched if boolean)
+    // Only two destinations, convert to a condition branch.
+    // Remark: This also swaps the target branches:
+    // 0 -> false -> getSuccessor(2); 1 -> true -> getSuccessor(1)
+    BranchInst::Create(TheSwitch->getSuccessor(1), TheSwitch->getSuccessor(2),
+                       call, TheSwitch);
     TheSwitch->eraseFromParent();
     break;
   default:
