@@ -1770,7 +1770,26 @@ ShuffleOp::inferReturnTypes(MLIRContext *, Optional<Location>,
   return success();
 }
 
+static bool isStepIndexArray(ArrayAttr idxArr, int64_t begin, int64_t width) {
+  int64_t expected = begin;
+  return idxArr.size() == width &&
+         llvm::all_of(idxArr.getAsValueRange<IntegerAttr>(),
+                      [&expected](auto attr) {
+                        return attr.getZExtValue() == expected++;
+                      });
+}
+
 OpFoldResult vector::ShuffleOp::fold(ArrayRef<Attribute> operands) {
+  // fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1
+  if (!getV1VectorType().isScalable() &&
+      isStepIndexArray(getMask(), 0, getV1VectorType().getDimSize(0)))
+    return getV1();
+  // fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2
+  if (!getV1VectorType().isScalable() && !getV2VectorType().isScalable() &&
+      isStepIndexArray(getMask(), getV1VectorType().getDimSize(0),
+                       getV2VectorType().getDimSize(0)))
+    return getV2();
+
   Attribute lhs = operands.front(), rhs = operands.back();
   if (!lhs || !rhs)
     return {};
