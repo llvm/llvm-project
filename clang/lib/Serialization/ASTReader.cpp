@@ -3101,6 +3101,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       case IDENTIFIER_OFFSET:
       case INTERESTING_IDENTIFIERS:
       case STATISTICS:
+      case PP_ASSUME_NONNULL_LOC:
       case PP_CONDITIONAL_STACK:
       case PP_COUNTER_VALUE:
       case SOURCE_LOCATION_OFFSETS:
@@ -3361,6 +3362,14 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
         }
       }
       break;
+
+    case PP_ASSUME_NONNULL_LOC: {
+      unsigned Idx = 0;
+      if (!Record.empty())
+        PP.setPreambleRecordedPragmaAssumeNonNullLoc(
+            ReadSourceLocation(F, Record, Idx));
+      break;
+    }
 
     case PP_CONDITIONAL_STACK:
       if (!Record.empty()) {
