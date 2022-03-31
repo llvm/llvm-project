@@ -857,7 +857,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 
   // Check if the backedge taken count is needed, and if so build it.
   if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.VectorPreHeader->getTerminator());
+    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
     auto *TCMO = Builder.CreateSub(TripCountV,
                                    ConstantInt::get(TripCountV->getType(), 1),
                                    "trip.count.minus.1");
@@ -898,16 +898,17 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
 /// LoopVectorBody basic-block was created for this. Introduce additional
 /// basic-blocks as needed, and fill them all.
 void VPlan::execute(VPTransformState *State) {
-  // Set the reverse mapping from VPValues to Values for code generation.
+  // 0. Set the reverse mapping from VPValues to Values for code generation.
   for (auto &Entry : Value2VPValue)
     State->VPValue2Value[Entry.second] = Entry.first;
 
-  // Initialize CFG state.
-  State->CFG.PrevVPBB = nullptr;
-  BasicBlock *VectorHeaderBB = State->CFG.VectorPreHeader->getSingleSuccessor();
-  State->CFG.PrevBB = VectorHeaderBB;
-  State->CFG.ExitBB = VectorHeaderBB->getSingleSuccessor();
+  BasicBlock *VectorPreHeaderBB = State->CFG.PrevBB;
+  State->CFG.VectorPreHeader = VectorPreHeaderBB;
+  BasicBlock *VectorHeaderBB = VectorPreHeaderBB->getSingleSuccessor();
+  assert(VectorHeaderBB && "Loop preheader does not have a single successor.");
+
   State->CurrentVectorLoop = State->LI->getLoopFor(VectorHeaderBB);
+  State->CFG.ExitBB = State->CurrentVectorLoop->getExitBlock();
 
   // Remove the edge between Header and Latch to allow other connections.
   // Temporarily terminate with unreachable until CFG is rewired.
@@ -919,6 +920,9 @@ void VPlan::execute(VPTransformState *State) {
   State->Builder.SetInsertPoint(Terminator);
 
   // Generate code in loop body.
+  State->CFG.PrevVPBB = nullptr;
+  State->CFG.PrevBB = VectorHeaderBB;
+
   for (VPBlockBase *Block : depth_first(Entry))
     Block->execute(State);
 
