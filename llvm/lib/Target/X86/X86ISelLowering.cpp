@@ -18699,10 +18699,6 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                               Zeroable, Subtarget, DAG))
     return PSHUFB;
 
-  // VBMI can use VPERMV/VPERMV3 byte shuffles.
-  if (Subtarget.hasVBMI())
-    return lowerShuffleWithPERMV(DL, MVT::v64i8, Mask, V1, V2, Subtarget, DAG);
-
   // Try to create an in-lane repeating shuffle mask and then shuffle the
   // results into the target lanes.
   if (SDValue V = lowerShuffleAsRepeatedMaskAndLanePermute(
@@ -18723,6 +18719,10 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (SDValue Result = lowerShuffleAsLanePermuteAndRepeatedMask(
             DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
       return Result;
+
+  // VBMI can use VPERMV/VPERMV3 byte shuffles.
+  if (Subtarget.hasVBMI())
+    return lowerShuffleWithPERMV(DL, MVT::v64i8, Mask, V1, V2, Subtarget, DAG);
 
   // FIXME: Implement direct support for this type!
   return splitAndLowerShuffle(DL, MVT::v64i8, V1, V2, Mask, DAG);
