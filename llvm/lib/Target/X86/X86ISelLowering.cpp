@@ -18724,7 +18724,6 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   if (Subtarget.hasVBMI())
     return lowerShuffleWithPERMV(DL, MVT::v64i8, Mask, V1, V2, Subtarget, DAG);
 
-  // FIXME: Implement direct support for this type!
   return splitAndLowerShuffle(DL, MVT::v64i8, V1, V2, Mask, DAG);
 }
 
