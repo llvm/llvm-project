@@ -219,6 +219,23 @@ InstructionCost RISCVTTIImpl::getGatherScatterOpCost(
   return NumLoads * MemOpCost;
 }
 
+InstructionCost
+RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                    TTI::TargetCostKind CostKind) {
+  auto *RetTy = ICA.getReturnType();
+  switch (ICA.getID()) {
+  // TODO: add more intrinsic
+  case Intrinsic::experimental_stepvector: {
+    unsigned Cost = 1; // vid
+    auto LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    return Cost + (LT.first - 1);
+  }
+  default:
+    break;
+  }
+  return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
 InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
                                                Type *Src,
                                                TTI::CastContextHint CCH,

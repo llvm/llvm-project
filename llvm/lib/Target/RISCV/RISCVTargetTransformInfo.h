@@ -83,6 +83,9 @@ public:
                                  VectorType *SubTp,
                                  ArrayRef<Value *> Args = None);
 
+  InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
+                                        TTI::TargetCostKind CostKind);
+
   InstructionCost getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
                                          const Value *Ptr, bool VariableMask,
                                          Align Alignment,
