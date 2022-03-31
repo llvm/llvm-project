@@ -699,6 +699,14 @@ void SwitchOp::getSuccessorRegions(mlir::RegionBranchPoint point,
 
 LogicalResult SwitchOp::verify() { return success(); }
 
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value cond,
+                     function_ref<void(OpBuilder &, Location)> switchBuilder) {
+  assert(switchBuilder && "the builder callback for regions must be present");
+  result.addOperands({cond});
+  OpBuilder::InsertionGuard guard(builder);
+  switchBuilder(builder, result.location);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
