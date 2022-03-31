@@ -1303,35 +1303,44 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape"> {
   let summary = "operation to produce a memref with a smaller rank.";
   let description = [{
     The `memref.collapse_shape` op produces a new view with a smaller rank
-    whose sizes are a reassociation of the original `view`. Depending on
-    whether or not the reassociated MemRefType is contiguous, the resulting
-    memref may require explicit alloc and copies.
+    whose sizes are a reassociation of the original `view`. The operation is
+    limited to such reassociations, where subsequent, contiguous dimensions are
+    collapsed into a single dimension. Such reassociations never require
+    additional allocs or copies.
+
+    Collapsing non-contiguous dimensions is undefined behavior. When a group of
+    dimensions can be statically proven to be non-contiguous, collapses of such
+    groups are rejected in the verifier on a best-effort basis. In the general
+    case, collapses of dynamically-sized dims with dynamic strides cannot be
+    proven to be contiguous or non-contiguous due to limitations in the memref
+    type.
 
     A reassociation is defined as a continuous grouping of dimensions and is
     represented with an array of I64ArrayAttr attribute.
 
-    For now, it is assumed that either:
-      1. a reassociation produces and consumes contiguous MemRefType or,
-      2. the reshape op will be folded into its consumers (by changing the shape
-         of the computations).
-    All other cases are undefined behavior and a reshape op may not lower to
-    LLVM if it cannot be proven statically that it does not require alloc+copy.
+    Note: Only the dimensions within a reassociation group must be contiguous.
+    The remaining dimensions may be non-contiguous.
 
-    The result memref type of a reshape can be zero-ranked if the operand
-    memref type is statically shaped with all dimensions being unit extent. In
-    such case the reassociation map is empty.
-
-    The verification rule is that the reassociation maps are applied to the
-    operand memref with the larger rank to obtain the result memref with the
-    smaller rank.
+    The result memref type can be zero-ranked if the source memref type is
+    statically shaped with all dimensions being unit extent. In such a case, the
+    reassociation indices must be empty.
 
     Examples:
 
     ```mlir
     // Dimension collapse (i, j) -> i' and k -> k'
     %1 = memref.collapse_shape %0 [[0, 1], [2]] :
-      memref<?x?x?xf32, stride_spec> into memref<?x?xf32, stride_spec_2>
+        memref<?x?x?xf32, stride_spec> into memref<?x?xf32, stride_spec_2>
     ```
+
+    For simplicity, this op may not be used to cast dynamicity of dimension
+    sizes and/or strides. I.e., a result dimension must be dynamic if and only
+    if at least one dimension in the corresponding reassociation group is
+    dynamic. Similarly, the stride of a result dimension must be dynamic if and
+    only if the corresponding start dimension in the source type is dynamic.
+
+    Note: This op currently assumes that the inner strides are of the
+    source/result layout map are the faster-varying ones.
   }];
   let builders = [
     // Builders for a contracting reshape whose result type is computed from

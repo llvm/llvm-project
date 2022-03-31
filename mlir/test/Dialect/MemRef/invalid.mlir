@@ -409,7 +409,7 @@ func @expand_shape(%arg0: memref<f32>) {
 // -----
 
 func @collapse_shape_to_higher_rank(%arg0: memref<f32>) {
-  // expected-error @+1 {{expected the type 'memref<f32>' to have higher rank than the type = 'memref<1xf32>'}}
+  // expected-error @+1 {{op reassociation index 0 is out of bounds}}
   %0 = memref.collapse_shape %arg0 [[0]] : memref<f32> into memref<1xf32>
 }
 
@@ -432,15 +432,8 @@ func @expand_shape_invalid_result_layout(
 
 // -----
 
-func @collapse_shape(%arg0: memref<?xf32>) {
-  // expected-error @+1 {{expected to collapse or expand dims}}
-  %0 = memref.collapse_shape %arg0 [[0]] : memref<?xf32> into memref<?xf32>
-}
-
-// -----
-
 func @collapse_shape_mismatch_indices_num(%arg0: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected rank of the collapsed type(2) to be the number of reassociation maps(1)}}
+  // expected-error @+1 {{invalid number of reassociation groups: found 1, expected 2}}
   %0 = memref.collapse_shape %arg0 [[0, 1]] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }
@@ -448,15 +441,26 @@ func @collapse_shape_mismatch_indices_num(%arg0: memref<?x?x?xf32>) {
 // -----
 
 func @collapse_shape_invalid_reassociation(%arg0: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected reassociation map #1 to be valid and contiguous}}
+  // expected-error @+1 {{reassociation indices must be contiguous}}
   %0 = memref.collapse_shape %arg0 [[0, 1], [1, 2]] :
     memref<?x?x?xf32> into memref<?x?xf32, offset: 0, strides: [?, 1]>
 }
 
 // -----
 
+func @collapse_shape_reshaping_non_contiguous(
+    %arg0: memref<3x4x5xf32, offset: 0, strides: [270, 50, 10]>) {
+  // expected-error @+1 {{invalid source layout map or collapsing non-contiguous dims}}
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] :
+      memref<3x4x5xf32, offset: 0, strides: [270, 50, 10]>
+      into memref<12x5xf32, offset: 0, strides: [50, 1]>
+  return
+}
+
+// -----
+
 func @collapse_shape_wrong_collapsed_type(%arg0: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected collapsed type to be 'memref<?x?xf32>', but got 'memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>'}}
+  // expected-error @+1 {{expected collapsed type to be 'memref<?x?xf32>' but found 'memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>'}}
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]] :
     memref<?x?x?xf32> into memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d0 * s0 + d1)>>
 }
@@ -485,7 +489,7 @@ func @expand_shape_illegal_static_memref
 
 func @collapse_shape_illegal_static_memref
   (%arg0: memref<2x3x2x4x5xf32>) -> memref<2x3x20xf32> {
-  // expected-error @+1 {{expected dimension 2 of collapsed type to be static value of 40}}
+  // expected-error @+1 {{collapsed dim size (20) must equal reassociation group size (40)}}
   %0 = memref.collapse_shape %arg0 [[0], [1], [2, 3, 4]]
       : memref<2x3x2x4x5xf32> into memref<2x3x20xf32>
   return %0 : memref<2x3x20xf32>
@@ -537,7 +541,7 @@ func @expand_shape_invalid_static_dim_size(%arg0 : memref<?x21xf32>)
 
 func @collapse_shape_illegal_mixed_memref(%arg0 : memref<?x4x5xf32>)
     -> memref<?x?xf32> {
-  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 5}}
+  // expected-error @+1 {{collapsed dim (1) must be dynamic if and only if reassociation group is dynamic}}
   %0 = memref.collapse_shape %arg0 [[0, 1], [2]]
       : memref<?x4x5xf32> into memref<?x?xf32>
   return %0 : memref<?x?xf32>
@@ -547,7 +551,7 @@ func @collapse_shape_illegal_mixed_memref(%arg0 : memref<?x4x5xf32>)
 
 func @collapse_shape_illegal_mixed_memref_2(%arg0 : memref<?x4x5xf32>)
     -> memref<?x?xf32> {
-  // expected-error @+1 {{expected dimension 1 of collapsed type to be static value of 20}}
+  // expected-error @+1 {{collapsed dim (1) must be dynamic if and only if reassociation group is dynamic}}
   %0 = memref.collapse_shape %arg0 [[0], [1, 2]]
       : memref<?x4x5xf32> into memref<?x?xf32>
   return %0 : memref<?x?xf32>

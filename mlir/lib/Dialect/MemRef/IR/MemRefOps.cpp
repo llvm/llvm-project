@@ -1701,105 +1701,6 @@ static bool isReshapableDimBand(unsigned dim, unsigned extent,
   return true;
 }
 
-/// Compute the MemRefType obtained by applying the `reassociation` (which is
-/// expected to be valid) to `type`.
-/// If `type` is Contiguous MemRefType, this always produce a contiguous
-/// MemRefType.
-static MemRefType
-computeReshapeCollapsedType(MemRefType type,
-                            ArrayRef<AffineMap> reassociation) {
-  auto sizes = type.getShape();
-  AffineExpr offset;
-  SmallVector<AffineExpr, 4> strides;
-  auto status = getStridesAndOffset(type, strides, offset);
-  auto isIdentityLayout = type.getLayout().isIdentity();
-  (void)status;
-  assert(succeeded(status) && "expected strided memref");
-
-  SmallVector<int64_t, 4> newSizes;
-  newSizes.reserve(reassociation.size());
-  SmallVector<AffineExpr, 4> newStrides;
-  newStrides.reserve(reassociation.size());
-
-  // Use the fact that reassociation is valid to simplify the logic: only use
-  // each map's rank.
-  assert(isReassociationValid(reassociation) && "invalid reassociation");
-  unsigned currentDim = 0;
-  for (AffineMap m : reassociation) {
-    unsigned dim = m.getNumResults();
-    int64_t size = 1;
-    AffineExpr stride = strides[currentDim + dim - 1];
-    if (isIdentityLayout ||
-        isReshapableDimBand(currentDim, dim, sizes, strides)) {
-      for (unsigned d = 0; d < dim; ++d) {
-        int64_t currentSize = sizes[currentDim + d];
-        if (ShapedType::isDynamic(currentSize)) {
-          size = ShapedType::kDynamicSize;
-          break;
-        }
-        size *= currentSize;
-      }
-    } else {
-      size = ShapedType::kDynamicSize;
-      stride = AffineExpr();
-    }
-    newSizes.push_back(size);
-    newStrides.push_back(stride);
-    currentDim += dim;
-  }
-
-  // Early-exit: if `type` is contiguous, the result must be contiguous.
-  if (canonicalizeStridedLayout(type).getLayout().isIdentity())
-    return MemRefType::Builder(type).setShape(newSizes).setLayout({});
-
-  // Convert back to int64_t because we don't have enough information to create
-  // new strided layouts from AffineExpr only. This corresponds to a case where
-  // copies may be necessary.
-  int64_t intOffset = ShapedType::kDynamicStrideOrOffset;
-  if (auto o = offset.dyn_cast<AffineConstantExpr>())
-    intOffset = o.getValue();
-  SmallVector<int64_t, 4> intStrides;
-  intStrides.reserve(strides.size());
-  for (auto stride : newStrides) {
-    if (auto cst = stride.dyn_cast_or_null<AffineConstantExpr>())
-      intStrides.push_back(cst.getValue());
-    else
-      intStrides.push_back(ShapedType::kDynamicStrideOrOffset);
-  }
-  auto layout =
-      makeStridedLinearLayoutMap(intStrides, intOffset, type.getContext());
-  return canonicalizeStridedLayout(
-      MemRefType::Builder(type).setShape(newSizes).setLayout(
-          AffineMapAttr::get(layout)));
-}
-
-void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
-                            ArrayRef<ReassociationIndices> reassociation,
-                            ArrayRef<NamedAttribute> attrs) {
-  auto memRefType = src.getType().cast<MemRefType>();
-  auto resultType = computeReshapeCollapsedType(
-      memRefType, getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
-                      b.getContext(), reassociation)));
-  build(b, result, resultType, src, attrs);
-  result.addAttribute(getReassociationAttrName(),
-                      getReassociationIndicesAttribute(b, reassociation));
-}
-
-template <typename ReshapeOp,
-          bool isExpansion = std::is_same<ReshapeOp, ExpandShapeOp>::value>
-static LogicalResult verifyReshapeOp(ReshapeOp op, MemRefType expandedType,
-                                     MemRefType collapsedType) {
-  if (failed(
-          verifyReshapeLikeTypes(op, expandedType, collapsedType, isExpansion)))
-    return failure();
-  auto maps = op.getReassociationMaps();
-  MemRefType expectedType = computeReshapeCollapsedType(expandedType, maps);
-  if (collapsedType != expectedType)
-    return op.emitOpError("expected collapsed type to be ")
-           << expectedType << ", but got " << collapsedType;
-  return success();
-}
-
 /// Compute the layout map after expanding a given source MemRef type with the
 /// specified reassociation indices.
 static FailureOr<AffineMap>
@@ -1925,8 +1826,174 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
               CollapseMixedReshapeOps<ExpandShapeOp, CollapseShapeOp>>(context);
 }
 
+/// Compute the layout map after collapsing a given source MemRef type with the
+/// specified reassociation indices.
+///
+/// Note: All collapsed dims in a reassociation group must be contiguous. It is
+/// not possible to check this by inspecting a MemRefType in the general case.
+/// But it is assumed. If this is not the case, the behavior is undefined.
+static FailureOr<AffineMap>
+computeCollapsedLayoutMap(MemRefType srcType, ArrayRef<int64_t> resultShape,
+                          ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<int64_t> srcStrides, resultStrides;
+  int64_t srcOffset;
+  if (failed(getStridesAndOffset(srcType, srcStrides, srcOffset)))
+    return failure();
+  assert(resultShape.size() == reassociation.size() && "invalid reassociation");
+
+  // Iterate over all reassociation groups from the back. Example:
+  // source shape   = [20, ?,   5, 10, 2]
+  // source strides = [ ?, ?, 800, 80, 4]
+  // reassociation  = [[0, 1], [2, 3], [4]]
+  // result shape   = [     ?,     50,   2]
+  //
+  // Note: The result shape is not needed in this computation. It is just used
+  // check that the size of the reassociation is correct.
+  for (ReassociationIndices group : llvm::reverse(reassociation)) {
+    // A result dim has the same stride as the first dimension (least
+    // significant one) in the corresponding reassociation group. E.g.:
+    // reassociation  = [[0, 1], [2, 3], [4]]
+    //                       |       |    |
+    //                       v       v    v
+    //                       ?      80    4
+    int64_t resultStride = srcStrides[group.pop_back_val()];
+
+    // The following is just a best-effort check for non-contiguous source
+    // strides within a reassociation group. E.g.:
+    // reassociation  = [[0, 1], [2, 3], [4]]
+    //                           ^^^^^^
+    // Iteratively compute the next stride within the reassociation group
+    // one-by-one. Start with the stride computed above. E.g.:
+    // reassociation  = [[0, 1], [2, 3], [4]]
+    //                               |
+    //                               v
+    //                  nextStride = 80
+    int64_t nextStride = resultStride;
+    for (int64_t nextDim : llvm::reverse(group)) {
+      // Next expected stride is previous stride multiplied by dim size, e.g.:
+      // reassociation  = [[0, 1], [2, 3], [4]]
+      //                            |
+      //                            v
+      //    nextStride = 80 * 10 = 800
+      nextStride =
+          computeNextStride(nextStride, srcType.getDimSize(nextDim + 1));
+
+      // Ensure that the source actually has this stride value. E.g.:
+      // source strides = [ ?, ?, 800, 80, 4]
+      //                           |
+      //                           v
+      //                  same stride, OK
+      // If strides are dynamic, we cannot verify anything statically.
+      if (!ShapedType::isDynamicStrideOrOffset(srcStrides[nextDim]) &&
+          !ShapedType::isDynamicStrideOrOffset(nextStride) &&
+          srcStrides[nextDim] != nextStride) {
+        // Attempting to collapse non-contiguous dimensions. This is forbidden.
+        // Note: This check does not handle cases where strides and dimension
+        // sizes are dynamic. Such dims could still turn out to be non-
+        // contiguous at runtime. This check is only a best effort to catch
+        // illegal collapses at verification time.
+        return failure();
+      }
+    }
+
+    resultStrides.push_back(resultStride);
+  }
+
+  return makeStridedLinearLayoutMap(
+      llvm::to_vector<8>(llvm::reverse(resultStrides)), srcOffset,
+      srcType.getContext());
+}
+
+static MemRefType
+computeCollapsedType(MemRefType srcType,
+                     ArrayRef<ReassociationIndices> reassociation) {
+  SmallVector<int64_t> resultShape;
+  for (const ReassociationIndices &group : reassociation) {
+    int64_t groupSize = 1;
+    for (int64_t srcDim : group) {
+      if (srcType.isDynamicDim(srcDim)) {
+        // Source dim is dynamic, so the collapsed dim is also dynamic.
+        groupSize = ShapedType::kDynamicSize;
+        break;
+      }
+
+      groupSize *= srcType.getDimSize(srcDim);
+    }
+
+    resultShape.push_back(groupSize);
+  }
+
+  if (srcType.getLayout().isIdentity()) {
+    // If the source is contiguous (i.e., no layout map specified), so is the
+    // result.
+    MemRefLayoutAttrInterface layout;
+    return MemRefType::get(resultShape, srcType.getElementType(), layout,
+                           srcType.getMemorySpace());
+  }
+
+  // Source may not be fully contiguous. Compute the layout map.
+  // Note: Dimensions that are collapsed into a single dim are assumed to be
+  // contiguous.
+  FailureOr<AffineMap> computedLayout =
+      computeCollapsedLayoutMap(srcType, resultShape, reassociation);
+  assert(succeeded(computedLayout) &&
+         "invalid source layout map or collapsing non-contiguous dims");
+  auto computedType =
+      MemRefType::get(resultShape, srcType.getElementType(), *computedLayout,
+                      srcType.getMemorySpaceAsInt());
+  return canonicalizeStridedLayout(computedType);
+}
+
+void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
+                            ArrayRef<ReassociationIndices> reassociation,
+                            ArrayRef<NamedAttribute> attrs) {
+  auto srcType = src.getType().cast<MemRefType>();
+  MemRefType resultType = computeCollapsedType(srcType, reassociation);
+  build(b, result, resultType, src, attrs);
+  result.addAttribute(getReassociationAttrName(),
+                      getReassociationIndicesAttribute(b, reassociation));
+}
+
 LogicalResult CollapseShapeOp::verify() {
-  return verifyReshapeOp(*this, getSrcType(), getResultType());
+  MemRefType srcType = getSrcType();
+  MemRefType resultType = getResultType();
+
+  // Verify result shape.
+  if (failed(verifyCollapsedShape(getOperation(), resultType.getShape(),
+                                  srcType.getShape(), getReassociationIndices(),
+                                  /*allowMultipleDynamicDimsPerGroup=*/true)))
+    return failure();
+
+  // Compute expected result type (including layout map).
+  MemRefType expectedResultType;
+  if (srcType.getLayout().isIdentity()) {
+    // If the source is contiguous (i.e., no layout map specified), so is the
+    // result.
+    MemRefLayoutAttrInterface layout;
+    expectedResultType =
+        MemRefType::get(resultType.getShape(), srcType.getElementType(), layout,
+                        srcType.getMemorySpace());
+  } else {
+    // Source may not be fully contiguous. Compute the layout map.
+    // Note: Dimensions that are collapsed into a single dim are assumed to be
+    // contiguous.
+    FailureOr<AffineMap> computedLayout = computeCollapsedLayoutMap(
+        srcType, resultType.getShape(), getReassociationIndices());
+    if (failed(computedLayout))
+      return emitOpError(
+          "invalid source layout map or collapsing non-contiguous dims");
+    auto computedType =
+        MemRefType::get(resultType.getShape(), srcType.getElementType(),
+                        *computedLayout, srcType.getMemorySpaceAsInt());
+    expectedResultType = canonicalizeStridedLayout(computedType);
+  }
+
+  auto canonicalizedResultType = canonicalizeStridedLayout(resultType);
+  if (expectedResultType != canonicalizedResultType)
+    return emitOpError("expected collapsed type to be ")
+           << expectedResultType << " but found " << canonicalizedResultType;
+
+  return success();
 }
 
 struct CollapseShapeOpMemRefCastFolder
@@ -1943,9 +2010,9 @@ public:
     if (!CastOp::canFoldIntoConsumerOp(cast))
       return failure();
 
-    Type newResultType = computeReshapeCollapsedType(
-        cast.getOperand().getType().cast<MemRefType>(),
-        op.getReassociationMaps());
+    Type newResultType =
+        computeCollapsedType(cast.getOperand().getType().cast<MemRefType>(),
+                             op.getReassociationIndices());
 
     if (newResultType == op.getResultType()) {
       rewriter.updateRootInPlace(
