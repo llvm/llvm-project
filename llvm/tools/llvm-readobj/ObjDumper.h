@@ -9,6 +9,7 @@
 #ifndef LLVM_TOOLS_LLVM_READOBJ_OBJDUMPER_H
 #define LLVM_TOOLS_LLVM_READOBJ_OBJDUMPER_H
 
+#include <functional.
 #include <memory>
 #include <system_error>
 
@@ -44,7 +45,7 @@ class ScopedPrinter;
 class SymbolComparator {
 public:
   using CompPredicate =
-      function_ref<bool(object::SymbolRef, object::SymbolRef)>;
+      std::function<bool(object::SymbolRef, object::SymbolRef)>;
 
   // Each Obj format has a slightly different way of retrieving a symbol's info
   // So we defer the predicate's impl to each format.
