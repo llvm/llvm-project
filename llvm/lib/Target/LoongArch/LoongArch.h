@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_LOONGARCH_LOONGARCH_H
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCH_H
 
+#include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
