@@ -1867,10 +1867,6 @@ static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
   if (A)
     return A->getValue();
 
-  if (const Arg *X = Args.getLastArg(
-          clang::driver::options::OPT__overlay_platform_toolchain_EQ))
-    return X->getValue();
-
   // If we have a SysRoot, ignore GCC_INSTALL_PREFIX.
   // GCC_INSTALL_PREFIX specifies the gcc installation for the default
   // sysroot and is likely not valid with a different sysroot.
