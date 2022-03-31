@@ -305,6 +305,12 @@ static void setMemoryPhiValueForBlock(MemoryPhi *MP, const BasicBlock *BB,
 // point to the correct new defs, to ensure we only have one variable, and no
 // disconnected stores.
 void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
+  // Don't bother updating dead code.
+  if (!MSSA->DT->isReachableFromEntry(MD->getBlock())) {
+    MD->setDefiningAccess(MSSA->getLiveOnEntryDef());
+    return;
+  }
+
   VisitedBlocks.clear();
   InsertedPHIs.clear();
 
@@ -422,10 +428,10 @@ void MemorySSAUpdater::insertDef(MemoryDef *MD, bool RenameUses) {
   if (NewPhiSize)
     tryRemoveTrivialPhis(ArrayRef<WeakVH>(&InsertedPHIs[NewPhiIndex], NewPhiSize));
 
-  // Now that all fixups are done, rename all uses if we are asked. Skip
-  // renaming for defs in unreachable blocks.
+  // Now that all fixups are done, rename all uses if we are asked. The defs are
+  // guaranteed to be in reachable code due to the check at the method entry.
   BasicBlock *StartBlock = MD->getBlock();
-  if (RenameUses && MSSA->getDomTree().getNode(StartBlock)) {
+  if (RenameUses) {
     SmallPtrSet<BasicBlock *, 16> Visited;
     // We are guaranteed there is a def in the block, because we just got it
     // handed to us in this function.
