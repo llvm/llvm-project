@@ -49,7 +49,7 @@ inline u32 computeCRC32(u32 Crc, uptr Value, uptr *Array, uptr ArraySize) {
   // as opposed to only for scudo_crc32.cpp. This means that other hardware
   // specific instructions were likely emitted at other places, and as a
   // result there is no reason to not use it here.
-#if defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+#if defined(__CRC32__) || defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
   Crc = CRC32_INTRINSIC(Crc, Value);
   for (uptr i = 0; i < ArraySize; i++)
     Crc = CRC32_INTRINSIC(Crc, Array[i]);
@@ -65,7 +65,7 @@ inline u32 computeCRC32(u32 Crc, uptr Value, uptr *Array, uptr ArraySize) {
   for (uptr i = 0; i < ArraySize; i++)
     Crc = computeSoftwareCRC32(Crc, Array[i]);
   return Crc;
-#endif  // defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
+#endif  // defined(__CRC32__) || defined(__SSE4_2__) || defined(__ARM_FEATURE_CRC32)
 }
 
 static BackendT &getBackend();
