@@ -12,10 +12,6 @@
 #include <memory>
 #include <system_error>
 
-#include "llvm/ADT/Optional.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
@@ -29,40 +25,13 @@ class COFFImportFile;
 class ObjectFile;
 class XCOFFObjectFile;
 class ELFObjectFileBase;
-} // namespace object
+}
 namespace codeview {
 class GlobalTypeTableBuilder;
 class MergingTypeTableBuilder;
 } // namespace codeview
 
 class ScopedPrinter;
-
-// Comparator to compare symbols.
-// Usage: the caller registers predicates (i.e., how to compare the symbols) by
-// calling addPredicate(). The order in which predicates are registered is also
-// their priority.
-class SymbolComparator {
-public:
-  using CompPredicate =
-      function_ref<bool(object::SymbolRef, object::SymbolRef)>;
-
-  // Each Obj format has a slightly different way of retrieving a symbol's info
-  // So we defer the predicate's impl to each format.
-  void addPredicate(CompPredicate Pred) { Predicates.push_back(Pred); }
-
-  bool operator()(object::SymbolRef LHS, object::SymbolRef RHS) {
-    for (CompPredicate Pred : Predicates) {
-      if (Pred(LHS, RHS))
-        return true;
-      if (Pred(RHS, LHS))
-        return false;
-    }
-    return false;
-  }
-
-private:
-  SmallVector<CompPredicate, 2> Predicates;
-};
 
 class ObjDumper {
 public:
@@ -78,14 +47,10 @@ public:
   virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
   virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols) {
-    printSymbols(PrintSymbols, PrintDynamicSymbols, llvm::None);
-  }
-  virtual void printSymbols(bool PrintSymbols, bool PrintDynamicSymbols,
-                            llvm::Optional<SymbolComparator> SymComp) {
     if (PrintSymbols)
-      printSymbols(SymComp);
+      printSymbols();
     if (PrintDynamicSymbols)
-      printDynamicSymbols(SymComp);
+      printDynamicSymbols();
   }
   virtual void printProgramHeaders(bool PrintProgramHeaders,
                                    cl::boolOrDefault PrintSectionMapping) {
@@ -96,17 +61,6 @@ public:
   }
 
   virtual void printUnwindInfo() = 0;
-
-  // Symbol comparison functions.
-  virtual bool canCompareSymbols() const { return false; }
-  virtual bool compareSymbolsByName(object::SymbolRef LHS,
-                                    object::SymbolRef RHS) const {
-    return true;
-  }
-  virtual bool compareSymbolsByType(object::SymbolRef LHS,
-                                    object::SymbolRef RHS) const {
-    return true;
-  }
 
   // Only implemented for ELF at this time.
   virtual void printDependentLibs() {}
@@ -178,10 +132,8 @@ protected:
   ScopedPrinter &W;
 
 private:
-  virtual void printSymbols() { printSymbols(llvm::None); }
-  virtual void printSymbols(llvm::Optional<SymbolComparator> Comp) {}
-  virtual void printDynamicSymbols() { printDynamicSymbols(llvm::None); }
-  virtual void printDynamicSymbols(llvm::Optional<SymbolComparator> Comp) {}
+  virtual void printSymbols() {}
+  virtual void printDynamicSymbols() {}
   virtual void printProgramHeaders() {}
   virtual void printSectionMapping() {}
 
