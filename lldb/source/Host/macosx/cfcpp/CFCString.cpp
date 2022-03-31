@@ -14,7 +14,7 @@
 CFCString::CFCString(CFStringRef s) : CFCReleaser<CFStringRef>(s) {}
 
 // CFCString copy constructor
-CFCString::CFCString(const CFCString &rhs) : CFCReleaser<CFStringRef>(rhs) {}
+CFCString::CFCString(const CFCString &rhs) = default;
 
 // CFCString copy constructor
 CFCString &CFCString::operator=(const CFCString &rhs) {

@@ -45,6 +45,16 @@ public:
             function_ref<void(Operation *)> preReplaceAction = nullptr,
             bool *inPlaceUpdate = nullptr);
 
+  /// Tries to fold a pre-existing constant operation. `constValue` represents
+  /// the value of the constant, and can be optionally passed if the value is
+  /// already known (e.g. if the constant was discovered by m_Constant). This is
+  /// purely an optimization opportunity for callers that already know the value
+  /// of the constant. Returns false if an existing constant for `op` already
+  /// exists in the folder, in which case `op` is replaced and erased.
+  /// Otherwise, returns true and `op` is inserted into the folder (and
+  /// hoisted if necessary).
+  bool insertKnownConstant(Operation *op, Attribute constValue = {});
+
   /// Notifies that the given constant `op` should be remove from this
   /// OperationFolder's internal bookkeeping.
   ///
@@ -113,6 +123,10 @@ private:
   /// also need to track per-dialect.
   using ConstantMap =
       DenseMap<std::tuple<Dialect *, Attribute, Type>, Operation *>;
+
+  /// Returns true if the given operation is an already folded constant that is
+  /// owned by this folder.
+  bool isFolderOwnedConstant(Operation *op) const;
 
   /// Tries to perform folding on the given `op`. If successful, populates
   /// `results` with the results of the folding.

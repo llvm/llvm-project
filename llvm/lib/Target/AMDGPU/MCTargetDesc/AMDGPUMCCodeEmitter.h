@@ -47,6 +47,11 @@ public:
                                     SmallVectorImpl<MCFixup> &Fixups,
                                     const MCSubtargetInfo &STI) const = 0;
 
+  virtual void getMachineOpValueT16F128(const MCInst &MI, unsigned OpNo,
+                                        APInt &Op,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const = 0;
+
   virtual void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const = 0;

@@ -41,6 +41,7 @@ private:
   ConstantRange badRange();
   ConstantRange unknownRange();
   ConstantRange validateRange(ConstantRange R);
+  ConstantRange calcRange(Instruction *I);
   void walkBackwards();
   void walkForwards();
   bool validateAndTransform();

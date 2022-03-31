@@ -14,11 +14,10 @@ CFCMutableArray::CFCMutableArray(CFMutableArrayRef s)
     : CFCReleaser<CFMutableArrayRef>(s) {}
 
 // CFCMutableArray copy constructor
-CFCMutableArray::CFCMutableArray(const CFCMutableArray &rhs)
-    : CFCReleaser<CFMutableArrayRef>(rhs) // NOTE: this won't make a copy of the
-                                          // array, just add a new reference to
-                                          // it
-{}
+CFCMutableArray::CFCMutableArray(const CFCMutableArray &rhs) =
+    default; // NOTE: this won't make a copy of the
+             // array, just add a new reference to
+             // it
 
 // CFCMutableArray copy constructor
 CFCMutableArray &CFCMutableArray::operator=(const CFCMutableArray &rhs) {
