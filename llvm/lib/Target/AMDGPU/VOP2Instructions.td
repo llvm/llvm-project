@@ -30,9 +30,6 @@ class VOP2e_T16 <bits<6> op, VOPProfile P> : Enc32 {
   let Inst{8-0}   = !if(P.HasSrc0, src0{9-1}, 0);
   let Inst{16-9}  = !if(P.HasSrc1, src1{8-1}, 0);
   let Inst{24-17} = !if(P.EmitDst, vdst{8-1}, 0);
-  let Inst{7}   = !if(P.HasSrc0, src0{0}, 0);
-  let Inst{16}  = !if(P.HasSrc1, src1{0}, 0);
-  let Inst{24}  = !if(P.EmitDst, vdst{0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; //encoding
 }
@@ -802,8 +799,8 @@ def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 
 // TODO-GFX11_16BIT Temporary profile because functions to set these fields are TBD
 class add16P<VOPProfile P> :  VOPProfile<P.ArgVT> {
-  let DstRC = VOPDstOperandT16<VGPR_16_F128>;
-  let DstRC64 = VOPDstOperandT16<VGPR_16>;
+  let DstRC = VOPDstOperandT16F128;
+  let DstRC64 = VOPDstOperandT16;
   let Src0RC32 = VSrcT_f16_F128;
   let Src1RC32 = VGPRSrc_16_F128;
   let Src0RC64 = VSrcT_f16;

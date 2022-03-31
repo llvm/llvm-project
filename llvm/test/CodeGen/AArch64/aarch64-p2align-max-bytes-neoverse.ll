@@ -1,12 +1,25 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -align-loops=32 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
-; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-N1
+; RUN: llc -mtriple=aarch64-none-linux-gnu -align-loops=32   < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n2 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-x1   < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-x2   < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a35  < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-8
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a53  < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-8
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a55  < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-8
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a57  < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-8
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a510 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-8
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a75  < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-8
+; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a710 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
 
 define i32 @a(i32 %x, i32* nocapture readonly %y, i32* nocapture readonly %z) {
 ; CHECK-DEFAULT:    .p2align 5
-; CHECK-N1:         .p2align 5, 0x0, 16
+; CHECK-8:          .p2align 4, 0x0, 8
+; CHECK-16:         .p2align 5, 0x0, 16
 ; CHECK-NEXT:       .LBB0_5: // %vector.body
 ; CHECK-DEFAULT:    .p2align 5
-; CHECK-N1:         .p2align 5, 0x0, 16
+; CHECK-8:          .p2align 4, 0x0, 8
+; CHECK-16:         .p2align 5, 0x0, 16
 ; CHECK-NEXT:       .LBB0_8: // %for.body
 entry:
   %cmp10 = icmp sgt i32 %x, 0

@@ -35,6 +35,7 @@ define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg
 ; A53-NEXT:  // %bb.1:
 ; A53-NEXT:    ldr w8, [x19]
 ; A53-NEXT:    ldr w9, [x9]
+; A53-NEXT:    .p2align 4, 0x0, 8
 ; A53-NEXT:  .LBB0_2: // %while.body.i.split.ver.us
 ; A53-NEXT:    // =>This Inner Loop Header: Depth=1
 ; A53-NEXT:    lsl w9, w9, #1
@@ -46,6 +47,7 @@ define void @test(%struct1* %fde, i32 %fd, void (i32, i32, i8*)* %func, i8* %arg
 ; A53-NEXT:    str x0, [x8, :lo12:gv1]
 ; A53-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; A53-NEXT:    ret
+; A53-NEXT:    .p2align 4, 0x0, 8
 ; A53-NEXT:  .LBB0_4: // %while.body.i.split
 ; A53-NEXT:    // =>This Inner Loop Header: Depth=1
 ; A53-NEXT:    b .LBB0_4

@@ -126,8 +126,10 @@ def FunctionTmpl
                                  FunctionDecl::TK_FunctionTemplate}],
                     "function templates">;
 
-def GlobalFunction
-    : SubsetSubject<Function, [{S->isGlobal()}], "global functions">;
+def HLSLEntry
+    : SubsetSubject<Function,
+                    [{S->isExternallyVisible() && !isa<CXXMethodDecl>(S)}],
+                    "global functions">;
 
 def ClassTmpl : SubsetSubject<CXXRecord, [{S->getDescribedClassTemplate()}],
                               "class templates">;
@@ -3946,7 +3948,7 @@ def Error : InheritableAttr {
 def HLSLNumThreads: InheritableAttr {
   let Spellings = [Microsoft<"numthreads">];
   let Args = [IntArgument<"X">, IntArgument<"Y">, IntArgument<"Z">];
-  let Subjects = SubjectList<[GlobalFunction]>;
+  let Subjects = SubjectList<[HLSLEntry]>;
   let LangOpts = [HLSL];
   let Documentation = [NumThreadsDocs];
 }
