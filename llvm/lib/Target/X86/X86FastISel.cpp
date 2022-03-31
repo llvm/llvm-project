@@ -281,6 +281,11 @@ bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
   if (I->isTerminator() && llvm::any_of(successors(I), HasPhis))
     return false;
 
+  // Make sure there are no potentially eflags clobbering constant
+  // materializations in between.
+  if (llvm::any_of(I->operands(), [](Value *V) { return isa<Constant>(V); }))
+    return false;
+
   CC = TmpCC;
   return true;
 }
