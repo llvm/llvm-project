@@ -693,8 +693,10 @@ static llvm::Optional<llvm::Error> AddVariableInfo(
     // Not realizing self is a fatal error for an expression and the
     // Swift compiler error alone is not particularly useful.
     if (is_self)
-      return make_error<StringError>(inconvertibleErrorCode(),
-                                     "Couldn't realize type of self.");
+      return make_error<StringError>(
+          inconvertibleErrorCode(),
+          "Couldn't realize Swift AST type of self. Hint: using `v` to "
+          "directly inspect variables and fields may still work.");
     return {};
   }
 
