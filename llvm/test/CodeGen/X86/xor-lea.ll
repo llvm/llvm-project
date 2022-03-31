@@ -202,6 +202,91 @@ define i64 @xor_add_sminval_i64(i64 %x, i64 %y) {
 }
 
 ;
+; ADD/SUB(XOR(X,MIN_SIGNED_VALUE),C)
+;
+
+define i8 @sub_xor_sminval_i8(i8 %x, i8 %y) {
+; X86-LABEL: sub_xor_sminval_i8:
+; X86:       # %bb.0:
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    xorb $-128, %al
+; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: sub_xor_sminval_i8:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorb $-128, %al
+; X64-NEXT:    subb %sil, %al
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+  %r = xor i8 %x, 128
+  %s = sub i8 %r, %y
+  ret i8 %s
+}
+
+define i16 @add_xor_sminval_i16(i16 %x) {
+; X86-LABEL: add_xor_sminval_i16:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $-32768, %eax # imm = 0x8000
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $2, %eax
+; X86-NEXT:    # kill: def $ax killed $ax killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_xor_sminval_i16:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    xorl $-32768, %edi # imm = 0x8000
+; X64-NEXT:    leal 2(%rdi), %eax
+; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    retq
+  %r = xor i16 %x, 32768
+  %s = add i16 %r, 2
+  ret i16 %s
+}
+
+define i32 @sub_xor_sminval_i32(i32 %x) {
+; X86-LABEL: sub_xor_sminval_i32:
+; X86:       # %bb.0:
+; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    addl $-512, %eax # imm = 0xFE00
+; X86-NEXT:    retl
+;
+; X64-LABEL: sub_xor_sminval_i32:
+; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    xorl $-2147483648, %edi # imm = 0x80000000
+; X64-NEXT:    leal -512(%rdi), %eax
+; X64-NEXT:    retq
+  %r = xor i32 %x, 2147483648
+  %s = sub i32 %r, 512
+  ret i32 %s
+}
+
+define i64 @add_xor_sminval_i64(i64 %x, i64 %y) {
+; X86-LABEL: add_xor_sminval_i64:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $-2147483648, %edx # imm = 0x80000000
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    retl
+;
+; X64-LABEL: add_xor_sminval_i64:
+; X64:       # %bb.0:
+; X64-NEXT:    movabsq $-9223372036854775808, %rax # imm = 0x8000000000000000
+; X64-NEXT:    xorq %rdi, %rax
+; X64-NEXT:    addq %rsi, %rax
+; X64-NEXT:    retq
+  %r = xor i64 %x, -9223372036854775808
+  %s = add i64 %y, %r
+  ret i64 %s
+}
+
+;
 ; XOR(SHL(X,C),MIN_SIGNED_VALUE)
 ;
 
