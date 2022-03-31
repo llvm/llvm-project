@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "exhaustive_test.h"
+#include "src/__support/FPUtil/FPBits.h"
 #include "utils/UnitTest/Test.h"
 
 template <typename T>
@@ -28,14 +29,26 @@ void LlvmLibcExhaustiveTest<T>::test_full_range(T start, T stop, int nthreads,
     thread_list.emplace_back([this, begin, end, rounding]() {
       std::stringstream msg;
       msg << "-- Testing from " << begin << " to " << end << " [0x" << std::hex
-          << begin << ", 0x" << end << ") ..." << std::endl;
+          << begin << ", 0x" << end << "), [" << std::hexfloat
+          << float(__llvm_libc::fputil::FPBits<float>(
+                 static_cast<uint32_t>(begin)))
+          << ", "
+          << float(
+                 __llvm_libc::fputil::FPBits<float>(static_cast<uint32_t>(end)))
+          << ") ..." << std::endl;
       std::cout << msg.str();
       msg.str("");
 
       bool result = check(begin, end, rounding);
 
       msg << "** Finished testing from " << std::dec << begin << " to " << end
-          << " [0x" << std::hex << begin << ", 0x" << end
+          << " [0x" << std::hex << begin << ", 0x" << end << "), ["
+          << std::hexfloat
+          << float(__llvm_libc::fputil::FPBits<float>(
+                 static_cast<uint32_t>(begin)))
+          << ", "
+          << float(
+                 __llvm_libc::fputil::FPBits<float>(static_cast<uint32_t>(end)))
           << ") : " << (result ? "PASSED" : "FAILED") << std::endl;
       std::cout << msg.str();
     });

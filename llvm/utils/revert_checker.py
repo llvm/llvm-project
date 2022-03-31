@@ -237,6 +237,9 @@ def _main() -> None:
   parser.add_argument(
       'root', nargs='+', help='Root(s) to search for commits from.')
   parser.add_argument('--debug', action='store_true')
+  parser.add_argument(
+      '-u', '--review_url', action='store_true',
+      help='Format SHAs as llvm review URLs')
   opts = parser.parse_args()
 
   logging.basicConfig(
@@ -257,7 +260,11 @@ def _main() -> None:
         all_reverts.append(revert)
 
   for revert in all_reverts:
-    print(f'{revert.sha} claims to revert {revert.reverted_sha}')
+    sha_fmt = (f'https://reviews.llvm.org/rG{revert.sha}'
+               if opts.review_url else revert.sha)
+    reverted_sha_fmt = (f'https://reviews.llvm.org/rG{revert.reverted_sha}'
+                        if opts.review_url else revert.reverted_sha)
+    print(f'{sha_fmt} claims to revert {reverted_sha_fmt}')
 
 
 if __name__ == '__main__':
